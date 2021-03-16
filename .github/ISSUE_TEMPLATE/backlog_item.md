@@ -2,7 +2,7 @@
 name: Backlog Item
 about: Issue that has enough reasoning, research and information to be implemented
 title: ''
-labels: 'Status: Needs Triage'
+labels: 'needs triage'
 assignees: ''
 
 ---
