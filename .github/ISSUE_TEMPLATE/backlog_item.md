@@ -1,8 +1,8 @@
 ---
 name: Backlog Item
 about: Issue that has enough reasoning, research and information to be implemented
-title: FEATURE
-labels: ''
+title: ''
+labels: 'Status: Needs Triage'
 assignees: ''
 
 ---
