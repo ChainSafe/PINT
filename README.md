@@ -1,6 +1,6 @@
-# Substrate Cumulus Parachain Template
+# Polkadot Index Network Token (PINT :beer:)
 
-A new Cumulus-based Substrate node, ready for hacking :cloud:
+A Polkadot ecosystem index for investors. A sell sustaining auction treasury for parachains.
 
 ## Upstream
 
@@ -13,8 +13,13 @@ Follow these steps to prepare a local Substrate development environment :hammer_
 
 ### Setup
 
-If necessary, refer to the setup instructions at the
-[Substrate Developer Hub](https://substrate.dev/docs/en/knowledgebase/getting-started/#manual-installation).
+This project currently builds against Rust nightly-2021-01-26. Assuming you have rustup already insatlled set up your local environment:
+
+```shell
+rustup install nightly-2021-01-26
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-01-26
+rustup override set nightly-2021-01-26
+``` 
 
 ### Build
 
@@ -25,6 +30,9 @@ Once the development environment is set up, build the node template. This comman
 ```bash
 cargo build --release
 ```
+
+Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run out of memory. Try freeing some memory or build on another machine.
+
 ## Run
 
 ### Local Testnet
@@ -44,12 +52,3 @@ Substrate Parachain Template:
 # this command assumes the chain spec is in a directory named polkadot that is a sibling of the working directory
 ./target/release/parachain-collator -d local-test --collator --alice --ws-port 9945 --parachain-id 200 -- --chain ../polkadot/rococo_local.json
 ```
-
-## Learn More
-
-Refer to the upstream
-[Substrate Developer Hub Node Template](https://github.com/substrate-developer-hub/substrate-node-template)
-to learn more about the structure of this project, the capabilities it encapsulates and the way in
-which those capabilities are implemented. You can learn more about
-[The Path of Parachain Block](https://polkadot.network/the-path-of-a-parachain-block/) on the
-official Polkadot Blog.
