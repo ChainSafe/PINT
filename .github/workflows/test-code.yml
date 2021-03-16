@@ -3,10 +3,10 @@ name: Test Code
 on:
   pull_request:
     branches:
-    - master
+    - main
   push:
     branches:
-    - master
+    - main
 
 jobs:
   test-code:
@@ -36,9 +36,11 @@ jobs:
         override: true
         default: true
 
-    # Enable this for clippy linting.
-    # - name: Check and Lint Code
-    #   run: cargo +nightly-2020-05-07 clippy -- -D warnings
+    - name: Check Code Formatting
+      run: cargo fmt -- --check
+
+    - name: Lint Code
+      run: cargo +nightly-2021-01-26 clippy -- -D warnings
 
     - name: Check Code
       run: cargo check --all
