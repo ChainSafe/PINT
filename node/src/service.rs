@@ -24,21 +24,24 @@ native_executor_instance!(
     parachain_runtime::native_version,
 );
 
+type NewPartialOk = PartialComponents<
+    TFullClient<Block, RuntimeApi, Executor>,
+    TFullBackend<Block>,
+    (),
+    sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+    sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
+    (),
+>;
+
 /// Starts a `ServiceBuilder` for a full service.
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
+
 pub fn new_partial(
     config: &Configuration,
 ) -> Result<
-    PartialComponents<
-        TFullClient<Block, RuntimeApi, Executor>,
-        TFullBackend<Block>,
-        (),
-        sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
-        sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>,
-        (),
-    >,
+    NewPartialOk,
     sc_service::Error,
 > {
     let inherent_data_providers = sp_inherents::InherentDataProviders::new();

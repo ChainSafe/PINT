@@ -1,3 +1,6 @@
+// Required as construct_runtime! produces code that violates this lint
+#![allow(clippy::from_over_into)]
+
 use crate as pallet_template;
 use frame_support::parameter_types;
 use frame_system as system;

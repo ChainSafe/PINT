@@ -12,6 +12,8 @@ mod mock;
 mod tests;
 
 #[frame_support::pallet]
+// this is requires as the #[pallet::event] proc macro generates code that violates this lint
+#[allow(clippy::unused_unit)]
 pub mod pallet {
     use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*};
     use frame_system::pallet_prelude::*;
