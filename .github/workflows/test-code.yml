@@ -40,7 +40,7 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Lint Code
-      run: cargo +nightly-2021-01-26 clippy --all-targets -- -D warnings
+      run: cargo clippy --all-targets -- -D warnings
 
     - name: Test Code
       run: cargo test --all
