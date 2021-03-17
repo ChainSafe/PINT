@@ -38,12 +38,7 @@ type NewPartialOk = PartialComponents<
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
 
-pub fn new_partial(
-    config: &Configuration,
-) -> Result<
-    NewPartialOk,
-    sc_service::Error,
-> {
+pub fn new_partial(config: &Configuration) -> Result<NewPartialOk, sc_service::Error> {
     let inherent_data_providers = sp_inherents::InherentDataProviders::new();
 
     let (client, backend, keystore_container, task_manager) =
