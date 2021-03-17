@@ -16,8 +16,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::{traits::AccountIdConversion, ModuleId},
-        traits::OriginTrait,
-        traits::{Currency, Get},
+        traits::{Currency, Get, ExistenceRequirement::AllowDeath},
     };
     use frame_system::pallet_prelude::*;
 
@@ -26,8 +25,8 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        type AdminOrigin: OriginTrait;
-        /// This must be an unique 8 character string.
+        type AdminOrigin: EnsureOrigin<Self::Origin>;
+        /// ModuleId must be an unique 8 character string.
         /// it is used to generate the account to hold the balances in this pallet
         type ModuleId: Get<ModuleId>;
         type Currency: Currency<Self::AccountId>;
@@ -43,17 +42,16 @@ pub mod pallet {
     pub type Something<T> = StorageValue<_, u32>;
 
     #[pallet::event]
-    #[pallet::metadata(T::AccountId = "AccountId")]
+    // #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Event documentation should end with an array that provides descriptive names for event
-        /// parameters. [something, who]
-        SomethingStored(u32, T::AccountId),
+        /// Some admin origin successfully transferred some funds from the treasury to another account
+        /// parameters. [initiator, recipient, amount]
+        WithdrawlMadeFromTreasury(AccountIdFor<T>, BalanceFor<T>),
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Error names should be descriptive.
         NoneValue,
     }
 
@@ -62,21 +60,30 @@ pub mod pallet {
 
     // Can add helper functions on the config here
     impl<T: Config> Module<T> {
-        pub fn treasury_account_id() -> T::AccountId {
+        fn treasury_account_id() -> T::AccountId {
             T::ModuleId::get().into_account()
         }
-    }
+     }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)]
+        #[pallet::weight(10_000)] // TODO: Set weights
         pub fn withdraw(
             origin: OriginFor<T>,
-            _amount: BalanceFor<T>,
-            _recipient: AccountIdFor<T>,
+            amount: BalanceFor<T>,
+            recipient: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let _caller = ensure_signed(origin)?;
-            // STUB
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            T::Currency::transfer(
+                &Self::treasury_account_id(),
+                &recipient,
+                amount,
+                AllowDeath
+            )?;
+
+            Self::deposit_event(Event::WithdrawlMadeFromTreasury(recipient, amount));
+
             Ok(().into())
         }
     }

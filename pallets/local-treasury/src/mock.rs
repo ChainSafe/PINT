@@ -4,6 +4,7 @@
 use crate as pallet_local_treasury;
 use frame_support::{parameter_types, traits::StorageMapShim};
 use frame_system as system;
+use frame_system::{EnsureSignedBy};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -85,7 +86,7 @@ parameter_types! {
 }
 
 impl pallet_local_treasury::Config for Test {
-    type AdminOrigin = Origin;
+    type AdminOrigin = EnsureOrigin<Origin>;
     type ModuleId = TestModuleId;
     type Currency = Balances;
     type Event = Event;
