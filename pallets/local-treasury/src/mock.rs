@@ -2,12 +2,13 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_local_treasury;
-use frame_support::{parameter_types, traits::StorageMapShim};
+use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim};
 use frame_system as system;
-use frame_system::{EnsureSignedBy};
+
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
+    traits::AccountIdConversion,
     traits::{BlakeTwo256, IdentityLookup},
     ModuleId,
 };
@@ -33,6 +34,9 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
+pub(crate) type Balance = u64;
+pub(crate) type AccountId = u64;
+
 impl system::Config for Test {
     type BaseCallFilter = ();
     type BlockWeights = ();
@@ -44,7 +48,7 @@ impl system::Config for Test {
     type BlockNumber = u64;
     type Hash = H256;
     type Hashing = BlakeTwo256;
-    type AccountId = u64;
+    type AccountId = AccountId;
     type Lookup = IdentityLookup<Self::AccountId>;
     type Header = Header;
     type Event = Event;
@@ -57,8 +61,6 @@ impl system::Config for Test {
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
 }
-
-pub(crate) type Balance = u64;
 
 // param types for balances
 parameter_types! {
@@ -81,31 +83,35 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+pub(crate) const LOCAL_TREASURE_MODULE_ID: ModuleId = ModuleId(*b"12345678");
+pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
+
 parameter_types! {
-    pub const TestModuleId: ModuleId = ModuleId(*b"fomofomo");
+    pub const TestModuleId: ModuleId = LOCAL_TREASURE_MODULE_ID;
+}
+ord_parameter_types! {
+    pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
 }
 
 impl pallet_local_treasury::Config for Test {
-    type AdminOrigin = EnsureOrigin<Origin>;
+    type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ModuleId = TestModuleId;
     type Currency = Balances;
     type Event = Event;
 }
 
-pub(crate) const INITIAL_BALANCE: Balance = 100;
+pub fn local_treasury_account_id() -> AccountId {
+    LOCAL_TREASURE_MODULE_ID.into_account()
+}
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
+pub fn new_test_ext(balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
     pallet_balances::GenesisConfig::<Test> {
         // Assign initial balances to accounts
-        balances: vec![
-            (0, INITIAL_BALANCE),
-            (1, INITIAL_BALANCE),
-            (2, INITIAL_BALANCE),
-        ],
+        balances,
     }
     .assimilate_storage(&mut t)
     .unwrap();

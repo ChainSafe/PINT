@@ -16,7 +16,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::{traits::AccountIdConversion, ModuleId},
-        traits::{Currency, Get, ExistenceRequirement::AllowDeath},
+        traits::{Currency, ExistenceRequirement::AllowDeath, Get},
     };
     use frame_system::pallet_prelude::*;
 
@@ -63,7 +63,7 @@ pub mod pallet {
         fn treasury_account_id() -> T::AccountId {
             T::ModuleId::get().into_account()
         }
-     }
+    }
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -75,12 +75,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
 
-            T::Currency::transfer(
-                &Self::treasury_account_id(),
-                &recipient,
-                amount,
-                AllowDeath
-            )?;
+            T::Currency::transfer(&Self::treasury_account_id(), &recipient, amount, AllowDeath)?;
 
             Self::deposit_event(Event::WithdrawlMadeFromTreasury(recipient, amount));
 

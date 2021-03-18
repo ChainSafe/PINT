@@ -14,7 +14,7 @@ use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Identify
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
+    ApplyExtrinsicResult, ModuleId, MultiSignature,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -228,9 +228,14 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
 }
 
-impl pallet_local_treasury::Config for Test {
-    type AdminOrigin = Origin;
-    type ModuleId = TestModuleId;
+parameter_types! {
+    pub const TreasuryModuleId: ModuleId = ModuleId(*b"12345678");
+}
+
+impl pallet_local_treasury::Config for Runtime {
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type ModuleId = TreasuryModuleId;
     type Currency = Balances;
     type Event = Event;
 }
@@ -342,11 +347,6 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
     type HrmpMessageSender = ParachainSystem;
     type SendXcmOrigin = EnsureRoot<AccountId>;
     type AccountIdConverter = LocationConverter;
-}
-
-/// Configure the local treasury pallet
-impl pallet_local_treasury::Config for Runtime {
-    type Event = Event;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
