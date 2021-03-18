@@ -54,9 +54,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-/// Import the template pallet.
-pub use template;
-
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -231,6 +228,13 @@ impl frame_system::Config for Runtime {
     type SS58Prefix = SS58Prefix;
 }
 
+impl pallet_local_treasury::Config for Test {
+    type AdminOrigin = Origin;
+    type ModuleId = TestModuleId;
+    type Currency = Balances;
+    type Event = Event;
+}
+
 parameter_types! {
     pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 }
@@ -340,8 +344,8 @@ impl cumulus_pallet_xcm_handler::Config for Runtime {
     type AccountIdConverter = LocationConverter;
 }
 
-/// Configure the pallet template in pallets/template.
-impl template::Config for Runtime {
+/// Configure the local treasury pallet
+impl pallet_local_treasury::Config for Runtime {
     type Event = Event;
 }
 
@@ -361,7 +365,7 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Module, Storage},
         ParachainInfo: parachain_info::{Module, Storage, Config},
         XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin},
-        TemplateModule: template::{Module, Call, Storage, Event<T>},
+        LocalTreasuryModule: pallet_local_treasury::{Module, Call, Storage, Event<T>},
     }
 );
 
