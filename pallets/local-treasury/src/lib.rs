@@ -27,7 +27,7 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// ModuleId must be an unique 8 character string.
-        /// it is used to generate the account to hold the balances in this pallet
+        /// It is used to generate the account ID which holds the balance of the treasury.
         type ModuleId: Get<ModuleId>;
         type Currency: Currency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -45,9 +45,9 @@ pub mod pallet {
     // #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Some admin origin successfully transferred some funds from the treasury to another account
+        /// Admin successfully transferred some funds from the treasury to another account
         /// parameters. [initiator, recipient, amount]
-        WithdrawlMadeFromTreasury(AccountIdFor<T>, BalanceFor<T>),
+        Withdrawl(AccountIdFor<T>, BalanceFor<T>),
     }
 
     #[pallet::error]
