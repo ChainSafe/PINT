@@ -86,10 +86,8 @@ fn admin_account_can_withdraw_to_zero() {
         (ADMIN_ACCOUNT_ID, 0),
     ];
 
-    let final_balances: Vec<(u64, u64)> = vec![
-        (local_treasury_account_id(), 0),
-        (ADMIN_ACCOUNT_ID, AMOUNT),
-    ];
+    let final_balances: Vec<(u64, u64)> =
+        vec![(local_treasury_account_id(), 0), (ADMIN_ACCOUNT_ID, AMOUNT)];
 
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(LocalTreasury::withdraw(
@@ -119,4 +117,3 @@ fn admin_account_overdraw_fails() {
         assert_balances(&initial_balances);
     });
 }
-
