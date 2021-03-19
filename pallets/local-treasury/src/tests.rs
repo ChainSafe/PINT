@@ -1,5 +1,6 @@
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok};
+use pallet_balances::Error as BalancesError;
 use sp_runtime::traits::BadOrigin;
 
 const ASHLEY: AccountId = 0;
@@ -74,3 +75,48 @@ fn admin_account_can_withdraw() {
         assert_balances(&final_balances);
     });
 }
+
+#[test]
+fn admin_account_can_withdraw_to_zero() {
+    const INITIAL_BALANCE: Balance = 100;
+    const AMOUNT: Balance = 100;
+
+    let initial_balances: Vec<(u64, u64)> = vec![
+        (local_treasury_account_id(), INITIAL_BALANCE),
+        (ADMIN_ACCOUNT_ID, 0),
+    ];
+
+    let final_balances: Vec<(u64, u64)> = vec![
+        (local_treasury_account_id(), 0),
+        (ADMIN_ACCOUNT_ID, AMOUNT),
+    ];
+
+    new_test_ext(initial_balances).execute_with(|| {
+        assert_ok!(LocalTreasury::withdraw(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            AMOUNT,
+            ADMIN_ACCOUNT_ID
+        ));
+        assert_balances(&final_balances);
+    });
+}
+
+#[test]
+fn admin_account_overdraw_fails() {
+    const INITIAL_BALANCE: Balance = 100;
+    const AMOUNT: Balance = 101;
+
+    let initial_balances: Vec<(u64, u64)> = vec![
+        (local_treasury_account_id(), INITIAL_BALANCE),
+        (ADMIN_ACCOUNT_ID, 0),
+    ];
+
+    new_test_ext(initial_balances.clone()).execute_with(|| {
+        assert_noop!(
+            LocalTreasury::withdraw(Origin::signed(ADMIN_ACCOUNT_ID), AMOUNT, ADMIN_ACCOUNT_ID),
+            BalancesError::<Test, _>::InsufficientBalance
+        );
+        assert_balances(&initial_balances);
+    });
+}
+
