@@ -29,6 +29,7 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// ModuleId must be an unique 8 character string.
         /// It is used to generate the account ID which holds the balance of the treasury.
+        #[pallet::constant]
         type ModuleId: Get<ModuleId>;
         /// The pallet to use as the base currency for this treasury
         type Currency: Currency<Self::AccountId>;
@@ -39,12 +40,7 @@ pub mod pallet {
     #[pallet::generate_store(pub(super) trait Store)]
     pub struct Pallet<T>(_);
 
-    #[pallet::storage]
-    #[pallet::getter(fn something)]
-    pub type Something<T> = StorageValue<_, u32>;
-
     #[pallet::event]
-    // #[pallet::metadata(T::AccountId = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Admin successfully transferred some funds from the treasury to another account
@@ -58,9 +54,8 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-    // Can add helper functions on the config here
     impl<T: Config> Module<T> {
-        fn treasury_account_id() -> T::AccountId {
+        pub fn treasury_account_id() -> T::AccountId {
             T::ModuleId::get().into_account()
         }
     }
