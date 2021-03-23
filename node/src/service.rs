@@ -1,3 +1,6 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 use cumulus_client_consensus_relay_chain::{
     build_relay_chain_consensus, BuildRelayChainConsensusParams,
 };

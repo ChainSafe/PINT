@@ -2,7 +2,7 @@
 authors = ['ChainSafe Systems']
 description = 'FRAME pallet to implement PINT local treasury.'
 edition = '2018'
-license = 'Unlicense'
+license = 'LGPL-3.0-only'
 name = 'pallet-local-treasury'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
