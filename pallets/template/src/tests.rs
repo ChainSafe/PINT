@@ -1,3 +1,6 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 use crate::{mock::*, Error};
 use frame_support::{assert_noop, assert_ok};
 
