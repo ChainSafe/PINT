@@ -1,9 +1,0 @@
-header:
-  license:
-    spdx-id: LGPL-3.0-only
-    copyright-owner: ChainSafe Systems
-    
-  paths:
-    - '**/*.rs'
-
-  comment: on-failure
