@@ -1,3 +1,6 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 

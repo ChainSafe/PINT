@@ -1,5 +1,7 @@
 # Polkadot Index Network Token (PINT :beer:)
 
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](http://www.gnu.org/licenses/lgpl-3.0)
+
 A Polkadot ecosystem index for investors. A sell sustaining auction treasury for parachains.
 
 ## Upstream
