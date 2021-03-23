@@ -55,7 +55,7 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     impl<T: Config> Module<T> {
-        pub fn treasury_account_id() -> T::AccountId {
+        pub fn account_id() -> T::AccountId {
             T::ModuleId::get().into_account()
         }
     }
@@ -71,7 +71,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
 
-            T::Currency::transfer(&Self::treasury_account_id(), &recipient, amount, AllowDeath)?;
+            T::Currency::transfer(&Self::account_id(), &recipient, amount, AllowDeath)?;
 
             Self::deposit_event(Event::Withdrawl(recipient, amount));
 
