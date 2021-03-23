@@ -54,7 +54,10 @@ pub mod pallet {
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-    impl<T: Config> Module<T> {
+    #[pallet::extra_constants]
+    impl<T: Config> Pallet<T> {
+        /// Returns the accountID for the treasury balance
+        /// Transferring balance to this account funds the treasury
         pub fn account_id() -> T::AccountId {
             T::ModuleId::get().into_account()
         }
