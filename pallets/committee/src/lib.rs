@@ -172,7 +172,7 @@ pub mod pallet {
 
             let proposal_hash = proposal.hash();
 
-            // Store the proposal by its hash. Duplicates will dedup here.
+            // Store the proposal by its hash.
             <Proposals<T>>::insert(proposal_hash, proposal);
 
             // Add the proposal to the active proposals
