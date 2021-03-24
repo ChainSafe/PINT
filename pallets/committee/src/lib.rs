@@ -105,12 +105,19 @@ pub mod pallet {
             }
         }
 
+        // This does not check if a vote is a duplicate, This must be done before calling this function
         pub fn cast_vote(&mut self, voter: AccountId, vote: Vote) {
             match vote {
                 Vote::Aye => self.ayes.push(voter),
                 Vote::Nay => self.nays.push(voter),
                 Vote::Abstain => self.abstenations.push(voter),
             }
+        }
+
+        pub fn remove_voters(&mut self, voters: &[AccountId]) {
+            self.ayes.retain(|x| !voters.contains(x));
+            self.nays.retain(|x| !voters.contains(x));
+            self.abstenations.retain(|x| !voters.contains(x));
         }
 
         pub fn has_voted(&self, voter: &AccountId) -> bool {
@@ -260,8 +267,8 @@ pub mod pallet {
             // Only members can vote
             let voter = Self::ensure_member(origin)?;
 
-            <Votes<T>>::try_mutate(&proposal_hash, |maybe_votes| {
-                if let Some(votes) = maybe_votes {
+            <Votes<T>>::try_mutate(&proposal_hash, |votes| {
+                if let Some(votes) = votes {
                     // members can vote only once
                     ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
                     votes.cast_vote(voter, vote); // mutates votes in place
@@ -290,10 +297,17 @@ pub mod pallet {
     impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
         fn change_members_sorted(
             _incoming: &[AccountIdFor<T>],
-            _outgoing: &[AccountIdFor<T>],
+            outgoing: &[AccountIdFor<T>],
             new: &[AccountIdFor<T>],
         ) {
-            // TODO: Remove outgoing members from any currently active votes
+            // Remove outgoing members from any currently active votes
+            for proposal_hash in ActiveProposals::<T>::get() {
+                <Votes<T>>::mutate(&proposal_hash, |votes| {
+                    if let Some(votes) = votes {
+                        votes.remove_voters(outgoing); // mutates votes in place
+                    }
+                });
+            }
             Members::<T>::put(new);
         }
     }
