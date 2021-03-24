@@ -1,8 +1,11 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_committee;
-use frame_support::parameter_types;
+use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 
 use sp_core::H256;
@@ -31,7 +34,6 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
-pub(crate) type Balance = u64;
 pub(crate) type AccountId = u64;
 
 impl system::Config for Test {
@@ -59,15 +61,29 @@ impl system::Config for Test {
     type SS58Prefix = SS58Prefix;
 }
 
+parameter_types! {
+    pub const ProposalSubmissionPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub const VotingPeriod: <Test as system::Config>::BlockNumber = 10;
+}
+pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
+ord_parameter_types! {
+    pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
+}
+
 impl pallet_committee::Config for Test {
+    type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
+    type VotingPeriod = VotingPeriod;
+    type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+    type ProposalNonce = u32;
     type Origin = Origin;
-    type Proposal = Call;
+    type Action = Call;
     type Event = Event;
 }
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
+    let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
     t.into()
