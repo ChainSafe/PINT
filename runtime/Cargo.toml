@@ -170,11 +170,10 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dependencies.template]
+[dependencies.pallet-local-treasury]
 default-features = false
-package = 'pallet-template'
-path = '../pallets/template'
-version = '3.0.0'
+path = '../pallets/local-treasury'
+version = '0.0.1'
 
 
 # Cumulus dependencies
