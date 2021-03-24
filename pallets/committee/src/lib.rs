@@ -20,6 +20,7 @@ pub mod pallet {
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
+        traits::{ChangeMembers, InitializeMembers},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
@@ -84,13 +85,39 @@ pub mod pallet {
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     /// Info for keeping track of a motion being voted on.
-    pub struct VoteAggregate<T: Config> {
+    /// This implements Default which is
+    pub struct VoteAggregate<AccountId, BlockNumber> {
         /// The current set of voters that approved it.
-        ayes: Vec<AccountIdFor<T>>,
+        ayes: Vec<AccountId>,
         /// The current set of voters that rejected it.
-        nays: Vec<AccountIdFor<T>>,
+        nays: Vec<AccountId>,
+        /// The current set of votes abstaining.
+        abstenations: Vec<AccountId>,
         /// The hard end time of this vote.
-        end: BlockNumberFor<T>,
+        end: BlockNumber,
+    }
+
+    impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
+        pub fn new_with_end(end: BlockNumber) -> Self {
+            Self {
+                end,
+                ..Default::default()
+            }
+        }
+
+        pub fn cast_vote(&mut self, voter: AccountId, vote: Vote) {
+            match vote {
+                Vote::Aye => self.ayes.push(voter),
+                Vote::Nay => self.nays.push(voter),
+                Vote::Abstain => self.abstenations.push(voter),
+            }
+        }
+
+        pub fn has_voted(&self, voter: &AccountId) -> bool {
+            self.ayes.contains(voter)
+                | self.nays.contains(voter)
+                | self.abstenations.contains(voter)
+        }
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -120,6 +147,20 @@ pub mod pallet {
     pub type Proposals<T: Config> =
         StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
 
+    #[pallet::storage]
+    /// Stores a vector of the hashes of currently active proposals for iteration
+    pub type Members<T: Config> = StorageValue<_, Vec<AccountIdFor<T>>, ValueQuery>;
+
+    #[pallet::storage]
+    /// Store a mapping (hash) -> VoteAggregate for all existing proposals.
+    pub type Votes<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        HashFor<T>,
+        VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>,
+        OptionQuery,
+    >;
+
     // end storage defs
 
     #[pallet::event]
@@ -130,6 +171,12 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
+        /// The origin making the call is not a member and it is a requirement that they are
+        NotMember,
+        /// Member has attempted to vote multiple times on a single proposal
+        DuplicateVote,
+        /// The hash provided does not have an associated proposal
+        NoProposalWithHash,
         /// The data type for enumerating the proposals has reached its upper bound.
         /// No more proposals can be made
         ProposalNonceExhausted,
@@ -157,6 +204,24 @@ pub mod pallet {
         pub fn get_proposal(hash: &HashFor<T>) -> Option<Proposal<T>> {
             <Proposals<T>>::get(hash)
         }
+
+        /// Returns None if no proposal exists
+        pub fn get_votes_for(
+            hash: &HashFor<T>,
+        ) -> Option<VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>> {
+            <Votes<T>>::get(hash)
+        }
+
+        pub fn members() -> Vec<AccountIdFor<T>> {
+            <Members<T>>::get()
+        }
+
+        pub fn ensure_member(origin: OriginFor<T>) -> Result<AccountIdFor<T>, DispatchError> {
+            let who = ensure_signed(origin)?;
+            let members = Self::members();
+            ensure!(members.contains(&who), Error::<T>::NotMember);
+            Ok(who)
+        }
     }
 
     #[pallet::call]
@@ -175,12 +240,61 @@ pub mod pallet {
             // Store the proposal by its hash.
             <Proposals<T>>::insert(proposal_hash, proposal);
 
-            // Add the proposal to the active proposals
+            // Add the proposal to the active proposals and set the initial votes
+            // Set the end block number to the current block plus the voting period
             <ActiveProposals<T>>::append(&proposal_hash);
+            let end = frame_system::Pallet::<T>::block_number() + T::VotingPeriod::get();
+            <Votes<T>>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
             Self::deposit_event(Event::Proposed(proposer, nonce, proposal_hash));
 
             Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn vote(
+            origin: OriginFor<T>,
+            proposal_hash: HashFor<T>,
+            vote: Vote,
+        ) -> DispatchResultWithPostInfo {
+            // Only members can vote
+            let voter = Self::ensure_member(origin)?;
+
+            <Votes<T>>::try_mutate(&proposal_hash, |maybe_votes| {
+                if let Some(votes) = maybe_votes {
+                    // members can vote only once
+                    ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
+                    votes.cast_vote(voter, vote); // mutates votes in place
+                    Ok(())
+                } else {
+                    Err(Error::<T>::NoProposalWithHash)
+                }
+            })?;
+
+            Ok(().into())
+        }
+    }
+
+    impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
+        fn initialize_members(members: &[AccountIdFor<T>]) {
+            if !members.is_empty() {
+                assert!(
+                    <Members<T>>::get().is_empty(),
+                    "Members are already initialized!"
+                );
+                <Members<T>>::put(members);
+            }
+        }
+    }
+
+    impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
+        fn change_members_sorted(
+            _incoming: &[AccountIdFor<T>],
+            _outgoing: &[AccountIdFor<T>],
+            new: &[AccountIdFor<T>],
+        ) {
+            // TODO: Remove outgoing members from any currently active votes
+            Members::<T>::put(new);
         }
     }
 }
