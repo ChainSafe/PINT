@@ -185,6 +185,8 @@ pub mod pallet {
         NotMember,
         /// Member has attempted to vote multiple times on a single proposal
         DuplicateVote,
+        /// Attempted to cast a vote outside the accepted voting period for a proposal
+        NotInVotingPeriod,
         /// The hash provided does not have an associated proposal
         NoProposalWithHash,
         /// The data type for enumerating the proposals has reached its upper bound.
@@ -241,7 +243,15 @@ pub mod pallet {
                 &frame_system::Pallet::<T>::block_number(),
                 &T::VotingPeriod::get(),
                 &T::ProposalSubmissionPeriod::get(),
-            ).ok_or(Error::<T>::InvalidOperationInEndBlockComputation.into())
+            )
+            .ok_or(Error::<T>::InvalidOperationInEndBlockComputation.into())
+        }
+
+        pub fn within_voting_period(
+            votes: &VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>,
+        ) -> bool {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
         }
     }
 
@@ -284,6 +294,11 @@ pub mod pallet {
 
             <Votes<T>>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {
+                    // Can only vote within the allowed range of blocks for this proposal
+                    ensure!(
+                        Self::within_voting_period(&votes),
+                        Error::<T>::NotInVotingPeriod
+                    );
                     // members can vote only once
                     ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
                     votes.cast_vote(voter, vote); // mutates votes in place
