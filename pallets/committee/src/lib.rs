@@ -11,11 +11,14 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod utils;
+
 #[frame_support::pallet]
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates this lint
 // requires boxed_local exception as extrincis must accept boxed calls but clippy only sees the local function
 #[allow(clippy::unused_unit, clippy::boxed_local)]
 pub mod pallet {
+    use crate::utils;
     use frame_support::{
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
@@ -187,6 +190,9 @@ pub mod pallet {
         /// The data type for enumerating the proposals has reached its upper bound.
         /// No more proposals can be made
         ProposalNonceExhausted,
+        /// There was a numerical overflow or underflow in calculating when the voting period
+        /// should end
+        InvalidOperationInEndBlockComputation,
     }
 
     #[pallet::hooks]
@@ -229,6 +235,14 @@ pub mod pallet {
             ensure!(members.contains(&who), Error::<T>::NotMember);
             Ok(who)
         }
+
+        pub fn get_next_voting_period_end() -> Result<BlockNumberFor<T>, DispatchError> {
+            utils::get_vote_end(
+                &frame_system::Pallet::<T>::block_number(),
+                &T::VotingPeriod::get(),
+                &T::ProposalSubmissionPeriod::get(),
+            ).ok_or(Error::<T>::InvalidOperationInEndBlockComputation.into())
+        }
     }
 
     #[pallet::call]
@@ -248,9 +262,10 @@ pub mod pallet {
             <Proposals<T>>::insert(proposal_hash, proposal);
 
             // Add the proposal to the active proposals and set the initial votes
-            // Set the end block number to the current block plus the voting period
+            // Set the end block number to the end of the next voting period
             <ActiveProposals<T>>::append(&proposal_hash);
-            let end = frame_system::Pallet::<T>::block_number() + T::VotingPeriod::get();
+            let end = Self::get_next_voting_period_end()?;
+
             <Votes<T>>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
             Self::deposit_event(Event::Proposed(proposer, nonce, proposal_hash));
