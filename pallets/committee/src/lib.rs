@@ -15,7 +15,7 @@ mod utils;
 
 #[frame_support::pallet]
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates this lint
-// requires boxed_local exception as extrincis must accept boxed calls but clippy only sees the local function
+// requires boxed_local exception as extrinsics must accept boxed calls but clippy only sees the local function
 #[allow(clippy::unused_unit, clippy::boxed_local)]
 pub mod pallet {
     use crate::utils;
