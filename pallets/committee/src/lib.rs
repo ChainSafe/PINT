@@ -109,7 +109,7 @@ pub mod pallet {
         }
 
         // This does not check if a vote is a duplicate, This must be done before calling this function
-        pub fn cast_vote(&mut self, voter: AccountId, vote: Vote) {
+        pub fn cast_vote(&mut self, voter: AccountId, vote: &Vote) {
             match vote {
                 Vote::Aye => self.ayes.push(voter),
                 Vote::Nay => self.nays.push(voter),
@@ -176,7 +176,12 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
+        /// A new proposal has been created
+        /// [proposer_address, proposal_nonce, proposal_hash]
         Proposed(AccountIdFor<T>, T::ProposalNonce, T::Hash),
+        /// A vote was cast
+        /// [voter_address, proposal_hash, vote]
+        VoteCast(AccountIdFor<T>, T::Hash, Vote),
     }
 
     #[pallet::error]
@@ -198,7 +203,17 @@ pub mod pallet {
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+        fn on_initialize(n: BlockNumberFor<T>) -> Weight {
+            // perform upkeep only at the start of a new cycle
+            if Self::get_next_voting_period_end(&n)
+                == Ok(n + T::VotingPeriod::get() + T::ProposalSubmissionPeriod::get())
+            {
+                Self::upkeep(n);
+            }
+            0 // TODO: Calcualte the non-negotiable weight consumed by performing upkeep
+        }
+    }
 
     impl<T: Config> Pallet<T> {
         fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
@@ -238,13 +253,15 @@ pub mod pallet {
             Ok(who)
         }
 
-        pub fn get_next_voting_period_end() -> Result<BlockNumberFor<T>, DispatchError> {
+        pub fn get_next_voting_period_end(
+            block_number: &BlockNumberFor<T>,
+        ) -> Result<BlockNumberFor<T>, DispatchError> {
             utils::get_vote_end(
-                &frame_system::Pallet::<T>::block_number(),
+                block_number,
                 &T::VotingPeriod::get(),
                 &T::ProposalSubmissionPeriod::get(),
             )
-            .ok_or(Error::<T>::InvalidOperationInEndBlockComputation.into())
+            .ok_or_else(|| Error::<T>::InvalidOperationInEndBlockComputation.into())
         }
 
         pub fn within_voting_period(
@@ -252,6 +269,16 @@ pub mod pallet {
         ) -> bool {
             let current_block = frame_system::Pallet::<T>::block_number();
             current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
+        }
+
+        fn upkeep(n: BlockNumberFor<T>) {
+            // clear out proposals that are no longer active
+            ActiveProposals::<T>::mutate(|proposals| {
+                proposals.retain(|hash| {
+                    let votes = <Votes<T>>::get(hash).unwrap();
+                    votes.end < n
+                })
+            })
         }
     }
 
@@ -274,7 +301,7 @@ pub mod pallet {
             // Add the proposal to the active proposals and set the initial votes
             // Set the end block number to the end of the next voting period
             <ActiveProposals<T>>::append(&proposal_hash);
-            let end = Self::get_next_voting_period_end()?;
+            let end = Self::get_next_voting_period_end(&frame_system::Pallet::<T>::block_number())?;
 
             <Votes<T>>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
@@ -301,7 +328,8 @@ pub mod pallet {
                     );
                     // members can vote only once
                     ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
-                    votes.cast_vote(voter, vote); // mutates votes in place
+                    votes.cast_vote(voter.clone(), &vote); // mutates votes in place
+                    Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
                     Ok(())
                 } else {
                     Err(Error::<T>::NoProposalWithHash)
