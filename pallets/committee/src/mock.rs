@@ -5,7 +5,7 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_committee;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{ord_parameter_types, parameter_types, traits::{OnFinalize, OnInitialize}};
 use frame_system as system;
 
 use sp_core::H256;
@@ -61,9 +61,12 @@ impl system::Config for Test {
     type SS58Prefix = SS58Prefix;
 }
 
+pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
+pub(crate) const VOTING_PERIOD: <Test as system::Config>::BlockNumber = 5;
+
 parameter_types! {
-    pub const ProposalSubmissionPeriod: <Test as system::Config>::BlockNumber = 10;
-    pub const VotingPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub const ProposalSubmissionPeriod: <Test as system::Config>::BlockNumber = PROPOSAL_SUBMISSION_PERIOD;
+    pub const VotingPeriod: <Test as system::Config>::BlockNumber = VOTING_PERIOD;
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
 ord_parameter_types! {
@@ -79,6 +82,17 @@ impl pallet_committee::Config for Test {
     type Origin = Origin;
     type Action = Call;
     type Event = Event;
+}
+
+pub fn run_to_block(n: u64) {
+    while System::block_number() < n {
+        // add custom module on_finalize here if implemented
+        System::on_finalize(System::block_number());
+        System::set_block_number(System::block_number() + 1);
+        System::on_initialize(System::block_number());
+        // need to explicitly call the committee pallet on_initialize
+        Committee::on_initialize(System::block_number());
+    }
 }
 
 // Build genesis storage according to the mock runtime.

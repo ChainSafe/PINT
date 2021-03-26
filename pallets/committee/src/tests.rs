@@ -14,6 +14,10 @@ fn make_action(value: u64) -> Call {
     Call::System(system::Call::remark(value.encode()))
 }
 
+//
+// Creating a proposal
+//
+
 #[test]
 fn proposer_can_create_a_proposal() {
     new_test_ext().execute_with(|| {
@@ -88,3 +92,28 @@ fn cannot_exceed_max_nonce() {
         );
     });
 }
+
+#[test]
+fn upkeep_drops_proposal_from_active_list() {
+    new_test_ext().execute_with(|| {
+        let action = make_action(123);
+        let proposal = pallet::Proposal::<Test>::new(0, action.clone());
+
+        assert_ok!(Committee::propose(
+            Origin::signed(PROPOSER_ACCOUNT_ID),
+            Box::new(action)
+        ));
+
+        assert!(Committee::active_proposals().contains(&proposal.hash()));
+        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD - 1);
+        assert!(Committee::active_proposals().contains(&proposal.hash()));
+        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD);
+        assert!(!Committee::active_proposals().contains(&proposal.hash())); // Dropped
+    });    
+}
+
+//
+// Voting on a proposal
+//
+
+

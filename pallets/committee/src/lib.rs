@@ -275,8 +275,11 @@ pub mod pallet {
             // clear out proposals that are no longer active
             ActiveProposals::<T>::mutate(|proposals| {
                 proposals.retain(|hash| {
-                    let votes = <Votes<T>>::get(hash).unwrap();
-                    votes.end < n
+                    if let Some(votes) = Self::get_votes_for(hash) {
+                        votes.end > n
+                    } else {
+                        false
+                    }
                 })
             })
         }
