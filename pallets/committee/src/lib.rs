@@ -88,14 +88,14 @@ pub mod pallet {
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
     /// Info for keeping track of a motion being voted on.
-    /// This implements Default which is
+    /// Default is empty vectors for all votes
     pub struct VoteAggregate<AccountId, BlockNumber> {
         /// The current set of voters that approved it.
         ayes: Vec<AccountId>,
         /// The current set of voters that rejected it.
         nays: Vec<AccountId>,
         /// The current set of votes abstaining.
-        abstenations: Vec<AccountId>,
+        abstentions: Vec<AccountId>,
         /// The hard end time of this vote.
         end: BlockNumber,
     }
@@ -113,20 +113,20 @@ pub mod pallet {
             match vote {
                 Vote::Aye => self.ayes.push(voter),
                 Vote::Nay => self.nays.push(voter),
-                Vote::Abstain => self.abstenations.push(voter),
+                Vote::Abstain => self.abstentions.push(voter),
             }
         }
 
         pub fn remove_voters(&mut self, voters: &[AccountId]) {
             self.ayes.retain(|x| !voters.contains(x));
             self.nays.retain(|x| !voters.contains(x));
-            self.abstenations.retain(|x| !voters.contains(x));
+            self.abstentions.retain(|x| !voters.contains(x));
         }
 
         pub fn has_voted(&self, voter: &AccountId) -> bool {
             self.ayes.contains(voter)
                 | self.nays.contains(voter)
-                | self.abstenations.contains(voter)
+                | self.abstentions.contains(voter)
         }
     }
 
