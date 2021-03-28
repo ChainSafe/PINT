@@ -5,7 +5,10 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_committee;
-use frame_support::{ord_parameter_types, parameter_types, traits::{OnFinalize, OnInitialize}};
+use frame_support::{
+    ord_parameter_types, parameter_types,
+    traits::{OnFinalize, OnInitialize},
+};
 use frame_system as system;
 
 use sp_core::H256;

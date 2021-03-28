@@ -101,6 +101,20 @@ pub mod pallet {
     }
 
     impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
+        pub fn new(
+            ayes: Vec<AccountId>,
+            nays: Vec<AccountId>,
+            abstentions: Vec<AccountId>,
+            end: BlockNumber,
+        ) -> Self {
+            Self {
+                ayes,
+                nays,
+                abstentions,
+                end,
+            }
+        }
+
         pub fn new_with_end(end: BlockNumber) -> Self {
             Self {
                 end,
@@ -124,9 +138,7 @@ pub mod pallet {
         }
 
         pub fn has_voted(&self, voter: &AccountId) -> bool {
-            self.ayes.contains(voter)
-                | self.nays.contains(voter)
-                | self.abstentions.contains(voter)
+            self.ayes.contains(voter) | self.nays.contains(voter) | self.abstentions.contains(voter)
         }
     }
 
