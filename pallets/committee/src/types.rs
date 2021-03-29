@@ -1,11 +1,9 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::{
-    pallet_prelude::*,
-};
-use sp_runtime::traits::Hash;
 use crate::Config;
+use frame_support::pallet_prelude::*;
+use sp_runtime::traits::Hash;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.

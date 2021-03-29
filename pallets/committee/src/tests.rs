@@ -11,6 +11,13 @@ use std::convert::TryFrom;
 
 const ASHLEY: AccountId = 0;
 
+// Start of the first submission period
+const START_OF_S1: <Test as system::Config>::BlockNumber = VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
+// Start of first voting period
+const START_OF_V1: <Test as system::Config>::BlockNumber = 2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
+
+
+
 /// value is used to make unique actions
 fn make_action(value: u64) -> Call {
     Call::System(system::Call::remark(value.encode()))
@@ -96,9 +103,9 @@ fn upkeep_drops_proposal_from_active_list() {
         let proposal = submit_proposal(123);
 
         assert!(Committee::active_proposals().contains(&proposal.hash()));
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD - 1);
+        run_to_block(START_OF_V1 - 1);
         assert!(Committee::active_proposals().contains(&proposal.hash()));
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD);
+        run_to_block(START_OF_V1);
         assert!(!Committee::active_proposals().contains(&proposal.hash())); // Dropped
     });
 }
@@ -112,7 +119,7 @@ fn non_member_cannot_vote() {
     new_test_ext().execute_with(|| {
         let proposal = submit_proposal(123);
         let expected_votes =
-            VoteAggregate::new_with_end(2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+            VoteAggregate::new_with_end(START_OF_V1);
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
             pallet::Error::<Test>::NotMember
@@ -157,18 +164,18 @@ fn member_can_vote_in_voting_period() {
             vec![ASHLEY],
             vec![],
             vec![],
-            2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD,
+            START_OF_V1,
         );
         let proposal = submit_proposal(123);
 
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD - 1);
+        run_to_block(START_OF_S1 - 1);
         // still not in voting period
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
             pallet::Error::<Test>::NotInVotingPeriod
         );
 
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+        run_to_block(START_OF_S1);
         // first block in voting period
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
@@ -190,10 +197,10 @@ fn member_can_vote_aye() {
             vec![ASHLEY],
             vec![],
             vec![],
-            2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD,
+            START_OF_V1,
         );
         let proposal = submit_proposal(123);
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+        run_to_block(START_OF_S1);
         // first block in voting period
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
@@ -215,10 +222,10 @@ fn member_can_vote_nay() {
             vec![],
             vec![ASHLEY],
             vec![],
-            2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD,
+            START_OF_V1,
         );
         let proposal = submit_proposal(123);
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+        run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
             proposal.hash(),
@@ -239,10 +246,10 @@ fn member_can_vote_abstain() {
             vec![],
             vec![],
             vec![ASHLEY],
-            2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD,
+            START_OF_V1,
         );
         let proposal = submit_proposal(123);
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+        run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
             proposal.hash(),
@@ -261,7 +268,7 @@ fn member_cannot_vote_after_voting_period() {
         Committee::initialize_members(&[ASHLEY]);
         let proposal = submit_proposal(123);
 
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD - 1);
+        run_to_block(START_OF_V1 - 1);
         // last block in voting period
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
@@ -269,7 +276,7 @@ fn member_cannot_vote_after_voting_period() {
             Vote::Aye
         ));
 
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD + VOTING_PERIOD);
+        run_to_block(START_OF_V1);
         // first block after voting period
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
@@ -287,10 +294,10 @@ fn member_cannot_vote_multiple_times() {
             vec![ASHLEY],
             vec![],
             vec![],
-            2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD,
+            START_OF_V1,
         );
 
-        run_to_block(VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD);
+        run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
             Origin::signed(ASHLEY),
             proposal.hash(),
@@ -303,6 +310,109 @@ fn member_cannot_vote_multiple_times() {
         assert_eq!(
             Committee::get_votes_for(&proposal.hash()),
             Some(expected_votes)
+        );
+    });
+}
+
+//
+// Closing/executing a proposal
+//
+
+#[test]
+fn non_execution_origin_cannot_close() {
+    new_test_ext().execute_with(|| {
+        Committee::initialize_members(&[ASHLEY]);
+        let proposal = submit_proposal(123);
+        run_to_block(START_OF_S1);
+
+        assert_ok!(Committee::vote(
+            Origin::signed(ASHLEY),
+            proposal.hash(),
+            Vote::Aye
+        ));
+        assert_noop!(
+            Committee::close(Origin::signed(ASHLEY), proposal.hash()),
+            BadOrigin
+        );
+    });
+}
+
+#[test]
+fn cannot_close_until_voting_period_elapsed() {
+    new_test_ext().execute_with(|| {
+        Committee::initialize_members(&[ASHLEY]);
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        assert_ok!(Committee::vote(
+            Origin::signed(ASHLEY),
+            proposal.hash(),
+            Vote::Aye
+        ));
+
+        assert_noop!(
+            Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+            pallet::Error::<Test>::VotingPeriodNotElapsed
+        );
+    });
+}
+
+#[test]
+fn cannot_close_if_insufficent_votes() {
+    new_test_ext().execute_with(|| {
+        Committee::initialize_members(&[ASHLEY]);
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_V1 + 1);
+        assert_noop!(
+            Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+            pallet::Error::<Test>::ProposalNotAccepted
+        );
+    });
+}
+
+#[test]
+fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
+    new_test_ext().execute_with(|| {
+        Committee::initialize_members(&[ASHLEY]);
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        assert_ok!(Committee::vote(
+            Origin::signed(ASHLEY),
+            proposal.hash(),
+            Vote::Aye
+        ));
+
+        run_to_block(START_OF_V1 + 1);
+        assert_ok!(Committee::close(
+            Origin::signed(EXECUTER_ACCOUNT_ID),
+            proposal.hash()
+        ));
+    });
+}
+
+#[test]
+fn cannot_execute_proposal_twice() {
+    new_test_ext().execute_with(|| {
+        Committee::initialize_members(&[ASHLEY]);
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        assert_ok!(Committee::vote(
+            Origin::signed(ASHLEY),
+            proposal.hash(),
+            Vote::Aye
+        ));
+
+        run_to_block(START_OF_V1 + 1);
+        assert_ok!(Committee::close(
+            Origin::signed(EXECUTER_ACCOUNT_ID),
+            proposal.hash()
+        ));
+        assert_noop!(
+            Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+            pallet::Error::<Test>::ProposalAlreadyExecuted
         );
     });
 }

@@ -11,8 +11,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod utils;
 mod types;
+mod utils;
 
 #[frame_support::pallet]
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates this lint
