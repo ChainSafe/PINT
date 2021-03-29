@@ -183,7 +183,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-
     // end storage defs
 
     #[pallet::event]
