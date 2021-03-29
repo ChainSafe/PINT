@@ -27,7 +27,7 @@ pub mod pallet {
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
-    use frame_system::RawOrigin;
+    // use frame_system::RawOrigin;
     use sp_runtime::traits::{CheckedAdd, Hash, One, Zero};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -68,6 +68,15 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
+
+    /// Origin for the committee module.
+    #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+    pub enum RawOrigin<AccountId> {
+        /// Action is executed by the committee. Contains the closer account and the members that voted Aye
+        ApprovedByCommittee(AccountId, Vec<AccountId>),
+    }
+
+    pub type Origin<T> = RawOrigin<<T as frame_system::Config>::AccountId>;
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
     /// This represents an instance of a proposal that can be voted on.
@@ -140,6 +149,13 @@ pub mod pallet {
         pub fn has_voted(&self, voter: &AccountId) -> bool {
             self.ayes.contains(voter) | self.nays.contains(voter) | self.abstentions.contains(voter)
         }
+
+        // to be accepted a proposal must have a majority of non-abstainig members vote Aye
+        // TODO: Check how non-voting memnbers should be handled
+        // TODO: Check how ties should be broken
+        pub fn is_accepted(&self) -> bool {
+            self.ayes.len() > self.nays.len()
+        }
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -170,6 +186,11 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
 
     #[pallet::storage]
+    /// Store a mapping (hash) -> () for all proposals that have been executed
+    pub type ExecutedProposals<T: Config> =
+        StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
+
+    #[pallet::storage]
     /// Stores a vector of the hashes of currently active proposals for iteration
     pub type Members<T: Config> = StorageValue<_, Vec<AccountIdFor<T>>, ValueQuery>;
 
@@ -183,7 +204,6 @@ pub mod pallet {
         OptionQuery,
     >;
 
-
     // end storage defs
 
     #[pallet::event]
@@ -195,6 +215,10 @@ pub mod pallet {
         /// A vote was cast
         /// [voter_address, proposal_hash, vote]
         VoteCast(AccountIdFor<T>, T::Hash, Vote),
+        /// A proposal was closed and executed. Any errors for calling the proposal action
+        /// are included
+        /// [proposal_hash, result]
+        ClosedAndExecutedProposal(T::Hash, DispatchResult),
     }
 
     #[pallet::error]
@@ -205,6 +229,12 @@ pub mod pallet {
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
+        /// Attempted to close a proposal before the voting period is over
+        VotingPeriodNotElapsed,
+        /// Tried to close a proposal that does not meet the vote requirements
+        ProposalNotAccepted,
+        /// Attempted to execute a proposal that has already been executed
+        ProposalAlreadyExecuted,
         /// The hash provided does not have an associated proposal
         NoProposalWithHash,
         /// The data type for enumerating the proposals has reached its upper bound.
@@ -351,6 +381,53 @@ pub mod pallet {
                     Err(Error::<T>::NoProposalWithHash)
                 }
             })?;
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn close(
+            origin: OriginFor<T>,
+            proposal_hash: HashFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let closer = ensure_signed(origin.clone())?;
+            T::ProposalExecutionOrigin::ensure_origin(origin)?;
+
+            // ensure proposal has not already been executed
+            ensure!(
+                !ExecutedProposals::<T>::contains_key(proposal_hash),
+                Error::<T>::ProposalAlreadyExecuted
+            );
+
+            let votes =
+                Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+            let current_block = frame_system::Pallet::<T>::block_number();
+
+            // Ensure voting period is over
+            ensure!(
+                current_block > votes.end,
+                Error::<T>::VotingPeriodNotElapsed
+            );
+
+            // Ensure voting has accepted proposal
+            ensure!(votes.is_accepted(), Error::<T>::ProposalNotAccepted);
+
+            // Execute the proposal
+            let proposal =
+                Self::get_proposal(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+            let result = proposal
+                .1
+                .dispatch(Origin::<T>::ApprovedByCommittee(closer, votes.ayes).into());
+
+            // register that this proposal has been executed
+            ExecutedProposals::<T>::insert(proposal_hash, ());
+
+            Self::deposit_event(Event::ClosedAndExecutedProposal(
+                proposal_hash,
+                result.map(|_| ()).map_err(|e| e.error),
+            ));
+
+            // TODO: Handle weight used by the dispatch call in weight calculation
 
             Ok(().into())
         }
