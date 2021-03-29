@@ -3,15 +3,22 @@
 
 // TODO: This will be moved into the AssetIndex pallet when that is implemented
 // Required here for mock and testing the SAFT registry
+#![allow(dead_code)]
 
-use sp_runtime::DispatchError;
+use frame_support::sp_runtime::DispatchError;
 
 pub enum AssetAvailability {
-	Liquid,
-	SAFT,
+    Liquid,
+    SAFT,
 }
 
 pub trait AssetRecorder<AssetId, Balance> {
-	fn add_asset(id: AssetId, units: Balance, availability: AssetAvailability, value: Balance) -> Result<(), DispatchError>;
-	fn remove_asset(id: AssetId) -> Result<(), DispatchError>;
+    fn add_asset(
+        id: &AssetId,
+        units: &Balance,
+        availability: &AssetAvailability,
+        value: &Balance,
+    ) -> Result<(), DispatchError>;
+
+    fn remove_asset(id: &AssetId) -> Result<(), DispatchError>;
 }

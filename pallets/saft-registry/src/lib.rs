@@ -17,13 +17,12 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    use crate::traits::{AssetAvailability, AssetRecorder};
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        pallet_prelude::*,
-        sp_runtime::{traits::{AtLeast32BitUnsigned}},
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
+        sp_runtime::traits::AtLeast32BitUnsigned,
     };
     use frame_system::pallet_prelude::*;
-    use crate::traits::AssetRecorder;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -31,7 +30,6 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         type AssetRecorder: AssetRecorder<Self::AssetId, Self::Balance>;
         type Balance: Parameter + AtLeast32BitUnsigned;
-        type NAV: Parameter + AtLeast32BitUnsigned;
         type AssetId: Parameter;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -44,10 +42,7 @@ pub mod pallet {
 
     impl<Balance, NAV> SAFTRecord<Balance, NAV> {
         pub fn new(nav: NAV, units: Balance) -> Self {
-            Self {
-                nav,
-                units
-            }
+            Self { nav, units }
         }
     }
 
@@ -57,8 +52,13 @@ pub mod pallet {
 
     #[pallet::storage]
     /// Store a mapping (hash) -> Proposal for all existing proposals.
-    pub type ActiveSAFTs<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AssetId, Vec<SAFTRecord<T::Balance, T::NAV>>, ValueQuery>;
+    pub type ActiveSAFTs<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AssetId,
+        Vec<SAFTRecord<T::Balance, T::Balance>>,
+        ValueQuery,
+    >;
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -71,17 +71,17 @@ pub mod pallet {
         SAFTRemoved(T::AssetId, u32),
         /// The NAV for a SAFT was updated
         /// [AssetId, AssetIndex]
-        NavUpdated(T::AssetId, u32)
+        NavUpdated(T::AssetId, u32),
     }
 
     #[pallet::error]
     pub enum Error<T> {
         // No SAFT with the given index exists for the given AssetId
-        AssetIndexOutOfBounds
+        AssetIndexOutOfBounds,
     }
 
     #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> { }
+    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
@@ -89,12 +89,21 @@ pub mod pallet {
         pub fn add_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            nav: T::NAV,
-            units: T::Balance
+            nav: T::Balance,
+            units: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
 
-            ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units));
+            ActiveSAFTs::<T>::append(
+                asset_id.clone(),
+                SAFTRecord::new(nav.clone(), units.clone()),
+            );
+            <T as Config>::AssetRecorder::add_asset(
+                &asset_id,
+                &units,
+                &AssetAvailability::SAFT,
+                &nav,
+            )?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
@@ -108,15 +117,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
             let index_usize: usize = index as usize;
-            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| {
+            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if index_usize >= safts.len() {
-                    Err(Error::<T>::AssetIndexOutOfBounds)
+                    Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
                     safts.remove(index_usize);
+                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())
-                }   
+                }
             })?;
 
             Ok(().into())
@@ -129,7 +139,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             index: u32,
-            latest_nav: T::NAV,
+            latest_nav: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
             let index_usize: usize = index as usize;
@@ -142,7 +152,7 @@ pub mod pallet {
                     // get_mut will return None if index out of bounds
                     Err(Error::<T>::AssetIndexOutOfBounds)
                 }
-            })?;            
+            })?;
             Ok(().into())
         }
     }
