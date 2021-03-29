@@ -12,11 +12,11 @@ use std::convert::TryFrom;
 const ASHLEY: AccountId = 0;
 
 // Start of the first submission period
-const START_OF_S1: <Test as system::Config>::BlockNumber = VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
+const START_OF_S1: <Test as system::Config>::BlockNumber =
+    VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
 // Start of first voting period
-const START_OF_V1: <Test as system::Config>::BlockNumber = 2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
-
-
+const START_OF_V1: <Test as system::Config>::BlockNumber =
+    2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
 
 /// value is used to make unique actions
 fn make_action(value: u64) -> Call {
@@ -118,8 +118,7 @@ fn upkeep_drops_proposal_from_active_list() {
 fn non_member_cannot_vote() {
     new_test_ext().execute_with(|| {
         let proposal = submit_proposal(123);
-        let expected_votes =
-            VoteAggregate::new_with_end(START_OF_V1);
+        let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
             pallet::Error::<Test>::NotMember
@@ -160,12 +159,8 @@ fn member_cannot_vote_before_voting_period() {
 fn member_can_vote_in_voting_period() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
-        let expected_votes = VoteAggregate::<AccountId, u64>::new(
-            vec![ASHLEY],
-            vec![],
-            vec![],
-            START_OF_V1,
-        );
+        let expected_votes =
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1 - 1);
@@ -193,12 +188,8 @@ fn member_can_vote_in_voting_period() {
 fn member_can_vote_aye() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
-        let expected_votes = VoteAggregate::<AccountId, u64>::new(
-            vec![ASHLEY],
-            vec![],
-            vec![],
-            START_OF_V1,
-        );
+        let expected_votes =
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         // first block in voting period
@@ -218,12 +209,8 @@ fn member_can_vote_aye() {
 fn member_can_vote_nay() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
-        let expected_votes = VoteAggregate::<AccountId, u64>::new(
-            vec![],
-            vec![ASHLEY],
-            vec![],
-            START_OF_V1,
-        );
+        let expected_votes =
+            VoteAggregate::<AccountId, u64>::new(vec![], vec![ASHLEY], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
@@ -242,12 +229,8 @@ fn member_can_vote_nay() {
 fn member_can_vote_abstain() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
-        let expected_votes = VoteAggregate::<AccountId, u64>::new(
-            vec![],
-            vec![],
-            vec![ASHLEY],
-            START_OF_V1,
-        );
+        let expected_votes =
+            VoteAggregate::<AccountId, u64>::new(vec![], vec![], vec![ASHLEY], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
@@ -290,12 +273,8 @@ fn member_cannot_vote_multiple_times() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
         let proposal = submit_proposal(123);
-        let expected_votes = VoteAggregate::<AccountId, u64>::new(
-            vec![ASHLEY],
-            vec![],
-            vec![],
-            START_OF_V1,
-        );
+        let expected_votes =
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
 
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
