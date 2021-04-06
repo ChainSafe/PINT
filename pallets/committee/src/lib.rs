@@ -170,7 +170,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
 
     #[pallet::storage]
-    /// Stores a vector of the hashes of currently active proposals for iteration
+    /// Stores a vector of account IDs of current committee members
     pub type Members<T: Config> = StorageValue<_, Vec<AccountIdFor<T>>, ValueQuery>;
 
     #[pallet::storage]
@@ -234,7 +234,7 @@ pub mod pallet {
             let nonce = <ProposalCount<T>>::get();
             match nonce.checked_add(&T::ProposalNonce::one()) {
                 Some(next) => {
-                    <ProposalCount<T>>::set(next);
+                    ProposalCount::<T>::set(next);
                     Ok(nonce)
                 }
                 None => Err(Error::ProposalNonceExhausted),
@@ -242,22 +242,22 @@ pub mod pallet {
         }
 
         pub fn active_proposals() -> Vec<HashFor<T>> {
-            <ActiveProposals<T>>::get()
+            ActiveProposals::<T>::get()
         }
 
         pub fn get_proposal(hash: &HashFor<T>) -> Option<Proposal<T>> {
-            <Proposals<T>>::get(hash)
+            Proposals::<T>::get(hash)
         }
 
         /// Get the votes for a proposal. Returns None if no proposal exists
         pub fn get_votes_for(
             hash: &HashFor<T>,
         ) -> Option<VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>> {
-            <Votes<T>>::get(hash)
+            Votes::<T>::get(hash)
         }
 
         pub fn members() -> Vec<AccountIdFor<T>> {
-            <Members<T>>::get()
+            Members::<T>::get()
         }
 
         /// Used to check if an origin is signed and the signer is a member of
@@ -323,14 +323,14 @@ pub mod pallet {
             let proposal_hash = proposal.hash();
 
             // Store the proposal by its hash.
-            <Proposals<T>>::insert(proposal_hash, proposal);
+            Proposals::<T>::insert(proposal_hash, proposal);
 
             // Add the proposal to the active proposals and set the initial votes
             // Set the end block number to the end of the next voting period
-            <ActiveProposals<T>>::append(&proposal_hash);
+            ActiveProposals::<T>::append(&proposal_hash);
             let end = Self::get_next_voting_period_end(&frame_system::Pallet::<T>::block_number())?;
 
-            <Votes<T>>::insert(proposal_hash, VoteAggregate::new_with_end(end));
+            Votes::<T>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
             Self::deposit_event(Event::Proposed(proposer, nonce, proposal_hash));
 
@@ -378,7 +378,7 @@ pub mod pallet {
                     <Members<T>>::get().is_empty(),
                     "Members are already initialized!"
                 );
-                <Members<T>>::put(members);
+                Members::<T>::put(members);
             }
         }
     }
