@@ -228,6 +228,8 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Gets a new unused proposal nonce and increments the nonce in the store
+        /// Returns an error if the data type used for the nonce exceeds is maximum value
         fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
             let nonce = <ProposalCount<T>>::get();
             match nonce.checked_add(&T::ProposalNonce::one()) {
@@ -247,7 +249,7 @@ pub mod pallet {
             <Proposals<T>>::get(hash)
         }
 
-        /// Returns None if no proposal exists
+        /// Get the votes for a proposal. Returns None if no proposal exists
         pub fn get_votes_for(
             hash: &HashFor<T>,
         ) -> Option<VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>> {
@@ -258,6 +260,8 @@ pub mod pallet {
             <Members<T>>::get()
         }
 
+        /// Used to check if an origin is signed and the signer is a member of
+        /// the committee
         pub fn ensure_member(origin: OriginFor<T>) -> Result<AccountIdFor<T>, DispatchError> {
             let who = ensure_signed(origin)?;
             let members = Self::members();
@@ -265,6 +269,7 @@ pub mod pallet {
             Ok(who)
         }
 
+        /// Returns the block at the end of the next voting period
         pub fn get_next_voting_period_end(
             block_number: &BlockNumberFor<T>,
         ) -> Result<BlockNumberFor<T>, DispatchError> {
@@ -276,6 +281,8 @@ pub mod pallet {
             .ok_or_else(|| Error::<T>::InvalidOperationInEndBlockComputation.into())
         }
 
+        /// Return true if the current block indicates it is the voting period 
+        /// for the given VoteAggregate. 
         pub fn within_voting_period(
             votes: &VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>,
         ) -> bool {
@@ -283,6 +290,8 @@ pub mod pallet {
             current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
         }
 
+        /// Function executed at the initialization of the first block in 
+        /// a new voting period cycle. Used to maintain the active proposals store.
         fn upkeep(n: BlockNumberFor<T>) {
             // clear out proposals that are no longer active
             ActiveProposals::<T>::mutate(|proposals| {
@@ -300,6 +309,9 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(10_000)] // TODO: Set weights
+        /// Extrinsic to propose a new action to be voted upon in the next voting period.
+        /// The provided action will be turned into a proposal and added to the list of current active proposals
+        /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
             let proposer = ensure_signed(origin.clone())?;
             T::ProposalSubmissionOrigin::ensure_origin(origin)?;
@@ -326,6 +338,10 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
+        /// Extrinsic to vote on an existing proposal.
+        /// This can only be called by members of the committee.
+        /// Successfully cast votes will be recorded in the state and a proposal
+        /// meeting voting requirements can be executed.
         pub fn vote(
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
