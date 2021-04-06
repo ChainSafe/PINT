@@ -189,10 +189,10 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new proposal has been created
-        /// [proposer_address, proposal_nonce, proposal_hash]
+        /// \[proposer_address, proposal_nonce, proposal_hash\]
         Proposed(AccountIdFor<T>, T::ProposalNonce, T::Hash),
         /// A vote was cast
-        /// [voter_address, proposal_hash, vote]
+        /// \[voter_address, proposal_hash, vote\]
         VoteCast(AccountIdFor<T>, T::Hash, Vote),
     }
 
