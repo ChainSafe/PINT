@@ -84,6 +84,9 @@ impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {
         Ok(())
     }
+    fn update_nav(_: &AssetId, _: &Balance) -> Result<(), DispatchError> { 
+        Ok(()) 
+    }
 }
 
 impl pallet_saft_registry::Config for Test {

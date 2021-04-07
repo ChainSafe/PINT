@@ -51,7 +51,7 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    /// Store a mapping (hash) -> Proposal for all existing proposals.
+    /// Store a mapping (AssetId) -> Vec<SaftRecord> for all active SAFTs
     pub type ActiveSAFTs<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -64,13 +64,13 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new SAFT was added
-        /// [AssetId, AssetIndex]
+        /// /[AssetId, AssetIndex/]
         SAFTAdded(T::AssetId, u32),
         /// A SAFT was removed
-        /// [AssetId, AssetIndex]
+        /// /[AssetId, AssetIndex/]
         SAFTRemoved(T::AssetId, u32),
         /// The NAV for a SAFT was updated
-        /// [AssetId, AssetIndex]
+        /// /[AssetId, AssetIndex/]
         NavUpdated(T::AssetId, u32),
     }
 
@@ -143,14 +143,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
             let index_usize: usize = index as usize;
-            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| {
+            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
-                    nav_record.nav = latest_nav;
+                    nav_record.nav = latest_nav.clone();
+                    <T as Config>::AssetRecorder::update_nav(&asset_id, &latest_nav)?;
                     Self::deposit_event(Event::<T>::NavUpdated(asset_id, index));
                     Ok(())
                 } else {
                     // get_mut will return None if index out of bounds
-                    Err(Error::<T>::AssetIndexOutOfBounds)
+                    Err(Error::<T>::AssetIndexOutOfBounds.into())
                 }
             })?;
             Ok(().into())
