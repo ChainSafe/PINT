@@ -39,7 +39,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The outer origin type.
-        type Origin: From<CommitteeOrigin<Self::AccountId>>;
+        type Origin: From<CommitteeOrigin<Self::AccountId, Self::BlockNumber>>;
         /// The outer call dispatch type.
         type Action: Parameter
             + Dispatchable<Origin = <Self as Config>::Origin, PostInfo = PostDispatchInfo>
@@ -71,7 +71,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
-    pub type Origin<T> = CommitteeOrigin<<T as frame_system::Config>::AccountId>;
+    pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -124,7 +124,7 @@ pub mod pallet {
         VoteCast(AccountIdFor<T>, T::Hash, Vote),
         /// A proposal was closed and executed. Any errors for calling the proposal action
         /// are included
-        /// [proposal_hash, result]
+        /// \[proposal_hash, result\]
         ClosedAndExecutedProposal(T::Hash, DispatchResult),
     }
 
@@ -219,8 +219,8 @@ pub mod pallet {
             .ok_or_else(|| Error::<T>::InvalidOperationInEndBlockComputation.into())
         }
 
-        /// Return true if the current block indicates it is the voting period 
-        /// for the given VoteAggregate. 
+        /// Return true if the current block indicates it is the voting period
+        /// for the given VoteAggregate.
         pub fn within_voting_period(
             votes: &VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>,
         ) -> bool {
@@ -228,7 +228,7 @@ pub mod pallet {
             current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
         }
 
-        /// Function executed at the initialization of the first block in 
+        /// Function executed at the initialization of the first block in
         /// a new voting period cycle. Used to maintain the active proposals store.
         fn upkeep(n: BlockNumberFor<T>) {
             // clear out proposals that are no longer active
@@ -309,6 +309,9 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
+        /// Extrinsic to close and execute a proposal.
+        /// Proposal must have been voted on and have majority approval.
+        /// Only the proposal execution origin can execute.
         pub fn close(
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
@@ -340,7 +343,7 @@ pub mod pallet {
                 Self::get_proposal(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
             let result = proposal
                 .1
-                .dispatch(Origin::<T>::ApprovedByCommittee(closer, votes.ayes).into());
+                .dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
 
             // register that this proposal has been executed
             ExecutedProposals::<T>::insert(proposal_hash, ());

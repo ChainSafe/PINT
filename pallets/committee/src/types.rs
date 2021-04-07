@@ -24,9 +24,9 @@ impl<T: Config> Proposal<T> {
 
 /// Origin for the committee module.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
-pub enum CommitteeOrigin<AccountId> {
+pub enum CommitteeOrigin<AccountId, BlockNumber> {
     /// Action is executed by the committee. Contains the closer account and the members that voted Aye
-    ApprovedByCommittee(AccountId, Vec<AccountId>),
+    ApprovedByCommittee(AccountId, VoteAggregate<AccountId, BlockNumber>),
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
@@ -84,11 +84,15 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
         self.ayes.contains(voter) | self.nays.contains(voter) | self.abstentions.contains(voter)
     }
 
-    // to be accepted a proposal must have a majority of non-abstainig members vote Aye
-    // TODO: Check how non-voting memnbers should be handled
-    // TODO: Check how ties should be broken
+    pub fn participants(&self) -> usize {
+        self.ayes.len() + self.nays.len() + self.abstentions.len()
+    }
+
+    /// Acceptence criteria for a vote is:
+    ///  - A successful vote is any that includes a simple majority of yay vs nays.
+    ///  - A minimum of four members must participate in each voting process.
     pub fn is_accepted(&self) -> bool {
-        self.ayes.len() > self.nays.len()
+        self.participants() >= 4 && self.ayes.len() > self.nays.len()
     }
 }
 

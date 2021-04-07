@@ -297,18 +297,29 @@ fn member_cannot_vote_multiple_times() {
 // Closing/executing a proposal
 //
 
+fn vote_four_times(proposal_hash: <Test as system::Config>::Hash) {
+    for account in 0..4 {
+        assert_ok!(Committee::vote(
+            Origin::signed(account),
+            proposal_hash,
+            Vote::Aye
+        ));
+    }
+}
+
+fn initialize_members() {
+    let members: Vec<u64> = (0..4).collect();
+    Committee::initialize_members(&members);
+}
+
 #[test]
 fn non_execution_origin_cannot_close() {
     new_test_ext().execute_with(|| {
-        Committee::initialize_members(&[ASHLEY]);
+        initialize_members();
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
 
-        assert_ok!(Committee::vote(
-            Origin::signed(ASHLEY),
-            proposal.hash(),
-            Vote::Aye
-        ));
+        vote_four_times(proposal.hash());
         assert_noop!(
             Committee::close(Origin::signed(ASHLEY), proposal.hash()),
             BadOrigin
@@ -319,15 +330,11 @@ fn non_execution_origin_cannot_close() {
 #[test]
 fn cannot_close_until_voting_period_elapsed() {
     new_test_ext().execute_with(|| {
-        Committee::initialize_members(&[ASHLEY]);
+        initialize_members();
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        assert_ok!(Committee::vote(
-            Origin::signed(ASHLEY),
-            proposal.hash(),
-            Vote::Aye
-        ));
+        vote_four_times(proposal.hash());
 
         assert_noop!(
             Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
@@ -339,7 +346,7 @@ fn cannot_close_until_voting_period_elapsed() {
 #[test]
 fn cannot_close_if_insufficent_votes() {
     new_test_ext().execute_with(|| {
-        Committee::initialize_members(&[ASHLEY]);
+        initialize_members();
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_V1 + 1);
@@ -353,15 +360,11 @@ fn cannot_close_if_insufficent_votes() {
 #[test]
 fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
     new_test_ext().execute_with(|| {
-        Committee::initialize_members(&[ASHLEY]);
+        initialize_members();
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        assert_ok!(Committee::vote(
-            Origin::signed(ASHLEY),
-            proposal.hash(),
-            Vote::Aye
-        ));
+        vote_four_times(proposal.hash());
 
         run_to_block(START_OF_V1 + 1);
         assert_ok!(Committee::close(
@@ -374,15 +377,11 @@ fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
 #[test]
 fn cannot_execute_proposal_twice() {
     new_test_ext().execute_with(|| {
-        Committee::initialize_members(&[ASHLEY]);
+        initialize_members();
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        assert_ok!(Committee::vote(
-            Origin::signed(ASHLEY),
-            proposal.hash(),
-            Vote::Aye
-        ));
+        vote_four_times(proposal.hash());
 
         run_to_block(START_OF_V1 + 1);
         assert_ok!(Committee::close(
