@@ -11,18 +11,16 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod traits;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::traits::{AssetAvailability, AssetRecorder};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
         sp_runtime::traits::AtLeast32BitUnsigned,
     };
     use frame_system::pallet_prelude::*;
+    use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
     #[pallet::config]
     pub trait Config: frame_system::Config {

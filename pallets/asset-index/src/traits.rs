@@ -1,16 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-// TODO: This will be moved into the AssetIndex pallet when that is implemented
-// Required here for mock and testing the SAFT registry
-#![allow(dead_code)]
-
+pub use crate::types::AssetAvailability;
 use frame_support::sp_runtime::DispatchError;
-
-pub enum AssetAvailability {
-    Liquid,
-    SAFT,
-}
 
 pub trait AssetRecorder<AssetId, Balance> {
     /// Add an asset to the recorder. If an asset with the given AssetId already exists

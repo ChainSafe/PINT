@@ -7,7 +7,7 @@
 use crate as pallet_saft_registry;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
-use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
+use pallet_saft_registry::traits::{AssetAvailability, AssetRecorder};
 
 use sp_core::H256;
 use sp_runtime::{
