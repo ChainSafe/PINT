@@ -281,8 +281,8 @@ pub mod pallet {
             .ok_or_else(|| Error::<T>::InvalidOperationInEndBlockComputation.into())
         }
 
-        /// Return true if the current block indicates it is the voting period 
-        /// for the given VoteAggregate. 
+        /// Return true if the current block indicates it is the voting period
+        /// for the given VoteAggregate.
         pub fn within_voting_period(
             votes: &VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>,
         ) -> bool {
@@ -290,7 +290,7 @@ pub mod pallet {
             current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
         }
 
-        /// Function executed at the initialization of the first block in 
+        /// Function executed at the initialization of the first block in
         /// a new voting period cycle. Used to maintain the active proposals store.
         fn upkeep(n: BlockNumberFor<T>) {
             // clear out proposals that are no longer active
