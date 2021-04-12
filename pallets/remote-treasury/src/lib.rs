@@ -33,6 +33,7 @@ pub mod pallet {
     use xcm::v0::{
         ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, OriginKind, Xcm,
     };
+    use xcm::VersionedXcm;
     use xcm_executor::traits::LocationConversion;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -166,17 +167,24 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Transacts the call as XCM to the configured location.
+        /// Relays the call as XCM to the configured location.
         #[pallet::weight(10)] // TODO: Set weights
-        pub fn execute(origin: OriginFor<T>, call: T::RemoteCall) -> DispatchResultWithPostInfo {
+        pub fn execute(
+            origin: OriginFor<T>,
+            call: T::RemoteCall,
+            dest: MultiLocation,
+        ) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
 
             let xcm_origin = T::AccountIdConverter::try_into_location(who)
                 .map_err(|_| Error::<T>::BadLocation)?;
 
-            let xcm = Xcm::Transact {
-                origin_type: OriginKind::Native,
-                call: call.encode(),
+            let xcm = Xcm::RelayTo {
+                dest,
+                inner: Box::new(VersionedXcm::V0(Xcm::Transact {
+                    origin_type: OriginKind::Native,
+                    call: call.encode(),
+                })),
             };
 
             T::XcmHandler::execute_xcm(xcm_origin, xcm)
