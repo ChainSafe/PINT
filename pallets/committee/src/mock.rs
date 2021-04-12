@@ -28,7 +28,7 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Committee: pallet_committee::{Module, Call, Storage, Event<T>},
+        Committee: pallet_committee::{Module, Call, Storage, Origin<T>, Event<T>},
     }
 );
 
@@ -72,15 +72,19 @@ parameter_types! {
     pub const VotingPeriod: <Test as system::Config>::BlockNumber = VOTING_PERIOD;
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
+pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = 88;
+
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
+    pub const ExecuterAccountId: AccountId = EXECUTER_ACCOUNT_ID;
+
 }
 
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;

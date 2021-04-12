@@ -11,6 +11,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+mod types;
 mod utils;
 
 #[frame_support::pallet]
@@ -18,6 +19,7 @@ mod utils;
 // requires boxed_local exception as extrinsics must accept boxed calls but clippy only sees the local function
 #[allow(clippy::unused_unit, clippy::boxed_local)]
 pub mod pallet {
+    pub use crate::types::*;
     use crate::utils;
     use frame_support::{
         dispatch::{Codec, DispatchResultWithPostInfo},
@@ -27,8 +29,8 @@ pub mod pallet {
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
-    use frame_system::RawOrigin;
-    use sp_runtime::traits::{CheckedAdd, Hash, One, Zero};
+    // use frame_system::RawOrigin;
+    use sp_runtime::traits::{CheckedAdd, One, Zero};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type HashFor<T> = <T as frame_system::Config>::Hash;
@@ -37,7 +39,7 @@ pub mod pallet {
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The outer origin type.
-        type Origin: From<RawOrigin<Self::AccountId>>;
+        type Origin: From<CommitteeOrigin<Self::AccountId, Self::BlockNumber>>;
         /// The outer call dispatch type.
         type Action: Parameter
             + Dispatchable<Origin = <Self as Config>::Origin, PostInfo = PostDispatchInfo>
@@ -69,86 +71,7 @@ pub mod pallet {
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    /// This represents an instance of a proposal that can be voted on.
-    /// It has been proposed and has an assigned nonce.
-    /// This extra abstraction is required since it may be desirable construct multiple
-    /// proposal instances out of a single proposal
-    pub struct Proposal<T: Config>(T::ProposalNonce, T::Action);
-
-    impl<T: Config> Proposal<T> {
-        pub fn new(nonce: T::ProposalNonce, action: T::Action) -> Self {
-            Self(nonce, action)
-        }
-
-        pub fn hash(&self) -> <T as frame_system::Config>::Hash {
-            T::Hashing::hash_of(self)
-        }
-    }
-
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
-    /// Info for keeping track of a motion being voted on.
-    /// Default is empty vectors for all votes
-    pub struct VoteAggregate<AccountId, BlockNumber> {
-        /// The current set of voters that approved it.
-        ayes: Vec<AccountId>,
-        /// The current set of voters that rejected it.
-        nays: Vec<AccountId>,
-        /// The current set of votes abstaining.
-        abstentions: Vec<AccountId>,
-        /// The hard end time of this vote.
-        end: BlockNumber,
-    }
-
-    impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
-        pub fn new(
-            ayes: Vec<AccountId>,
-            nays: Vec<AccountId>,
-            abstentions: Vec<AccountId>,
-            end: BlockNumber,
-        ) -> Self {
-            Self {
-                ayes,
-                nays,
-                abstentions,
-                end,
-            }
-        }
-
-        pub fn new_with_end(end: BlockNumber) -> Self {
-            Self {
-                end,
-                ..Default::default()
-            }
-        }
-
-        // This does not check if a vote is a duplicate, This must be done before calling this function
-        pub fn cast_vote(&mut self, voter: AccountId, vote: &Vote) {
-            match vote {
-                Vote::Aye => self.ayes.push(voter),
-                Vote::Nay => self.nays.push(voter),
-                Vote::Abstain => self.abstentions.push(voter),
-            }
-        }
-
-        pub fn remove_voters(&mut self, voters: &[AccountId]) {
-            self.ayes.retain(|x| !voters.contains(x));
-            self.nays.retain(|x| !voters.contains(x));
-            self.abstentions.retain(|x| !voters.contains(x));
-        }
-
-        pub fn has_voted(&self, voter: &AccountId) -> bool {
-            self.ayes.contains(voter) | self.nays.contains(voter) | self.abstentions.contains(voter)
-        }
-    }
-
-    #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-    /// Possible votes a member can cast
-    pub enum Vote {
-        Aye,
-        Nay,
-        Abstain,
-    }
+    pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
 
     #[pallet::pallet]
     #[pallet::generate_store(pub(super) trait Store)]
@@ -168,6 +91,11 @@ pub mod pallet {
     /// Store a mapping (hash) -> Proposal for all existing proposals.
     pub type Proposals<T: Config> =
         StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
+
+    #[pallet::storage]
+    /// Store a mapping (hash) -> () for all proposals that have been executed
+    pub type ExecutedProposals<T: Config> =
+        StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
 
     #[pallet::storage]
     /// Stores a vector of account IDs of current committee members
@@ -194,6 +122,10 @@ pub mod pallet {
         /// A vote was cast
         /// \[voter_address, proposal_hash, vote\]
         VoteCast(AccountIdFor<T>, T::Hash, Vote),
+        /// A proposal was closed and executed. Any errors for calling the proposal action
+        /// are included
+        /// \[proposal_hash, result\]
+        ClosedAndExecutedProposal(T::Hash, DispatchResult),
     }
 
     #[pallet::error]
@@ -204,6 +136,12 @@ pub mod pallet {
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
+        /// Attempted to close a proposal before the voting period is over
+        VotingPeriodNotElapsed,
+        /// Tried to close a proposal that does not meet the vote requirements
+        ProposalNotAccepted,
+        /// Attempted to execute a proposal that has already been executed
+        ProposalAlreadyExecuted,
         /// The hash provided does not have an associated proposal
         NoProposalWithHash,
         /// The data type for enumerating the proposals has reached its upper bound.
@@ -366,6 +304,56 @@ pub mod pallet {
                     Err(Error::<T>::NoProposalWithHash)
                 }
             })?;
+
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Extrinsic to close and execute a proposal.
+        /// Proposal must have been voted on and have majority approval.
+        /// Only the proposal execution origin can execute.
+        pub fn close(
+            origin: OriginFor<T>,
+            proposal_hash: HashFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let closer = ensure_signed(origin.clone())?;
+            T::ProposalExecutionOrigin::ensure_origin(origin)?;
+
+            // ensure proposal has not already been executed
+            ensure!(
+                !ExecutedProposals::<T>::contains_key(proposal_hash),
+                Error::<T>::ProposalAlreadyExecuted
+            );
+
+            let votes =
+                Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+            let current_block = frame_system::Pallet::<T>::block_number();
+
+            // Ensure voting period is over
+            ensure!(
+                current_block > votes.end,
+                Error::<T>::VotingPeriodNotElapsed
+            );
+
+            // Ensure voting has accepted proposal
+            ensure!(votes.is_accepted(), Error::<T>::ProposalNotAccepted);
+
+            // Execute the proposal
+            let proposal =
+                Self::get_proposal(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+            let result = proposal
+                .1
+                .dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
+
+            // register that this proposal has been executed
+            ExecutedProposals::<T>::insert(proposal_hash, ());
+
+            Self::deposit_event(Event::ClosedAndExecutedProposal(
+                proposal_hash,
+                result.map(|_| ()).map_err(|e| e.error),
+            ));
+
+            // TODO: Handle weight used by the dispatch call in weight calculation
 
             Ok(().into())
         }
