@@ -169,7 +169,7 @@ pub mod pallet {
         /// Gets a new unused proposal nonce and increments the nonce in the store
         /// Returns an error if the data type used for the nonce exceeds is maximum value
         fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
-            let nonce = <ProposalCount<T>>::get();
+            let nonce = ProposalCount::<T>::get();
             match nonce.checked_add(&T::ProposalNonce::one()) {
                 Some(next) => {
                     ProposalCount::<T>::set(next);
@@ -288,7 +288,7 @@ pub mod pallet {
             // Only members can vote
             let voter = Self::ensure_member(origin)?;
 
-            <Votes<T>>::try_mutate(&proposal_hash, |votes| {
+            Votes::<T>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {
                     // Can only vote within the allowed range of blocks for this proposal
                     ensure!(
@@ -363,7 +363,7 @@ pub mod pallet {
         fn initialize_members(members: &[AccountIdFor<T>]) {
             if !members.is_empty() {
                 assert!(
-                    <Members<T>>::get().is_empty(),
+                    Members::<T>::get().is_empty(),
                     "Members are already initialized!"
                 );
                 Members::<T>::put(members);
@@ -379,7 +379,7 @@ pub mod pallet {
         ) {
             // Remove outgoing members from any currently active votes
             for proposal_hash in ActiveProposals::<T>::get() {
-                <Votes<T>>::mutate(&proposal_hash, |votes| {
+                Votes::<T>::mutate(&proposal_hash, |votes| {
                     if let Some(votes) = votes {
                         votes.remove_voters(outgoing); // mutates votes in place
                     }
