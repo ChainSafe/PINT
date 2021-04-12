@@ -30,7 +30,9 @@ pub mod pallet {
         transactional,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+    use xcm::v0::{
+        ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, OriginKind, Xcm,
+    };
     use xcm_executor::traits::LocationConversion;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -131,7 +133,7 @@ pub mod pallet {
         /// Transfer balance from the treasury asset's location to another destination.
         /// Only callable by the AdminOrigin.
         #[transactional]
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(10)] // TODO: Set weights
         pub fn transfer_dot(
             origin: OriginFor<T>,
             amount: T::Balance,
@@ -160,6 +162,25 @@ pub mod pallet {
             Self::do_transfer_on_relay_chain(xcm_origin, asset, dest)?;
 
             Self::deposit_event(Event::TransferredDOT(recipient, amount));
+
+            Ok(().into())
+        }
+
+        /// Transacts the call as XCM to the configured location.
+        #[pallet::weight(10)] // TODO: Set weights
+        pub fn execute(origin: OriginFor<T>, call: T::RemoteCall) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+
+            let xcm_origin = T::AccountIdConverter::try_into_location(who)
+                .map_err(|_| Error::<T>::BadLocation)?;
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::Native,
+                call: call.encode(),
+            };
+
+            T::XcmHandler::execute_xcm(xcm_origin, xcm)
+                .map_err(|_| Error::<T>::FailedXcmExecution)?;
 
             Ok(().into())
         }
