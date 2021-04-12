@@ -64,14 +64,14 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new SAFT was added
-        /// /[AssetId, AssetIndex/]
+        /// \[AssetId, AssetIndex\]
         SAFTAdded(T::AssetId, u32),
         /// A SAFT was removed
-        /// /[AssetId, AssetIndex/]
+        /// \[AssetId, AssetIndex\]
         SAFTRemoved(T::AssetId, u32),
         /// The NAV for a SAFT was updated
-        /// /[AssetId, AssetIndex/]
-        NavUpdated(T::AssetId, u32),
+        /// \[AssetId, AssetIndex, OldNav, NewNav\]
+        NavUpdated(T::AssetId, u32, T::Balance, T::Balance),
     }
 
     #[pallet::error]
@@ -94,16 +94,16 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
 
-            ActiveSAFTs::<T>::append(
-                asset_id.clone(),
-                SAFTRecord::new(nav.clone(), units.clone()),
-            );
             <T as Config>::AssetRecorder::add_asset(
                 &asset_id,
                 &units,
                 &AssetAvailability::SAFT,
                 &nav,
             )?;
+            ActiveSAFTs::<T>::append(
+                asset_id.clone(),
+                SAFTRecord::new(nav.clone(), units.clone()),
+            );
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
@@ -121,8 +121,8 @@ pub mod pallet {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
-                    safts.remove(index_usize);
                     <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
+                    safts.remove(index_usize);
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())
@@ -145,9 +145,12 @@ pub mod pallet {
             let index_usize: usize = index as usize;
             ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
+                    let prev_nav = nav_record.nav.clone();
                     nav_record.nav = latest_nav.clone();
                     <T as Config>::AssetRecorder::update_nav(&asset_id, &latest_nav)?;
-                    Self::deposit_event(Event::<T>::NavUpdated(asset_id, index));
+                    Self::deposit_event(Event::<T>::NavUpdated(
+                        asset_id, index, prev_nav, latest_nav,
+                    ));
                     Ok(())
                 } else {
                     // get_mut will return None if index out of bounds
