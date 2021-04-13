@@ -71,7 +71,9 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        AssetAdded(AccountIdFor<T>, BalanceFor<T>),
+        // A new asset was added to the index and some index token paid out
+        // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
+        AssetAdded(T::AssetId, BalanceFor<T>, AccountIdFor<T>, BalanceFor<T>),
     }
 
     #[pallet::error]
@@ -83,7 +85,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(10_000)] // TODO: Set weights
-        /// Index updated to include added assets
+        /// Callable by an admin to add new assets to the index and mint some IndexToken
         /// Caller balance is updated to allocate the correct amount of the IndexToken
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
         pub fn add_asset(
@@ -101,7 +103,7 @@ pub mod pallet {
                 &availaility,
             )?;
             T::IndexToken::deposit_into_existing(&caller, value)?;
-            Self::deposit_event(Event::AssetAdded(caller, value));
+            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
         }
     }
