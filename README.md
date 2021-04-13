@@ -4,6 +4,12 @@
 
 A Polkadot ecosystem index for investors. A sell sustaining auction treasury for parachains.
 
+Organized by the Stateless Money validator, governed by a community that includes Polychain Capital, Hypersphere Ventures, HashKey Capital, Acala, and built by ChainSafe as a StakerDAO product. 
+
+For more information on the project please visit [Polkadot Index Network Token](https://docs.polkadotindex.com/) documentation.
+
+❗**Current development should be considered a work in progress.**
+
 ## Upstream
 
 This project is a fork of the
