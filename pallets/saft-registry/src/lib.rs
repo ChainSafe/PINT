@@ -100,10 +100,7 @@ pub mod pallet {
                 &AssetAvailability::SAFT,
                 &nav,
             )?;
-            ActiveSAFTs::<T>::append(
-                asset_id.clone(),
-                SAFTRecord::new(nav, units),
-            );
+            ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units));
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
