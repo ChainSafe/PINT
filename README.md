@@ -2,7 +2,7 @@
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](http://www.gnu.org/licenses/lgpl-3.0)
 
-A Polkadot ecosystem index for investors. A sell sustaining auction treasury for parachains.
+A Polkadot ecosystem index for investors. A self sustaining auction treasury for parachains.
 
 Organized by the Stateless Money validator, governed by a community that includes Polychain Capital, Hypersphere Ventures, HashKey Capital, Acala, and built by ChainSafe as a StakerDAO product. 
 
