@@ -135,7 +135,30 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Transfer assets.
+        /// Transfer units of the asset type to the provided destination.
+        ///
+        /// Dependent on the the asset's native location wrt the destination, the appropriate
+        /// cross chain message routine is executed:
+        ///
+        /// 1) Is the native location of the provided asset the local system, then requested amount
+        /// of the native asset is transferred from the treasury account to the destination's
+        /// account within this system, then this transfer is mirrored on the
+        /// destination's system via a cross chain message.
+        ///
+        /// 2) If the native location of the provided asset matches the destination's location,
+        /// then the requested amount is withdrawn from the treasury locally as well as on
+        /// corresponding holding on the destination's system and deposited into the destination's
+        /// account within the destination system.
+        ///
+        /// 3) If the native location of the provided asset neither matches with the local system or
+        /// with the provided destination, then the requested amount is withdrawn from the treasury
+        /// locally as and send to the asset's native location. There the amount is removed from
+        /// the treasury's holding and put into the holding of the destination's account. Finally
+        /// another xcm from the asset's native location to the provided destination is issued
+        /// and the provided amount is put into the destination's account in the destination's
+        /// system.
+        ///
+        /// Only callable by the AdminOrigin.
         #[transactional]
         #[pallet::weight(1000)]
         pub fn transfer(
@@ -164,7 +187,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Transfer units of DOT from the treasury asset's location to another destination.
+        /// Transfer units of the relay chain asset from the treasury asset's location to another destination.
         /// Only callable by the AdminOrigin.
         #[transactional]
         #[pallet::weight(10)] // TODO: Set weights
@@ -176,19 +199,21 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let who = ensure_signed(origin)?;
 
-            let mut relay_chain_location: MultiLocation = T::AssetIdConvert::convert(T::RelayChainAssetId::get())
-                .ok_or(Error::<T>::NotCrossChainTransferableAsset)?;
+            let mut relay_chain_location: MultiLocation =
+                T::AssetIdConvert::convert(T::RelayChainAssetId::get())
+                    .ok_or(Error::<T>::NotCrossChainTransferableAsset)?;
             let asset = MultiAsset::ConcreteFungible {
                 id: relay_chain_location.clone(),
                 amount: amount.into(),
             };
 
             // the recipient's account on the relay chain
-            relay_chain_location.push(Junction::AccountId32 {
-                network: T::RelayChainNetworkId::get(),
-                id: T::AccountId32Convert::convert(recipient.clone()),
-            })
-            .map_err(|_| Error::<T>::NotCrossChainTransferableAsset)?;
+            relay_chain_location
+                .push(Junction::AccountId32 {
+                    network: T::RelayChainNetworkId::get(),
+                    id: T::AccountId32Convert::convert(recipient.clone()),
+                })
+                .map_err(|_| Error::<T>::NotCrossChainTransferableAsset)?;
 
             Self::do_transfer_multiasset(Self::account_id(), asset, relay_chain_location)?;
             Self::deposit_event(Event::TransferredRelayChainAsset(who, recipient, amount));
@@ -236,7 +261,8 @@ pub mod pallet {
         /// - withdraw the `asset` from the issuer's holding (locally)
         /// - deposit the `asset` into `dest`'s holding (locally)
         /// - send another Xcm to `dest`
-        /// - deposit `asset` into `recipient` (in `dest`)
+        /// - remove `asset` from sender's holding (on `dest`)
+        /// - deposit `asset` into `recipient` (on `dest`)
         fn transfer_reserve_asset_locally(
             asset: MultiAsset,
             dest: MultiLocation,
