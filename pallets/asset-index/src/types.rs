@@ -3,15 +3,23 @@ use xcm::v0::MultiLocation;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum AssetAvailability {
-    Liquid,
+    Liquid(MultiLocation),
     SAFT,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct IndexAssetData<Balance> {
-    units: Balance,
-    availability: AssetAvailability,
-    location: MultiLocation,
+    pub units: Balance,
+    pub availability: AssetAvailability,
+}
+
+impl<Balance> IndexAssetData<Balance> {
+    pub fn new(units: Balance, availability: AssetAvailability) -> Self {
+        Self {
+            units,
+            availability,
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

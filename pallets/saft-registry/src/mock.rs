@@ -77,14 +77,10 @@ impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
         _: &AssetId,
         _: &Balance,
         _: &AssetAvailability,
-        _: &Balance,
     ) -> Result<(), DispatchError> {
         Ok(())
     }
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {
-        Ok(())
-    }
-    fn update_nav(_: &AssetId, _: &Balance) -> Result<(), DispatchError> {
         Ok(())
     }
 }

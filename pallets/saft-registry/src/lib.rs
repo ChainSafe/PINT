@@ -96,12 +96,7 @@ pub mod pallet {
                 asset_id.clone(),
                 SAFTRecord::new(nav.clone(), units.clone()),
             );
-            <T as Config>::AssetRecorder::add_asset(
-                &asset_id,
-                &units,
-                &AssetAvailability::SAFT,
-                &nav,
-            )?;
+            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::SAFT)?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
@@ -144,7 +139,6 @@ pub mod pallet {
             ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
                     nav_record.nav = latest_nav.clone();
-                    <T as Config>::AssetRecorder::update_nav(&asset_id, &latest_nav)?;
                     Self::deposit_event(Event::<T>::NavUpdated(asset_id, index));
                     Ok(())
                 } else {

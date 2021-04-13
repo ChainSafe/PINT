@@ -14,10 +14,7 @@ pub trait AssetRecorder<AssetId, Balance> {
         id: &AssetId,
         units: &Balance,
         availability: &AssetAvailability,
-        nav: &Balance,
     ) -> Result<(), DispatchError>;
 
     fn remove_asset(id: &AssetId) -> Result<(), DispatchError>;
-
-    fn update_nav(id: &AssetId, nav: &Balance) -> Result<(), DispatchError>;
 }
