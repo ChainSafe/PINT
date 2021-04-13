@@ -9,12 +9,6 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
@@ -23,17 +17,14 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::{
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
+            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Zero},
             ModuleId,
         },
         traits::Get,
         transactional,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{
-        ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, OriginKind, Xcm,
-    };
-    use xcm::VersionedXcm;
+    use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
     use xcm_executor::traits::LocationConversion;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -53,8 +44,11 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + Into<u128>;
 
-        // /// The Call type required for other chains.
-        type RemoteCall: Parameter;
+        /// Asset Id that is used to identify different kinds of assets.
+        type AssetId: Parameter + Member + Clone;
+
+        /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
+        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
 
         /// Convert an `AccountId` to `AccountId32` for cross chain messages
         type AccountId32Convert: Convert<AccountIdFor<Self>, [u8; 32]>;
@@ -67,11 +61,16 @@ pub mod pallet {
         #[pallet::constant]
         type ModuleId: Get<ModuleId>;
 
-        // /// Descriptor of where the treasury asset exist: `(Parent, AccountId32)`
-        // #[pallet::constant]
-        // type Location: Get<MultiLocation>;
+        /// Self chain location.
+        #[pallet::constant]
+        type SelfLocation: Get<MultiLocation>;
+
+        /// Identifier for the relay chain's asset type
+        #[pallet::constant]
+        type RelayChainAssetId: Get<Self::AssetId>;
 
         /// The network id of relay chain. Typically `NetworkId::Polkadot`.
+        #[pallet::constant]
         type RelayChainNetworkId: Get<NetworkId>;
 
         /// Executor for cross chain messages.
@@ -87,9 +86,12 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Admin successfully transferred some funds from the DOT treasury on the relay chain into the recipient's account on the relay chain.
+        /// Admin successfully transferred relay chain assets from the treasury's account on the relay chain into the recipient's account on the relay chain.
         /// parameters. \[recipient, amount\]
-        TransferredDOT(AccountIdFor<T>, T::Balance),
+        TransferredRelayChainAsset(AccountIdFor<T>, AccountIdFor<T>, T::Balance),
+        /// Admin successfully transferred some asset units.
+        /// parameters. \[sender, asset_id, amount, dest\]
+        Transferred(AccountIdFor<T>, T::AssetId, T::Balance, MultiLocation),
     }
 
     #[pallet::error]
@@ -101,6 +103,8 @@ pub mod pallet {
         /// Thrown when the destination of a requested cross-chain transfer is the location of
         /// the local chain itself
         NoCrossChainTransfer,
+        /// Failed to convert the provided currency into a location
+        NotCrossChainTransferableAsset,
         /// Execution of a cross-chain failed
         FailedXcmExecution,
     }
@@ -112,7 +116,7 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {
         /// Returns the accountID for the treasury balance
         /// Transferring balance to this account funds the treasury
-        pub fn account_id() -> T::AccountId {
+        pub fn account_id() -> AccountIdFor<T> {
             T::ModuleId::get().into_account()
         }
 
@@ -131,60 +135,95 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Transfer balance from the treasury asset's location to another destination.
+        /// Transfer assets.
+        #[transactional]
+        #[pallet::weight(1000)]
+        pub fn transfer(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            amount: T::Balance,
+            dest: MultiLocation,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let who = ensure_signed(origin)?;
+
+            if amount.is_zero() {
+                // nothing to transfer
+                return Ok(().into());
+            }
+
+            let id: MultiLocation = T::AssetIdConvert::convert(asset_id.clone())
+                .ok_or(Error::<T>::NotCrossChainTransferableAsset)?;
+            let asset = MultiAsset::ConcreteFungible {
+                id,
+                amount: amount.into(),
+            };
+
+            Self::do_transfer_multiasset(Self::account_id(), asset, dest.clone())?;
+            Self::deposit_event(Event::Transferred(who, asset_id, amount, dest));
+            Ok(().into())
+        }
+
+        /// Transfer units of DOT from the treasury asset's location to another destination.
         /// Only callable by the AdminOrigin.
         #[transactional]
         #[pallet::weight(10)] // TODO: Set weights
-        pub fn transfer_dot(
+        pub fn transfer_relay_chain_asset(
             origin: OriginFor<T>,
             amount: T::Balance,
             recipient: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let who = ensure_signed(origin)?;
 
+            let mut relay_chain_location: MultiLocation = T::AssetIdConvert::convert(T::RelayChainAssetId::get())
+                .ok_or(Error::<T>::NotCrossChainTransferableAsset)?;
             let asset = MultiAsset::ConcreteFungible {
-                id: Junction::Parent.into(),
+                id: relay_chain_location.clone(),
                 amount: amount.into(),
             };
 
             // the recipient's account on the relay chain
-            let dest = (
-                Junction::Parent,
-                Junction::AccountId32 {
-                    network: T::RelayChainNetworkId::get(),
-                    id: T::AccountId32Convert::convert(recipient.clone()),
-                },
-            )
-                .into();
+            relay_chain_location.push(Junction::AccountId32 {
+                network: T::RelayChainNetworkId::get(),
+                id: T::AccountId32Convert::convert(recipient.clone()),
+            })
+            .map_err(|_| Error::<T>::NotCrossChainTransferableAsset)?;
 
-            let xcm_origin = T::AccountIdConverter::try_into_location(Self::account_id())
-                .map_err(|_| Error::<T>::BadLocation)?;
-
-            Self::do_transfer_on_relay_chain(xcm_origin, asset, dest)?;
-
-            Self::deposit_event(Event::TransferredDOT(recipient, amount));
-
+            Self::do_transfer_multiasset(Self::account_id(), asset, relay_chain_location)?;
+            Self::deposit_event(Event::TransferredRelayChainAsset(who, recipient, amount));
             Ok(().into())
         }
+    }
 
-        /// Relays the call as XCM to the configured location.
-        #[pallet::weight(10)] // TODO: Set weights
-        pub fn execute(
-            origin: OriginFor<T>,
-            call: T::RemoteCall,
+    impl<T: Config> Pallet<T> {
+        /// Executes a cross chain message to transfer the `MultiAsset` to its correct location.
+        fn do_transfer_multiasset(
+            who: AccountIdFor<T>,
+            asset: MultiAsset,
             dest: MultiLocation,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-
             let xcm_origin = T::AccountIdConverter::try_into_location(who)
                 .map_err(|_| Error::<T>::BadLocation)?;
 
-            let xcm = Xcm::RelayTo {
-                dest,
-                inner: Box::new(VersionedXcm::V0(Xcm::Transact {
-                    origin_type: OriginKind::Native,
-                    call: call.encode(),
-                })),
+            let (dest, recipient) = Self::split_multi_location(&dest);
+
+            let dest = dest.ok_or_else(|| Error::<T>::InvalidDestination)?;
+            let self_location = T::SelfLocation::get();
+            ensure!(dest != self_location, Error::<T>::NoCrossChainTransfer);
+
+            let recipient = recipient.ok_or_else(|| Error::<T>::InvalidDestination)?;
+
+            // the native location of the asset type
+            let reserve =
+                Self::asset_reserve(&asset).ok_or_else(|| Error::<T>::InvalidDestination)?;
+
+            let xcm = if reserve == self_location {
+                Self::transfer_reserve_asset_locally(asset, dest, recipient)
+            } else if reserve == dest {
+                Self::transfer_to_reserve(asset, dest, recipient)
+            } else {
+                Self::transfer_to_non_reserve(asset, reserve, dest, recipient)
             };
 
             T::XcmHandler::execute_xcm(xcm_origin, xcm)
@@ -192,40 +231,106 @@ pub mod pallet {
 
             Ok(().into())
         }
-    }
 
-    impl<T: Config> Pallet<T> {
-        /// Transfer the `MultiAsset` via the `XcmHandler` without depositing event.
-        ///
-        /// Executes a cross-chain message to withdraw DOT from the treasury's holding on
-        /// the relay chain and deposits it into destination's account on the relay chain.
-        fn do_transfer_on_relay_chain(
-            origin: MultiLocation,
+        /// A cross chain message that will
+        /// - withdraw the `asset` from the issuer's holding (locally)
+        /// - deposit the `asset` into `dest`'s holding (locally)
+        /// - send another Xcm to `dest`
+        /// - deposit `asset` into `recipient` (in `dest`)
+        fn transfer_reserve_asset_locally(
             asset: MultiAsset,
             dest: MultiLocation,
-        ) -> DispatchResultWithPostInfo {
-            let (dest, recipient) =
-                Self::split_multi_location(dest).ok_or_else(|| Error::<T>::InvalidDestination)?;
-
-            let xcm = Xcm::WithdrawAsset {
+            recipient: MultiLocation,
+        ) -> Xcm {
+            Xcm::WithdrawAsset {
                 assets: vec![asset],
-                effects: vec![Order::InitiateReserveWithdraw {
+                effects: vec![Order::DepositReserveAsset {
                     assets: vec![MultiAsset::All],
-                    reserve: dest,
+                    dest,
                     effects: vec![Order::DepositAsset {
                         assets: vec![MultiAsset::All],
                         dest: recipient,
                     }],
                 }],
-            };
+            }
+        }
 
-            T::XcmHandler::execute_xcm(origin, xcm).map_err(|_| Error::<T>::FailedXcmExecution)?;
+        /// A cross chain message that will
+        /// - withdraw the `asset` from the issuer's holding (locally)
+        /// - send another Xcm to `reserve`
+        /// - withdraw `asset` from the holding (on `reserve`)
+        /// - deposit `asset` into `recipient` (on `reserve`)
+        fn transfer_to_reserve(
+            asset: MultiAsset,
+            reserve: MultiLocation,
+            recipient: MultiLocation,
+        ) -> Xcm {
+            Xcm::WithdrawAsset {
+                assets: vec![asset],
+                effects: vec![Order::InitiateReserveWithdraw {
+                    assets: vec![MultiAsset::All],
+                    reserve,
+                    effects: vec![Order::DepositAsset {
+                        assets: vec![MultiAsset::All],
+                        dest: recipient,
+                    }],
+                }],
+            }
+        }
 
-            Ok(().into())
+        /// A cross chain message that will
+        /// - withdraw the `asset` from the issuer's holding (locally)
+        /// - send another Xcm to `reserve`
+        /// - withdraw `asset` from the holding (on `reserve`)
+        /// - deposit `asset` into `dest` (on `reserve`)
+        /// - send another Xcm to `dest`
+        /// - deposit `asset` into `recipient` (in `dest`)
+        ///
+        /// If the `reserve` is the relay chain and `dest` includes the hop via the relay chain
+        /// `dest` is reanchored from the relay chain's point of view.
+        fn transfer_to_non_reserve(
+            asset: MultiAsset,
+            reserve: MultiLocation,
+            dest: MultiLocation,
+            recipient: MultiLocation,
+        ) -> Xcm {
+            let mut reanchored_dest = dest.clone();
+            if reserve == Junction::Parent.into() {
+                if let MultiLocation::X2(Junction::Parent, Junction::Parachain { id }) = dest {
+                    reanchored_dest = Junction::Parachain { id }.into();
+                }
+            }
+
+            Xcm::WithdrawAsset {
+                assets: vec![asset],
+                effects: vec![Order::InitiateReserveWithdraw {
+                    assets: vec![MultiAsset::All],
+                    reserve,
+                    effects: vec![Order::DepositReserveAsset {
+                        assets: vec![MultiAsset::All],
+                        dest: reanchored_dest,
+                        effects: vec![Order::DepositAsset {
+                            assets: vec![MultiAsset::All],
+                            dest: recipient,
+                        }],
+                    }],
+                }],
+            }
+        }
+
+        /// Returns the chain location part of the asset.
+        fn asset_reserve(asset: &MultiAsset) -> Option<MultiLocation> {
+            if let MultiAsset::ConcreteFungible { id, .. } = asset {
+                Self::split_multi_location(id).0
+            } else {
+                None
+            }
         }
 
         /// Splits the `location` into the chain location part and the recipient location.
-        fn split_multi_location(location: MultiLocation) -> Option<(MultiLocation, MultiLocation)> {
+        fn split_multi_location(
+            location: &MultiLocation,
+        ) -> (Option<MultiLocation>, Option<MultiLocation>) {
             let chain_location = match (location.first(), location.at(1)) {
                 (Some(Junction::Parent), Some(Junction::Parachain { id })) => {
                     Some((Junction::Parent, Junction::Parachain { id: *id }).into())
@@ -235,16 +340,21 @@ pub mod pallet {
                     Some(Junction::Parachain { id: *id }.into())
                 }
                 _ => None,
-            }?;
+            };
 
-            let (path, location) = location.split_last();
-
-            // make sure the path until `location` only consists of chains
-            path.iter()
-                .all(|junction| {
-                    matches!(junction, Junction::Parent | Junction::Parachain { id: _ })
+            let (path, last_junction) = location.clone().split_last();
+            // make sure the path until the final junction consists of chain junction
+            let target_location = last_junction
+                .into_iter()
+                .filter(|_| {
+                    path.iter().all(|junction| {
+                        matches!(junction, Junction::Parent | Junction::Parachain { id: _ })
+                    })
                 })
-                .then(|| location.map(|location| (chain_location, location.into())))?
+                .map(Into::into)
+                .next();
+
+            (chain_location, target_location)
         }
     }
 }
