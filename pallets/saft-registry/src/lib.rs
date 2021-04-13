@@ -102,7 +102,7 @@ pub mod pallet {
             )?;
             ActiveSAFTs::<T>::append(
                 asset_id.clone(),
-                SAFTRecord::new(nav.clone(), units.clone()),
+                SAFTRecord::new(nav, units),
             );
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
