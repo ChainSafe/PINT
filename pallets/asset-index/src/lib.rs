@@ -116,17 +116,17 @@ pub mod pallet {
             units: &BalanceFor<T>,
             availability: &AssetAvailability,
         ) -> Result<(), DispatchError> {
-            Holdings::<T>::mutate(asset_id, |query| {
-                if let Some(index_asset_data) = query {
-                    // mutate if exists
-                    index_asset_data.units += *units;
-                } else {
-                    // otherwise write a new entry
-                    let index_asset_data =
-                        IndexAssetData::<BalanceFor<T>>::new(*units, availability.clone());
-                    Holdings::<T>::insert(asset_id, index_asset_data);
-                }
-            });
+            if Holdings::<T>::contains_key(asset_id) {
+                Holdings::<T>::mutate(asset_id, |value| {
+                    if let Some(index_asset_data) = value {
+                        index_asset_data.units += *units;
+                    }
+                });
+            } else {
+                let index_asset_data =
+                    IndexAssetData::<BalanceFor<T>>::new(*units, availability.clone());
+                Holdings::<T>::insert(asset_id, index_asset_data);
+            }
             Ok(())
         }
 

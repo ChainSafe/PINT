@@ -105,10 +105,10 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub LockupPeriod: u32 = 10;
-    pub MinimumRedemption: u32 = 10;
-    pub WithdrawalPeriod: u32 = 10;
-    pub DOTContributionLimit: u32 = 0;
+    pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub MinimumRedemption: u32 = 0;
+    pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub DOTContributionLimit: u32 = 999;
 }
 
 impl pallet_asset_index::Config for Test {
