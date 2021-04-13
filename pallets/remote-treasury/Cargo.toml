@@ -77,10 +77,5 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dev-dependencies.xcm-executor]
-default-features = false
-git = 'https://github.com/paritytech/polkadot'
-branch = 'rococo-v1'
-
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
