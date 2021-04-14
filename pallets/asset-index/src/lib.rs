@@ -48,7 +48,7 @@ pub mod pallet {
         // The maximum amount of DOT that can exist in the index
         type DOTContributionLimit: Get<BalanceFor<Self>>;
         // Type used to identify assets
-        type AssetId: Parameter + Encode + Decode;
+        type AssetId: Parameter;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -86,7 +86,7 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        // Thrown if adding units to an asset holding causes it numerical type to overflow
+        // Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
     }
 
@@ -121,7 +121,7 @@ pub mod pallet {
 
     impl<T: Config> AssetRecorder<T::AssetId, BalanceFor<T>> for Pallet<T> {
         /// Creates IndexAssetData if entry with given assetID does not exist.
-        /// Otherwise adds the units to existing
+        /// Otherwise adds the units to the existing holding
         fn add_asset(
             asset_id: &T::AssetId,
             units: &BalanceFor<T>,
@@ -143,9 +143,8 @@ pub mod pallet {
             Ok(())
         }
 
-        fn remove_asset(asset_id: &T::AssetId) -> Result<(), DispatchError> {
-            Holdings::<T>::remove(asset_id);
-            Ok(())
+        fn remove_asset(_: &T::AssetId) -> Result<(), DispatchError> {
+            todo!();
         }
     }
 }
