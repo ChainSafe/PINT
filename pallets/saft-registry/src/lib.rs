@@ -138,8 +138,9 @@ pub mod pallet {
             let index_usize: usize = index as usize;
             ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
+                    let old_nav = nav_record.nav.clone();
                     nav_record.nav = latest_nav.clone();
-                    Self::deposit_event(Event::<T>::NavUpdated(asset_id, index));
+                    Self::deposit_event(Event::<T>::NavUpdated(asset_id, index, old_nav, latest_nav));
                     Ok(())
                 } else {
                     // get_mut will return None if index out of bounds
