@@ -23,6 +23,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
+        sp_runtime::traits::{CheckedAdd, Zero},
         traits::{Currency, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
@@ -36,10 +37,17 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         // Currency implementation to use as the index token
         type IndexToken: LockableCurrency<Self::AccountId>;
+        // Period after the minting of the index token for which 100% is locked up.
+        // Only applies to users contributing assets directly to index
         type LockupPeriod: Get<Self::BlockNumber>;
+        // The minimum amount of the index token that can be redeemed for the underlying asset in the index
         type MinimumRedemption: Get<BalanceFor<Self>>;
+        // Minimum amount of time between redeeming index tokens
+        // and being able to withdraw the awarded assets
         type WithdrawalPeriod: Get<Self::BlockNumber>;
+        // The maximum amount of DOT that can exist in the index
         type DOTContributionLimit: Get<BalanceFor<Self>>;
+        // Type used to identify assets
         type AssetId: Parameter + Encode + Decode;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -77,7 +85,10 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        // Thrown if adding units to an asset holding causes it numerical type to overflow
+        AssetUnitsOverflow,
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -92,7 +103,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             units: BalanceFor<T>,
-            availaility: AssetAvailability,
+            availability: AssetAvailability,
             value: BalanceFor<T>,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
@@ -100,7 +111,7 @@ pub mod pallet {
             <Self as AssetRecorder<T::AssetId, BalanceFor<T>>>::add_asset(
                 &asset_id,
                 &units,
-                &availaility,
+                &availability,
             )?;
             T::IndexToken::deposit_into_existing(&caller, value)?;
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
@@ -116,17 +127,19 @@ pub mod pallet {
             units: &BalanceFor<T>,
             availability: &AssetAvailability,
         ) -> Result<(), DispatchError> {
-            if Holdings::<T>::contains_key(asset_id) {
-                Holdings::<T>::mutate(asset_id, |value| {
-                    if let Some(index_asset_data) = value {
-                        index_asset_data.units += *units;
-                    }
+            Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
+                let index_asset_data = value.get_or_insert_with(|| {
+                    IndexAssetData::<BalanceFor<T>>::new(
+                        BalanceFor::<T>::zero(),
+                        availability.clone(),
+                    )
                 });
-            } else {
-                let index_asset_data =
-                    IndexAssetData::<BalanceFor<T>>::new(*units, availability.clone());
-                Holdings::<T>::insert(asset_id, index_asset_data);
-            }
+                index_asset_data.units = index_asset_data
+                    .units
+                    .checked_add(units)
+                    .ok_or(Error::AssetUnitsOverflow)?;
+                Ok(())
+            })?;
             Ok(())
         }
 
