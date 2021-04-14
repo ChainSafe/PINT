@@ -62,14 +62,14 @@ pub mod pallet {
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new SAFT was added
-        /// /[AssetId, AssetIndex/]
+        /// \[AssetId, AssetIndex\]
         SAFTAdded(T::AssetId, u32),
         /// A SAFT was removed
-        /// /[AssetId, AssetIndex/]
+        /// \[AssetId, AssetIndex\]
         SAFTRemoved(T::AssetId, u32),
         /// The NAV for a SAFT was updated
-        /// /[AssetId, AssetIndex/]
-        NavUpdated(T::AssetId, u32),
+        /// \[AssetId, AssetIndex, OldNav, NewNav\]
+        NavUpdated(T::AssetId, u32, T::Balance, T::Balance),
     }
 
     #[pallet::error]
