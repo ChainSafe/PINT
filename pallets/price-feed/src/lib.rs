@@ -5,12 +5,6 @@
 
 pub use pallet::*;
 
-#[cfg(test)]
-mod mock;
-
-#[cfg(test)]
-mod tests;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
@@ -22,13 +16,21 @@ pub mod pallet {
         traits::{Currency, ExistenceRequirement::AllowDeath, Get},
     };
     use frame_system::pallet_prelude::*;
+    use pallet_chainlink_feed::FeedOracle;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type BalanceFor<T> = <<T as Config>::Currency as Currency<AccountIdFor<T>>>::Balance;
 
+    /// Provides access to all the price feeds
     #[pallet::config]
     pub trait Config: frame_system::Config {
         type Currency: Currency<Self::AccountId>;
+
+        type AssetId: Parameter + Member;
+
+        /// The oracle for price feeds
+        type Oracle: FeedOracle<Self>;
+
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -49,14 +51,6 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn withdraw(
-            origin: OriginFor<T>,
-            amount: BalanceFor<T>,
-            recipient: AccountIdFor<T>,
-        ) -> DispatchResultWithPostInfo {
 
-            Ok(().into())
-        }
     }
 }
