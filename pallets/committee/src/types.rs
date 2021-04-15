@@ -80,6 +80,12 @@ pub struct VoteAggregate<AccountId, BlockNumber> {
     pub end: BlockNumber,
 }
 
+pub enum VoteRejectionReason {
+    InsuffientVotes,
+    ConstituentVeto,
+    CouncilDeny,
+}
+
 impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
     pub fn new(
         ayes: Vec<CommitteeMember<AccountId>>,
@@ -143,14 +149,21 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
     ///  - At least min_council_votes must be case by the council
     ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) > count(nays))
     ///  - There is NOT a majority of Nay votes by the constituent members
-    pub fn is_accepted(&self, min_council_votes: usize) -> bool {
+    pub fn is_accepted(&self, min_council_votes: usize) -> Result<(), VoteRejectionReason> {
         // council votes
         let (ayes, nays, abs) = self.tally(&Some(MemberType::Council));
         let participants = ayes + nays + abs;
         // constituent votes
         let (cons_ayes, cons_nays, _) = self.tally(&Some(MemberType::Constituent));
 
-        participants >= min_council_votes && ayes > nays && cons_nays <= cons_ayes
+        ensure!(
+            participants >= min_council_votes,
+            VoteRejectionReason::InsuffientVotes
+        );
+        ensure!(ayes > nays, VoteRejectionReason::CouncilDeny);
+        ensure!(cons_nays <= cons_ayes, VoteRejectionReason::ConstituentVeto);
+        
+        Ok(())
     }
 }
 

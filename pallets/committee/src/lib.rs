@@ -142,8 +142,12 @@ pub mod pallet {
         NotInVotingPeriod,
         /// Attempted to close a proposal before the voting period is over
         VotingPeriodNotElapsed,
-        /// Tried to close a proposal that does not meet the vote requirements
-        ProposalNotAccepted,
+        /// Tried to close a proposal but not enough council members voted
+        ProposalNotAcceptedInsufficientVotes,
+        /// Tried to close a proposal but the constituent members voted to veto proposal
+        ProposalNotAcceptedConstituentVeto,
+        /// Tried to close a proposal but proposal was denied by council
+        ProposalNotAcceptedCouncilDeny,
         /// Attempted to execute a proposal that has already been executed
         ProposalAlreadyExecuted,
         /// The hash provided does not have an associated proposal
@@ -154,6 +158,16 @@ pub mod pallet {
         /// There was a numerical overflow or underflow in calculating when the voting period
         /// should end
         InvalidOperationInEndBlockComputation,
+    }
+
+    impl<T> From<VoteRejectionReason> for Error<T> {
+        fn from(reason: VoteRejectionReason) -> Self {
+            match reason {
+                VoteRejectionReason::InsuffientVotes => Self::ProposalNotAcceptedInsufficientVotes,
+                VoteRejectionReason::ConstituentVeto => Self::ProposalNotAcceptedConstituentVeto,
+                VoteRejectionReason::CouncilDeny => Self::ProposalNotAcceptedCouncilDeny,
+            }
+        }
     }
 
     #[pallet::hooks]
@@ -343,10 +357,9 @@ pub mod pallet {
             );
 
             // Ensure voting has accepted proposal
-            ensure!(
-                votes.is_accepted(T::MinCouncilVotes::get()),
-                Error::<T>::ProposalNotAccepted
-            );
+            votes
+                .is_accepted(T::MinCouncilVotes::get())
+                .map_err(Into::<Error<T>>::into)?;
 
             // Execute the proposal
             let proposal =
