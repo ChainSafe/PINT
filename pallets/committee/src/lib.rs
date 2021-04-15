@@ -98,8 +98,9 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
 
     #[pallet::storage]
-    /// Stores a vector of account IDs of current committee members
-    pub type Members<T: Config> = StorageValue<_, Vec<AccountIdFor<T>>, ValueQuery>;
+    /// Maps accountIDs to their member type (council or constituent)
+    pub type Members<T: Config> =
+        StorageMap<_, Blake2_128Concat, AccountIdFor<T>, MemberType, OptionQuery>;
 
     #[pallet::storage]
     /// Store a mapping (hash) -> VoteAggregate for all existing proposals.
@@ -121,7 +122,7 @@ pub mod pallet {
         Proposed(AccountIdFor<T>, T::ProposalNonce, T::Hash),
         /// A vote was cast
         /// \[voter_address, proposal_hash, vote\]
-        VoteCast(AccountIdFor<T>, T::Hash, Vote),
+        VoteCast(CommitteeMember<AccountIdFor<T>>, T::Hash, Vote),
         /// A proposal was closed and executed. Any errors for calling the proposal action
         /// are included
         /// \[proposal_hash, result\]
@@ -194,17 +195,21 @@ pub mod pallet {
             Votes::<T>::get(hash)
         }
 
-        pub fn members() -> Vec<AccountIdFor<T>> {
-            Members::<T>::get()
-        }
+        // pub fn members() -> Vec<AccountIdFor<T>> {
+        //     Members::<T>::get()
+        // }
 
         /// Used to check if an origin is signed and the signer is a member of
         /// the committee
-        pub fn ensure_member(origin: OriginFor<T>) -> Result<AccountIdFor<T>, DispatchError> {
+        pub fn ensure_member(
+            origin: OriginFor<T>,
+        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
             let who = ensure_signed(origin)?;
-            let members = Self::members();
-            ensure!(members.contains(&who), Error::<T>::NotMember);
-            Ok(who)
+            if let Some(member_type) = Members::<T>::get(who.clone()) {
+                Ok(CommitteeMember::new(who, member_type))
+            } else {
+                Err(Error::<T>::NotMember.into())
+            }
         }
 
         /// Returns the block at the end of the next voting period
@@ -296,8 +301,11 @@ pub mod pallet {
                         Error::<T>::NotInVotingPeriod
                     );
                     // members can vote only once
-                    ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
-                    votes.cast_vote(voter.clone(), &vote); // mutates votes in place
+                    ensure!(
+                        !votes.has_voted(&voter.account_id),
+                        Error::<T>::DuplicateVote
+                    );
+                    votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
                     Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
                     Ok(())
                 } else {
@@ -359,14 +367,18 @@ pub mod pallet {
         }
     }
 
+    // Note: This can only be used to manage constituent members.
+    // Council members must be added by promoting them
     impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
         fn initialize_members(members: &[AccountIdFor<T>]) {
             if !members.is_empty() {
                 assert!(
-                    Members::<T>::get().is_empty(),
+                    Members::<T>::iter().count() == 0,
                     "Members are already initialized!"
                 );
-                Members::<T>::put(members);
+                for member in members {
+                    Members::<T>::insert(member, MemberType::Council);
+                }
             }
         }
     }
@@ -385,7 +397,10 @@ pub mod pallet {
                     }
                 });
             }
-            Members::<T>::put(new);
+            Members::<T>::drain().for_each(drop); // remove all the members from the map
+            for member in new {
+                Members::<T>::insert(member, MemberType::Constituent);
+            }
         }
     }
 }
