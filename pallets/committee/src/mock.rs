@@ -77,12 +77,14 @@ pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = 88;
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
     pub const ExecuterAccountId: AccountId = EXECUTER_ACCOUNT_ID;
+    pub const MinCouncilVotes: usize = 4;
 
 }
 
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
+    type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
     type ProposalNonce = u32;

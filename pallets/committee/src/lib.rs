@@ -62,6 +62,9 @@ pub mod pallet {
         /// Duration (in blocks) of the voting period
         type VotingPeriod: Get<Self::BlockNumber>;
 
+        /// Minumum number of council members that must vote for a action to be passed
+        type MinCouncilVotes: Get<usize>;
+
         /// Origin that is permitted to create proposals
         type ProposalSubmissionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
@@ -194,10 +197,6 @@ pub mod pallet {
         ) -> Option<VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>> {
             Votes::<T>::get(hash)
         }
-
-        // pub fn members() -> Vec<AccountIdFor<T>> {
-        //     Members::<T>::get()
-        // }
 
         /// Used to check if an origin is signed and the signer is a member of
         /// the committee
@@ -344,7 +343,10 @@ pub mod pallet {
             );
 
             // Ensure voting has accepted proposal
-            ensure!(votes.is_accepted(), Error::<T>::ProposalNotAccepted);
+            ensure!(
+                votes.is_accepted(T::MinCouncilVotes::get()),
+                Error::<T>::ProposalNotAccepted
+            );
 
             // Execute the proposal
             let proposal =
@@ -367,8 +369,8 @@ pub mod pallet {
         }
     }
 
-    // Note: This can only be used to manage constituent members.
-    // Council members must be added by promoting them
+    /// Initialize council members. Can only be done once.
+    /// Constituent members must be initialized later by voting by the council
     impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
         fn initialize_members(members: &[AccountIdFor<T>]) {
             if !members.is_empty() {
@@ -383,6 +385,9 @@ pub mod pallet {
         }
     }
 
+    /// Used to add and remove constituent members.
+    /// Council members must be added by first adding them as constituents.
+    /// The existing council can then vote to add them as concil members
     impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
         fn change_members_sorted(
             _incoming: &[AccountIdFor<T>],

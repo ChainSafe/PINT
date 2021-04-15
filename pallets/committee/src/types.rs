@@ -120,9 +120,18 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
             > 0
     }
 
-    pub fn tally(&self) -> (usize, usize, usize) {
+    /// produce a tuple of the vote totals: (ayes, nays, abstentions)
+    /// Can optionally filter by membership type to only tally council or constituent votes
+    pub fn tally(&self, member_type: &Option<MemberType>) -> (usize, usize, usize) {
         self.votes
             .iter()
+            .filter(|x| {
+                if let Some(m) = member_type {
+                    &x.member.member_type == m
+                } else {
+                    true
+                }
+            })
             .fold((0, 0, 0), |(ayes, nays, abs), x| match x.vote {
                 Vote::Aye => (ayes + 1, nays, abs),
                 Vote::Nay => (ayes, nays + 1, abs),
@@ -130,13 +139,18 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
             })
     }
 
-    /// Acceptence criteria for a vote is:
-    ///  - A successful vote is any that includes a simple majority of yay vs nays.
-    ///  - A minimum of four members must participate in each voting process.
-    pub fn is_accepted(&self) -> bool {
-        let (ayes, nays, abs) = self.tally();
+    /// For a vote to be accepted all of the following must be true:
+    ///  - At least min_council_votes must be case by the council
+    ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) > count(nays))
+    ///  - There is NOT a majority of Nay votes by the constituent members
+    pub fn is_accepted(&self, min_council_votes: usize) -> bool {
+        // council votes
+        let (ayes, nays, abs) = self.tally(&Some(MemberType::Council));
         let participants = ayes + nays + abs;
-        participants >= 4 && ayes > nays
+        // constituent votes
+        let (cons_ayes, cons_nays, _) = self.tally(&Some(MemberType::Constituent));
+
+        participants >= min_council_votes && ayes > nays && cons_nays <= cons_ayes
     }
 }
 
