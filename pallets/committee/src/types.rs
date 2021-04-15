@@ -162,7 +162,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
         );
         ensure!(ayes > nays, VoteRejectionReason::CouncilDeny);
         ensure!(cons_nays <= cons_ayes, VoteRejectionReason::ConstituentVeto);
-        
+
         Ok(())
     }
 }

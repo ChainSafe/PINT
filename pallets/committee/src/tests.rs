@@ -4,7 +4,11 @@
 use crate as pallet;
 use crate::mock::*;
 use crate::{CommitteeMember, MemberType, Vote, VoteAggregate};
-use frame_support::{assert_noop, assert_ok, codec::Encode, traits::{InitializeMembers, ChangeMembers}};
+use frame_support::{
+    assert_noop, assert_ok,
+    codec::Encode,
+    traits::{ChangeMembers, InitializeMembers},
+};
 use frame_system as system;
 use sp_runtime::traits::BadOrigin;
 use std::convert::{TryFrom, TryInto};
@@ -302,7 +306,6 @@ fn member_cannot_vote_multiple_times() {
 // Closing/executing a proposal
 //
 
-
 // iterates through accounts and vote a particular way on a proposal
 fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: Vote)
 where
@@ -332,7 +335,7 @@ where
     I: IntoIterator<Item = AccountId>,
 {
     let members: Vec<u64> = accounts.into_iter().collect();
-    Committee::change_members(&members, &[], Vec::new());   
+    Committee::change_members(&members, &[], Vec::new());
 }
 
 #[test]
@@ -373,7 +376,11 @@ fn cannot_close_if_insufficent_council_votes() {
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        vote_with_each(0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(), proposal.hash(), Vote::Aye);
+        vote_with_each(
+            0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(),
+            proposal.hash(),
+            Vote::Aye,
+        );
 
         run_to_block(START_OF_V1 + 1);
         assert_noop!(
@@ -390,7 +397,11 @@ fn cannot_close_if_council_rejects() {
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        vote_with_each(0..(MIN_COUNCIL_VOTES).try_into().unwrap(), proposal.hash(), Vote::Nay);
+        vote_with_each(
+            0..(MIN_COUNCIL_VOTES).try_into().unwrap(),
+            proposal.hash(),
+            Vote::Nay,
+        );
 
         run_to_block(START_OF_V1 + 1);
         assert_noop!(
