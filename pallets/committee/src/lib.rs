@@ -403,9 +403,9 @@ pub mod pallet {
     /// The existing council can then vote to add them as concil members
     impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
         fn change_members_sorted(
-            _incoming: &[AccountIdFor<T>],
+            incoming: &[AccountIdFor<T>],
             outgoing: &[AccountIdFor<T>],
-            new: &[AccountIdFor<T>],
+            _sorted_new: &[AccountIdFor<T>],
         ) {
             // Remove outgoing members from any currently active votes
             for proposal_hash in ActiveProposals::<T>::get() {
@@ -415,8 +415,10 @@ pub mod pallet {
                     }
                 });
             }
-            Members::<T>::drain().for_each(drop); // remove all the members from the map
-            for member in new {
+            for leaving_member in outgoing {
+                Members::<T>::remove(leaving_member)
+            }
+            for member in incoming {
                 Members::<T>::insert(member, MemberType::Constituent);
             }
         }
