@@ -13,7 +13,7 @@ use sp_runtime::{
     testing::Header,
     traits::AccountIdConversion,
     traits::{BlakeTwo256, IdentityLookup},
-    ModuleId,
+    PalletId,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -86,11 +86,11 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-pub(crate) const LOCAL_TREASURE_MODULE_ID: ModuleId = ModuleId(*b"12345678");
+pub(crate) const LOCAL_TREASURE_MODULE_ID: PalletId = PalletId(*b"12345678");
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
 
 parameter_types! {
-    pub const TestModuleId: ModuleId = LOCAL_TREASURE_MODULE_ID;
+    pub const TestPalletId: PalletId = LOCAL_TREASURE_MODULE_ID;
 }
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
@@ -98,7 +98,7 @@ ord_parameter_types! {
 
 impl pallet_local_treasury::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type ModuleId = TestModuleId;
+    type PalletId = TestPalletId;
     type Currency = Balances;
     type Event = Event;
 }
