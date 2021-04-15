@@ -11,8 +11,8 @@ pub use pallet::*;
 pub mod pallet {
     use frame_support::{
         pallet_prelude::*,
-        PalletId,
         traits::{Currency, Get},
+        PalletId,
     };
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::FeedOracle;
@@ -39,8 +39,7 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    pub enum Event<T: Config> {
-    }
+    pub enum Event<T: Config> {}
 
     #[pallet::error]
     pub enum Error<T> {}
@@ -49,7 +48,5 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
-    impl<T: Config> Pallet<T> {
-
-    }
+    impl<T: Config> Pallet<T> {}
 }
