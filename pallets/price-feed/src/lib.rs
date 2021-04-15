@@ -10,10 +10,9 @@ pub use pallet::*;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{traits::AccountIdConversion, ModuleId},
-        traits::{Currency, ExistenceRequirement::AllowDeath, Get},
+        PalletId,
+        traits::{Currency, Get},
     };
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::FeedOracle;
