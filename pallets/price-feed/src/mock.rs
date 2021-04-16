@@ -5,6 +5,7 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_price_feed;
+use frame_support::sp_runtime::traits::AccountIdConversion;
 use frame_support::{parameter_types, PalletId};
 use frame_system as system;
 use sp_core::H256;
@@ -13,7 +14,6 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     Perbill,
 };
-use frame_support::sp_runtime::traits::AccountIdConversion;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -133,16 +133,15 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Test> {
         balances: vec![(pallet_account, 100 * MIN_RESERVE)],
     }
-        .assimilate_storage(&mut t)
-        .unwrap();
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     pallet_chainlink_feed::GenesisConfig::<Test> {
         pallet_admin: Some(pallet_account),
         feed_creators: vec![1],
     }
-        .assimilate_storage(&mut t)
-        .unwrap();
-
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     t.into()
 }
