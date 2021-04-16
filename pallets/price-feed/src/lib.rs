@@ -21,6 +21,7 @@ mod types;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     pub use crate::traits::PriceFeed;
+    use crate::types::AssetPricePair;
     use frame_support::sp_runtime::PerThing;
     use frame_support::{pallet_prelude::*, traits::Get};
     use frame_system::pallet_prelude::*;
@@ -84,4 +85,18 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {}
 
+    impl<T: Config> PriceFeed<T::AssetFeedId, T::Precision> for Pallet<T> {
+        fn get_price(
+            quote: T::AssetFeedId,
+        ) -> Result<AssetPricePair<T::AssetFeedId, T::Precision>, DispatchError> {
+          Self::get_price_pair(T::SelfAssetFeedId::get(), quote)
+        }
+
+        fn get_price_pair(
+            _base: T::AssetFeedId,
+            _quote: T::AssetFeedId,
+        ) -> Result<AssetPricePair<T::AssetFeedId, T::Precision>, DispatchError> {
+            todo!()
+        }
+    }
 }
