@@ -14,7 +14,8 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-chainlink-feed/std'
+    'pallet-balances/std',
+    'pallet-chainlink-feed/std',
 ]
 [dependencies.codec]
 default-features = false
