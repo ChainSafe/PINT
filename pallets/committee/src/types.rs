@@ -52,6 +52,7 @@ impl<AccountId> CommitteeMember<AccountId> {
 }
 
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+/// A committee member together with their cast vote.
 pub struct MemberVote<AccountId> {
     pub member: CommitteeMember<AccountId>,
     pub vote: Vote,
@@ -119,16 +120,12 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
     }
 
     pub fn has_voted(&self, voter: &AccountId) -> bool {
-        self.votes
-            .iter()
-            .filter(|x| &x.member.account_id == voter)
-            .count()
-            > 0
+        self.votes.iter().any(|x| &x.member.account_id == voter)
     }
 
     /// produce a tuple of the vote totals: (ayes, nays, abstentions)
     /// Can optionally filter by membership type to only tally council or constituent votes
-    pub fn tally(&self, member_type: &Option<MemberType>) -> (usize, usize, usize) {
+    pub fn tally(&self, member_type: Option<&MemberType>) -> (usize, usize, usize) {
         self.votes
             .iter()
             .filter(|x| {
@@ -146,15 +143,15 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
     }
 
     /// For a vote to be accepted all of the following must be true:
-    ///  - At least min_council_votes must be case by the council
+    ///  - At least min_council_votes must be cast by the council
     ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) > count(nays))
     ///  - There is NOT a majority of Nay votes by the constituent members
     pub fn is_accepted(&self, min_council_votes: usize) -> Result<(), VoteRejectionReason> {
         // council votes
-        let (ayes, nays, abs) = self.tally(&Some(MemberType::Council));
+        let (ayes, nays, abs) = self.tally(Some(&MemberType::Council));
         let participants = ayes + nays + abs;
         // constituent votes
-        let (cons_ayes, cons_nays, _) = self.tally(&Some(MemberType::Constituent));
+        let (cons_ayes, cons_nays, _) = self.tally(Some(&MemberType::Constituent));
 
         ensure!(
             participants >= min_council_votes,

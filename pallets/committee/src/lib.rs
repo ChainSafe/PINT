@@ -387,8 +387,9 @@ pub mod pallet {
     impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
         fn initialize_members(members: &[AccountIdFor<T>]) {
             if !members.is_empty() {
-                assert!(
-                    Members::<T>::iter().count() == 0,
+                assert_eq!(
+                    Members::<T>::iter().count(),
+                    0,
                     "Members are already initialized!"
                 );
                 for member in members {
