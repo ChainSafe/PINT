@@ -33,21 +33,21 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        // Origin that is allowed to administer the index
+        /// Origin that is allowed to administer the index
         type AdminOrigin: EnsureOrigin<Self::Origin>;
-        // Currency implementation to use as the index token
+        /// Currency implementation to use as the index token
         type IndexToken: LockableCurrency<Self::AccountId>;
-        // Period after the minting of the index token for which 100% is locked up.
-        // Only applies to users contributing assets directly to index
+        /// Period after the minting of the index token for which 100% is locked up.
+        /// Only applies to users contributing assets directly to index
         type LockupPeriod: Get<Self::BlockNumber>;
-        // The minimum amount of the index token that can be redeemed for the underlying asset in the index
+        /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
         type MinimumRedemption: Get<BalanceFor<Self>>;
-        // Minimum amount of time between redeeming index tokens
-        // and being able to withdraw the awarded assets
+        /// Minimum amount of time between redeeming index tokens
+        /// and being able to withdraw the awarded assets
         type WithdrawalPeriod: Get<Self::BlockNumber>;
-        // The maximum amount of DOT that can exist in the index
+        /// The maximum amount of DOT that can exist in the index
         type DOTContributionLimit: Get<BalanceFor<Self>>;
-        // Type used to identify assets
+        /// Type used to identify assets
         type AssetId: Parameter;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
