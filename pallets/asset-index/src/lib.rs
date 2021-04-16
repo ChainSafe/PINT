@@ -39,13 +39,17 @@ pub mod pallet {
         type IndexToken: LockableCurrency<Self::AccountId>;
         /// Period after the minting of the index token for which 100% is locked up.
         /// Only applies to users contributing assets directly to index
+        #[pallet::constant]
         type LockupPeriod: Get<Self::BlockNumber>;
         /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
+        #[pallet::constant]
         type MinimumRedemption: Get<BalanceFor<Self>>;
         /// Minimum amount of time between redeeming index tokens
         /// and being able to withdraw the awarded assets
+        #[pallet::constant]
         type WithdrawalPeriod: Get<Self::BlockNumber>;
         /// The maximum amount of DOT that can exist in the index
+        #[pallet::constant]
         type DOTContributionLimit: Get<BalanceFor<Self>>;
         /// Type used to identify assets
         type AssetId: Parameter;
