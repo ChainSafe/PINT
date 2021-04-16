@@ -39,8 +39,7 @@ pub mod pallet {
         type SelfAssetFeedId: Get<Self::AssetFeedId>;
 
         /// Used to define the decimal precision when calculating prices
-        // TODO should this be a property of the FeedOracle::Feed type instead, so that feeds can have different precisions?
-        //  however when the base currency is the same for all feeds the precision should also be
+        // TODO this needs to be factored in when converting the feed prices with their decimals
         type Precision: PerThing + Encode;
 
         /// Type used to identify the asset's feed.
@@ -49,10 +48,9 @@ pub mod pallet {
         /// The internal oracle that gives access to the asset's price feeds.
         ///
         /// NOTE: this assumes all the feed's provide data in the same base currency.
-        /// When querying the price of an asset (`quote` asset) from the, its price is given by means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
+        /// When querying the price of an asset (`quote`/`asset`) from the, its price is given by means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
         type Oracle: FeedOracle<Self>;
 
-        // TODO probably also make this IsType<<Self as pallet_chainlink_feed::Config>::Event
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
