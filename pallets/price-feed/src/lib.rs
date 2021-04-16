@@ -89,7 +89,7 @@ pub mod pallet {
         fn get_price(
             quote: T::AssetFeedId,
         ) -> Result<AssetPricePair<T::AssetFeedId, T::Precision>, DispatchError> {
-          Self::get_price_pair(T::SelfAssetFeedId::get(), quote)
+            Self::get_price_pair(T::SelfAssetFeedId::get(), quote)
         }
 
         fn get_price_pair(
