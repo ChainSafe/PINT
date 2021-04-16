@@ -22,8 +22,7 @@ mod types;
 pub mod pallet {
     pub use crate::traits::PriceFeed;
     use crate::types::AssetPricePair;
-    use frame_support::sp_runtime::PerThing;
-    use frame_support::{pallet_prelude::*, traits::Get};
+    use frame_support::{pallet_prelude::*, sp_runtime::PerThing, traits::Get};
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::FeedOracle;
 
