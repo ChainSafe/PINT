@@ -47,7 +47,7 @@ pub mod pallet {
         /// The internal oracle that gives access to the asset's price feeds.
         ///
         /// NOTE: this assumes all the feed's provide data in the same base currency.
-        /// When querying the price of an asset (`quote`/`asset`) from the, its price is given by means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
+        /// When querying the price of an asset (`quote`/`asset`) from the oracle, its price is given by means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
         type Oracle: FeedOracle<Self>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
