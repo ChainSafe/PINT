@@ -4152,6 +4152,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-index"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "xcm",
+]
+
+[[package]]
 name = "pallet-authority-discovery"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#645299e8b23ec5fa52935b1a6edbf36886e80141"
@@ -4510,6 +4525,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-asset-index",
  "pallet-balances",
  "parity-scale-codec",
  "serde",

@@ -11,18 +11,16 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-mod traits;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::traits::{AssetAvailability, AssetRecorder};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
         sp_runtime::traits::AtLeast32BitUnsigned,
     };
     use frame_system::pallet_prelude::*;
+    use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -94,13 +92,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
 
-            <T as Config>::AssetRecorder::add_asset(
-                &asset_id,
-                &units,
-                &AssetAvailability::SAFT,
-                &nav,
-            )?;
-            ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units));
+            ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
+            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::SAFT)?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
@@ -118,8 +111,8 @@ pub mod pallet {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
-                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
                     safts.remove(index_usize);
+                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())
@@ -142,11 +135,10 @@ pub mod pallet {
             let index_usize: usize = index as usize;
             ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
-                    let prev_nav = nav_record.nav.clone();
+                    let old_nav = nav_record.nav.clone();
                     nav_record.nav = latest_nav.clone();
-                    <T as Config>::AssetRecorder::update_nav(&asset_id, &latest_nav)?;
                     Self::deposit_event(Event::<T>::NavUpdated(
-                        asset_id, index, prev_nav, latest_nav,
+                        asset_id, index, old_nav, latest_nav,
                     ));
                     Ok(())
                 } else {
