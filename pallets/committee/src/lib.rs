@@ -62,6 +62,9 @@ pub mod pallet {
         /// Duration (in blocks) of the voting period
         type VotingPeriod: Get<Self::BlockNumber>;
 
+        /// Minumum number of council members that must vote for a action to be passed
+        type MinCouncilVotes: Get<usize>;
+
         /// Origin that is permitted to create proposals
         type ProposalSubmissionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
@@ -98,8 +101,9 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
 
     #[pallet::storage]
-    /// Stores a vector of account IDs of current committee members
-    pub type Members<T: Config> = StorageValue<_, Vec<AccountIdFor<T>>, ValueQuery>;
+    /// Maps accountIDs to their member type (council or constituent)
+    pub type Members<T: Config> =
+        StorageMap<_, Blake2_128Concat, AccountIdFor<T>, MemberType, OptionQuery>;
 
     #[pallet::storage]
     /// Store a mapping (hash) -> VoteAggregate for all existing proposals.
@@ -121,7 +125,7 @@ pub mod pallet {
         Proposed(AccountIdFor<T>, T::ProposalNonce, T::Hash),
         /// A vote was cast
         /// \[voter_address, proposal_hash, vote\]
-        VoteCast(AccountIdFor<T>, T::Hash, Vote),
+        VoteCast(CommitteeMember<AccountIdFor<T>>, T::Hash, Vote),
         /// A proposal was closed and executed. Any errors for calling the proposal action
         /// are included
         /// \[proposal_hash, result\]
@@ -138,8 +142,12 @@ pub mod pallet {
         NotInVotingPeriod,
         /// Attempted to close a proposal before the voting period is over
         VotingPeriodNotElapsed,
-        /// Tried to close a proposal that does not meet the vote requirements
-        ProposalNotAccepted,
+        /// Tried to close a proposal but not enough council members voted
+        ProposalNotAcceptedInsufficientVotes,
+        /// Tried to close a proposal but the constituent members voted to veto proposal
+        ProposalNotAcceptedConstituentVeto,
+        /// Tried to close a proposal but proposal was denied by council
+        ProposalNotAcceptedCouncilDeny,
         /// Attempted to execute a proposal that has already been executed
         ProposalAlreadyExecuted,
         /// The hash provided does not have an associated proposal
@@ -150,6 +158,16 @@ pub mod pallet {
         /// There was a numerical overflow or underflow in calculating when the voting period
         /// should end
         InvalidOperationInEndBlockComputation,
+    }
+
+    impl<T> From<VoteRejectionReason> for Error<T> {
+        fn from(reason: VoteRejectionReason) -> Self {
+            match reason {
+                VoteRejectionReason::InsuffientVotes => Self::ProposalNotAcceptedInsufficientVotes,
+                VoteRejectionReason::ConstituentVeto => Self::ProposalNotAcceptedConstituentVeto,
+                VoteRejectionReason::CouncilDeny => Self::ProposalNotAcceptedCouncilDeny,
+            }
+        }
     }
 
     #[pallet::hooks]
@@ -194,17 +212,17 @@ pub mod pallet {
             Votes::<T>::get(hash)
         }
 
-        pub fn members() -> Vec<AccountIdFor<T>> {
-            Members::<T>::get()
-        }
-
         /// Used to check if an origin is signed and the signer is a member of
         /// the committee
-        pub fn ensure_member(origin: OriginFor<T>) -> Result<AccountIdFor<T>, DispatchError> {
+        pub fn ensure_member(
+            origin: OriginFor<T>,
+        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
             let who = ensure_signed(origin)?;
-            let members = Self::members();
-            ensure!(members.contains(&who), Error::<T>::NotMember);
-            Ok(who)
+            if let Some(member_type) = Members::<T>::get(who.clone()) {
+                Ok(CommitteeMember::new(who, member_type))
+            } else {
+                Err(Error::<T>::NotMember.into())
+            }
         }
 
         /// Returns the block at the end of the next voting period
@@ -296,8 +314,11 @@ pub mod pallet {
                         Error::<T>::NotInVotingPeriod
                     );
                     // members can vote only once
-                    ensure!(!votes.has_voted(&voter), Error::<T>::DuplicateVote);
-                    votes.cast_vote(voter.clone(), &vote); // mutates votes in place
+                    ensure!(
+                        !votes.has_voted(&voter.account_id),
+                        Error::<T>::DuplicateVote
+                    );
+                    votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
                     Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
                     Ok(())
                 } else {
@@ -336,7 +357,9 @@ pub mod pallet {
             );
 
             // Ensure voting has accepted proposal
-            ensure!(votes.is_accepted(), Error::<T>::ProposalNotAccepted);
+            votes
+                .is_accepted(T::MinCouncilVotes::get())
+                .map_err(Into::<Error<T>>::into)?;
 
             // Execute the proposal
             let proposal =
@@ -359,23 +382,31 @@ pub mod pallet {
         }
     }
 
+    /// Initialize council members. Can only be done once.
+    /// Constituent members must be initialized later by voting by the council
     impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
         fn initialize_members(members: &[AccountIdFor<T>]) {
             if !members.is_empty() {
-                assert!(
-                    Members::<T>::get().is_empty(),
+                assert_eq!(
+                    Members::<T>::iter().count(),
+                    0,
                     "Members are already initialized!"
                 );
-                Members::<T>::put(members);
+                for member in members {
+                    Members::<T>::insert(member, MemberType::Council);
+                }
             }
         }
     }
 
+    /// Used to add and remove constituent members.
+    /// Council members must be added by first adding them as constituents.
+    /// The existing council can then vote to add them as concil members
     impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
         fn change_members_sorted(
-            _incoming: &[AccountIdFor<T>],
+            incoming: &[AccountIdFor<T>],
             outgoing: &[AccountIdFor<T>],
-            new: &[AccountIdFor<T>],
+            _sorted_new: &[AccountIdFor<T>],
         ) {
             // Remove outgoing members from any currently active votes
             for proposal_hash in ActiveProposals::<T>::get() {
@@ -385,7 +416,12 @@ pub mod pallet {
                     }
                 });
             }
-            Members::<T>::put(new);
+            for leaving_member in outgoing {
+                Members::<T>::remove(leaving_member)
+            }
+            for member in incoming {
+                Members::<T>::insert(member, MemberType::Constituent);
+            }
         }
     }
 }
