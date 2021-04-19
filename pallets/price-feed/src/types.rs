@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::{PerThing, SaturatedConversion, FixedPointNumber, FixedU128};
+use frame_support::sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128};
 
 /// The type to represent asset prices
 pub type Price = FixedU128;
@@ -14,8 +14,8 @@ pub struct AssetPricePair<AssetId> {
     pub base: AssetId,
     /// The quote asset
     pub quote: AssetId,
-    /// The price for `base/quote`
-    price: Price,
+    /// The price of `base/quote`
+    pub price: Price,
 }
 
 impl<AssetId> AssetPricePair<AssetId>
@@ -42,37 +42,33 @@ where
         &self.price
     }
 
+    /// Returns the price fraction `quote/base`
+    ///
+    /// Returns `None` if `price = 0`.
+    pub fn reciprocal_price(&self) -> Option<Price> {
+        self.price.reciprocal()
+    }
+
     /// Calculates the total volume of the provided units of the `quote` assetId w.r.t. price pair
-    pub fn volume<N>(&self, units: N) -> Price
-    where
-        N: Into<Price>,
+    pub fn volume<N: FixedPointOperand>(&self, units: N) -> Option<N>
     {
-        // where N: From<Price>
-        // self.price * Price::saturated_from(units)
-        todo!()
+        self.price.checked_mul_int(units)
     }
 
     /// Calculates the total volume of the provided units of the `base` assetId w.r.t. price pair
-    pub fn reciprocal_volume<N>(&self, units: N) -> u128
-    where
-        N: Into<u128>,
+    pub fn reciprocal_volume<N:FixedPointOperand>(&self, units: N) -> Option<N>
     {
-        todo!()
-        // self.price.saturating_reciprocal_mul(units.into())
+      self.reciprocal_price()?.checked_mul_int(units)
+    }
+
+    /// Turns this price pair of `base/quote` into a price pair of `quote/base`
+    ///
+    /// Returns `None` if `price = 0`.
+    pub fn invert(self) -> Option<Self> {
+        Some(Self {
+            base: self.quote,
+            quote: self.base,
+            price: self.price.reciprocal()?
+        })
     }
 }
-
-// impl<AssetId, Price> AssetPricePair<AssetId, Price>
-// where
-//     AssetId: Member,
-//     Price: PerThing + From<u128>,
-// {
-//     /// Turns this price pair of `base/quote` into a price pair of `quote/base`
-//     pub fn invert(self) -> Self {
-//         Self {
-//             base: self.quote,
-//             quote: self.base,
-//             price: self.price.saturating_reciprocal_mul(1).into(),
-//         }
-//     }
-// }

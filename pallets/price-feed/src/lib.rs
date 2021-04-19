@@ -21,13 +21,14 @@ mod types;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     pub use crate::traits::PriceFeed;
-    use crate::types::AssetPricePair;
-    use frame_support::{pallet_prelude::*, sp_runtime::PerThing, traits::{Get}, };
+    use crate::types::{AssetPricePair, Price};
+    use frame_support::{pallet_prelude::*, traits::{Get}, };
     use frame_system::pallet_prelude::*;
-    use pallet_chainlink_feed::{FeedOracle, FeedInterface, Feed};
+    use pallet_chainlink_feed::{FeedOracle, FeedInterface};
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
-    use frame_support::sp_runtime::{FixedU128};
+    use frame_support::sp_runtime::{FixedPointNumber};
+    use frame_support::sp_std::convert::TryInto;
 
     type FeedIdFor<T> =  <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
 
@@ -194,8 +195,16 @@ pub mod pallet {
             Ok((feed.latest_data().answer, feed.decimals()))
         }
     }
+    impl<T: Config> Pallet<T> where FeedValueFor<T> : TryInto<u128> {
 
-    impl<T: Config> PriceFeed<T::AssetId> for Pallet<T> {
+        fn adjust_with_multiplier(value: u128, exp: u8 ) -> Result<u128, DispatchError>{
+            let multiplier = 10u128.checked_pow(exp.into()).ok_or_else(||Error::<T>::ExceededAccuracy)?;
+            Ok(value.checked_mul(multiplier).ok_or_else(||Error::<T>::ExceededAccuracy)?)
+        }
+
+    }
+
+    impl<T: Config> PriceFeed<T::AssetId> for Pallet<T> where FeedValueFor<T> : TryInto<u128> {
 
         /// Returns a `AssetPricePair` where `base` is the configured `SelfAssetId`.
         fn get_price(
@@ -211,26 +220,29 @@ pub mod pallet {
             let base_feed_id = Self::get_asset_feed_id(&base).ok_or_else(||Error::<T>::AssetPriceFeedNotFound)?;
             let quote_feed_id = Self::get_asset_feed_id(&quote).ok_or_else(||Error::<T>::AssetPriceFeedNotFound)?;
 
-            let (mut last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
-            let (mut last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;
+            let (last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
+            let (last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;
 
+            let mut last_base_value = last_base_value.try_into().map_err(|_|Error::<T>::ExceededAccuracy)?;
+            let mut last_quote_value = last_quote_value.try_into().map_err(|_|Error::<T>::ExceededAccuracy)?;
+
+            // upscale the precision of the feed, which measures in fewer decimals
             if base_decimals > quote_decimals {
-
+                last_quote_value = Self::adjust_with_multiplier(last_quote_value, base_decimals - quote_decimals)?;
             } else if quote_decimals > base_decimals {
-
+                last_base_value = Self::adjust_with_multiplier(last_base_value, quote_decimals - base_decimals)?;
             }
 
-            let maybe_adjustment_multiplier = 10u128.checked_pow(10);
+           let price = Price::checked_from_rational(last_base_value, last_quote_value).ok_or_else(||Error::<T>::ExceededAccuracy)?;
 
-
-            // T::Price::checked_from_rational()
-
-            todo!()
+            Ok(
+                AssetPricePair {
+                    base,
+                    quote,
+                    price
+                }
+            )
         }
     }
 
-
-    fn adjust_with_multiplier() {
-
-    }
 }
