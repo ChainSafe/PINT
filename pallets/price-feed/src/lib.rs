@@ -7,6 +7,8 @@ pub use pallet::*;
 
 #[cfg(test)]
 mod mock;
+#[cfg(test)]
+pub use mock::FeedBuilder;
 
 #[cfg(test)]
 mod tests;
