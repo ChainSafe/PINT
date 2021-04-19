@@ -198,7 +198,7 @@ git = "https://github.com/paritytech/polkadot"
 branch = 'rococo-v1'
 
 [[bin]]
-name = 'parachain-collator'
+name = 'pint'
 
 [package]
 authors = ['Anonymous']

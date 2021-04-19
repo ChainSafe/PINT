@@ -4,19 +4,19 @@
 # Builder layer
 FROM rust as builder
 
+WORKDIR /pint
 COPY . .
 
-ARG RUST_TOOLCHAIN=nightly-2020-11-25
 ENV CARGO_TERM_COLOR=always
 
-RUN --mount=type=cache,target=/home/rust/.cargo/git \
-    --mount=type=cache,target=/home/rust/.cargo/registry \
-    --mount=type=cache,sharing=private,target=/home/rust/src/target \
+RUN --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,sharing=private,target=/pint/target \
     apt-get update \
     && apt-get install -y --no-install-recommends clang libclang-dev cmake \
-    && rustup default ${RUST_TOOLCHAIN} \
+    && rustup default nightly-2020-11-25 \
     && rustup target add wasm32-unknown-unknown \
-    && cargo build --release
+    && cargo build --release -vv
 
 # Release Image
 FROM debian:stable-slim
@@ -29,4 +29,4 @@ COPY --from=builder /home/rust/target/release/pint /usr/local/bin/
 
 EXPOSE 30333 9933 9944
 
-ENTRYPOINT [ "/usr/local/bin/parachain-collator" ]
+ENTRYPOINT [ "/usr/local/bin/pint" ]
