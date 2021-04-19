@@ -29,6 +29,7 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, traits::Get};
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::{FeedInterface, FeedOracle};
+    use std::cmp::Ordering;
 
     type FeedIdFor<T> = <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
 
@@ -197,8 +198,7 @@ pub mod pallet {
         fn get_latest_valid_value(
             feed_id: FeedIdFor<T>,
         ) -> Result<(FeedValueFor<T>, u8), DispatchError> {
-            let feed =
-                T::Oracle::feed(feed_id).ok_or_else(|| Error::<T>::AssetPriceFeedNotFound)?;
+            let feed = T::Oracle::feed(feed_id).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
             ensure!(
                 feed.first_valid_round().is_some(),
                 Error::<T>::InvalidFeedValue
@@ -213,10 +213,10 @@ pub mod pallet {
         fn adjust_with_multiplier(value: u128, exp: u8) -> Result<u128, DispatchError> {
             let multiplier = 10u128
                 .checked_pow(exp.into())
-                .ok_or_else(|| Error::<T>::ExceededAccuracy)?;
+                .ok_or(Error::<T>::ExceededAccuracy)?;
             Ok(value
                 .checked_mul(multiplier)
-                .ok_or_else(|| Error::<T>::ExceededAccuracy)?)
+                .ok_or(Error::<T>::ExceededAccuracy)?)
         }
     }
 
@@ -234,9 +234,9 @@ pub mod pallet {
             quote: T::AssetId,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
             let base_feed_id =
-                Self::get_asset_feed_id(&base).ok_or_else(|| Error::<T>::AssetPriceFeedNotFound)?;
-            let quote_feed_id = Self::get_asset_feed_id(&quote)
-                .ok_or_else(|| Error::<T>::AssetPriceFeedNotFound)?;
+                Self::get_asset_feed_id(&base).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
+            let quote_feed_id =
+                Self::get_asset_feed_id(&quote).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
 
             let (last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
             let (last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;
@@ -249,16 +249,24 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::ExceededAccuracy)?;
 
             // upscale the precision of the feed, which measures in fewer decimals
-            if base_decimals > quote_decimals {
-                last_quote_value =
-                    Self::adjust_with_multiplier(last_quote_value, base_decimals - quote_decimals)?;
-            } else if quote_decimals > base_decimals {
-                last_base_value =
-                    Self::adjust_with_multiplier(last_base_value, quote_decimals - base_decimals)?;
+            match base_decimals.cmp(&quote_decimals) {
+                Ordering::Less => {
+                    last_base_value = Self::adjust_with_multiplier(
+                        last_base_value,
+                        quote_decimals - base_decimals,
+                    )?;
+                }
+                Ordering::Greater => {
+                    last_quote_value = Self::adjust_with_multiplier(
+                        last_quote_value,
+                        base_decimals - quote_decimals,
+                    )?;
+                }
+                _ => {}
             }
 
             let price = Price::checked_from_rational(last_base_value, last_quote_value)
-                .ok_or_else(|| Error::<T>::ExceededAccuracy)?;
+                .ok_or(Error::<T>::ExceededAccuracy)?;
 
             Ok(AssetPricePair { base, quote, price })
         }
