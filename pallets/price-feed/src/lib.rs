@@ -49,9 +49,6 @@ pub mod pallet {
         #[pallet::constant]
         type SelfAssetId: Get<Self::AssetId>;
 
-        // /// The price type to represent the different asset price pairs
-        // type Price: FixedPointNumber + CheckedMul + One;
-
         /// Type used to identify the assets.
         type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
