@@ -25,6 +25,8 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, sp_runtime::PerThing, traits::Get};
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::FeedOracle;
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
 
     type FeedIdFor<T> =  <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
 
@@ -47,7 +49,7 @@ pub mod pallet {
         type Precision: PerThing + Encode;
 
         /// Type used to identify the assets.
-        type AssetId: Parameter + Member;
+        type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
         /// The internal oracle that gives access to the asset's price feeds.
         ///
@@ -78,6 +80,50 @@ pub mod pallet {
         /// The decimal precision to use when calculating price fractions
         pub fn precision() -> T::Precision {
             T::Precision::one()
+        }
+    }
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config>  where <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize {
+        /// The mappings to insert at genesis
+        pub asset_feeds: Vec<(T::AssetId, FeedIdFor<T>)>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> where <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize{
+        fn default() -> Self {
+            Self {
+                asset_feeds: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> where <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize {
+        fn build(&self) {
+           for (asset, feed) in &self.asset_feeds {
+               AssetFeeds::<T>::insert(asset.clone(),feed.clone())
+           }
+        }
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> GenesisConfig<T> where <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize {
+        /// Direct implementation of `GenesisBuild::build_storage`.
+        ///
+        /// Kept in order not to break dependency.
+        pub fn build_storage(&self) -> Result<frame_support::sp_runtime::Storage, String> {
+            <Self as GenesisBuild<T>>::build_storage(self)
+        }
+
+        /// Direct implementation of `GenesisBuild::assimilate_storage`.
+        ///
+        /// Kept in order not to break dependency.
+        pub fn assimilate_storage(
+            &self,
+            storage: &mut frame_support::sp_runtime::Storage,
+        ) -> Result<(), String> {
+            <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
         }
     }
 
