@@ -11,6 +11,7 @@ version = '0.0.1'
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
@@ -44,8 +45,8 @@ git = "https://github.com/mattsse/chainlink-polkadot"
 # see also https://github.com/ChainSafe/PINT/pull/39
 branch = "substrate-v3"
 
-[dev-dependencies]
-serde = { version = "1.0" }
+[dependencies]
+serde = { version = "1.0.101", optional = true }
 
 [dev-dependencies.pallet-balances]
 default-features = false

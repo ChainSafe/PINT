@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::{PerThing, SaturatedConversion};
+use frame_support::sp_runtime::{PerThing, SaturatedConversion, FixedPointNumber, FixedU128};
+
+/// The type to represent asset prices
+pub type Price = FixedU128;
 
 /// Defines an asset pair identifier
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct AssetPricePair<AssetId, Price> {
+pub struct AssetPricePair<AssetId> {
     /// The base asset id of this pair.
     pub base: AssetId,
     /// The quote asset
@@ -15,10 +18,9 @@ pub struct AssetPricePair<AssetId, Price> {
     price: Price,
 }
 
-impl<AssetId, Price> AssetPricePair<AssetId, Price>
+impl<AssetId> AssetPricePair<AssetId>
 where
-    AssetId: Member,
-    Price: PerThing,
+    AssetId: Member
 {
     /// Whether this pair involves the `asset`
     pub fn involves_asset(&self, asset: &AssetId) -> bool {
@@ -45,7 +47,9 @@ where
     where
         N: Into<Price>,
     {
-        self.price * Price::saturated_from(units)
+        // where N: From<Price>
+        // self.price * Price::saturated_from(units)
+        todo!()
     }
 
     /// Calculates the total volume of the provided units of the `base` assetId w.r.t. price pair
@@ -53,21 +57,22 @@ where
     where
         N: Into<u128>,
     {
-        self.price.saturating_reciprocal_mul(units.into())
+        todo!()
+        // self.price.saturating_reciprocal_mul(units.into())
     }
 }
 
-impl<AssetId, Price> AssetPricePair<AssetId, Price>
-where
-    AssetId: Member,
-    Price: PerThing + From<u128>,
-{
-    /// Turns this price pair of `base/quote` into a price pair of `quote/base`
-    pub fn invert(self) -> Self {
-        Self {
-            base: self.quote,
-            quote: self.base,
-            price: self.price.saturating_reciprocal_mul(1).into(),
-        }
-    }
-}
+// impl<AssetId, Price> AssetPricePair<AssetId, Price>
+// where
+//     AssetId: Member,
+//     Price: PerThing + From<u128>,
+// {
+//     /// Turns this price pair of `base/quote` into a price pair of `quote/base`
+//     pub fn invert(self) -> Self {
+//         Self {
+//             base: self.quote,
+//             quote: self.base,
+//             price: self.price.saturating_reciprocal_mul(1).into(),
+//         }
+//     }
+// }

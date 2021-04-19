@@ -22,13 +22,16 @@ mod types;
 pub mod pallet {
     pub use crate::traits::PriceFeed;
     use crate::types::AssetPricePair;
-    use frame_support::{pallet_prelude::*, sp_runtime::PerThing, traits::Get};
+    use frame_support::{pallet_prelude::*, sp_runtime::PerThing, traits::{Get}, };
     use frame_system::pallet_prelude::*;
-    use pallet_chainlink_feed::FeedOracle;
+    use pallet_chainlink_feed::{FeedOracle, FeedInterface, Feed};
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
+    use frame_support::sp_runtime::{FixedU128};
 
     type FeedIdFor<T> =  <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
+
+    type FeedValueFor<T> =  <<<T as Config>::Oracle as FeedOracle<T>>::Feed as FeedInterface<T>>::Value;
 
     /// Provides access to all the price feeds
     /// This is used to determine the equivalent amount of PINT for assets
@@ -44,9 +47,8 @@ pub mod pallet {
         #[pallet::constant]
         type SelfAssetId: Get<Self::AssetId>;
 
-        /// Used to define the decimal precision when calculating prices
-        // TODO this needs to be factored in when converting the feed prices with their decimals
-        type Precision: PerThing + Encode;
+        // /// The price type to represent the different asset price pairs
+        // type Price: FixedPointNumber + CheckedMul + One;
 
         /// Type used to identify the assets.
         type AssetId: Parameter + Member + MaybeSerializeDeserialize;
@@ -74,14 +76,6 @@ pub mod pallet {
         FeedIdFor<T>,
         OptionQuery,
     >;
-
-    #[pallet::extra_constants]
-    impl<T: Config> Pallet<T> {
-        /// The decimal precision to use when calculating price fractions
-        pub fn precision() -> T::Precision {
-            T::Precision::one()
-        }
-    }
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config>  where <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize {
@@ -172,7 +166,12 @@ pub mod pallet {
     #[pallet::error]
     pub enum Error<T> {
         /// Thrown if no price feed was found for an asset
-        AssetPriceFeedNotFound
+        AssetPriceFeedNotFound,
+        /// Thrown when the underlying price feed does not yet contain a valid round.
+        InvalidFeedValue,
+        /// Thrown if the calculation of the price ratio fails due to exceeding the
+        /// accuracy of the configured price.
+        ExceededAccuracy
     }
 
     #[pallet::hooks]
@@ -181,18 +180,57 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
 
-    impl<T: Config> PriceFeed<T::AssetFeedId, T::Precision> for Pallet<T> {
+        /// Returns the corresponding identifier for the asset's price feed
+        pub fn get_asset_feed_id(asset_id : &T::AssetId) -> Option<FeedIdFor<T>> {
+            AssetFeeds::<T>::get(asset_id)
+        }
+
+        /// Returns the latest value in the feed together with the feed's decimals
+        /// or an error if no feed was found for the given
+        /// or the feed doesn't contain any valid round yet.
+        fn get_latest_valid_value(feed_id: FeedIdFor<T>) -> Result<(FeedValueFor<T>, u8), DispatchError> {
+            let feed = T::Oracle::feed(feed_id).ok_or_else(||Error::<T>::AssetPriceFeedNotFound)?;
+            ensure!(feed.first_valid_round().is_some(), Error::<T>::InvalidFeedValue);
+            Ok((feed.latest_data().answer, feed.decimals()))
+        }
+    }
+
+    impl<T: Config> PriceFeed<T::AssetId> for Pallet<T> {
+
+        /// Returns a `AssetPricePair` where `base` is the configured `SelfAssetId`.
         fn get_price(
-            quote: T::AssetFeedId,
-        ) -> Result<AssetPricePair<T::AssetFeedId, T::Precision>, DispatchError> {
-            Self::get_price_pair(T::SelfAssetFeedId::get(), quote)
+            quote: T::AssetId,
+        ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+            Self::get_price_pair(T::SelfAssetId::get(), quote)
         }
 
         fn get_price_pair(
-            _base: T::AssetFeedId,
-            _quote: T::AssetFeedId,
-        ) -> Result<AssetPricePair<T::AssetFeedId, T::Precision>, DispatchError> {
+            base: T::AssetId,
+            quote: T::AssetId,
+        ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+            let base_feed_id = Self::get_asset_feed_id(&base).ok_or_else(||Error::<T>::AssetPriceFeedNotFound)?;
+            let quote_feed_id = Self::get_asset_feed_id(&quote).ok_or_else(||Error::<T>::AssetPriceFeedNotFound)?;
+
+            let (mut last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
+            let (mut last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;
+
+            if base_decimals > quote_decimals {
+
+            } else if quote_decimals > base_decimals {
+
+            }
+
+            let maybe_adjustment_multiplier = 10u128.checked_pow(10);
+
+
+            // T::Price::checked_from_rational()
+
             todo!()
         }
+    }
+
+
+    fn adjust_with_multiplier() {
+
     }
 }
