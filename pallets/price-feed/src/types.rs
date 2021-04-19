@@ -20,7 +20,7 @@ pub struct AssetPricePair<AssetId> {
 
 impl<AssetId> AssetPricePair<AssetId>
 where
-    AssetId: Member
+    AssetId: Member,
 {
     /// Whether this pair involves the `asset`
     pub fn involves_asset(&self, asset: &AssetId) -> bool {
@@ -50,15 +50,13 @@ where
     }
 
     /// Calculates the total volume of the provided units of the `quote` assetId w.r.t. price pair
-    pub fn volume<N: FixedPointOperand>(&self, units: N) -> Option<N>
-    {
+    pub fn volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
         self.price.checked_mul_int(units)
     }
 
     /// Calculates the total volume of the provided units of the `base` assetId w.r.t. price pair
-    pub fn reciprocal_volume<N:FixedPointOperand>(&self, units: N) -> Option<N>
-    {
-      self.reciprocal_price()?.checked_mul_int(units)
+    pub fn reciprocal_volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
+        self.reciprocal_price()?.checked_mul_int(units)
     }
 
     /// Turns this price pair of `base/quote` into a price pair of `quote/base`
@@ -68,7 +66,7 @@ where
         Some(Self {
             base: self.quote,
             quote: self.base,
-            price: self.price.reciprocal()?
+            price: self.price.reciprocal()?,
         })
     }
 }
