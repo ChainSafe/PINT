@@ -6,13 +6,12 @@
 
 use crate as pallet_price_feed;
 use frame_support::sp_runtime::traits::AccountIdConversion;
-use frame_support::{parameter_types, PalletId};
+use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system as system;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    Perbill,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -92,7 +91,7 @@ parameter_types! {
 }
 
 type FeedId = u16;
-type Value = u64;
+type Value = u128;
 
 impl pallet_chainlink_feed::Config for Test {
     type Event = Event;
@@ -108,19 +107,23 @@ impl pallet_chainlink_feed::Config for Test {
     type WeightInfo = ();
 }
 
+type AssetId = u64;
+pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
+
 parameter_types! {
-    pub const PINTFeed: FeedId = 1u16;
+    pub const PINTAssetId: AssetId = 1u64;
 }
 
-type BaseCurrency = u128;
+ord_parameter_types! {
+    pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
+}
 
 impl pallet_price_feed::Config for Test {
-    type Event = Event;
+    type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+    type SelfAssetId = PINTAssetId;
+    type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
-    type BaseCurrency = BaseCurrency;
-    type SelfAssetFeedId = PINTFeed;
-    type Precision = Perbill;
-    type AssetFeedId = FeedId;
+    type Event = Event;
 }
 
 // Build genesis storage according to the mock runtime.
