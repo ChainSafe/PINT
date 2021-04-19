@@ -70,3 +70,45 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mock_pair(base: u128, quote: u128) -> AssetPricePair<u64> {
+        AssetPricePair {
+            base: 1,
+            quote: 2,
+            price: Price::checked_from_rational(base, quote).unwrap(),
+        }
+    }
+
+    #[test]
+    fn can_detect_involvement() {
+        let pair = mock_pair(600, 200);
+        assert!(pair.is_quote(&2));
+        assert!(pair.is_base(&1));
+    }
+
+    #[test]
+    fn can_determine_volume() {
+        let pair = mock_pair(600, 200);
+        let value_of_units_measured_in_quote = pair.volume(300u128).unwrap();
+        assert_eq!(value_of_units_measured_in_quote, 600 / 200 * 300);
+    }
+
+    #[test]
+    fn can_determine_reciprocal_volume() {
+        let pair = mock_pair(800, 200);
+        let value_of_units_measured_in_base = pair.reciprocal_volume(500u128).unwrap();
+        assert_eq!(value_of_units_measured_in_base, 200 / 8 * 5);
+    }
+
+    #[test]
+    fn can_invert_pair() {
+        let pair = mock_pair(500, 100);
+        let reciprocal_price = pair.reciprocal_price().unwrap();
+        let inverted = pair.invert().unwrap();
+        assert_eq!(reciprocal_price, *inverted.price());
+    }
+}
