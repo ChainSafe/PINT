@@ -40,9 +40,6 @@ pub mod pallet {
     /// This is used to determine the equivalent amount of PINT for assets
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// The unit used to measure the value of assets
-        type BaseCurrency: Parameter + Member;
-
         /// The origin that is allowed to insert asset -> feed mappings
         type AdminOrigin: EnsureOrigin<Self::Origin>;
 
