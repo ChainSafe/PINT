@@ -5,7 +5,7 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_local_treasury;
-use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim};
+use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim, PalletId};
 use frame_system as system;
 
 use sp_core::H256;
@@ -13,7 +13,6 @@ use sp_runtime::{
     testing::Header,
     traits::AccountIdConversion,
     traits::{BlakeTwo256, IdentityLookup},
-    PalletId,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -63,6 +62,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 // param types for balances

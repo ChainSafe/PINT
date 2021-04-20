@@ -62,6 +62,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
