@@ -64,7 +64,7 @@ impl<AccountId> MemberVote<AccountId> {
     }
 }
 
-/// Origin for the committee module.
+/// Origin for the committee pallet.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
     /// Action is executed by the committee. Contains the closer account and the members that voted Aye

@@ -26,9 +26,9 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-        LocalTreasury: pallet_local_treasury::{Module, Call, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -86,11 +86,11 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
-pub(crate) const LOCAL_TREASURE_MODULE_ID: PalletId = PalletId(*b"12345678");
+pub(crate) const LOCAL_TREASURE_PALLET_ID: PalletId = PalletId(*b"12345678");
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
 
 parameter_types! {
-    pub const TestPalletId: PalletId = LOCAL_TREASURE_MODULE_ID;
+    pub const TestPalletId: PalletId = LOCAL_TREASURE_PALLET_ID;
 }
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
@@ -104,7 +104,7 @@ impl pallet_local_treasury::Config for Test {
 }
 
 pub fn local_treasury_account_id() -> AccountId {
-    LOCAL_TREASURE_MODULE_ID.into_account()
+    LOCAL_TREASURE_PALLET_ID.into_account()
 }
 
 // Build genesis storage according to the mock runtime.
