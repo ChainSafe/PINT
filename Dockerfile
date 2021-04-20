@@ -15,13 +15,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/git \
     cargo build --release -vv
 
 # Release Image
-FROM debian:stable-slim
+FROM debian:buster-slim
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /home/rust/target/release/pint /usr/local/bin/
+COPY --from=builder /pint/target/release/pint /usr/local/bin/
 
 # 30333 for p2p traffic
 # 9933 for RPC call
