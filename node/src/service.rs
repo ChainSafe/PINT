@@ -30,6 +30,7 @@ native_executor_instance!(
 ///
 /// Use this macro if you don't actually need the full service, but just the builder in order to
 /// be able to perform chain operations.
+#[allow(clippy::type_complexity)]
 pub fn new_partial(
     config: &Configuration,
 ) -> Result<
@@ -85,7 +86,7 @@ pub fn new_partial(
         client.clone(),
         inherent_data_providers.clone(),
         &task_manager.spawn_essential_handle(),
-        registry.clone(),
+        registry,
     )?;
 
     let params = PartialComponents {
