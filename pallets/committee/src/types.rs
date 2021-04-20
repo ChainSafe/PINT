@@ -22,6 +22,48 @@ impl<T: Config> Proposal<T> {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+/// Defines what sub-type a member belongs to.
+/// Council members are fixed in number and can vote on proposals
+/// Constituent members are unbounded in number but can only veto council proposals
+pub enum MemberType {
+    Council,
+    Constituent,
+}
+
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+/// Assignment of a member type to an accountId
+pub struct CommitteeMember<AccountId> {
+    pub account_id: AccountId,
+    pub member_type: MemberType,
+}
+
+impl<AccountId> CommitteeMember<AccountId> {
+    pub fn new(account_id: AccountId, member_type: MemberType) -> Self {
+        Self {
+            account_id,
+            member_type,
+        }
+    }
+
+    pub fn into_vote(self, vote: Vote) -> MemberVote<AccountId> {
+        MemberVote { member: self, vote }
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+/// A committee member together with their cast vote.
+pub struct MemberVote<AccountId> {
+    pub member: CommitteeMember<AccountId>,
+    pub vote: Vote,
+}
+
+impl<AccountId> MemberVote<AccountId> {
+    pub fn new(member: CommitteeMember<AccountId>, vote: Vote) -> Self {
+        Self { member, vote }
+    }
+}
+
 /// Origin for the committee module.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
@@ -33,29 +75,31 @@ pub enum CommitteeOrigin<AccountId, BlockNumber> {
 /// Info for keeping track of a motion being voted on.
 /// Default is empty vectors for all votes
 pub struct VoteAggregate<AccountId, BlockNumber> {
-    /// The current set of voters that approved it.
-    pub ayes: Vec<AccountId>,
-    /// The current set of voters that rejected it.
-    pub nays: Vec<AccountId>,
-    /// The current set of votes abstaining.
-    pub abstentions: Vec<AccountId>,
+    /// The current set of votes.
+    pub votes: Vec<MemberVote<AccountId>>,
     /// The hard end time of this vote.
     pub end: BlockNumber,
 }
 
+pub enum VoteRejectionReason {
+    InsuffientVotes,
+    ConstituentVeto,
+    CouncilDeny,
+}
+
 impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
     pub fn new(
-        ayes: Vec<AccountId>,
-        nays: Vec<AccountId>,
-        abstentions: Vec<AccountId>,
+        ayes: Vec<CommitteeMember<AccountId>>,
+        nays: Vec<CommitteeMember<AccountId>>,
+        abstentions: Vec<CommitteeMember<AccountId>>,
         end: BlockNumber,
     ) -> Self {
-        Self {
-            ayes,
-            nays,
-            abstentions,
-            end,
-        }
+        let votes = std::iter::empty()
+            .chain(ayes.into_iter().map(|x| x.into_vote(Vote::Aye)))
+            .chain(nays.into_iter().map(|x| x.into_vote(Vote::Nay)))
+            .chain(abstentions.into_iter().map(|x| x.into_vote(Vote::Abstain)))
+            .collect();
+        Self { votes, end }
     }
 
     pub fn new_with_end(end: BlockNumber) -> Self {
@@ -66,33 +110,57 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
     }
 
     // This does not check if a vote is a duplicate, This must be done before calling this function
-    pub fn cast_vote(&mut self, voter: AccountId, vote: &Vote) {
-        match vote {
-            Vote::Aye => self.ayes.push(voter),
-            Vote::Nay => self.nays.push(voter),
-            Vote::Abstain => self.abstentions.push(voter),
-        }
+    pub fn cast_vote(&mut self, vote: MemberVote<AccountId>) {
+        self.votes.push(vote)
     }
 
     pub fn remove_voters(&mut self, voters: &[AccountId]) {
-        self.ayes.retain(|x| !voters.contains(x));
-        self.nays.retain(|x| !voters.contains(x));
-        self.abstentions.retain(|x| !voters.contains(x));
+        self.votes
+            .retain(|x| !voters.contains(&x.member.account_id));
     }
 
     pub fn has_voted(&self, voter: &AccountId) -> bool {
-        self.ayes.contains(voter) | self.nays.contains(voter) | self.abstentions.contains(voter)
+        self.votes.iter().any(|x| &x.member.account_id == voter)
     }
 
-    pub fn participants(&self) -> usize {
-        self.ayes.len() + self.nays.len() + self.abstentions.len()
+    /// produce a tuple of the vote totals: (ayes, nays, abstentions)
+    /// Can optionally filter by membership type to only tally council or constituent votes
+    pub fn tally(&self, member_type: Option<&MemberType>) -> (usize, usize, usize) {
+        self.votes
+            .iter()
+            .filter(|x| {
+                if let Some(m) = member_type {
+                    &x.member.member_type == m
+                } else {
+                    true
+                }
+            })
+            .fold((0, 0, 0), |(ayes, nays, abs), x| match x.vote {
+                Vote::Aye => (ayes + 1, nays, abs),
+                Vote::Nay => (ayes, nays + 1, abs),
+                Vote::Abstain => (ayes, nays, abs + 1),
+            })
     }
 
-    /// Acceptence criteria for a vote is:
-    ///  - A successful vote is any that includes a simple majority of yay vs nays.
-    ///  - A minimum of four members must participate in each voting process.
-    pub fn is_accepted(&self) -> bool {
-        self.participants() >= 4 && self.ayes.len() > self.nays.len()
+    /// For a vote to be accepted all of the following must be true:
+    ///  - At least min_council_votes must be cast by the council
+    ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) > count(nays))
+    ///  - There is NOT a majority of Nay votes by the constituent members
+    pub fn is_accepted(&self, min_council_votes: usize) -> Result<(), VoteRejectionReason> {
+        // council votes
+        let (ayes, nays, abs) = self.tally(Some(&MemberType::Council));
+        let participants = ayes + nays + abs;
+        // constituent votes
+        let (cons_ayes, cons_nays, _) = self.tally(Some(&MemberType::Constituent));
+
+        ensure!(
+            participants >= min_council_votes,
+            VoteRejectionReason::InsuffientVotes
+        );
+        ensure!(ayes > nays, VoteRejectionReason::CouncilDeny);
+        ensure!(cons_nays <= cons_ayes, VoteRejectionReason::ConstituentVeto);
+
+        Ok(())
     }
 }
 

@@ -3,13 +3,22 @@
 
 use crate as pallet;
 use crate::mock::*;
-use crate::{Vote, VoteAggregate};
-use frame_support::{assert_noop, assert_ok, codec::Encode, traits::InitializeMembers};
+use crate::{CommitteeMember, MemberType, Vote, VoteAggregate};
+use frame_support::{
+    assert_noop, assert_ok,
+    codec::Encode,
+    traits::{ChangeMembers, InitializeMembers},
+};
 use frame_system as system;
 use sp_runtime::traits::BadOrigin;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 const ASHLEY: AccountId = 0;
+
+const ASHLEY_COUNCIL: CommitteeMember<AccountId> = CommitteeMember {
+    account_id: ASHLEY,
+    member_type: MemberType::Council,
+};
 
 // Start of the first submission period
 const START_OF_S1: <Test as system::Config>::BlockNumber =
@@ -160,7 +169,7 @@ fn member_can_vote_in_voting_period() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
         let expected_votes =
-            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1 - 1);
@@ -189,7 +198,7 @@ fn member_can_vote_aye() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
         let expected_votes =
-            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         // first block in voting period
@@ -210,7 +219,7 @@ fn member_can_vote_nay() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
         let expected_votes =
-            VoteAggregate::<AccountId, u64>::new(vec![], vec![ASHLEY], vec![], START_OF_V1);
+            VoteAggregate::<AccountId, u64>::new(vec![], vec![ASHLEY_COUNCIL], vec![], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
@@ -230,7 +239,7 @@ fn member_can_vote_abstain() {
     new_test_ext().execute_with(|| {
         Committee::initialize_members(&[ASHLEY]);
         let expected_votes =
-            VoteAggregate::<AccountId, u64>::new(vec![], vec![], vec![ASHLEY], START_OF_V1);
+            VoteAggregate::<AccountId, u64>::new(vec![], vec![], vec![ASHLEY_COUNCIL], START_OF_V1);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
@@ -274,7 +283,7 @@ fn member_cannot_vote_multiple_times() {
         Committee::initialize_members(&[ASHLEY]);
         let proposal = submit_proposal(123);
         let expected_votes =
-            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY], vec![], vec![], START_OF_V1);
+            VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 
         run_to_block(START_OF_S1);
         assert_ok!(Committee::vote(
@@ -297,29 +306,46 @@ fn member_cannot_vote_multiple_times() {
 // Closing/executing a proposal
 //
 
-fn vote_four_times(proposal_hash: <Test as system::Config>::Hash) {
-    for account in 0..4 {
+// iterates through accounts and vote a particular way on a proposal
+fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: Vote)
+where
+    I: IntoIterator<Item = AccountId>,
+{
+    for account in accounts {
         assert_ok!(Committee::vote(
             Origin::signed(account),
             proposal_hash,
-            Vote::Aye
+            vote.clone()
         ));
     }
 }
 
-fn initialize_members() {
-    let members: Vec<u64> = (0..4).collect();
+/// Intiializes a number of council members
+fn initialize_council<I>(accounts: I)
+where
+    I: IntoIterator<Item = AccountId>,
+{
+    let members: Vec<u64> = accounts.into_iter().collect();
     Committee::initialize_members(&members);
+}
+
+// add a number of new constituent members
+fn add_constituents<I>(accounts: I)
+where
+    I: IntoIterator<Item = AccountId>,
+{
+    let members: Vec<u64> = accounts.into_iter().collect();
+    Committee::change_members(&members, &[], Vec::new());
 }
 
 #[test]
 fn non_execution_origin_cannot_close() {
     new_test_ext().execute_with(|| {
-        initialize_members();
+        initialize_council(0..4);
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
 
-        vote_four_times(proposal.hash());
+        vote_with_each(0..4, proposal.hash(), Vote::Aye);
         assert_noop!(
             Committee::close(Origin::signed(ASHLEY), proposal.hash()),
             BadOrigin
@@ -330,11 +356,11 @@ fn non_execution_origin_cannot_close() {
 #[test]
 fn cannot_close_until_voting_period_elapsed() {
     new_test_ext().execute_with(|| {
-        initialize_members();
+        initialize_council(0..4);
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        vote_four_times(proposal.hash());
+        vote_with_each(0..4, proposal.hash(), Vote::Aye);
 
         assert_noop!(
             Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
@@ -344,15 +370,63 @@ fn cannot_close_until_voting_period_elapsed() {
 }
 
 #[test]
-fn cannot_close_if_insufficent_votes() {
+fn cannot_close_if_insufficent_council_votes() {
     new_test_ext().execute_with(|| {
-        initialize_members();
+        initialize_council(0..4);
         let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        vote_with_each(
+            0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(),
+            proposal.hash(),
+            Vote::Aye,
+        );
 
         run_to_block(START_OF_V1 + 1);
         assert_noop!(
             Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
-            pallet::Error::<Test>::ProposalNotAccepted
+            pallet::Error::<Test>::ProposalNotAcceptedInsufficientVotes
+        );
+    });
+}
+
+#[test]
+fn cannot_close_if_council_rejects() {
+    new_test_ext().execute_with(|| {
+        initialize_council(0..4);
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        vote_with_each(
+            0..(MIN_COUNCIL_VOTES).try_into().unwrap(),
+            proposal.hash(),
+            Vote::Nay,
+        );
+
+        run_to_block(START_OF_V1 + 1);
+        assert_noop!(
+            Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+            pallet::Error::<Test>::ProposalNotAcceptedCouncilDeny
+        );
+    });
+}
+
+#[test]
+fn cannot_close_if_constituents_veto() {
+    new_test_ext().execute_with(|| {
+        initialize_council(0..4);
+        add_constituents(4..8);
+
+        let proposal = submit_proposal(123);
+
+        run_to_block(START_OF_S1);
+        vote_with_each(0..4, proposal.hash(), Vote::Aye);
+        vote_with_each(4..8, proposal.hash(), Vote::Nay);
+
+        run_to_block(START_OF_V1 + 1);
+        assert_noop!(
+            Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+            pallet::Error::<Test>::ProposalNotAcceptedConstituentVeto
         );
     });
 }
@@ -360,11 +434,11 @@ fn cannot_close_if_insufficent_votes() {
 #[test]
 fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
     new_test_ext().execute_with(|| {
-        initialize_members();
+        initialize_council(0..4);
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        vote_four_times(proposal.hash());
+        vote_with_each(0..4, proposal.hash(), Vote::Aye);
 
         run_to_block(START_OF_V1 + 1);
         assert_ok!(Committee::close(
@@ -377,11 +451,11 @@ fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
 #[test]
 fn cannot_execute_proposal_twice() {
     new_test_ext().execute_with(|| {
-        initialize_members();
+        initialize_council(0..4);
         let proposal = submit_proposal(123);
 
         run_to_block(START_OF_S1);
-        vote_four_times(proposal.hash());
+        vote_with_each(0..4, proposal.hash(), Vote::Aye);
 
         run_to_block(START_OF_V1 + 1);
         assert_ok!(Committee::close(
