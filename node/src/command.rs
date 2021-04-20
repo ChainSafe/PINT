@@ -106,7 +106,8 @@ impl SubstrateCli for RelayChainCli {
     }
 
     fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-        polkadot_cli::Cli::from_iter([RelayChainCli::executable_name()].iter()).load_spec(id)
+        polkadot_cli::Cli::from_iter([RelayChainCli::executable_name().to_string()].iter())
+            .load_spec(id)
     }
 
     fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -114,7 +115,6 @@ impl SubstrateCli for RelayChainCli {
     }
 }
 
-#[allow(clippy::borrowed_box)] // unsure why this only gives warning on this func. Need to look into removing this allow
 fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
     let mut storage = chain_spec.build_storage()?;
 
@@ -181,7 +181,24 @@ pub fn run() -> Result<()> {
         }
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
-            runner.sync_run(|config| cmd.run(config.database))
+
+            runner.sync_run(|config| {
+                let polkadot_cli = RelayChainCli::new(
+                    &config,
+                    [RelayChainCli::executable_name().to_string()]
+                        .iter()
+                        .chain(cli.relaychain_args.iter()),
+                );
+
+                let polkadot_config = SubstrateCli::create_configuration(
+                    &polkadot_cli,
+                    &polkadot_cli,
+                    config.task_executor.clone(),
+                )
+                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+                cmd.run(config, polkadot_config)
+            })
         }
         Some(Subcommand::Revert(cmd)) => {
             let runner = cli.create_runner(cmd)?;
@@ -202,7 +219,7 @@ pub fn run() -> Result<()> {
 
             let block: Block = generate_genesis_block(&load_spec(
                 &params.chain.clone().unwrap_or_default(),
-                params.parachain_id.into(),
+                params.parachain_id.unwrap_or(200).into(),
             )?)?;
             let raw_header = block.header().encode();
             let output_buf = if params.raw {
@@ -247,14 +264,12 @@ pub fn run() -> Result<()> {
                 // TODO
                 let key = sp_core::Pair::generate().0;
 
-                let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
-                let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-                let para_id = extension.map(|e| e.para_id);
+                let para_id =
+                    chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
                 let polkadot_cli = RelayChainCli::new(
-                    config.base_path.as_ref().map(|x| x.path().join("polkadot")),
-                    relay_chain_id,
-                    [RelayChainCli::executable_name()]
+                    &config,
+                    [RelayChainCli::executable_name().to_string()]
                         .iter()
                         .chain(cli.relaychain_args.iter()),
                 );
@@ -269,13 +284,9 @@ pub fn run() -> Result<()> {
                 let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
                 let task_executor = config.task_executor.clone();
-                let polkadot_config = SubstrateCli::create_configuration(
-                    &polkadot_cli,
-                    &polkadot_cli,
-                    task_executor,
-                    None,
-                )
-                .map_err(|err| format!("Relay chain argument error: {}", err))?;
+                let polkadot_config =
+                    SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
+                        .map_err(|err| format!("Relay chain argument error: {}", err))?;
                 let collator = cli.run.base.validator || cli.collator;
 
                 info!("Parachain id: {:?}", id);
@@ -350,7 +361,7 @@ impl CliConfiguration<Self> for RelayChainCli {
         self.base.base.prometheus_config(default_listen_port)
     }
 
-    fn init<C: SubstrateCli>(&self) -> Result<sc_telemetry::TelemetryWorker> {
+    fn init<C: SubstrateCli>(&self) -> Result<()> {
         unreachable!("PolkadotCli is never initialized; qed");
     }
 
@@ -410,5 +421,12 @@ impl CliConfiguration<Self> for RelayChainCli {
 
     fn announce_block(&self) -> Result<bool> {
         self.base.base.announce_block()
+    }
+
+    fn telemetry_endpoints(
+        &self,
+        chain_spec: &Box<dyn ChainSpec>,
+    ) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
+        self.base.base.telemetry_endpoints(chain_spec)
     }
 }
