@@ -3,46 +3,46 @@ name: Test Code
 on:
   pull_request:
     branches:
-    - main
+      - main
   push:
     branches:
-    - main
+      - main
 
 jobs:
   test-code:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v2
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-    - name: Cache cargo registry
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Install toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly-2021-01-26
-        components: rustfmt, clippy
-        target: wasm32-unknown-unknown
-        override: true
-        default: true
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2021-04-18
+          components: rustfmt, clippy
+          target: wasm32-unknown-unknown
+          override: true
+          default: true
 
-    - name: Check Code Formatting
-      run: cargo fmt -- --check
+      - name: Check Code Formatting
+        run: cargo fmt -- --check
 
-    - name: Lint Code
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-targets
+      - name: Lint Code
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-targets
 
-    - name: Test Code
-      run: cargo test --all
+      - name: Test Code
+        run: cargo test --all
