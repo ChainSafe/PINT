@@ -8,6 +8,3 @@ members = [
     'runtime',
 ]
 
-# For local Apple M1 chip machine temporarily
-# [patch.crates-io]
-# rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb.git" }

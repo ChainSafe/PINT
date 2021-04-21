@@ -197,9 +197,6 @@ branch = 'rococo-v1'
 git = "https://github.com/paritytech/polkadot"
 branch = 'rococo-v1'
 
-[[bin]]
-name = 'pint'
-
 [package]
 authors = ['Anonymous']
 build = 'build.rs'
