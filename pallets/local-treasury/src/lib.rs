@@ -15,7 +15,13 @@ mod tests;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use frame_support::{dispatch::DispatchResultWithPostInfo, pallet_prelude::*, sp_runtime::{traits::AccountIdConversion}, traits::{Currency, ExistenceRequirement::AllowDeath, Get}, PalletId};
+    use frame_support::{
+        dispatch::DispatchResultWithPostInfo,
+        pallet_prelude::*,
+        sp_runtime::traits::AccountIdConversion,
+        traits::{Currency, ExistenceRequirement::AllowDeath, Get},
+        PalletId,
+    };
     use frame_system::pallet_prelude::*;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;

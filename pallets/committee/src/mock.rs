@@ -27,8 +27,8 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Committee: pallet_committee::{Module, Call, Storage, Origin<T>, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>},
     }
 );
 
@@ -62,6 +62,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
@@ -73,16 +74,19 @@ parameter_types! {
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
 pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = 88;
+pub(crate) const MIN_COUNCIL_VOTES: usize = 4;
 
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
     pub const ExecuterAccountId: AccountId = EXECUTER_ACCOUNT_ID;
+    pub const MinCouncilVotes: usize = MIN_COUNCIL_VOTES;
 
 }
 
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
+    type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
     type ProposalNonce = u32;
@@ -93,7 +97,7 @@ impl pallet_committee::Config for Test {
 
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
-        // add custom module on_finalize here if implemented
+        // add custom pallet on_finalize here if implemented
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());

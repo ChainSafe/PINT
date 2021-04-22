@@ -1,8 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+use crate::chain_spec;
 use std::path::PathBuf;
-
 use structopt::StructOpt;
 
 /// Sub-commands supported by the collator.
@@ -32,7 +32,7 @@ pub enum Subcommand {
     ImportBlocks(sc_cli::ImportBlocksCmd),
 
     /// Remove the whole chain.
-    PurgeChain(sc_cli::PurgeChainCmd),
+    PurgeChain(cumulus_client_cli::PurgeChainCmd),
 
     /// Revert the chain to a previous state.
     Revert(sc_cli::RevertCmd),
@@ -46,15 +46,17 @@ pub struct ExportGenesisStateCommand {
     pub output: Option<PathBuf>,
 
     /// Id of the parachain this state is for.
-    #[structopt(long, default_value = "200")]
-    pub parachain_id: u32,
+    ///
+    /// Default: 100
+    #[structopt(long, conflicts_with = "chain")]
+    pub parachain_id: Option<u32>,
 
     /// Write output in binary. Default is to write in hex.
     #[structopt(short, long)]
     pub raw: bool,
 
     /// The name of the chain for that the genesis state should be exported.
-    #[structopt(long)]
+    #[structopt(long, conflicts_with = "parachain-id")]
     pub chain: Option<String>,
 }
 
@@ -94,9 +96,9 @@ impl std::ops::Deref for RunCmd {
 
 #[derive(Debug, StructOpt)]
 #[structopt(settings = &[
-	structopt::clap::AppSettings::GlobalVersion,
-	structopt::clap::AppSettings::ArgsNegateSubcommands,
-	structopt::clap::AppSettings::SubcommandsNegateReqs,
+structopt::clap::AppSettings::GlobalVersion,
+structopt::clap::AppSettings::ArgsNegateSubcommands,
+structopt::clap::AppSettings::SubcommandsNegateReqs,
 ])]
 pub struct Cli {
     #[structopt(subcommand)]
@@ -129,12 +131,17 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-    /// Create a new instance of `Self`.
+    /// Parse the relay chain CLI parameters using the para chain `Configuration`.
     pub fn new<'a>(
-        base_path: Option<PathBuf>,
-        chain_id: Option<String>,
+        para_config: &sc_service::Configuration,
         relay_chain_args: impl Iterator<Item = &'a String>,
     ) -> Self {
+        let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
+        let chain_id = extension.map(|e| e.relay_chain.clone());
+        let base_path = para_config
+            .base_path
+            .as_ref()
+            .map(|x| x.path().join("polkadot"));
         Self {
             base_path,
             chain_id,

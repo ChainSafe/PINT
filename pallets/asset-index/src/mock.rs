@@ -4,7 +4,8 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
-use crate as pallet_saft_registry;
+use crate as pallet_asset_index;
+use frame_support::traits::StorageMapShim;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
@@ -27,7 +28,8 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -82,18 +84,55 @@ impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     }
 }
 
-impl pallet_saft_registry::Config for Test {
+// param types for balances
+parameter_types! {
+    pub const MaxLocks: u32 = 1024;
+    pub static ExistentialDeposit: Balance = 0;
+}
+
+impl pallet_balances::Config for Test {
+    type Balance = Balance;
+    type DustRemoval = ();
+    type Event = Event;
+    type ExistentialDeposit = ExistentialDeposit;
+    type AccountStore = StorageMapShim<
+        pallet_balances::Account<Test>,
+        system::Provider<Test>,
+        Balance,
+        pallet_balances::AccountData<Balance>,
+    >;
+    type MaxLocks = MaxLocks;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub MinimumRedemption: u32 = 0;
+    pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub DOTContributionLimit: u32 = 999;
+}
+
+impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type Event = Event;
-    type Balance = Balance;
-    type AssetRecorder = MockAssetRecorder;
     type AssetId = u32;
+    type IndexToken = Balances;
+    type LockupPeriod = LockupPeriod;
+    type MinimumRedemption = MinimumRedemption;
+    type WithdrawalPeriod = WithdrawalPeriod;
+    type DOTContributionLimit = DOTContributionLimit;
 }
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+pub fn new_test_ext(balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+    pallet_balances::GenesisConfig::<Test> {
+        // Assign initial balances to accounts
+        balances,
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
     t.into()
 }

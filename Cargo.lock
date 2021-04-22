@@ -1234,6 +1234,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cumulus-client-cli"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus.git?branch=rococo-v1#6ed96321a6b004eb860454087b3a7e278f326eb1"
+dependencies = [
+ "sc-cli",
+ "sc-service",
+ "structopt",
+]
+
+[[package]]
 name = "cumulus-client-collator"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus.git?branch=rococo-v1#6ed96321a6b004eb860454087b3a7e278f326eb1"
@@ -1452,6 +1462,24 @@ dependencies = [
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "sp-trie 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "tracing",
+]
+
+[[package]]
+name = "cumulus-primitives-utility"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus.git?branch=rococo-v1#6ed96321a6b004eb860454087b3a7e278f326eb1"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "impl-trait-for-tuples",
+ "parity-scale-codec",
+ "polkadot-core-primitives",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-std 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-trie 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "xcm",
 ]
 
 [[package]]
@@ -4559,6 +4587,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-index"
+version = "0.0.1"
+dependencies = [
+ "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "frame-system 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-io 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "xcm",
+]
+
+[[package]]
 name = "pallet-authority-discovery"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#68cfc326fa0e3d96d0d92509e4db1a104b9da9bb"
@@ -5014,6 +5057,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "pallet-asset-index",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
@@ -5258,6 +5302,7 @@ dependencies = [
 name = "parachain-collator"
 version = "2.0.0"
 dependencies = [
+ "cumulus-client-cli",
  "cumulus-client-collator",
  "cumulus-client-consensus-relay-chain",
  "cumulus-client-network",
@@ -5326,6 +5371,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
+ "cumulus-primitives-utility",
  "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "frame-executive",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
@@ -5340,6 +5386,7 @@ dependencies = [
  "pallet-timestamp",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
  "polkadot-parachain",
@@ -10848,7 +10895,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
