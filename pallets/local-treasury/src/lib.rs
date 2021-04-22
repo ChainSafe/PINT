@@ -18,8 +18,9 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{traits::AccountIdConversion, ModuleId},
+        sp_runtime::traits::AccountIdConversion,
         traits::{Currency, ExistenceRequirement::AllowDeath, Get},
+        PalletId,
     };
     use frame_system::pallet_prelude::*;
 
@@ -30,10 +31,10 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// Origin that is allowed to manage the treasury balance and initiate withdrawals
         type AdminOrigin: EnsureOrigin<Self::Origin>;
-        /// ModuleId must be an unique 8 character string.
+        /// PalletId must be an unique 8 character string.
         /// It is used to generate the account ID which holds the balance of the treasury.
         #[pallet::constant]
-        type ModuleId: Get<ModuleId>;
+        type PalletId: Get<PalletId>;
         /// The pallet to use as the base currency for this treasury
         type Currency: Currency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -62,7 +63,7 @@ pub mod pallet {
         /// Returns the accountID for the treasury balance
         /// Transferring balance to this account funds the treasury
         pub fn account_id() -> T::AccountId {
-            T::ModuleId::get().into_account()
+            T::PalletId::get().into_account()
         }
     }
 

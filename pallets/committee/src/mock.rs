@@ -27,8 +27,8 @@ frame_support::construct_runtime!(
         NodeBlock = Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Module, Call, Config, Storage, Event<T>},
-        Committee: pallet_committee::{Module, Call, Storage, Origin<T>, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>},
     }
 );
 
@@ -62,6 +62,7 @@ impl system::Config for Test {
     type OnKilledAccount = ();
     type SystemWeightInfo = ();
     type SS58Prefix = SS58Prefix;
+    type OnSetCode = ();
 }
 
 pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
@@ -96,7 +97,7 @@ impl pallet_committee::Config for Test {
 
 pub fn run_to_block(n: u64) {
     while System::block_number() < n {
-        // add custom module on_finalize here if implemented
+        // add custom pallet on_finalize here if implemented
         System::on_finalize(System::block_number());
         System::set_block_number(System::block_number() + 1);
         System::on_initialize(System::block_number());
