@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  docker:
-    runs-on: ubuntu-18.04
+  pint-slim:
+    runs-on: ubuntu-20.04
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -26,6 +26,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: ${{ github.event_name != 'pull_request' }}
-          tags: pint:latest
+          tags: pint-slim:latest
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+    

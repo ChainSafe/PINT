@@ -1,0 +1,47 @@
+# This is just a template for test env
+version: "3.9"
+services:
+  cumulus-0:
+    image: "rococo:rococo-v1"
+    volumes:
+      - "/tmp:/data"
+    entrypoint: "/bin/bash"
+    # 1. create directories
+    # 2. generate test-chain spec
+    # 3. start test-chain 0
+    command: |
+      mkdir -p /data/rococo \
+      && mkdir -p /data/pint \
+      && /usr/local/bin/polkadot build-spec --chain rococo-local --raw \
+      --disable-default-bootnode > /data/rococo/rococo_local.json \
+      && /usr/local/bin/polkadot --chain /data/rococo/rococo_local.json \
+      -d /data/rococo/cumulus_relay0 --validator --alice --port 50555
+  cumulus-1:
+    depends_on:
+      - "cumulus-0"
+    image: "rococo:rococo-v1"
+    volumes:
+      - "/tmp:/data"
+    entrypoint: "/bin/bash"
+    command: |
+      /usr/local/bin/polkadot --chain /data/rococo/rococo_local.json \
+      -d /data/rococo/cumulus_relay1 --validator --bob --port 50556
+  pint:
+    depends_on:
+      - "cumulus-1"
+    image: "pint:latest"
+    ports:
+      - "30333:30333"
+      - "9933:9933"
+      - "9944:9944"
+      - "9615:9615"
+    volumes:
+      - "/tmp:/data"
+    entrypoint: "/bin/bash"
+    command: |
+      /usr/local/bin/pint \
+      && export-genesis-state --parachain-id 200 > ./data/pint/para-200-genesis
+      && /usr/local/bin/pint export-genesis-wasm  > /data/pint/para-200-wasm
+      && /usr/local/bin/pint -d /data/pint/local-test --collator --alice \
+      --ws-port 9945 --parachain-id 200 -- --execution wasm \
+      --chain ./data/rococo/rococo_local.json
