@@ -55,6 +55,13 @@ cargo build --release --features real-overseer
 ./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay0 --validator --alice --port 50556
 ```
 
+* [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in the  `./bin` folder and
+    * Run globally
+        * `polkadot-launch config.json`
+    * Run locally, navigate into polkadot-launch,
+        * ``` yarn ```
+        * ``` yarn start ```
+
 Substrate Parachain Template:
 ```
 # this command assumes the chain spec is in a directory named polkadot that is a sibling of the working directory

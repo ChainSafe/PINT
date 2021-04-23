@@ -1,0 +1,61 @@
+{
+  "relaychain": {
+    "bin": "./bin/polkadot",
+    "chain": "rococo-local",
+    "nodes": [
+      {
+        "name": "alice",
+        "wsPort": 9944,
+        "port": 30444
+      },
+      {
+        "name": "bob",
+        "wsPort": 9955,
+        "port": 30555
+      },
+      {
+        "name": "charlie",
+        "wsPort": 9966,
+        "port": 30666
+      }
+    ]
+  },
+  "parachains": [
+    {
+      "bin": "./target/release/pint",
+      "chain": "pint-dev",
+      "id": "1",
+      "wsPort": 9988,
+      "port": 31200,
+      "balance": "1000000000000000000000",
+      "flags": [
+        "--",
+        "--execution=wasm"
+      ]
+    },
+    {
+      "bin": "./target/release/pint",
+      "chain": "pint-dev",
+      "id": "300",
+      "wsPort": 9999,
+      "port": 31300,
+      "balance": "1000000000000000000000",
+      "flags": [
+        "--",
+        "--execution=wasm"
+      ]
+    }
+  ],
+  "simpleParachains": [
+  ],
+  "hrmpChannels": [
+    {
+      "sender": 1,
+      "recipient": 300,
+      "maxCapacity": 8,
+      "maxMessageSize": 512
+    }
+  ],
+  "types": {},
+  "finalization": false
+}
