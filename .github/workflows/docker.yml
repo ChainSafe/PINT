@@ -1,13 +1,8 @@
 name: Docker
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
-
+    branches: [ "main", "docker-staging" ]
 jobs:
   pint-slim:
     runs-on: ubuntu-20.04
@@ -25,8 +20,8 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: pint-slim:latest
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}:${{steps.extract_branch.outputs.branch}}-${{ steps.vars.outputs.sha_short }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
-    
+
