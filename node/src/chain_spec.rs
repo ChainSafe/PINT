@@ -46,15 +46,15 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-pub fn development_config(id: ParaId) -> ChainSpec {
+pub fn pint_development_config(id: ParaId) -> ChainSpec {
     ChainSpec::from_genesis(
         // Name
-        "Development",
+        "PINT Development",
         // ID
-        "dev",
+        "pint_dev",
         ChainType::Local,
         move || {
-            testnet_genesis(
+            pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -76,7 +76,7 @@ pub fn development_config(id: ParaId) -> ChainSpec {
     )
 }
 
-pub fn local_testnet_config(id: ParaId) -> ChainSpec {
+pub fn pint_local_config(id: ParaId) -> ChainSpec {
     ChainSpec::from_genesis(
         // Name
         "Local Testnet",
@@ -84,7 +84,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
         "local_testnet",
         ChainType::Local,
         move || {
-            testnet_genesis(
+            pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -114,7 +114,7 @@ pub fn local_testnet_config(id: ParaId) -> ChainSpec {
     )
 }
 
-fn testnet_genesis(
+fn pint_testnet_genesis(
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
     id: ParaId,
