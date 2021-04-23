@@ -22,7 +22,7 @@
 	},
 	"parachains": [
 		{
-			"bin": "./target/release/parachain-collator",
+			"bin": "./target/release/pint",
 			"chain": "pint-dev",
 			"id": "1",
 			"wsPort": 9988,
@@ -31,7 +31,7 @@
 			"flags": ["--", "--execution=wasm"]
 		},
 		{
-			"bin": "./target/release/parachain-collator",
+			"bin": "./target/release/pint",
 			"chain": "pint-dev",
 			"id": "300",
 			"wsPort": 9999,
