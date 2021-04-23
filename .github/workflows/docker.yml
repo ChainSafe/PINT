@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main", "docker-staging" ]
 jobs:
-  pint-slim:
+  pint:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up QEMU
@@ -21,7 +21,7 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}:${{steps.extract_branch.outputs.branch}}-${{ steps.vars.outputs.sha_short }}
+          tags: pint:latest
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
