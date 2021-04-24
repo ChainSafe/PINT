@@ -35,14 +35,5 @@ jobs:
           override: true
           default: true
 
-      - name: Check Code Formatting
-        run: cargo fmt -- --check
-
-      - name: Lint Code
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets
-
       - name: Test Code
         run: cargo test --all
