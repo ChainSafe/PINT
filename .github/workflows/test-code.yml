@@ -9,6 +9,7 @@ on:
       - main
 
 jobs:
+  # Test code
   test-code:
     runs-on: ubuntu-20.04
 
@@ -30,10 +31,51 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly-2021-04-18
-          components: rustfmt, clippy
           target: wasm32-unknown-unknown
           override: true
           default: true
 
       - name: Test Code
         run: cargo test --all
+
+
+  # Lint code
+  clippy_check:
+      runs-on: ubuntu-20.04
+
+      steps:
+        - name: Checkout Code
+          uses: actions/checkout@v1
+
+        - name: Install toolchain
+          uses: actions-rs/toolchain@v1
+          with:
+              toolchain: nightly-2021-04-18
+              components: clippy
+              override: true
+              
+        - name: Clippy Check
+        - uses: actions-rs/clippy-check@v1
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            args: --all-features
+
+
+  # Check if the code format is correct
+  format_check:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly-2020-04-18
+            components: rustfmt
+            override: true
+
+      - name: Format check
+      - uses: mbrobbel/rustfmt-check@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
