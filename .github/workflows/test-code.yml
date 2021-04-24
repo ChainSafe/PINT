@@ -55,7 +55,7 @@ jobs:
               override: true
               
         - name: Clippy Check
-        - uses: actions-rs/clippy-check@v1
+          uses: actions-rs/clippy-check@v1
           with:
             token: ${{ secrets.GITHUB_TOKEN }}
             args: --all-features
@@ -76,6 +76,6 @@ jobs:
             override: true
 
       - name: Format check
-      - uses: mbrobbel/rustfmt-check@master
+        uses: mbrobbel/rustfmt-check@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
