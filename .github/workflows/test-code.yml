@@ -36,7 +36,7 @@ jobs:
           default: true
 
       - name: Test Code
-        run: cargo test --all
+        run: cargo test --all-features
 
 
   # Lint code
@@ -51,6 +51,7 @@ jobs:
           uses: actions-rs/toolchain@v1
           with:
               toolchain: nightly-2021-04-18
+              target: wasm32-unknown-unknown
               components: clippy
               override: true
               
@@ -72,7 +73,6 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
             toolchain: nightly-2020-04-18
-            target: wasm32-unknown-unknown
             components: rustfmt
             override: true
 
