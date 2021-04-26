@@ -50,11 +50,11 @@ jobs:
         - name: Cache cargo registry
           uses: actions/cache@v2
           with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+            path: |
+              ~/.cargo/registry
+              ~/.cargo/git
+              target
+            key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
           
         - name: Install toolchain
           uses: actions-rs/toolchain@v1
