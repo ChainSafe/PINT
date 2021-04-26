@@ -9,6 +9,12 @@
 
 pub use pallet::*;
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 mod traits;
 mod types;
 
@@ -86,21 +92,6 @@ pub mod pallet {
     impl<T: Config> Pallet<T> {}
 
     impl<T: Config> Pallet<T> {
-        /// The total amount of the given asset currently held
-        pub fn aggregated_balance(asset_id: &T::AssetId) -> T::Balance {
-            TotalBalance::<T>::get(asset_id)
-        }
-
-        /// The total balance of an asset of a user
-        pub fn total_balance(asset_id: &T::AssetId, who: &AccountIdFor<T>) -> T::Balance {
-            Accounts::<T>::get(who, asset_id).total_balance()
-        }
-
-        /// The current available balance of an asset of a user
-        pub fn available_balance(asset_id: &T::AssetId, who: &AccountIdFor<T>) -> T::Balance {
-            Accounts::<T>::get(who, asset_id).available
-        }
-
         /// Set the available balance of the given account the given value.
         pub(crate) fn set_available_balance(
             asset_id: &T::AssetId,
@@ -114,6 +105,22 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiAssetDepository<T::AssetId, AccountIdFor<T>, T::Balance> for Pallet<T> {
+
+        /// The total amount of the given asset currently held
+        fn aggregated_balance(asset_id: &T::AssetId) -> T::Balance {
+            TotalBalance::<T>::get(asset_id)
+        }
+
+        /// The total balance of an asset of a user
+        fn total_balance(asset_id: &T::AssetId, who: &AccountIdFor<T>) -> T::Balance {
+            Accounts::<T>::get(who, asset_id).total_balance()
+        }
+
+        /// The current available balance of an asset of a user
+        fn available_balance(asset_id: &T::AssetId, who: &AccountIdFor<T>) -> T::Balance {
+            Accounts::<T>::get(who, asset_id).available
+        }
+
         /// Deposit the `amount` of the given asset into the available balance of the given account `who`.
         fn deposit(
             asset_id: &T::AssetId,
