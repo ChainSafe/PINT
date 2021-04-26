@@ -36,7 +36,7 @@ jobs:
           default: true
 
       - name: Test Code
-        run: cargo test --all-features
+        run: cargo test --all
 
 
   # Lint code
@@ -47,6 +47,15 @@ jobs:
         - name: Checkout Code
           uses: actions/checkout@v1
 
+        - name: Cache cargo registry
+          uses: actions/cache@v2
+          with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          
         - name: Install toolchain
           uses: actions-rs/toolchain@v1
           with:
@@ -54,7 +63,7 @@ jobs:
               target: wasm32-unknown-unknown
               components: clippy
               override: true
-              
+
         - name: Clippy Check
           uses: actions-rs/clippy-check@v1
           with:
