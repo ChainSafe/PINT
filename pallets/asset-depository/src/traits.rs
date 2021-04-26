@@ -13,7 +13,7 @@ pub trait MultiAssetDepository<AssetId, AccountId, Balance> {
 
     /// The current available balance of an asset of a user
     fn available_balance(asset_id: &AssetId, who: &AccountId) -> Balance;
-    
+
     /// Add `amount` to the balance of `who` under `asset_id`.
     fn deposit(asset_id: &AssetId, who: &AccountId, amount: Balance) -> DispatchResult;
 

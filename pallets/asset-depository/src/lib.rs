@@ -105,7 +105,6 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiAssetDepository<T::AssetId, AccountIdFor<T>, T::Balance> for Pallet<T> {
-
         /// The total amount of the given asset currently held
         fn aggregated_balance(asset_id: &T::AssetId) -> T::Balance {
             TotalBalance::<T>::get(asset_id)
