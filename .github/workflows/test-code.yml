@@ -28,6 +28,12 @@ jobs:
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly-2021-04-18
+          target: wasm32-unknown-unknown
+          override: true
+          default: true
 
       - name: Test Code
         run: cargo test --all
@@ -52,6 +58,11 @@ jobs:
           
         - name: Install toolchain
           uses: actions-rs/toolchain@v1
+          with:
+              toolchain: nightly-2021-04-18
+              target: wasm32-unknown-unknown
+              components: clippy
+              override: true
 
         - name: Clippy Check
           uses: actions-rs/clippy-check@v1
@@ -69,6 +80,12 @@ jobs:
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly-2020-04-18
+            components: rustfmt
+            override: true
 
       - name: Format check
-        run: cargo fmt -- --check
+        uses: mbrobbel/rustfmt-check@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
