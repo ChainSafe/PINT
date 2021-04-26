@@ -1,8 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+use codec::{Decode, Encode};
 use frame_support::sp_runtime::{traits::Saturating, RuntimeDebug};
-use codec::{Encode, Decode};
 
 /// Represents the balance of a single asset.
 #[derive(Encode, Decode, Clone, PartialEq, Eq, Default, RuntimeDebug)]
@@ -19,7 +19,6 @@ pub struct AccountBalance<Balance> {
     /// This is intended to reserve an amount of this asset for PINT related operations, so that it can be spend.
     pub reserved: Balance,
 }
-
 
 impl<Balance: Saturating + Copy + Ord> AccountBalance<Balance> {
     /// The total balance that is currently reserved and available

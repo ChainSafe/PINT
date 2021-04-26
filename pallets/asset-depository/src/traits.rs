@@ -5,7 +5,6 @@ use frame_support::sp_runtime::DispatchResult;
 
 /// An abstraction over the multiple balances for different assets
 pub trait MultiAssetDepository<AssetId, AccountId, Balance> {
-
     /// Add `amount` to the balance of `who` under `asset_id`.
     fn deposit(asset_id: &AssetId, who: &AccountId, amount: Balance) -> DispatchResult;
 
