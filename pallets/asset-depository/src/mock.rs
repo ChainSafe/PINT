@@ -5,17 +5,13 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_asset_depository;
-use frame_support::traits::StorageMapShim;
-use frame_support::{ord_parameter_types, parameter_types, Parameter};
+use frame_support::parameter_types;
 use frame_system as system;
 
-use frame_support::pallet_prelude::{MaybeSerializeDeserialize, Member};
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
-    DispatchError,
 };
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -38,7 +34,6 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
-pub(crate) type Balance = u64;
 pub(crate) type AccountId = u64;
 
 impl system::Config for Test {
