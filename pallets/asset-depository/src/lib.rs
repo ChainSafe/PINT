@@ -16,7 +16,7 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::traits::MultiAssetDepository;
+    pub use crate::traits::MultiAssetDepository;
     use crate::types::AccountBalance;
     use frame_support::sp_runtime::traits::{CheckedAdd, CheckedSub};
     use frame_support::{
