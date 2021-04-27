@@ -67,8 +67,9 @@ commands:
   login_dockerhub:
     description: Login DockerHub
     steps:
-      name: Login DockerHub
-      run: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run: 
+          name: Login DockerHub
+          command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
   prefetch-crates:
