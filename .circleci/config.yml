@@ -38,19 +38,21 @@ commands:
       - install_deps
       - restore_build_cache
   sccache_setup:
-    when:
-      test -f $RUSTC_WRAPPER
+    description: Setup Sccache
     steps:
-      - run:
-          name: Setup Sccache
-          command: |
-            RUSTC_WRAPPER='' cargo install \
-            --git https://github.com/paritytech/sccache.git \
-            --features native-zlib
-      - save_cache:
-          key: sccache-cache
-          paths:
-            - ${HOME}/.cargo/bin/sccache
+      when:
+        condition: test -f $RUSTC_WRAPPER
+        steps:
+          - run:
+              name: Setup Sccache
+              command: |
+                RUSTC_WRAPPER='' cargo install \
+                --git https://github.com/paritytech/sccache.git \
+                --features native-zlib
+          - save_cache:
+              key: sccache-cache
+              paths:
+                - ${HOME}/.cargo/bin/sccache
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -74,16 +76,18 @@ commands:
             ls -all $HOME/.cargo
             du -ssh $HOME/.cargo
   cargo_audit_setup:
-    when:
-      test -f $CARGO_AUDIT
+    description: Setup Cargo Audit
     steps:
-      - run:
-          name: Setup CARGO AUDIT
-          command: RUSTC_WRAPPER="" cargo install cargo-audit
-      - save_cache:
-          key: cargo-audit-cache
-          paths:
-            - ${HOME}/.cargo/bin/cargo-audit
+      whenp:
+        condition: test -f $CARGO_AUDIT
+        steps:
+          - run:
+              name: Setup CARGO AUDIT
+              command: RUSTC_WRAPPER="" cargo install cargo-audit
+          - save_cache:
+              key: cargo-audit-cache
+              paths:
+                - ${HOME}/.cargo/bin/cargo-audit
   login_dockerhub:
     description: Login DockerHub
     steps:
