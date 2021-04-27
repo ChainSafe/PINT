@@ -83,6 +83,7 @@ jobs:
       - run:
           name: clippy check
           command: cargo clippy --all-targets -vv
+          no_output_timeout: 50m
   test:
     executor: test-executor
     description: Run tests
@@ -92,6 +93,7 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --all -vv
+          no_output_timeout: 50m
   security:
     executor: test-executor
     description: Cargo audit
