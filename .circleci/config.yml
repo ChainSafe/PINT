@@ -9,7 +9,7 @@ executors:
     environment:
       IMAGE_NAME: chainsafe/pint
     docker:
-      image: circleci/buildpack-deps:stretch
+      - image: circleci/buildpack-deps:stretch
 
 commands:
   rust_setup:
@@ -120,8 +120,7 @@ jobs:
           docker_layer_caching: true
       - run:
           name: Build docker image
-          command: |
-            docker build -t $IMAGE_NAME:latest .
+          command: docker build -t $IMAGE_NAME:latest .
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
