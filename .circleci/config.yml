@@ -69,7 +69,7 @@ jobs:
     executor: test-executor
     description: format check
     steps:
-      - build_setup
+      - rust_setup
       - run:
           name: Format check
           command: cargo fmt -- --check
