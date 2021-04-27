@@ -167,7 +167,7 @@ workflows:
           filters:
             branches:
               only: main
-      - docker_publish_tag:
+      - docker-publish-tag:
           requires:
             - docker-publish-latest
           filters:
