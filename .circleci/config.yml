@@ -5,6 +5,8 @@ executors:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: xlarge
+    environment:
+      IMAGE_NAME: chainsafe/pint
 
 commands:
   rust_setup:
@@ -53,7 +55,7 @@ commands:
       - checkout
       - rust_setup
       - install_deps
-
+  
 jobs:
   prefetch-crates:
     executor: test-executor
@@ -83,7 +85,7 @@ jobs:
       - run:
           name: clippy check
           command: cargo clippy --all-targets
-          no_output_timeout: 42m
+          no_output_timeout: 128m
   test:
     executor: test-executor
     description: Run tests
@@ -93,7 +95,7 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --all
-          no_output_timeout: 42m
+          no_output_timeout: 128m
   security:
     executor: test-executor
     description: Cargo audit
@@ -105,8 +107,33 @@ jobs:
           command: cargo install cargo-audit
       - run:
           name: Check for known security issues in dependencies
-          # TODO remove ignore when https://github.com/filecoin-project/rust-fil-proofs/issues/1403 resolved
-          command: cargo audit --ignore RUSTSEC-2021-0011
+          command: cargo audit
+  docker_build:
+    steps:
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build docker image
+          command: docker build -t $IMAGE_NAME:latest
+  docker_publish_latest:
+    steps:
+      - setup_remote_docker
+      - run:
+          name: Docker Publish Latest Image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:latest
+  docker_publish_tag:
+    steps:
+      - setup_remote_docker
+      - run:
+          name: Docker Publish Tagged Image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            IMAGE_TAG=${CIRCLE_TAG/v/''}
+            docker tag $IMAGE_NAME:latest $IMAGE_NAME:$IMAGE_TAG
+            docker push $IMAGE_NAME:latest
+            docker push $IMAGE_NAME:$IMAGE_TAG
 
 workflows:
   test-code:
@@ -125,3 +152,20 @@ workflows:
       - security:
           requires:
             - prefetch-crates
+  docker:
+    jobs:
+      - docker_build
+      - docker_publish_latest:
+          requires:
+            - docker_build
+          filters:
+            branches:
+              only: main
+      - docker_publish_tag:
+          requires:
+            - docker_publish_latest
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only: main
