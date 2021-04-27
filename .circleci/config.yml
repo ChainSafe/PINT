@@ -55,12 +55,6 @@ commands:
       - checkout
       - rust_setup
       - install_deps
-      - run:
-          name: Install Sccache
-          command: |
-            cargo install --git https://github.com/paritytech/sccache.git
-            sccache --start-server
-            sccache -s
   
 jobs:
   prefetch-crates:
@@ -72,6 +66,12 @@ jobs:
       - run:
           name: Fetch workspace dependencies over network
           command: cargo fetch
+      - run:
+          name: Install sccache
+          command: |
+            RUSTC_WRAPPER='' cargo install --git https://github.com/paritytech/sccache.git
+            sccache --start-server
+            sccache -s
       - save_cargo_package_cache
   format:
     executor: test-executor
