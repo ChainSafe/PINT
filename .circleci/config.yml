@@ -3,7 +3,7 @@ version: 2.1
 executors:
   test-executor:
     machine:
-      image: ubuntu-2004:202010-01
+      image: ubuntu-1604:202007-01
     resource_class: xlarge
   docker-executor:
     environment:
@@ -88,7 +88,7 @@ jobs:
       - run:
           name: clippy check
           command: cargo clippy --all-targets
-          no_output_timeout: 128m
+          no_output_timeout: 256m
   test:
     executor: test-executor
     description: Run tests
@@ -98,7 +98,7 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --all
-          no_output_timeout: 128m
+          no_output_timeout: 256m
   security:
     executor: test-executor
     description: Cargo audit
@@ -122,6 +122,7 @@ jobs:
       - run:
           name: Build docker image
           command: docker build -t $IMAGE_NAME:latest .
+          no_output_timeout: 256m
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
