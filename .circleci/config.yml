@@ -185,9 +185,6 @@ workflows:
       - test:
           requires:
             - prefetch-crates
-      - test-vectors:
-          requires:
-            - prefetch-crates
   build-check:
     jobs:
       - prefetch-crates
