@@ -115,6 +115,7 @@ jobs:
     executor: docker-executor
     description: Build Docker Image
     steps:
+      - checkout
       - setup_remote_docker:
           version: 20.10.2
           docker_layer_caching: true
