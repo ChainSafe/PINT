@@ -86,8 +86,8 @@ jobs:
                 paths:
                   - ${HOME}/.cargo/bin/sccache
       - when:
-        condition: test -f $CARGO_AUDIT
-        steps:
+         condition: test -f $CARGO_AUDIT
+         steps:
           - run:
               name: Setup CARGO AUDIT
               command: RUSTC_WRAPPER="" cargo install cargo-audit
@@ -127,7 +127,6 @@ jobs:
     description: Cargo audit
     steps:
       - build_setup
-      - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
