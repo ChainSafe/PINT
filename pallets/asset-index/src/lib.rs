@@ -1,6 +1,10 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # AssetIndex Pallet
+//!
+//! Tracks all the assets in the PINT index, composed of multiple assets
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -18,7 +22,7 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::traits::AssetRecorder;
+    use crate::traits::{AssetRecorder, MultiAssetRegistry};
     use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -27,6 +31,11 @@ pub mod pallet {
         traits::{Currency, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
+    use pallet_asset_depository::MultiAssetDepository;
+    use pallet_price_feed::PriceFeed;
+    use pallet_remote_asset_manager::RemoteAssetManager;
+    use sp_std::convert::TryInto;
+    use xcm::opaque::v0::MultiLocation;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type BalanceFor<T> = <<T as Config>::IndexToken as Currency<AccountIdFor<T>>>::Balance;
@@ -51,8 +60,22 @@ pub mod pallet {
         /// The maximum amount of DOT that can exist in the index
         #[pallet::constant]
         type DOTContributionLimit: Get<BalanceFor<Self>>;
+        /// Type that handles cross chain transfers
+        type RemoteAssetManager: RemoteAssetManager<
+            AccountIdFor<Self>,
+            Self::AssetId,
+            BalanceFor<Self>,
+        >;
         /// Type used to identify assets
-        type AssetId: Parameter;
+        type AssetId: Parameter + Member;
+        /// Handles asset depositing and withdrawing from sovereign user accounts
+        type MultiAssetDepository: MultiAssetDepository<
+            Self::AssetId,
+            AccountIdFor<Self>,
+            BalanceFor<Self>,
+        >;
+        /// The types that provides the necessary asset price pairs
+        type PriceFeed: PriceFeed<Self::AssetId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -86,12 +109,17 @@ pub mod pallet {
         // A new asset was added to the index and some index token paid out
         // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, BalanceFor<T>, AccountIdFor<T>, BalanceFor<T>),
+        // A new deposit of an asset into the index has been performed
+        // \[AssetId, AssetUnits, Account, PINTPayout\]
+        Deposited(T::AssetId, BalanceFor<T>, AccountIdFor<T>, BalanceFor<T>),
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        // Thrown if adding units to an asset holding causes its numerical type to overflow
+        /// Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
+        /// Thrown if no index could be found for an asset identifier.
+        UnsupportedAsset,
     }
 
     #[pallet::hooks]
@@ -121,6 +149,56 @@ pub mod pallet {
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
         }
+
+        /// Initiate a transfer from the user's sovereign account into the index.
+        ///
+        /// This will withdraw the given amount from the user's sovereign account and mints PINT proportionally using the latest available price pairs
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn deposit(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            amount: BalanceFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+
+            let mut holding = Holdings::<T>::get(&asset_id)
+                .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
+                .ok_or(Error::<T>::UnsupportedAsset)?;
+
+            let price = T::PriceFeed::get_price(asset_id.clone())?;
+            let units: u128 = amount
+                .try_into()
+                .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+            let pint_amount: BalanceFor<T> = price
+                .volume(units)
+                .ok_or(Error::<T>::AssetUnitsOverflow)
+                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
+
+            // make sure we can store the additional deposit
+            holding.units = holding
+                .units
+                .checked_add(&amount)
+                .ok_or(Error::<T>::AssetUnitsOverflow)?;
+
+            // withdraw from the caller's sovereign account
+            T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
+            // update the holding
+            Holdings::<T>::insert(asset_id.clone(), holding);
+            // add minted PINT to user's balance
+            T::IndexToken::deposit_creating(&caller, pint_amount);
+            Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn withdraw(
+            origin: OriginFor<T>,
+            _amount: BalanceFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            let _caller = ensure_signed(origin)?;
+
+            Ok(().into())
+        }
     }
 
     impl<T: Config> AssetRecorder<T::AssetId, BalanceFor<T>> for Pallet<T> {
@@ -130,7 +208,7 @@ pub mod pallet {
             asset_id: &T::AssetId,
             units: &BalanceFor<T>,
             availability: &AssetAvailability,
-        ) -> Result<(), DispatchError> {
+        ) -> DispatchResult {
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
                     IndexAssetData::<BalanceFor<T>>::new(
@@ -147,7 +225,7 @@ pub mod pallet {
             Ok(())
         }
 
-        fn remove_asset(_: &T::AssetId) -> Result<(), DispatchError> {
+        fn remove_asset(_: &T::AssetId) -> DispatchResult {
             todo!();
         }
     }
