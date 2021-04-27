@@ -8,6 +8,7 @@ executors:
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
+      CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
       SCCACHE_CACHE_SIZE: 2G
@@ -29,26 +30,40 @@ commands:
       - run:
           name: Substrate Build Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
+  build_setup:
+    description: Sets up environment for future jobs
+    steps:
+      - checkout
+      - rust_setup
+      - install_deps
+      - restore_build_cache
   sccache_setup:
+    when:
+      test -f $RUSTC_WRAPPER
     steps:
       - run:
           name: Setup Sccache
           command: |
-            test -f "$RUSTC_WRAPPER" \
-            || RUSTC_WRAPPER='' cargo install --git https://github.com/paritytech/sccache.git
-            sccache --start-server && sccache -s
-  save_cargo_package_cache:
+            RUSTC_WRAPPER='' cargo install \
+            --git https://github.com/paritytech/sccache.git \
+            --features native-zlib
+      - save_cache:
+          key: sccache-cache
+          paths:
+            - ${HOME}/.cargo/bin/sccache
+  save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
       - save_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
           paths:
+            - ${HOME}/.cache/sccache
             - ${HOME}/.cargo/git
             - ${HOME}/.cargo/registry
             - ${HOME}/.cargo/.package-cache
             - ${HOME}/.cargo/bin/sccache
-            - ${HOME}/.cache/sccache
-  restore_cargo_package_cache:
+            - ${HOME}/.cargo/bin/cargo-audit
+  restore_build_cache:
     description: Restore Cargo package cache from prev job
     steps:
       - restore_cache:
@@ -58,12 +73,17 @@ commands:
           command: |
             ls -all $HOME/.cargo
             du -ssh $HOME/.cargo
-  build_setup:
-    description: Sets up environment for future jobs
+  cargo_audit_setup:
+    when:
+      test -f $CARGO_AUDIT
     steps:
-      - checkout
-      - rust_setup
-      - install_deps
+      - run:
+          name: Setup CARGO AUDIT
+          command: RUSTC_WRAPPER="" cargo install cargo-audit
+      - save_cache:
+          key: cargo-audit-cache
+          paths:
+            - ${HOME}/.cargo/bin/cargo-audit
   login_dockerhub:
     description: Login DockerHub
     steps:
@@ -77,12 +97,7 @@ jobs:
     description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
-      - restore_cargo_package_cache
       - sccache_setup
-      - run:
-          name: Fetch workspace dependencies over network
-          command: cargo fetch
-      - save_cargo_package_cache
   format:
     executor: test-executor
     description: format check
@@ -97,7 +112,6 @@ jobs:
     description: Lint Code
     steps:
       - build_setup
-      - restore_cargo_package_cache
       - run:
           name: clippy check
           command: cargo clippy --all-targets
@@ -106,7 +120,6 @@ jobs:
     description: Run tests
     steps:
       - build_setup
-      - restore_cargo_package_cache
       - run:
           name: Run Tests
           command: cargo test --all
@@ -115,10 +128,7 @@ jobs:
     description: Cargo audit
     steps:
       - build_setup
-      - restore_cargo_package_cache
-      - run:
-          name: Install dependency auditing tool
-          command: cargo install cargo-audit
+      - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
