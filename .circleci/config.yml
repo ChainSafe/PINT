@@ -37,22 +37,6 @@ commands:
       - rust_setup
       - install_deps
       - restore_build_cache
-  sccache_setup:
-    description: Setup Sccache
-    steps:
-      when:
-        condition: test -f $RUSTC_WRAPPER
-        steps:
-          - run:
-              name: Setup Sccache
-              command: |
-                RUSTC_WRAPPER='' cargo install \
-                --git https://github.com/paritytech/sccache.git \
-                --features native-zlib
-          - save_cache:
-              key: sccache-cache
-              paths:
-                - ${HOME}/.cargo/bin/sccache
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -75,19 +59,6 @@ commands:
           command: |
             ls -all $HOME/.cargo
             du -ssh $HOME/.cargo
-  cargo_audit_setup:
-    description: Setup Cargo Audit
-    steps:
-      whenp:
-        condition: test -f $CARGO_AUDIT
-        steps:
-          - run:
-              name: Setup CARGO AUDIT
-              command: RUSTC_WRAPPER="" cargo install cargo-audit
-          - save_cache:
-              key: cargo-audit-cache
-              paths:
-                - ${HOME}/.cargo/bin/cargo-audit
   login_dockerhub:
     description: Login DockerHub
     steps:
@@ -101,7 +72,29 @@ jobs:
     description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
-      - sccache_setup
+      - when:
+          condition: test -f $RUSTC_WRAPPER
+          steps:
+            - run:
+                name: Setup Sccache
+                command: |
+                  RUSTC_WRAPPER='' cargo install \
+                  --git https://github.com/paritytech/sccache.git \
+                  --features native-zlib
+            - save_cache:
+                key: sccache-cache
+                paths:
+                  - ${HOME}/.cargo/bin/sccache
+      - when:
+        condition: test -f $CARGO_AUDIT
+        steps:
+          - run:
+              name: Setup CARGO AUDIT
+              command: RUSTC_WRAPPER="" cargo install cargo-audit
+          - save_cache:
+              key: cargo-audit-cache
+              paths:
+                - ${HOME}/.cargo/bin/cargo-audit
   format:
     executor: test-executor
     description: format check
@@ -119,6 +112,7 @@ jobs:
       - run:
           name: clippy check
           command: cargo clippy --all-targets
+      - save_build_cache
   test:
     executor: test-executor
     description: Run tests
@@ -127,6 +121,7 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --all
+      - save_build_cache
   security:
     executor: test-executor
     description: Cargo audit
@@ -136,6 +131,7 @@ jobs:
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
+      - save_build_cache
   docker-build:
     executor: test-executor
     description: Build Docker Image
