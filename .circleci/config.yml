@@ -10,6 +10,7 @@ executors:
       IMAGE_NAME: chainsafe/pint
     docker:
       - image: circleci/buildpack-deps:stretch
+    resource_class: xlarge
 
 commands:
   rust_setup:
