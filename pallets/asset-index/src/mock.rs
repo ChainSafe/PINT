@@ -10,17 +10,17 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
+use crate::Config;
+use frame_support::dispatch::DispatchResult;
+use pallet_asset_depository::MultiAssetDepository;
+use pallet_price_feed::{AssetPricePair, PriceFeed};
+use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
     DispatchError,
 };
-use pallet_price_feed::{PriceFeed, AssetPricePair};
-use crate::Config;
-use pallet_asset_depository::MultiAssetDepository;
-use pallet_remote_asset_manager::RemoteAssetManager;
-use frame_support::dispatch::DispatchResult;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -140,11 +140,13 @@ impl pallet_asset_index::Config for Test {
 }
 
 pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
+impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
+    for MockRemoteAssetManager
+{
     fn reserve_withdraw_and_deposit(
-    who: AccountId,
-    asset: AssetId,
-    amount: Balance,
+        who: AccountId,
+        asset: AssetId,
+        amount: Balance,
     ) -> DispatchResult {
         Ok(().into())
     }
@@ -156,7 +158,10 @@ impl<AssetId> PriceFeed<AssetId> for MockPriceFeed {
         todo!()
     }
 
-    fn get_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+    fn get_price_pair(
+        base: AssetId,
+        quote: AssetId,
+    ) -> Result<AssetPricePair<AssetId>, DispatchError> {
         todo!()
     }
 }
