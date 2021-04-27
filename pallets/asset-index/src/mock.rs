@@ -10,10 +10,9 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
-use crate::Config;
 use frame_support::dispatch::DispatchResult;
-use pallet_asset_depository::MultiAssetDepository;
-use pallet_price_feed::{AssetPricePair, PriceFeed};
+use frame_support::sp_runtime::FixedPointNumber;
+use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
@@ -144,25 +143,32 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
     for MockRemoteAssetManager
 {
     fn reserve_withdraw_and_deposit(
-        who: AccountId,
-        asset: AssetId,
-        amount: Balance,
+        _who: AccountId,
+        _asset: AssetId,
+        _amount: Balance,
     ) -> DispatchResult {
         Ok(().into())
     }
 }
 
+pub const PINT_ASSET_ID: AssetId = 0u32;
+pub const ASSET_A_ID: AssetId = 1u32;
+
 pub struct MockPriceFeed;
-impl<AssetId> PriceFeed<AssetId> for MockPriceFeed {
+impl PriceFeed<AssetId> for MockPriceFeed {
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        todo!()
+        Self::get_price_pair(PINT_ASSET_ID, quote)
     }
 
     fn get_price_pair(
         base: AssetId,
         quote: AssetId,
     ) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        todo!()
+        Ok(AssetPricePair {
+            base,
+            quote,
+            price: Price::checked_from_rational(600, 300).unwrap(),
+        })
     }
 }
 
