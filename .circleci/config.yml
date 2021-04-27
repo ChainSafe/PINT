@@ -118,7 +118,7 @@ jobs:
           docker_layer_caching: true
       - run:
           name: Build docker image
-          command: docker build -t $IMAGE_NAME:latest
+          command: docker build -t $IMAGE_NAME:latest .
   docker-publish-latest:
     docker:
       - image: circleci/buildpack-deps:stretch
