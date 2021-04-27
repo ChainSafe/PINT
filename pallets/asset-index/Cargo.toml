@@ -15,7 +15,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-balances/std',
     'pallet-remote-asset-manager/std',
     'pallet-asset-depository/std',
     'pallet-price-feed/std',
@@ -75,7 +74,6 @@ version = '0.0.1'
 serde = { version = "1.0.101" }
 
 [dev-dependencies.pallet-balances]
-default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'

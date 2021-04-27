@@ -31,7 +31,7 @@ pub mod pallet {
     use frame_support::{pallet_prelude::*, traits::Get};
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::{FeedInterface, FeedOracle};
-    use std::cmp::Ordering;
+    use frame_support::sp_std::cmp::Ordering;
 
     type FeedIdFor<T> = <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
 
