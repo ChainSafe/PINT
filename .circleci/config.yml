@@ -47,14 +47,13 @@ commands:
             - ${HOME}/.cargo/git
             - ${HOME}/.cargo/registry
             - ${HOME}/.cargo/.package-cache
-            - ${HOME}/.cargo/bin/sccache
   restore_build_cache:
     description: Restore Cargo package cache from prev job
     steps:
       - restore_cache:
           keys: 
             - cargo-package-cache-{{ checksum "Cargo.lock" }}
-            - sccache-cache
+            - sccache-cache-bins
       - run:
           name: Check cargo package cache
           command: |
@@ -83,9 +82,10 @@ jobs:
                   --git https://github.com/paritytech/sccache.git \
                   --features native-zlib
             - save_cache:
-                key: sccache-cache
+                key: sccache-cache-bins
                 paths:
                   - ${HOME}/.cargo/bin/sccache
+                  - ${HOME}/.cargo/bin/sccache-dist
       - run:
           name: Fetch Dependencies
           command: cargo fetch
