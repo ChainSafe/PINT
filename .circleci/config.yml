@@ -108,26 +108,32 @@ jobs:
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
-  docker_build:
+  docker-build:
+    executor: test-executor
+    description: Build Docker Image
     steps:
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
           name: Build docker image
           command: docker build -t $IMAGE_NAME:latest
-  docker_publish_latest:
+  docker-publish-latest:
+    executor: test-executor
+    description: Publish latest Docker Image
     steps:
       - setup_remote_docker
       - run:
-          name: Docker Publish Latest Image
+          name: Publish Latest Docker Image
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push $IMAGE_NAME:latest
-  docker_publish_tag:
+  docker-publish-tag:
+    executor: test-executor
+    description: Publish Tagged Docker Image
     steps:
       - setup_remote_docker
       - run:
-          name: Docker Publish Tagged Image
+          name: Publish Tagged Docker Image
           command: |
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             IMAGE_TAG=${CIRCLE_TAG/v/''}
@@ -154,16 +160,16 @@ workflows:
             - prefetch-crates
   docker:
     jobs:
-      - docker_build
-      - docker_publish_latest:
+      - docker-build
+      - docker-publish-latest:
           requires:
-            - docker_build
+            - docker-build
           filters:
             branches:
               only: main
       - docker_publish_tag:
           requires:
-            - docker_publish_latest
+            - docker-publish-latest
           filters:
             tags:
               only: /^v.*/
