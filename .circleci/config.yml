@@ -69,6 +69,7 @@ jobs:
     executor: test-executor
     description: format check
     steps:
+      - checkout
       - rust_setup
       - run:
           name: Format check
@@ -81,7 +82,7 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: clippy check
-          command: cargo clippy --all-targets
+          command: cargo clippy --all-targets -vv
   test:
     executor: test-executor
     description: Run tests
@@ -90,7 +91,7 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: Run Tests
-          command: cargo test --all
+          command: cargo test --all -vv
   security:
     executor: test-executor
     description: Cargo audit
