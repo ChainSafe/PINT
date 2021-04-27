@@ -2,15 +2,12 @@ version: 2.1
 
 executors:
   test-executor:
+    resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
-    resource_class: xlarge
-  docker-executor:
+    docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
-    docker:
-      - image: circleci/buildpack-deps:stretch
-    resource_class: xlarge
 
 commands:
   rust_setup:
@@ -113,13 +110,10 @@ jobs:
           name: Check for known security issues in dependencies
           command: cargo audit
   docker-build:
-    executor: docker-executor
+    executor: test-executor
     description: Build Docker Image
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 20.10.2
-          docker_layer_caching: true
       - run:
           name: Build docker image
           command: docker build -t $IMAGE_NAME:latest .
@@ -132,12 +126,11 @@ jobs:
           paths:
             - ./image.tar
   docker-publish-latest:
-    executor: docker-executor
+    executor: test-executor
     description: Publish latest Docker Image
     steps:
       - attach_workspace:
           at: /tmp/workspace
-      - setup_remote_docker
       - run:
           name: Load Archived Docker Image
           command: docker load -i /tmp/workspace/image.tar
@@ -147,12 +140,11 @@ jobs:
             echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker push $IMAGE_NAME:latest
   docker-publish-tag:
-    executor: docker-executor
+    executor: test-executor
     description: Publish Tagged Docker Image
     steps:
       - attach_workspace:
           at: /tmp/workspace
-      - setup_remote_docker
       - run:
           name: Load Archived Docker Image
           command: docker load -i /tmp/workspace/image.tar
