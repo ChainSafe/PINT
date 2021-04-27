@@ -191,20 +191,6 @@ workflows:
       - nightly-build-check:
           requires:
             - prefetch-crates
-  daily-check:
-    triggers:
-      - schedule:
-          cron: "0 0 * * *"
-          filters:
-            branches:
-              only:
-                - main
-    jobs:
-      - prefetch-crates
-      - install:
-          requires:
-            - prefetch-crates
-
   security:
     jobs:
       - prefetch-crates
