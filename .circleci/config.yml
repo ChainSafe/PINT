@@ -2,7 +2,7 @@ version: 2.1
 
 executors:
   test-executor:
-    # resource_class: xlarge
+    resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
       docker_layer_caching: true
@@ -29,6 +29,14 @@ commands:
       - run:
           name: Substrate Build Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
+  sccache_setup:
+    steps:
+      - run:
+          name: Setup Sccache
+          command: |
+            test -f "$RUSTC_WRAPPER" \
+            || RUSTC_WRAPPER='' cargo install --git https://github.com/paritytech/sccache.git
+            sccache --start-server && sccache -s
   save_cargo_package_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -38,6 +46,7 @@ commands:
             - ../.cargo/git
             - ../.cargo/registry
             - ../.cargo/.package-cache
+            - ../.cargo/bin/sccache
             - ../.sccache
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
@@ -63,12 +72,7 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
-      - run:
-          name: Install sccache
-          command: |
-            RUSTC_WRAPPER='' cargo install --git https://github.com/paritytech/sccache.git
-            sccache --start-server
-            sccache -s
+      - sccache_setup
       - run:
           name: Fetch workspace dependencies over network
           command: cargo fetch
