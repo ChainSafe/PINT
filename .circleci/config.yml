@@ -10,7 +10,7 @@ executors:
       IMAGE_NAME: chainsafe/pint
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
-      SCCACHE_CACHE_SIZE: 1G
+      SCCACHE_CACHE_SIZE: 2G
 
 commands:
   rust_setup:
@@ -20,7 +20,7 @@ commands:
           name: Setup Rust Toolchain
           command: |
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain  ${RUSTC_TOOLCHAIN} \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
             --target wasm32-unknown-unknown \
             --component clippy rustfmt \
             --profile minimal
@@ -43,11 +43,11 @@ commands:
       - save_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
           paths:
-            - ../.cargo/git
-            - ../.cargo/registry
-            - ../.cargo/.package-cache
-            - ../.cargo/bin/sccache
-            - ../.sccache
+            - ${HOME}/.cargo/git
+            - ${HOME}/.cargo/registry
+            - ${HOME}/.cargo/.package-cache
+            - ${HOME}/.cargo/bin/sccache
+            - ${HOME}/.cache/sccache
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
@@ -64,6 +64,11 @@ commands:
       - checkout
       - rust_setup
       - install_deps
+  login_dockerhub:
+    description: Login DockerHub
+    steps:
+      name: Login DockerHub
+      run: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
   prefetch-crates:
@@ -140,11 +145,10 @@ jobs:
       - run:
           name: Load Archived Docker Image
           command: docker load -i /tmp/workspace/image.tar
+      - login_dockerhub
       - run:
           name: Publish Latest Docker Image
-          command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push $IMAGE_NAME:latest
+          command: docker push $IMAGE_NAME:latest
   docker-publish-tag:
     executor: test-executor
     description: Publish Tagged Docker Image
@@ -154,10 +158,10 @@ jobs:
       - run:
           name: Load Archived Docker Image
           command: docker load -i /tmp/workspace/image.tar
+      - login_dockerhub
       - run:
           name: Publish Tagged Docker Image
           command: |
-            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             IMAGE_TAG=${CIRCLE_TAG/v/''}
             docker tag $IMAGE_NAME:latest $IMAGE_NAME:$IMAGE_TAG
             docker push $IMAGE_NAME:latest
