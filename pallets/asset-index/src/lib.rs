@@ -201,6 +201,13 @@ pub mod pallet {
         }
     }
 
+    impl<T: Config> Pallet<T> {
+        /// The amount of index tokens held by the given user
+        pub fn index_token_balance(account: &T::AccountId) -> BalanceFor<T> {
+            T::IndexToken::total_balance(account)
+        }
+    }
+
     impl<T: Config> AssetRecorder<T::AssetId, BalanceFor<T>> for Pallet<T> {
         /// Creates IndexAssetData if entry with given assetID does not exist.
         /// Otherwise adds the units to the existing holding
