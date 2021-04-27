@@ -23,7 +23,7 @@ pub mod pallet {
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{MultiLocation};
+    use xcm::v0::MultiLocation;
 
     pub use crate::traits::RemoteAssetManager;
     use crate::traits::XcmHandler;
