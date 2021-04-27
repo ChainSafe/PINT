@@ -13,18 +13,16 @@ commands:
       - run:
           name: Setup Rust Toolchain
           command: |
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-            rustup default nightly-2021-04-18
-            rustup component add clippy rustfmt
-            rustup target add wasm32-unknown-unknown
-            cargo install cargo-audit
+            curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain  nightly-2021-04-18 \
+            --target wasm32-unknown-unknown \
+            --component clippy rustfmt \
+            --profile minimal
   install_deps:
     steps:
       - run:
           name: Substrate Build Dependencies
-          command: |
-            sudo apt-get update
-            sudo apt-get install -y git clang curl libssl-dev
+          command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
   save_cargo_package_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -99,6 +97,9 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - run:
+          name: Install dependency auditing tool
+          command: cargo install cargo-audit
       - run:
           name: Check for known security issues in dependencies
           # TODO remove ignore when https://github.com/filecoin-project/rust-fil-proofs/issues/1403 resolved
