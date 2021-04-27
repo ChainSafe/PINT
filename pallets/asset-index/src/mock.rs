@@ -16,6 +16,11 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     DispatchError,
 };
+use pallet_price_feed::{PriceFeed, AssetPricePair};
+use crate::Config;
+use pallet_asset_depository::MultiAssetDepository;
+use pallet_remote_asset_manager::RemoteAssetManager;
+use frame_support::dispatch::DispatchResult;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -30,6 +35,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
+        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -40,6 +46,7 @@ parameter_types! {
 
 pub(crate) type Balance = u64;
 pub(crate) type AccountId = u64;
+pub(crate) type AssetId = u32;
 
 impl system::Config for Test {
     type BaseCallFilter = ();
@@ -73,7 +80,7 @@ ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
 }
 
-pub struct MockAssetRecorder();
+pub struct MockAssetRecorder;
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
@@ -105,22 +112,53 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+impl pallet_asset_depository::Config for Test {
+    type Event = Event;
+    type AssetId = AssetId;
+    type Balance = Balance;
+}
+
 parameter_types! {
     pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
-    pub DOTContributionLimit: u32 = 999;
+    pub DOTContributionLimit: Balance = 999;
 }
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type Event = Event;
-    type AssetId = u32;
+    type AssetId = AssetId;
     type IndexToken = Balances;
     type LockupPeriod = LockupPeriod;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
+    type RemoteAssetManager = MockRemoteAssetManager;
+    type MultiAssetDepository = AssetDepository;
+    type PriceFeed = MockPriceFeed;
+}
+
+pub struct MockRemoteAssetManager;
+impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
+    fn reserve_withdraw_and_deposit(
+    who: AccountId,
+    asset: AssetId,
+    amount: Balance,
+    ) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
+pub struct MockPriceFeed;
+impl<AssetId> PriceFeed<AssetId> for MockPriceFeed {
+    fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        todo!()
+    }
+
+    fn get_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        todo!()
+    }
 }
 
 // Build genesis storage according to the mock runtime.
