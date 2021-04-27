@@ -2,12 +2,15 @@ version: 2.1
 
 executors:
   test-executor:
-    resource_class: xlarge
+    # resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
+      RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
+      RUSTC_TOOLCHAIN: nightly-2021-04-18
+      SCCACHE_CACHE_SIZE: 1G
 
 commands:
   rust_setup:
@@ -17,7 +20,7 @@ commands:
           name: Setup Rust Toolchain
           command: |
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain  nightly-2021-04-18 \
+            --default-toolchain  ${RUSTC_TOOLCHAIN} \
             --target wasm32-unknown-unknown \
             --component clippy rustfmt \
             --profile minimal
@@ -31,18 +34,14 @@ commands:
     steps:
       - save_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
-          # paths are relative to /home/circleci/project/
           paths:
             - ../.cargo/git
             - ../.cargo/registry
             - ../.cargo/.package-cache
+            - ../.sccache
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
-      - run:
-          name: Print dir
-          command: |
-            ls -all /usr/local/include
       - restore_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
       - run:
@@ -56,6 +55,12 @@ commands:
       - checkout
       - rust_setup
       - install_deps
+      - run:
+          name: Install Sccache
+          command: |
+            cargo install --git https://github.com/paritytech/sccache.git
+            sccache --start-server
+            sccache -s
   
 jobs:
   prefetch-crates:
@@ -86,7 +91,6 @@ jobs:
       - run:
           name: clippy check
           command: cargo clippy --all-targets
-          no_output_timeout: 256m
   test:
     executor: test-executor
     description: Run tests
@@ -96,7 +100,6 @@ jobs:
       - run:
           name: Run Tests
           command: cargo test --all
-          no_output_timeout: 256m
   security:
     executor: test-executor
     description: Cargo audit
@@ -117,7 +120,6 @@ jobs:
       - run:
           name: Build docker image
           command: DOCKER_BUILDKIT=1 docker build -t $IMAGE_NAME:latest .
-          no_output_timeout: 256m
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
