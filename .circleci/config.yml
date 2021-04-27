@@ -43,17 +43,18 @@ commands:
       - save_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
           paths:
-            - ${HOME}/.cache/sccache
-            - ${HOME}/.cargo/git
-            - ${HOME}/.cargo/registry
-            - ${HOME}/.cargo/.package-cache
+            - ../.cache/sccache
+            - ../.cargo/git
+            - ../.cargo/registry
+            - ../.cargo/.package-cache
+            - ../.cargo/bin/sccache
   restore_build_cache:
     description: Restore Cargo package cache from prev job
     steps:
       - restore_cache:
           keys: 
             - cargo-package-cache-{{ checksum "Cargo.lock" }}
-            - sccache-cache-bins
+            - sccache-bins
       - run:
           name: Check cargo package cache
           command: |
@@ -81,11 +82,12 @@ jobs:
                   RUSTC_WRAPPER='' cargo install \
                   --git https://github.com/paritytech/sccache.git \
                   --features native-zlib
+                  sccache -s
             - save_cache:
-                key: sccache-cache-bins
+                key: sccache-bins
                 paths:
-                  - ${HOME}/.cargo/bin/sccache
-                  - ${HOME}/.cargo/bin/sccache-dist
+                  - ../.cargo/bin/sccache
+                  - ../.cargo/bin/sccache-dist
       - run:
           name: Fetch Dependencies
           command: cargo fetch
@@ -124,7 +126,7 @@ jobs:
     steps:
       - build_setup
       - restore_cache:
-          key: cargo-audit-cache
+          key: cargo-audit-bin
       - when:
           condition: ! -f $CARGO_AUDIT
           steps:
@@ -132,9 +134,9 @@ jobs:
               name: Setup CARGO AUDIT
               command: RUSTC_WRAPPER="" cargo install cargo-audit
           - save_cache:
-              key: cargo-audit-cache
+              key: cargo-audit-bin
               paths:
-                - ${HOME}/.cargo/bin/cargo-audit]
+                - ../.cargo/bin/cargo-audit
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
