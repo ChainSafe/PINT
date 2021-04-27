@@ -151,4 +151,22 @@ pub mod pallet {
             todo!();
         }
     }
+
+    impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
+        fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
+            Holdings::<T>::get(asset).and_then(|holding| {
+                if let AssetAvailability::Liquid(location) = holding.availability {
+                    Some(location)
+                } else {
+                    None
+                }
+            })
+        }
+
+        fn is_liquid_asset(asset: &T::AssetId) -> bool {
+            Holdings::<T>::get(asset)
+                .map(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
+                .unwrap_or_default()
+        }
+    }
 }
