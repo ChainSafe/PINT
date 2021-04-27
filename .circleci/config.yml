@@ -48,12 +48,13 @@ commands:
             - ${HOME}/.cargo/registry
             - ${HOME}/.cargo/.package-cache
             - ${HOME}/.cargo/bin/sccache
-            - ${HOME}/.cargo/bin/cargo-audit
   restore_build_cache:
     description: Restore Cargo package cache from prev job
     steps:
       - restore_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          keys: 
+            - cargo-package-cache-{{ checksum "Cargo.lock" }}
+            - sccache-cache
       - run:
           name: Check cargo package cache
           command: |
@@ -73,7 +74,7 @@ jobs:
     steps:
       - build_setup
       - when:
-          condition: test -f $RUSTC_WRAPPER
+          condition: ! -f $RUSTC_WRAPPER
           steps:
             - run:
                 name: Setup Sccache
@@ -85,16 +86,11 @@ jobs:
                 key: sccache-cache
                 paths:
                   - ${HOME}/.cargo/bin/sccache
-      - when:
-         condition: test -f $CARGO_AUDIT
-         steps:
-          - run:
-              name: Setup CARGO AUDIT
-              command: RUSTC_WRAPPER="" cargo install cargo-audit
-          - save_cache:
-              key: cargo-audit-cache
-              paths:
-                - ${HOME}/.cargo/bin/cargo-audit
+      - run:
+          name: Fetch Dependencies
+          command: cargo fetch
+      - save_build_cache
+
   format:
     executor: test-executor
     description: format check
@@ -127,6 +123,18 @@ jobs:
     description: Cargo audit
     steps:
       - build_setup
+      - restore_cache:
+          key: cargo-audit-cache
+      - when:
+          condition: ! -f $CARGO_AUDIT
+          steps:
+          - run:
+              name: Setup CARGO AUDIT
+              command: RUSTC_WRAPPER="" cargo install cargo-audit
+          - save_cache:
+              key: cargo-audit-cache
+              paths:
+                - ${HOME}/.cargo/bin/cargo-audit]
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
