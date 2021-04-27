@@ -33,7 +33,7 @@ use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
     EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+    NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
     TakeWeightCredit,
 };
@@ -334,18 +334,18 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
 /// biases the kind of local `Origin` it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
-    /// Sovereign account converter; this attempts to derive an `AccountId` from the origin location
-    /// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
-    /// foreign chains who want to have a local sovereign account on this chain which they control.
+    // Sovereign account converter; this attempts to derive an `AccountId` from the origin location
+    // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
+    // foreign chains who want to have a local sovereign account on this chain which they control.
     SovereignSignedViaLocation<LocationToAccountId, Origin>,
-    /// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-    /// recognised.
+    // Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
+    // recognised.
     RelayChainAsNative<RelayChainOrigin, Origin>,
-    /// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-    /// recognised.
+    // Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
+    // recognised.
     SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-    /// Native signed account converter; this just converts an `AccountId32` origin into a normal
-    /// `Origin::Signed` origin of the same 32-byte value.
+    // Native signed account converter; this just converts an `AccountId32` origin into a normal
+    // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RococoNetwork, Origin>,
 );
 
