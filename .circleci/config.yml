@@ -5,9 +5,9 @@ executors:
     resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
-    docker_layer_caching: true
-    environment:
-      IMAGE_NAME: chainsafe/pint
+      docker_layer_caching: true
+      environment:
+        IMAGE_NAME: chainsafe/pint
 
 commands:
   rust_setup:
