@@ -10,6 +10,8 @@
 
 pub use pallet::*;
 
+mod traits;
+
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
@@ -17,25 +19,19 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Zero},
-            ModuleId,
-        },
+        sp_runtime::traits::{AtLeast32BitUnsigned, Convert},
         traits::Get,
-        transactional,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
-    use xcm_executor::traits::LocationConversion;
+    use xcm::v0::{MultiLocation};
+
+    pub use crate::traits::RemoteAssetManager;
+    use crate::traits::XcmHandler;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Origin that is allowed to manage the treasury and dispatch cross-chain calls from the
-        /// Treasury's account
-        type AdminOrigin: EnsureOrigin<Self::Origin>;
-
         /// The balance type for cross chain transfers
         type Balance: Parameter
             + Member
@@ -48,6 +44,30 @@ pub mod pallet {
         /// Asset Id that is used to identify different kinds of assets.
         type AssetId: Parameter + Member + Clone;
 
+        /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
+        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
+
+        /// Convert `Self::Account` to `AccountId32`
+        type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
+
+        /// The native asset id
+        #[pallet::constant]
+        type SelfAssetId: Get<Self::AssetId>;
+
+        /// The location of the chain itself
+        #[pallet::constant]
+        type SelfLocation: Get<MultiLocation>;
+
+        /// Identifier for the relay chain's specific asset
+        #[pallet::constant]
+        type RelayChainAssetId: Get<Self::AssetId>;
+
+        /// Used to convert accounts to locations
+        type AccountIdConverter: Convert<MultiLocation, Option<AccountIdFor<Self>>>;
+
+        /// Executor for cross chain messages.
+        type XcmHandler: XcmHandler<AccountIdFor<Self>, Self::Call>;
+
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -57,17 +77,19 @@ pub mod pallet {
 
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
-    pub enum Event<T: Config> {
-    }
+    pub enum Event<T: Config> {}
 
     #[pallet::error]
-    pub enum Error<T> {
-    }
+    pub enum Error<T> {}
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
+            Ok(().into())
+        }
     }
 }
