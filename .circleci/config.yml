@@ -8,6 +8,7 @@ executors:
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
+      CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
       SCCACHE_CACHE_SIZE: 5G
@@ -18,20 +19,19 @@ commands:
       - run:
           name: Substrate Build Dependencies && Sccache
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
-  install_rust:
-    steps:
-      - run:
-          name: Install Rust
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain "$RUSTC_TOOLCHAIN" \
-            --profile minimal 
-  install_cargo_audit:
+  cargo_audit_setup:
     description: Install cargo-audit
     steps:
+      - restore_cache:
+          key: cargo-audit-{{ arch }}
       - run:
           name: Setup CARGO AUDIT
-          command: RUSTC_WRAPPER='' cargo install cargo-audit
+          command: |
+            [ ! -f ${CARGO_AUDIT} ] \
+            && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            --profile minimal \
+            && RUSTC_WRAPPER='' cargo install cargo-audit
       - save_cache:
           key: cargo-audit-{{ arch }}
           paths:
@@ -56,52 +56,15 @@ commands:
             - ../.cargo/bin/sccache
   rust_setup:
     description: Setup Rust Toolchain
-    parameters:
-      feature:
-        description: Optional Feature
-        type: enum
-        enum: [ "sccache", "cargo-audit", "clippy", "rustfmt" ]
-        default: "sccache"
     steps:
-      - unless:
-          condition:
-            equal: [ "cargo-audit", << parameters.feature >> ]
-          steps:
-            - install_rust
-      - when:
-          condition:
-            or:
-              - equal: [ "sccache", << parameters.feature >> ]
-              - equal: [ "clippy", << parameters.feature >> ]
-          steps: 
-            - install_deps 
-            - sccache_setup
-            - run:
-                name: Add target wasm32-unknown-unkown
-                command: rustup target add wasm32-unknown-unknown
-            - restore_cache:
-                key: cargo-package-cache-{{ checksum "Cargo.lock" }}
-      - when:
-          condition:
-            equal: [ "clippy", << parameters.feature >> ]
-          steps:
-            run:
-              name: Install rustfmt
-              command: rustup component add clippy
-      - when:
-          condition:
-            equal: [ "rustfmt", << parameters.feature >> ]
-          steps:
-            run:
-              name: Install rustfmt
-              command: rustup component add rustfmt
-      - when:
-          condition:
-            equal: [ "cargo-audit", << parameters.feature >> ]
-          steps:
-            - install_rust
-            - install_cargo_audit
-      - checkout
+      - run:
+          name: Install Rust Toolchain
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            -c clippy rustfmt \
+            -t wasm32-unknown-unknown \
+            --profile minimal 
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -120,12 +83,19 @@ commands:
           command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
+  prefetch-cache:
+    executor: test-executor
+    description: Prefetch Cache
+    steps:
+      - checkout
+      - reust_setup
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
   format:
     executor: test-executor
-    description: format check
+    description: Format Check
     steps:
-      - rust_setup:
-          feature: "rustfmt"
+      - checkout
       - run:
           name: Format check
           command: cargo fmt -- --check
@@ -133,8 +103,6 @@ jobs:
     executor: test-executor
     description: Lint Code
     steps:
-      - rust_setup:
-          feature: "clippy"
       - run:
           name: clippy check
           command: cargo clippy --all-targets
@@ -143,7 +111,6 @@ jobs:
     executor: test-executor
     description: Run tests
     steps:
-      - rust_setup
       - run:
           name: Run Tests
           command: cargo test --all
@@ -152,13 +119,7 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - restore_cache:
-          key: cargo-audit-{{ arch }}
-      - run:
-          name: Check if cargo-audit exists
-          command: cargo-audit --version
-      - rust_setup:
-          feature: "cargo-audit"
+      - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
@@ -217,7 +178,6 @@ workflows:
   security:
     jobs:
       - security
-
   docker:
     jobs:
       - docker-build
