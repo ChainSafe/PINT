@@ -8,7 +8,7 @@ executors:
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
-      RUSTC_WRAPPER: /home/circleci/.cargo/bin/cargo-audit
+      RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
       SCCACHE_CACHE_SIZE: 5G
 
@@ -43,8 +43,8 @@ commands:
       - run: 
           name: Install Sccache
           command: |
-            ! -f ${RUSTC_WRAPPER} \
-            && url -L https://github.com/mozilla/sccache/releases/download/\
+            [ ! -f ${RUSTC_WRAPPER} ] \
+            && curl -L https://github.com/mozilla/sccache/releases/download/\
             v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
             | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
             && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache ${RUSTC_WRAPPER} \
@@ -81,7 +81,6 @@ commands:
                 command: rustup target add wasm32-unknown-unknown
             - restore_cache:
                 key: cargo-package-cache-{{ checksum "Cargo.lock" }}
-            - checkout
       - when:
           condition:
             equal: [ "clippy", << parameters.feature >> ]
@@ -102,6 +101,7 @@ commands:
           steps:
             - install_rust
             - install_cargo_audit
+      - checkout
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
