@@ -17,7 +17,7 @@ mod tests;
 pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
-        sp_runtime::traits::AtLeast32BitUnsigned,
+        sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*,
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
