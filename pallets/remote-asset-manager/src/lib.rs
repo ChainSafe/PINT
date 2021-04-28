@@ -16,6 +16,7 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    pub use crate::traits::{RemoteAssetManager, XcmHandler};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -24,9 +25,6 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use xcm::v0::MultiLocation;
-
-    pub use crate::traits::RemoteAssetManager;
-    use crate::traits::XcmHandler;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -62,9 +60,6 @@ pub mod pallet {
         #[pallet::constant]
         type RelayChainAssetId: Get<Self::AssetId>;
 
-        /// Used to convert accounts to locations
-        type AccountIdConverter: Convert<MultiLocation, Option<AccountIdFor<Self>>>;
-
         /// Executor for cross chain messages.
         type XcmHandler: XcmHandler<AccountIdFor<Self>, Self::Call>;
 
@@ -90,6 +85,16 @@ pub mod pallet {
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
+        }
+    }
+
+    impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
+        fn reserve_withdraw_and_deposit(
+            _who: AccountIdFor<T>,
+            _asset: T::AssetId,
+            _amount: T::Balance,
+        ) -> DispatchResult {
+            todo!()
         }
     }
 }
