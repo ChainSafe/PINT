@@ -120,9 +120,7 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - checkout
-      - restore_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
+      - checkout  
       - rust_setup
       - cargo_audit_setup
       - run:
