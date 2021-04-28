@@ -124,7 +124,7 @@ jobs:
           command: cargo-audit --version
       - run:
           name: Setup CARGO AUDIT
-          command: cargo install cargo-audit
+          command: RUSTC_WRAPPER='' cargo install cargo-audit
           when: on_fail
       - save_cache:
           key: cargo-audit-bin
@@ -192,10 +192,10 @@ workflows:
             - prefetch-crates
   security:
     jobs:
-      - prefetch-crates
+      - rust_setup
       - security:
           requires:
-            - prefetch-crates
+            - rust_setup
   docker:
     jobs:
       - docker-build
