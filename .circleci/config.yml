@@ -96,6 +96,7 @@ jobs:
     description: Format Check
     steps:
       - checkout
+      - rust_setup
       - run:
           name: Format check
           command: cargo fmt -- --check
