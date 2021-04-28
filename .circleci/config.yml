@@ -17,7 +17,7 @@ commands:
   install_deps:
     steps:
       - run:
-          name: Substrate Build Dependencies && Sccache
+          name: Substrate Build Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
   cargo_audit_setup:
     description: Install cargo-audit
@@ -25,10 +25,10 @@ commands:
       - restore_cache:
           key: cargo-audit-{{ arch }}
       - run:
-          name: Setup cargo-audit
+          name: Sets up cargo-audit
           command: |
             [[ ! -f ${CARGO_AUDIT} ]] && RUSTC_WRAPPER='' cargo install cargo-audit
-            cargo-audit --version
+            cargo audit --version
       - save_cache:
           key: cargo-audit-{{ arch }}
           paths:
@@ -38,7 +38,7 @@ commands:
       - restore_cache:
           key: sccache-{{ arch }}
       - run: 
-          name: Setup Sccache
+          name: Sets up Sccache
           command: |
             [[ ! -f ${RUSTC_WRAPPER} ]] \
             && curl -L https://github.com/mozilla/sccache/releases/download/\
@@ -52,7 +52,7 @@ commands:
           paths:
             - ../.cargo/bin/sccache
   rust_setup:
-    description: Setup Rust Toolchain
+    description: Sets up Rust Toolchain
     steps:
       - run:
           name: Install Rust Toolchain
@@ -120,7 +120,10 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - build_setup
+      - checkout
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+      - rust_setup
       - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
