@@ -56,6 +56,10 @@ commands:
             - ../.cargo/bin/sccache
   rust_setup:
     description: Setup Rust Toolchain
+    parameters:
+      sccache:
+        type: boolean
+        default: true
     steps:
       - run:
           name: Install Rust Toolchain
@@ -64,7 +68,8 @@ commands:
             --default-toolchain "$RUSTC_TOOLCHAIN" \
             -c clippy rustfmt \
             -t wasm32-unknown-unknown \
-            --profile minimal 
+            --profile minimal
+      - sccache_setup
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
