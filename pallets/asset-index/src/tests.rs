@@ -189,8 +189,10 @@ fn deposit_fails_on_overflowing() {
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, Balance::MAX),
             pallet::Error::<Test>::AssetVolumeOverflow
         );
-        assert_ok!(
-            AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000)
-        );
+        assert_ok!(AssetIndex::deposit(
+            Origin::signed(ASHLEY),
+            ASSET_A_ID,
+            1_000
+        ));
     })
 }

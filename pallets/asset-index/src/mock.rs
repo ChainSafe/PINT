@@ -159,7 +159,7 @@ pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
         if quote == UNKNOWN_ASSET_ID {
-            Err(  pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+            Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
         } else {
             Self::get_price_pair(PINT_ASSET_ID, quote)
         }
