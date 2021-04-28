@@ -2,16 +2,16 @@ version: 2.1
 
 executors:
   test-executor:
-    resource_class: xlarge
+    # resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
       CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
-      RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
+      RUSTC_WRAPPER: /usr/local/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
-      SCCACHE_CACHE_SIZE: 2G
+      SCCACHE_CACHE_SIZE: 5G
 
 commands:
   rust_setup:
@@ -25,10 +25,19 @@ commands:
             --target wasm32-unknown-unknown \
             --component clippy rustfmt \
             --profile minimal
+      - run:
+          name: Install Sccache
+          command: |
+            curl -L https://github.com/mozilla/sccache/releases/download/\
+            v0.2.15/sccache-v0.2.15-aarch64-unknown-linux-musl.tar.gz \
+            | tar -zxvf - sccache-v0.2.15-aarch64-unknown-linux-musl/sccache \
+            && mv sccache-v0.2.15-aarch64-unknown-linux-musl/sccache /usr/local/bin \
+            && chmod +x /usr/local/bin/sccache \
+            && sccache -s
   install_deps:
     steps:
       - run:
-          name: Substrate Build Dependencies
+          name: Substrate Build Dependencies && Sccache
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
   build_setup:
     description: Sets up environment for future jobs
@@ -37,6 +46,8 @@ commands:
       - rust_setup
       - install_deps
       - restore_build_cache
+      - restore_cache:
+          key: sccache-bins
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -47,7 +58,6 @@ commands:
             - ../.cargo/git
             - ../.cargo/registry
             - ../.cargo/.package-cache
-            - ../.cargo/bin/sccache
   restore_build_cache:
     description: Restore Cargo package cache from prev job
     steps:
@@ -73,21 +83,6 @@ jobs:
     description: Prefetch cargo crates for subsequent jobs.
     steps:
       - build_setup
-      - when:
-          condition: ! -f $RUSTC_WRAPPER
-          steps:
-            - run:
-                name: Setup Sccache
-                command: |
-                  RUSTC_WRAPPER='' cargo install \
-                  --git https://github.com/paritytech/sccache.git \
-                  --features native-zlib
-                  sccache -s
-            - save_cache:
-                key: sccache-bins
-                paths:
-                  - ../.cargo/bin/sccache
-                  - ../.cargo/bin/sccache-dist
       - run:
           name: Fetch Dependencies
           command: cargo fetch
@@ -106,7 +101,6 @@ jobs:
     executor: test-executor
     description: Lint Code
     steps:
-      - build_setup
       - run:
           name: clippy check
           command: cargo clippy --all-targets
@@ -115,7 +109,6 @@ jobs:
     executor: test-executor
     description: Run tests
     steps:
-      - build_setup
       - run:
           name: Run Tests
           command: cargo test --all
@@ -124,23 +117,22 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - build_setup
       - restore_cache:
           key: cargo-audit-bin
-      - when:
-          condition: ! -f $CARGO_AUDIT
-          steps:
-          - run:
-              name: Setup CARGO AUDIT
-              command: RUSTC_WRAPPER="" cargo install cargo-audit
-          - save_cache:
-              key: cargo-audit-bin
-              paths:
-                - ../.cargo/bin/cargo-audit
+      - run:
+          name: Check if cargo-audit exists
+          command: cargo-audit --version
+      - run:
+          name: Setup CARGO AUDIT
+          command: cargo install cargo-audit
+          when: on_fail
+      - save_cache:
+          key: cargo-audit-bin
+          paths:
+            - ../.cargo/bin/cargo-audit
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
-      - save_build_cache
   docker-build:
     executor: test-executor
     description: Build Docker Image
