@@ -28,8 +28,8 @@ commands:
       - run:
           name: Install Sccache
           command: |
-            curl -L https://github.com/mozilla/sccache/releases/download/\                                                                                                                        
-            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \        
+            curl -L https://github.com/mozilla/sccache/releases/download/\
+            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
             | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
             && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /usr/local/bin \
             && sudo chmod +x /usr/local/bin/sccache \
