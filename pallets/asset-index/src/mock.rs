@@ -43,7 +43,7 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
-pub(crate) type Balance = u64;
+pub(crate) type Balance = u128;
 pub(crate) type AccountId = u64;
 pub(crate) type AssetId = u32;
 
@@ -104,7 +104,7 @@ impl pallet_balances::Config for Test {
     type AccountStore = StorageMapShim<
         pallet_balances::Account<Test>,
         system::Provider<Test>,
-        Balance,
+        AccountId,
         pallet_balances::AccountData<Balance>,
     >;
     type MaxLocks = MaxLocks;
@@ -153,11 +153,16 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 
 pub const PINT_ASSET_ID: AssetId = 0u32;
 pub const ASSET_A_ID: AssetId = 1u32;
+pub const UNKNOWN_ASSET_ID: AssetId = 2u32;
 
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        Self::get_price_pair(PINT_ASSET_ID, quote)
+        if quote == UNKNOWN_ASSET_ID {
+            Err(  pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+        } else {
+            Self::get_price_pair(PINT_ASSET_ID, quote)
+        }
     }
 
     fn get_price_pair(
