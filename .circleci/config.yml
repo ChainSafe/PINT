@@ -2,7 +2,7 @@ version: 2.1
 
 executors:
   test-executor:
-    resource_class: xlarge
+    # resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
       docker_layer_caching: true
@@ -11,32 +11,66 @@ executors:
       CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
       RUSTC_TOOLCHAIN: nightly-2021-04-18
-      SCCACHE_CACHE_SIZE: 2G
+      SCCACHE_CACHE_SIZE: 5G
 
 commands:
-  rust_setup:
-    description: Setup Rust Toolchain
-    steps:
-      - run:
-          name: Setup Rust Toolchain
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain "$RUSTC_TOOLCHAIN" \
-            --target wasm32-unknown-unknown \
-            --component clippy rustfmt \
-            --profile minimal
   install_deps:
     steps:
       - run:
           name: Substrate Build Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
+  cargo_audit_setup:
+    description: Install cargo-audit
+    steps:
+      - restore_cache:
+          key: cargo-audit-{{ arch }}
+      - run:
+          name: Sets up cargo-audit
+          command: |
+            [[ ! -f ${CARGO_AUDIT} ]] && RUSTC_WRAPPER='' cargo install cargo-audit
+            cargo audit --version
+      - save_cache:
+          key: cargo-audit-{{ arch }}
+          paths:
+            - ../.cargo/bin/cargo-audit
+  sccache_setup:
+    steps:
+      - restore_cache:
+          key: sccache-{{ arch }}
+      - run: 
+          name: Sets up Sccache
+          command: |
+            [[ ! -f ${RUSTC_WRAPPER} ]] \
+            && curl -L https://github.com/mozilla/sccache/releases/download/\
+            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
+            | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
+            && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache ${RUSTC_WRAPPER} \
+            && sudo chmod +x ${RUSTC_WRAPPER}
+            sccache -s
+      - save_cache:
+          key: sccache-{{ arch }}
+          paths:
+            - ../.cargo/bin/sccache
+  rust_setup:
+    description: Sets up Rust Toolchain
+    steps:
+      - run:
+          name: Sets up Rust Toolchain
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            -c clippy rustfmt \
+            -t wasm32-unknown-unknown \
+            --profile minimal
+      - sccache_setup
   build_setup:
     description: Sets up environment for future jobs
     steps:
       - checkout
       - rust_setup
       - install_deps
-      - restore_build_cache
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -47,19 +81,6 @@ commands:
             - ../.cargo/git
             - ../.cargo/registry
             - ../.cargo/.package-cache
-            - ../.cargo/bin/sccache
-  restore_build_cache:
-    description: Restore Cargo package cache from prev job
-    steps:
-      - restore_cache:
-          keys: 
-            - cargo-package-cache-{{ checksum "Cargo.lock" }}
-            - sccache-bins
-      - run:
-          name: Check cargo package cache
-          command: |
-            ls -all $HOME/.cargo
-            du -ssh $HOME/.cargo
   login_dockerhub:
     description: Login DockerHub
     steps:
@@ -68,34 +89,9 @@ commands:
           command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
-  prefetch-crates:
-    executor: test-executor
-    description: Prefetch cargo crates for subsequent jobs.
-    steps:
-      - build_setup
-      - when:
-          condition: ! -f $RUSTC_WRAPPER
-          steps:
-            - run:
-                name: Setup Sccache
-                command: |
-                  RUSTC_WRAPPER='' cargo install \
-                  --git https://github.com/paritytech/sccache.git \
-                  --features native-zlib
-                  sccache -s
-            - save_cache:
-                key: sccache-bins
-                paths:
-                  - ../.cargo/bin/sccache
-                  - ../.cargo/bin/sccache-dist
-      - run:
-          name: Fetch Dependencies
-          command: cargo fetch
-      - save_build_cache
-
   format:
     executor: test-executor
-    description: format check
+    description: Format Check
     steps:
       - checkout
       - rust_setup
@@ -108,7 +104,7 @@ jobs:
     steps:
       - build_setup
       - run:
-          name: clippy check
+          name: Clippy Check
           command: cargo clippy --all-targets
       - save_build_cache
   test:
@@ -124,23 +120,14 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - build_setup
+      - checkout
       - restore_cache:
-          key: cargo-audit-bin
-      - when:
-          condition: ! -f $CARGO_AUDIT
-          steps:
-          - run:
-              name: Setup CARGO AUDIT
-              command: RUSTC_WRAPPER="" cargo install cargo-audit
-          - save_cache:
-              key: cargo-audit-bin
-              paths:
-                - ../.cargo/bin/cargo-audit
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+      - rust_setup
+      - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
-      - save_build_cache
   docker-build:
     executor: test-executor
     description: Build Docker Image
@@ -190,20 +177,12 @@ jobs:
 workflows:
   test-code:
     jobs:
-      - prefetch-crates
       - format
-      - lint:
-          requires:
-            - prefetch-crates
-      - test:
-          requires:
-            - prefetch-crates
+      - lint
+      - test
   security:
     jobs:
-      - prefetch-crates
-      - security:
-          requires:
-            - prefetch-crates
+      - security
   docker:
     jobs:
       - docker-build
