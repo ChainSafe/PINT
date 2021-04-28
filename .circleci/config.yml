@@ -120,12 +120,7 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
-      - run:
-          name: Sets Up Rust Toolchain
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain "$RUSTC_TOOLCHAIN" \
-            --profile minimal
+      - build_setup
       - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
