@@ -34,12 +34,12 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         /// The balance type for cross chain transfers
         type Balance: Parameter
-        + Member
-        + AtLeast32BitUnsigned
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Into<u128>;
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Into<u128>;
 
         /// Asset Id that is used to identify different kinds of assets.
         type AssetId: Parameter + Member + Clone;
