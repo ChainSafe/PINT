@@ -93,7 +93,7 @@ fn deposit_only_works_for_added_liquid_assets() {
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
             100,
-            AssetAvailability::SAFT,
+            AssetAvailability::Saft,
             5
         ));
         assert_noop!(

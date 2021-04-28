@@ -13,7 +13,7 @@ use xcm::v0::MultiLocation;
 /// in the future.
 pub enum AssetAvailability {
     Liquid(MultiLocation),
-    SAFT,
+    Saft,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

@@ -93,7 +93,7 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin)?;
 
             ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
-            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::SAFT)?;
+            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::Saft)?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
