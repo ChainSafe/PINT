@@ -62,6 +62,8 @@ commands:
             -c clippy rustfmt \
             -t wasm32-unknown-unknown \
             --profile minimal
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
       - sccache_setup
   build_setup:
     description: Sets up environment for future jobs
@@ -69,13 +71,11 @@ commands:
       - checkout
       - rust_setup
       - install_deps
-      - restore_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
       - save_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
           paths:
             - ../.cache/sccache
             - ../.cargo/git
@@ -122,7 +122,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
       - rust_setup
       - cargo_audit_setup
       - run:
