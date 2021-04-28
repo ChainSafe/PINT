@@ -33,7 +33,7 @@ use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
     EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
+    NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
     SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
     TakeWeightCredit,
 };
@@ -344,9 +344,6 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
     // recognised.
     SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-    // Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
-    // transaction from the Root origin.
-    ParentAsSuperuser<Origin>,
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RococoNetwork, Origin>,
@@ -377,7 +374,7 @@ impl Config for XcmConfig {
     type AssetTransactor = LocalAssetTransactor;
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
     type IsReserve = NativeAsset;
-    type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
+    type IsTeleporter = NativeAsset;
     type LocationInverter = LocationInverter<Ancestry>;
     type Barrier = Barrier;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;

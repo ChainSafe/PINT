@@ -23,7 +23,7 @@ mod types;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     pub use crate::traits::PriceFeed;
-    use crate::types::{AssetPricePair, Price};
+    pub use crate::types::{AssetPricePair, Price};
     use frame_support::sp_runtime::FixedPointNumber;
     use frame_support::sp_std::convert::TryInto;
     #[cfg(feature = "std")]

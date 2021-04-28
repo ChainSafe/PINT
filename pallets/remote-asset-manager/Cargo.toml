@@ -1,9 +1,9 @@
 [package]
 authors = ['ChainSafe Systems']
-description = 'FRAME pallet to implement PINT asset index.'
+description = 'FRAME pallet to bond/unbond and transfer assets on other chains.'
 edition = '2018'
 license = 'LGPL-3.0-only'
-name = 'pallet-asset-index'
+name = 'pallet-remote-asset-manager'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
@@ -11,14 +11,9 @@ version = '0.0.1'
 [features]
 default = ['std']
 std = [
-    'sp-std/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-balances/std',
-    'pallet-remote-asset-manager/std',
-    'pallet-asset-depository/std',
-    'pallet-price-feed/std',
     'xcm/std',
     'xcm-executor/std',
 ]
@@ -27,12 +22,6 @@ default-features = false
 features = ['derive']
 package = 'parity-scale-codec'
 version = '2.0.0'
-
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
 
 [dependencies.frame-support]
 default-features = false
@@ -47,32 +36,22 @@ branch = 'rococo-v1'
 version = '3.0.0'
 
 [dependencies.xcm]
-git = "https://github.com/paritytech/polkadot"
-branch = 'rococo-v1'
 default-features = false
+git = 'https://github.com/paritytech/polkadot'
+branch = 'rococo-v1'
 
 [dependencies.xcm-executor]
 default-features = false
 git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
-[dependencies.pallet-remote-asset-manager]
-default-features = false
-path = '../remote-asset-manager'
-version = '0.0.1'
-
-[dependencies.pallet-asset-depository]
-default-features = false
-path = '../asset-depository'
-version = '0.0.1'
-
-[dependencies.pallet-price-feed]
-default-features = false
-path = '../price-feed'
-version = '0.0.1'
-
 [dev-dependencies]
 serde = { version = "1.0.101" }
+
+[dev-dependencies.xcm-builder]
+default-features = false
+git = 'https://github.com/paritytech/polkadot'
+branch = 'rococo-v1'
 
 [dev-dependencies.pallet-balances]
 default-features = false

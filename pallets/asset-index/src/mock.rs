@@ -10,6 +10,10 @@ use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
+use frame_support::dispatch::DispatchResult;
+use frame_support::sp_runtime::FixedPointNumber;
+use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -30,6 +34,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
+        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
     }
 );
 
@@ -38,8 +43,9 @@ parameter_types! {
     pub const SS58Prefix: u8 = 42;
 }
 
-pub(crate) type Balance = u64;
+pub(crate) type Balance = u128;
 pub(crate) type AccountId = u64;
+pub(crate) type AssetId = u32;
 
 impl system::Config for Test {
     type BaseCallFilter = ();
@@ -73,7 +79,7 @@ ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
 }
 
-pub struct MockAssetRecorder();
+pub struct MockAssetRecorder;
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
@@ -98,29 +104,77 @@ impl pallet_balances::Config for Test {
     type AccountStore = StorageMapShim<
         pallet_balances::Account<Test>,
         system::Provider<Test>,
-        Balance,
+        AccountId,
         pallet_balances::AccountData<Balance>,
     >;
     type MaxLocks = MaxLocks;
     type WeightInfo = ();
 }
 
+impl pallet_asset_depository::Config for Test {
+    type Event = Event;
+    type AssetId = AssetId;
+    type Balance = Balance;
+}
+
 parameter_types! {
     pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
-    pub DOTContributionLimit: u32 = 999;
+    pub DOTContributionLimit: Balance = 999;
 }
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type Event = Event;
-    type AssetId = u32;
+    type AssetId = AssetId;
     type IndexToken = Balances;
     type LockupPeriod = LockupPeriod;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
+    type RemoteAssetManager = MockRemoteAssetManager;
+    type MultiAssetDepository = AssetDepository;
+    type PriceFeed = MockPriceFeed;
+}
+
+pub struct MockRemoteAssetManager;
+impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
+    for MockRemoteAssetManager
+{
+    fn reserve_withdraw_and_deposit(
+        _who: AccountId,
+        _asset: AssetId,
+        _amount: Balance,
+    ) -> DispatchResult {
+        Ok(().into())
+    }
+}
+
+pub const PINT_ASSET_ID: AssetId = 0u32;
+pub const ASSET_A_ID: AssetId = 1u32;
+pub const UNKNOWN_ASSET_ID: AssetId = 2u32;
+
+pub struct MockPriceFeed;
+impl PriceFeed<AssetId> for MockPriceFeed {
+    fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        if quote == UNKNOWN_ASSET_ID {
+            Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+        } else {
+            Self::get_price_pair(PINT_ASSET_ID, quote)
+        }
+    }
+
+    fn get_price_pair(
+        base: AssetId,
+        quote: AssetId,
+    ) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        Ok(AssetPricePair {
+            base,
+            quote,
+            price: Price::checked_from_rational(600, 300).unwrap(),
+        })
+    }
 }
 
 // Build genesis storage according to the mock runtime.
