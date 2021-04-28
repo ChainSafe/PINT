@@ -27,7 +27,7 @@ commands:
       - run:
           name: Setup CARGO AUDIT
           command: |
-            [ ! -f ${CARGO_AUDIT} ] \
+            [[ ! -f ${CARGO_AUDIT} ]] \
             && curl https://sh.rustup.rs -sSf | sh -s -- -y \
             --default-toolchain "$RUSTC_TOOLCHAIN" \
             --profile minimal \
@@ -43,7 +43,7 @@ commands:
       - run: 
           name: Install Sccache
           command: |
-            [ ! -f ${RUSTC_WRAPPER} ] \
+            [[ ! -f ${RUSTC_WRAPPER} ]] \
             && curl -L https://github.com/mozilla/sccache/releases/download/\
             v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
             | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
