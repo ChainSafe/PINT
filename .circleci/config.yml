@@ -2,7 +2,7 @@ version: 2.1
 
 executors:
   test-executor:
-    # resource_class: xlarge
+    resource_class: xlarge
     machine:
       image: ubuntu-2004:202010-01
       docker_layer_caching: true
@@ -17,7 +17,7 @@ commands:
   install_deps:
     steps:
       - run:
-          name: Substrate Build Dependencies
+          name: Sets Up Substrate Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
   cargo_audit_setup:
     description: Install cargo-audit
@@ -135,7 +135,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: DOCKER_BUILDKIT=1 docker build -t $IMAGE_NAME:latest .
+          command: BUILDKIT_PROGRESS=plain DOCKER_BUILDKIT=1 docker build -t $IMAGE_NAME:latest .
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
