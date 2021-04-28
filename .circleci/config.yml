@@ -8,46 +8,100 @@ executors:
       docker_layer_caching: true
     environment:
       IMAGE_NAME: chainsafe/pint
-      CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
-      RUSTC_WRAPPER: /usr/local/bin/sccache
+      RUSTC_WRAPPER: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_TOOLCHAIN: nightly-2021-04-18
       SCCACHE_CACHE_SIZE: 5G
 
 commands:
-  rust_setup:
-    description: Setup Rust Toolchain
-    steps:
-      - run:
-          name: Setup Rust Toolchain
-          command: |
-            curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain "$RUSTC_TOOLCHAIN" \
-            --target wasm32-unknown-unknown \
-            --component clippy rustfmt \
-            --profile minimal
-      - run:
-          name: Install Sccache
-          command: |
-            curl -L https://github.com/mozilla/sccache/releases/download/\
-            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
-            | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
-            && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache /usr/local/bin \
-            && sudo chmod +x /usr/local/bin/sccache \
-            && sccache -s
   install_deps:
     steps:
       - run:
           name: Substrate Build Dependencies && Sccache
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
-  build_setup:
-    description: Sets up environment for future jobs
+  install_rust:
     steps:
-      - checkout
-      - rust_setup
-      - install_deps
-      - restore_build_cache
+      - run:
+          name: Install Rust
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            --profile minimal 
+  install_cargo_audit:
+    description: Install cargo-audit
+    steps:
+      - run:
+          name: Setup CARGO AUDIT
+          command: RUSTC_WRAPPER='' cargo install cargo-audit
+      - save_cache:
+          key: cargo-audit-{{ arch }}
+          paths:
+            - ../.cargo/bin/cargo-audit
+  sccache_setup:
+    steps:
       - restore_cache:
-          key: sccache-bins
+          key: sccache-{{ arch }}
+      - run: 
+          name: Install Sccache
+          command: |
+            ! -f ${RUSTC_WRAPPER} \
+            && url -L https://github.com/mozilla/sccache/releases/download/\
+            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
+            | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
+            && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache ${RUSTC_WRAPPER} \
+            && sudo chmod +x ${RUSTC_WRAPPER} \
+            && sccache -s  
+      - save_cache:
+          key: sccache-{{ arch }}
+          paths:
+            - ../.cargo/bin/sccache
+  rust_setup:
+    description: Setup Rust Toolchain
+    parameters:
+      feature:
+        description: Optional Feature
+        type: enum
+        enum: [ "sccache", "cargo-audit", "clippy", "rustfmt" ]
+        default: "sccache"
+    steps:
+      - unless:
+          condition:
+            equal: [ "cargo-audit", << parameters.feature >> ]
+          steps:
+            - install_rust
+      - when:
+          condition:
+            or:
+              - equal: [ "sccache", << parameters.feature >> ]
+              - equal: [ "clippy", << parameters.feature >> ]
+          steps: 
+            - install_deps 
+            - sccache_setup
+            - run:
+                name: Add target wasm32-unknown-unkown
+                command: rustup target add wasm32-unknown-unknown
+            - restore_cache:
+                key: cargo-package-cache-{{ checksum "Cargo.lock" }}
+            - checkout
+      - when:
+          condition:
+            equal: [ "clippy", << parameters.feature >> ]
+          steps:
+            run:
+              name: Install rustfmt
+              command: rustup component add clippy
+      - when:
+          condition:
+            equal: [ "rustfmt", << parameters.feature >> ]
+          steps:
+            run:
+              name: Install rustfmt
+              command: rustup component add rustfmt
+      - when:
+          condition:
+            equal: [ "cargo-audit", << parameters.feature >> ]
+          steps:
+            - install_rust
+            - install_cargo_audit
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -58,18 +112,6 @@ commands:
             - ../.cargo/git
             - ../.cargo/registry
             - ../.cargo/.package-cache
-  restore_build_cache:
-    description: Restore Cargo package cache from prev job
-    steps:
-      - restore_cache:
-          keys: 
-            - cargo-package-cache-{{ checksum "Cargo.lock" }}
-            - sccache-bins
-      - run:
-          name: Check cargo package cache
-          command: |
-            ls -all $HOME/.cargo
-            du -ssh $HOME/.cargo
   login_dockerhub:
     description: Login DockerHub
     steps:
@@ -78,22 +120,12 @@ commands:
           command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
-  prefetch-crates:
-    executor: test-executor
-    description: Prefetch cargo crates for subsequent jobs.
-    steps:
-      - build_setup
-      - run:
-          name: Fetch Dependencies
-          command: cargo fetch
-      - save_build_cache
-
   format:
     executor: test-executor
     description: format check
     steps:
-      - checkout
-      - rust_setup
+      - rust_setup:
+          feature: "rustfmt"
       - run:
           name: Format check
           command: cargo fmt -- --check
@@ -101,6 +133,8 @@ jobs:
     executor: test-executor
     description: Lint Code
     steps:
+      - rust_setup:
+          feature: "clippy"
       - run:
           name: clippy check
           command: cargo clippy --all-targets
@@ -109,6 +143,7 @@ jobs:
     executor: test-executor
     description: Run tests
     steps:
+      - rust_setup
       - run:
           name: Run Tests
           command: cargo test --all
@@ -118,18 +153,12 @@ jobs:
     description: Cargo audit
     steps:
       - restore_cache:
-          key: cargo-audit-bin
+          key: cargo-audit-{{ arch }}
       - run:
           name: Check if cargo-audit exists
           command: cargo-audit --version
-      - run:
-          name: Setup CARGO AUDIT
-          command: RUSTC_WRAPPER='' cargo install cargo-audit
-          when: on_fail
-      - save_cache:
-          key: cargo-audit-bin
-          paths:
-            - ../.cargo/bin/cargo-audit
+      - rust_setup:
+          feature: "cargo-audit"
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
@@ -182,20 +211,13 @@ jobs:
 workflows:
   test-code:
     jobs:
-      - prefetch-crates
       - format
-      - lint:
-          requires:
-            - prefetch-crates
-      - test:
-          requires:
-            - prefetch-crates
+      - lint
+      - test
   security:
     jobs:
-      - rust_setup
-      - security:
-          requires:
-            - rust_setup
+      - security
+
   docker:
     jobs:
       - docker-build
