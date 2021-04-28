@@ -22,19 +22,16 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant)]
 pub mod pallet {
-    pub use crate::traits::MultiAssetRegistry;
     use crate::traits::AssetRecorder;
-    use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
+    pub use crate::traits::MultiAssetRegistry;
     pub use crate::types::MultiAssetAdapter;
+    use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::traits::{CheckedAdd, Zero},
+        sp_std::{convert::TryInto, prelude::*},
         traits::{Currency, LockableCurrency},
-        sp_std::{
-            convert::TryInto,
-            prelude::*
-        },
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_depository::MultiAssetDepository;
