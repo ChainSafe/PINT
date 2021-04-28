@@ -17,7 +17,7 @@ commands:
   install_deps:
     steps:
       - run:
-          name: Sets Up Substrate Dependencies
+          name: Download Substrate Dependencies
           command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
   cargo_audit_setup:
     description: Install cargo-audit
