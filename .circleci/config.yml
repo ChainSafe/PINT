@@ -27,11 +27,7 @@ commands:
       - run:
           name: Setup cargo-audit
           command: |
-            [[ ! -f ${CARGO_AUDIT} ]] \
-            && curl https://sh.rustup.rs -sSf | sh -s -- -y \
-            --default-toolchain "$RUSTC_TOOLCHAIN" \
-            --profile minimal \
-            && RUSTC_WRAPPER='' cargo install cargo-audit
+            [[ ! -f ${CARGO_AUDIT} ]] && RUSTC_WRAPPER='' cargo install cargo-audit
             cargo-audit --version
       - save_cache:
           key: cargo-audit-{{ arch }}
@@ -124,6 +120,12 @@ jobs:
     executor: test-executor
     description: Cargo audit
     steps:
+      - run:
+          name: Sets Up Rust Toolchain
+          command: |
+            curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            --profile minimal
       - cargo_audit_setup
       - run:
           name: Check for known security issues in dependencies
