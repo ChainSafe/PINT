@@ -25,14 +25,14 @@ commands:
       - restore_cache:
           key: cargo-audit-{{ arch }}
       - run:
-          name: Setup CARGO AUDIT
+          name: Setup cargo-audit
           command: |
-            if [ ! -f ${CARGO_AUDIT} ]; then
-              && curl https://sh.rustup.rs -sSf | sh -s -- -y \
-              --default-toolchain "$RUSTC_TOOLCHAIN" \
-              --profile minimal \
-              && RUSTC_WRAPPER='' cargo install cargo-audit
-            fi
+            [[ ! -f ${CARGO_AUDIT} ]] \
+            && curl https://sh.rustup.rs -sSf | sh -s -- -y \
+            --default-toolchain "$RUSTC_TOOLCHAIN" \
+            --profile minimal \
+            && RUSTC_WRAPPER='' cargo install cargo-audit
+            cargo-audit --version
       - save_cache:
           key: cargo-audit-{{ arch }}
           paths:
@@ -42,26 +42,21 @@ commands:
       - restore_cache:
           key: sccache-{{ arch }}
       - run: 
-          name: Install Sccache
+          name: Setup Sccache
           command: |
-            if [ ! -f ${RUSTC_WRAPPER} ]; then
-              curl -L https://github.com/mozilla/sccache/releases/download/\
-              v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
-              | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
-              && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache ${RUSTC_WRAPPER} \
-              && sudo chmod +x ${RUSTC_WRAPPER} \
-              && sccache -s
-            fi
+            [[ ! -f ${RUSTC_WRAPPER} ]] \
+            && curl -L https://github.com/mozilla/sccache/releases/download/\
+            v0.2.15/sccache-v0.2.15-x86_64-unknown-linux-musl.tar.gz \
+            | tar -zxvf - sccache-v0.2.15-x86_64-unknown-linux-musl/sccache \
+            && sudo mv sccache-v0.2.15-x86_64-unknown-linux-musl/sccache ${RUSTC_WRAPPER} \
+            && sudo chmod +x ${RUSTC_WRAPPER}
+            sccache -s
       - save_cache:
           key: sccache-{{ arch }}
           paths:
             - ../.cargo/bin/sccache
   rust_setup:
     description: Setup Rust Toolchain
-    parameters:
-      sccache:
-        type: boolean
-        default: true
     steps:
       - run:
           name: Install Rust Toolchain
@@ -72,6 +67,14 @@ commands:
             -t wasm32-unknown-unknown \
             --profile minimal
       - sccache_setup
+  build_setup:
+    description: Sets up environment for future jobs
+    steps:
+      - checkout
+      - rust_setup
+      - install_deps
+      - restore_cache:
+          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
   save_build_cache:
     description: Save cargo package cache for subsequent jobs
     steps:
@@ -90,14 +93,6 @@ commands:
           command: echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
   
 jobs:
-  prefetch-cache:
-    executor: test-executor
-    description: Prefetch Cache
-    steps:
-      - checkout
-      - rust_setup
-      - restore_cache:
-          key: cargo-package-cache-{{ checksum "Cargo.lock" }}
   format:
     executor: test-executor
     description: Format Check
@@ -111,6 +106,7 @@ jobs:
     executor: test-executor
     description: Lint Code
     steps:
+      - build_setup
       - run:
           name: clippy check
           command: cargo clippy --all-targets
@@ -119,6 +115,7 @@ jobs:
     executor: test-executor
     description: Run tests
     steps:
+      - build_setup
       - run:
           name: Run Tests
           command: cargo test --all
@@ -181,13 +178,8 @@ workflows:
   test-code:
     jobs:
       - format
-      - prefetch-cache
-      - lint:
-          requires:
-            - prefetch-cache
-      - test:
-          requires:
-            - prefetch-cache
+      - lint
+      - test
   security:
     jobs:
       - security
