@@ -120,6 +120,8 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
+        /// Thrown if calculating the volume of units of an asset with it's price overflows.
+        AssetVolumeOverflow,
     }
 
     #[pallet::hooks]
@@ -171,7 +173,7 @@ pub mod pallet {
                 .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
             let pint_amount: BalanceFor<T> = price
                 .volume(units)
-                .ok_or(Error::<T>::AssetUnitsOverflow)
+                .ok_or(Error::<T>::AssetVolumeOverflow)
                 .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
 
             // make sure we can store the additional deposit
@@ -196,8 +198,7 @@ pub mod pallet {
             _amount: BalanceFor<T>,
         ) -> DispatchResultWithPostInfo {
             let _caller = ensure_signed(origin)?;
-todo!();
-            Ok(().into())
+            todo!();
         }
     }
 
