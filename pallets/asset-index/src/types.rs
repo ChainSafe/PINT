@@ -169,8 +169,6 @@ impl<
             .saturated_into();
         MultiAssets::withdraw(&asset_id, &who, amount)
             .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
-        let mut withdrawn = Assets::default();
-        withdrawn.saturating_subsume(asset.clone());
-        Ok(withdrawn)
+        Ok(asset.clone().into())
     }
 }
