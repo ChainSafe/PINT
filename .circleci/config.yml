@@ -31,8 +31,8 @@ commands:
             curl -L https://github.com/mozilla/sccache/releases/download/\
             v0.2.15/sccache-v0.2.15-aarch64-unknown-linux-musl.tar.gz \
             | tar -zxvf - sccache-v0.2.15-aarch64-unknown-linux-musl/sccache \
-            && mv sccache-v0.2.15-aarch64-unknown-linux-musl/sccache /usr/local/bin \
-            && chmod +x /usr/local/bin/sccache \
+            && sudo mv sccache-v0.2.15-aarch64-unknown-linux-musl/sccache /usr/local/bin \
+            && sudo chmod +x /usr/local/bin/sccache \
             && sccache -s
   install_deps:
     steps:
