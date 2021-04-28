@@ -55,7 +55,7 @@ commands:
     description: Sets up Rust Toolchain
     steps:
       - run:
-          name: Install Rust Toolchain
+          name: Sets up Rust Toolchain
           command: |
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
             --default-toolchain "$RUSTC_TOOLCHAIN" \
@@ -104,7 +104,7 @@ jobs:
     steps:
       - build_setup
       - run:
-          name: clippy check
+          name: Clippy Check
           command: cargo clippy --all-targets
       - save_build_cache
   test:
