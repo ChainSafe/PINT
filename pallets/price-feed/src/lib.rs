@@ -25,13 +25,13 @@ pub mod pallet {
     pub use crate::traits::PriceFeed;
     pub use crate::types::{AssetPricePair, Price};
     use frame_support::sp_runtime::FixedPointNumber;
+    use frame_support::sp_std::cmp::Ordering;
     use frame_support::sp_std::convert::TryInto;
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{pallet_prelude::*, traits::Get};
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::{FeedInterface, FeedOracle};
-    use std::cmp::Ordering;
 
     type FeedIdFor<T> = <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
 
