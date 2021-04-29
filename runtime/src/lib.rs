@@ -426,8 +426,6 @@ impl pallet_local_treasury::Config for Runtime {
     type Event = Event;
 }
 
-// impl pallet_co
-
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where

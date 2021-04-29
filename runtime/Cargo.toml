@@ -69,12 +69,6 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dependencies.pallet-elections-phragmen]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
-
 [dependencies.pallet-randomness-collective-flip]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -181,11 +175,6 @@ default-features = false
 path = '../pallets/local-treasury'
 version = '0.0.1'
 
-[dependencies.pallet-committee]
-default-features = false
-path = '../pallets/committee'
-version = '0.0.1'
-
 
 # Cumulus dependencies
 [dependencies.parachain-info]
@@ -276,11 +265,9 @@ std = [
 	'frame-system/std',
 	'frame-system-rpc-runtime-api/std',
 	'pallet-balances/std',
-    'pallet-committee/std',
-    'pallet-elections-phragmen/std',
 	'pallet-randomness-collective-flip/std',
+	'pallet-timestamp/std',
 	'pallet-sudo/std',
-    'pallet-timestamp/std',
 	'pallet-transaction-payment/std',
 	'pallet-transaction-payment-rpc-runtime-api/std',
 	'parachain-info/std',

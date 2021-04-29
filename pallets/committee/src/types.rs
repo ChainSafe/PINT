@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate::Config;
-use frame_support::{
-    pallet_prelude::*,
-    sp_std::{iter, vec::Vec},
-};
+use frame_support::pallet_prelude::*;
 use sp_runtime::traits::Hash;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -97,7 +94,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
         abstentions: Vec<CommitteeMember<AccountId>>,
         end: BlockNumber,
     ) -> Self {
-        let votes = iter::empty()
+        let votes = std::iter::empty()
             .chain(ayes.into_iter().map(|x| x.into_vote(Vote::Aye)))
             .chain(nays.into_iter().map(|x| x.into_vote(Vote::Nay)))
             .chain(abstentions.into_iter().map(|x| x.into_vote(Vote::Abstain)))
