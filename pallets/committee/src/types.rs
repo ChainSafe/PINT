@@ -3,6 +3,7 @@
 
 use crate::Config;
 use frame_support::pallet_prelude::*;
+use frame_support::sp_std::{self, prelude::Vec};
 use sp_runtime::traits::Hash;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -94,7 +95,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
         abstentions: Vec<CommitteeMember<AccountId>>,
         end: BlockNumber,
     ) -> Self {
-        let votes = std::iter::empty()
+        let votes = sp_std::iter::empty()
             .chain(ayes.into_iter().map(|x| x.into_vote(Vote::Aye)))
             .chain(nays.into_iter().map(|x| x.into_vote(Vote::Nay)))
             .chain(abstentions.into_iter().map(|x| x.into_vote(Vote::Abstain)))
