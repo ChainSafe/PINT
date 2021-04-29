@@ -493,11 +493,17 @@ impl pallet_price_feed::Config for Runtime {
 }
 
 parameter_types! {
+    // Used to determine the account for storing the funds used to pay the oracles.
     pub const FeedPalletId: PalletId = PalletId(*b"linkfeed");
+    // Minimum amount of funds that need to be present in the fund account
     pub const MinimumReserve: Balance = 100;
+    // Maximum allowed string length for feed names
     pub const StringLimit: u32 = 15;
+    // Maximum number of oracles per feed
     pub const OracleLimit: u32 = 10;
+    // Maximum number of feeds
     pub const FeedLimit: u16 = 10;
+    // Number of rounds to keep around per feed
     pub const PruningWindow: u32 = 3;
 }
 
