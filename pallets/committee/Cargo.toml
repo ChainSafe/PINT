@@ -14,7 +14,9 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'sp-runtime/std',
 ]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']

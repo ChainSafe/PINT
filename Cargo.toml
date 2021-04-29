@@ -7,3 +7,6 @@ members = [
     'pallets/*',
     'runtime',
 ]
+
+[patch.crates-io]
+rocksdb = { git = "https://github.com/hdevalence/rust-rocksdb.git" }

@@ -1,6 +1,14 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # Committee Pallet
+//!
+//! The Collective pallet uses a set of AccountIds to identify who
+//! can vote on proposals. This set can be modified via proposals to
+//! the Governance Committee. Members may be added, removed or swapped
+//! with new members. There is no bound on how many members may exist
+//! in the committee.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -25,6 +33,7 @@ pub mod pallet {
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
+        sp_std::{boxed::Box, vec::Vec},
         traits::{ChangeMembers, InitializeMembers},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
