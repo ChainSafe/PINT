@@ -3,7 +3,7 @@
 
 //! # Committee Pallet
 //!
-//! The Collective pallet uses a set of AccountIds to identify who
+//! The Committee pallet uses a set of AccountIds to identify who
 //! can vote on proposals. This set can be modified via proposals to
 //! the Governance Committee. Members may be added, removed or swapped
 //! with new members. There is no bound on how many members may exist
