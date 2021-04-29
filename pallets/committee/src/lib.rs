@@ -146,6 +146,10 @@ pub mod pallet {
     pub enum Error<T> {
         /// The origin making the call is not a member and it is a requirement that they are
         NotMember,
+        /// The origin making the call is not a council member and it is a requirement that they are
+        NotCouncilMember,
+        /// Member has already in committee
+        MemberExists,
         /// Member has attempted to vote multiple times on a single proposal
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
@@ -168,8 +172,6 @@ pub mod pallet {
         /// There was a numerical overflow or underflow in calculating when the voting period
         /// should end
         InvalidOperationInEndBlockComputation,
-        /// Set members failed
-        SetMembersFailed,
     }
 
     impl<T> From<VoteRejectionReason> for Error<T> {
@@ -228,9 +230,13 @@ pub mod pallet {
         /// the committee
         pub fn ensure_member(
             origin: OriginFor<T>,
+            council: bool,
         ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
             let who = ensure_signed(origin)?;
             if let Some(member_type) = Members::<T>::get(who.clone()) {
+                let _ = council
+                    && member_type == MemberType::Constituent
+                    && Err(<Error<T>>::NotCouncilMember)?;
                 Ok(CommitteeMember::new(who, member_type))
             } else {
                 Err(Error::<T>::NotMember.into())
@@ -277,26 +283,28 @@ pub mod pallet {
         ///
         /// This call can only be triggered by `fn propose_constituents` momentary
         /// after approving of `propose_constituents`
-        fn set_members_encoded(
-            mut constituents: Vec<AccountIdFor<T>>,
+        fn add_constituent_encoded(
+            constituent: AccountIdFor<T>,
         ) -> Result<(Vec<u8>, Vec<u8>), Error<T>> {
-            constituents.sort();
             let mut members = <Members<T>>::iter().collect::<Vec<(T::AccountId, MemberType)>>();
-            constituents
-                .into_iter()
-                .for_each(|i| members.push((i, MemberType::Constituent)));
+            members.push((constituent, MemberType::Constituent));
 
             // sort members
             members.sort();
 
             // construct new storage value
+            //
+            // see `sp_storage::StorageMap`
             let mut value = BTreeMap::new();
-            members
+            if let Some(_) = members
                 .into_iter()
                 .map(|(k, v)| value.insert(k, v))
                 .collect::<Option<Vec<_>>>()
-                .ok_or(<Error<T>>::SetMembersFailed)?;
-            Ok((<Members<T>>::final_prefix().to_vec(), value.encode()))
+            {
+                Err(<Error<T>>::MemberExists.into())
+            } else {
+                Ok((<Members<T>>::final_prefix().to_vec(), value.encode()))
+            }
         }
     }
 
@@ -342,7 +350,7 @@ pub mod pallet {
             vote: Vote,
         ) -> DispatchResultWithPostInfo {
             // Only members can vote
-            let voter = Self::ensure_member(origin)?;
+            let voter = Self::ensure_member(origin, vote != Vote::Nay)?;
 
             Votes::<T>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {
@@ -429,18 +437,21 @@ pub mod pallet {
         /// ## NOTE
         ///
         /// This function contains a HACK, `frame_system::set_storage` directly.
-        pub fn propose_constituents(
+        pub fn propose_constituent(
             origin: OriginFor<T>,
-            constituents: Vec<AccountIdFor<T>>,
+            constituent: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_member(origin.clone())?;
+            Self::ensure_member(origin.clone(), true)?;
             Self::propose(
                 origin,
                 Box::new(
-                    SystemCall::set_storage(Vec::from([Self::set_members_encoded(constituents)?]))
-                        .into(),
+                    SystemCall::set_storage(Vec::from([Self::add_constituent_encoded(
+                        constituent,
+                    )?]))
+                    .into(),
                 ),
             )?;
+
             Ok(().into())
         }
     }

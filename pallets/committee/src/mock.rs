@@ -111,5 +111,14 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
     let t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
     t.into()
+}
+
+// Get last event
+pub fn last_event() -> Event {
+    system::Pallet::<Test>::events()
+        .pop()
+        .expect("Event expected")
+        .event
 }

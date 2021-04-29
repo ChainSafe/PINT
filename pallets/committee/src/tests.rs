@@ -468,3 +468,43 @@ fn cannot_execute_proposal_twice() {
         );
     });
 }
+
+//
+// Constituent Committee Council Selection
+//
+
+#[test]
+fn propose_constituent_works() {
+    new_test_ext().execute_with(|| {
+        System::set_block_number(1);
+        initialize_council(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4);
+
+        // propose a new consituent
+        assert_ok!(Committee::propose_constituent(
+            Origin::signed(PROPOSER_ACCOUNT_ID),
+            42
+        ));
+
+        // test if proposal submitted with event
+        if let Event::pallet_committee(crate::Event::Proposed(_, _, hash)) = last_event() {
+            assert_eq!(&[hash], Committee::active_proposals().as_slice());
+
+            // Vote Aye on adding new constituent
+            run_to_block(START_OF_S1);
+            vote_with_each(
+                PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4,
+                hash,
+                Vote::Aye,
+            );
+
+            // Close proposal
+            run_to_block(START_OF_V1 + 1);
+            assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), hash,));
+        } else {
+            panic!("Could not get proposal hash from events");
+        }
+
+        // Vote Aye on adding new constituent
+        <pallet::Members<Test>>::contains_key(42);
+    });
+}
