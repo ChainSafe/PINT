@@ -389,6 +389,42 @@ pub mod pallet {
 
             Ok(().into())
         }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Set new constituent members
+        ///
+        /// This call can only be triggered by `fn propose_constituents` momentary
+        /// after approving of `propose_constituents`
+        pub fn set_members(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            ensure_root(origin)?;
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Propose new constituents to the constituent committee
+        ///
+        /// * This call only can be called by `MemberType::Council`
+        /// * This call will propose the call `set_members`
+        pub fn propose_constituents(
+            origin: OriginFor<T>,
+            _constituents: Vec<AccountIdFor<T>>,
+        ) -> DispatchResultWithPostInfo {
+            let _selector = Self::ensure_member(origin);
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Execute a proposal
+        ///
+        /// For the constituent selection momentary
+        pub fn execute(
+            origin: OriginFor<T>,
+            _proposal_hash: HashFor<T>,
+            // #[compact] length_bound: u32,
+        ) -> DispatchResultWithPostInfo {
+            Self::ensure_member(origin)?;
+            Ok(().into())
+        }
     }
 
     /// Initialize council members. Can only be done once.
