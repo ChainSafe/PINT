@@ -33,11 +33,12 @@ pub mod pallet {
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
-        sp_std::{boxed::Box, vec::Vec},
+        sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec},
         traits::{ChangeMembers, InitializeMembers},
         weights::{GetDispatchInfo, PostDispatchInfo},
+        StoragePrefixedMap,
     };
-    use frame_system::pallet_prelude::*;
+    use frame_system::{pallet_prelude::*, Call as SystemCall};
     // use frame_system::RawOrigin;
     use sp_runtime::traits::{CheckedAdd, One, Zero};
 
@@ -167,6 +168,8 @@ pub mod pallet {
         /// There was a numerical overflow or underflow in calculating when the voting period
         /// should end
         InvalidOperationInEndBlockComputation,
+        /// Set members failed
+        SetMembersFailed,
     }
 
     impl<T> From<VoteRejectionReason> for Error<T> {
@@ -268,6 +271,32 @@ pub mod pallet {
                     }
                 })
             })
+        }
+
+        /// Constructs new constituent members and returns the storage key value
+        ///
+        /// This call can only be triggered by `fn propose_constituents` momentary
+        /// after approving of `propose_constituents`
+        fn set_members_encoded(
+            mut constituents: Vec<AccountIdFor<T>>,
+        ) -> Result<(Vec<u8>, Vec<u8>), Error<T>> {
+            constituents.sort();
+            let mut members = <Members<T>>::iter().collect::<Vec<(T::AccountId, MemberType)>>();
+            constituents
+                .into_iter()
+                .for_each(|i| members.push((i, MemberType::Constituent)));
+
+            // sort members
+            members.sort();
+
+            // construct new storage value
+            let mut value = BTreeMap::new();
+            members
+                .into_iter()
+                .map(|(k, v)| value.insert(k, v))
+                .collect::<Option<Vec<_>>>()
+                .ok_or(<Error<T>>::SetMembersFailed)?;
+            Ok((<Members<T>>::final_prefix().to_vec(), value.encode()))
         }
     }
 
@@ -391,38 +420,27 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
-        /// Set new constituent members
-        ///
-        /// This call can only be triggered by `fn propose_constituents` momentary
-        /// after approving of `propose_constituents`
-        pub fn set_members(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            ensure_root(origin)?;
-            Ok(().into())
-        }
-
-        #[pallet::weight(10_000)] // TODO: Set weights
         /// Propose new constituents to the constituent committee
         ///
         /// * This call only can be called by `MemberType::Council`
-        /// * This call will propose the call `set_members`
+        /// * This call will propose a call which will rewrite the
+        ///   storage value of `Members`.
+        ///
+        /// ## NOTE
+        ///
+        /// This function contains a HACK, `frame_system::set_storage` directly.
         pub fn propose_constituents(
             origin: OriginFor<T>,
-            _constituents: Vec<AccountIdFor<T>>,
+            constituents: Vec<AccountIdFor<T>>,
         ) -> DispatchResultWithPostInfo {
-            let _selector = Self::ensure_member(origin);
-            Ok(().into())
-        }
-
-        #[pallet::weight(10_000)] // TODO: Set weights
-        /// Execute a proposal
-        ///
-        /// For the constituent selection momentary
-        pub fn execute(
-            origin: OriginFor<T>,
-            _proposal_hash: HashFor<T>,
-            // #[compact] length_bound: u32,
-        ) -> DispatchResultWithPostInfo {
-            Self::ensure_member(origin)?;
+            Self::ensure_member(origin.clone())?;
+            Self::propose(
+                origin,
+                Box::new(
+                    SystemCall::set_storage(Vec::from([Self::set_members_encoded(constituents)?]))
+                        .into(),
+                ),
+            )?;
             Ok(().into())
         }
     }
