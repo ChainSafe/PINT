@@ -279,10 +279,9 @@ pub mod pallet {
             })
         }
 
-        /// Constructs new constituent members and returns the storage key value
+        /// Add a new constituent member and returns the storage key value pair
         ///
-        /// This call can only be triggered by `fn propose_constituents` momentary
-        /// after approving of `propose_constituents`
+        /// This call only triggers after the approving of `propose_constituent`
         fn add_constituent_encoded(
             constituent: AccountIdFor<T>,
         ) -> Result<(Vec<u8>, Vec<u8>), Error<T>> {
@@ -428,7 +427,7 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
-        /// Propose new constituents to the constituent committee
+        /// Propose a new constituent to the constituent committee
         ///
         /// * This call only can be called by `MemberType::Council`
         /// * This call will propose a call which will rewrite the

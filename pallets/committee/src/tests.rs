@@ -489,7 +489,7 @@ fn propose_constituent_works() {
         if let Event::pallet_committee(crate::Event::Proposed(_, _, hash)) = last_event() {
             assert_eq!(&[hash], Committee::active_proposals().as_slice());
 
-            // Vote Aye on adding new constituent
+            // vote Aye on adding new constituent
             run_to_block(START_OF_S1);
             vote_with_each(
                 PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4,
@@ -497,14 +497,14 @@ fn propose_constituent_works() {
                 Vote::Aye,
             );
 
-            // Close proposal
+            // close proposal
             run_to_block(START_OF_V1 + 1);
             assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), hash,));
         } else {
             panic!("Could not get proposal hash from events");
         }
 
-        // Vote Aye on adding new constituent
+        // vote Aye on adding new constituent
         <pallet::Members<Test>>::contains_key(42);
     });
 }
