@@ -18,6 +18,7 @@ std = [
 ]
 
 [dependencies.pallet-asset-index]
+default-features = false
 path = "../asset-index"
 
 [dependencies.codec]

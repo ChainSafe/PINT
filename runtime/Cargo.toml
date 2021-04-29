@@ -170,11 +170,46 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
+[dependencies.pallet-asset-depository]
+default-features = false
+path = '../pallets/asset-depository'
+version = '0.0.1'
+
+[dependencies.pallet-committee]
+default-features = false
+path = '../pallets/committee'
+version = '0.0.1'
+
 [dependencies.pallet-local-treasury]
 default-features = false
 path = '../pallets/local-treasury'
 version = '0.0.1'
 
+[dependencies.pallet-asset-index]
+default-features = false
+path = '../pallets/asset-index'
+version = '0.0.1'
+
+[dependencies.pallet-saft-registry]
+default-features = false
+path = '../pallets/saft-registry'
+version = '0.0.1'
+
+[dependencies.pallet-price-feed]
+default-features = false
+path = '../pallets/price-feed'
+version = '0.0.1'
+
+[dependencies.pallet-remote-asset-manager]
+default-features = false
+path = '../pallets/remote-asset-manager'
+version = '0.0.1'
+
+[dependencies.pallet-chainlink-feed]
+default_features = false
+package = 'pallet-chainlink-feed'
+git = "https://github.com/mattsse/chainlink-polkadot"
+branch = "substrate-v3"
 
 # Cumulus dependencies
 [dependencies.parachain-info]
@@ -279,5 +314,12 @@ std = [
 	'cumulus-pallet-xcm/std',
 	'cumulus-pallet-xcmp-queue/std',
 	'cumulus-primitives-utility/std',
+	'pallet-asset-depository/std',
+	'pallet-asset-index/std',
+	'pallet-committee/std',
 	'pallet-local-treasury/std',
+	'pallet-price-feed/std',
+	'pallet-remote-asset-manager/std',
+	'pallet-saft-registry/std',
+	'pallet-chainlink-feed/std',
 ]

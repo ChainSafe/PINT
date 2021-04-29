@@ -28,20 +28,21 @@ use sp_version::RuntimeVersion;
 use frame_system::limits::{BlockLength, BlockWeights};
 
 // Polkadot imports
+use cumulus_primitives_core::ParaId;
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiLocation, NetworkId};
+use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId};
 use xcm_builder::{
-    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-    EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-    SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
-    TakeWeightCredit,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
+    FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter, NativeAsset, ParentIsDefault,
+    RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+    SignedAccountId32AsNative, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::{traits::Convert, Config, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
+use codec::Decode;
 pub use frame_support::{
-    construct_runtime, parameter_types,
+    construct_runtime, ord_parameter_types, parameter_types,
     traits::{All, IsInVec, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -49,11 +50,13 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
+use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
+use xcm_executor::traits::MatchesFungible;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -80,6 +83,15 @@ pub type Hash = sp_core::H256;
 
 /// Digest item type.
 pub type DigestItem = generic::DigestItem<Hash>;
+
+/// Identifier for an asset.
+pub type AssetId = u32;
+
+/// Identifier for price feeds.
+pub type FeedId = u64;
+
+/// Value type for price feeds.
+pub type Value = u128;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -319,15 +331,23 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
-    // Use this currency:
-    Balances,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    IsConcrete<RococoLocation>,
-    // Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
+pub type LocalAssetTransactor = MultiAssetAdapter<
+    // Use this balance type
+    Balance,
+    // Use this depository for asset balances
+    AssetDepository,
+    // Use this for a registry of supported asset
+    AssetIndex,
+    // Use this to convert from fungible to balance type
+    IsAsset,
+    // The account type
     AccountId,
+    // Use this to convert Multilocations to accounts
+    LocationToAccountId,
+    // The asset identifier type
+    AssetId,
+    // Use this to determine convert a Multiasset to an AssetId
+    AssetIdConvert,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -426,6 +446,180 @@ impl pallet_local_treasury::Config for Runtime {
     type Event = Event;
 }
 
+impl pallet_saft_registry::Config for Runtime {
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type Event = Event;
+    type Balance = Balance;
+    type AssetRecorder = AssetIndex;
+    type AssetId = AssetId;
+}
+
+parameter_types! {
+    pub const ProposalSubmissionPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
+    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 5;
+}
+
+ord_parameter_types! {
+     pub const MinCouncilVotes: usize = 4;
+}
+
+impl pallet_committee::Config for Runtime {
+    type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
+    type VotingPeriod = VotingPeriod;
+    type MinCouncilVotes = MinCouncilVotes;
+    // Using root as the admin origin for now
+    type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
+    type ProposalNonce = u32;
+    type Origin = Origin;
+    type Action = Call;
+    type Event = Event;
+}
+
+impl pallet_asset_depository::Config for Runtime {
+    type Event = Event;
+    type AssetId = AssetId;
+    type Balance = Balance;
+}
+
+impl pallet_price_feed::Config for Runtime {
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type SelfAssetId = PINTAssetId;
+    type AssetId = AssetId;
+    type Oracle = ChainlinkFeed;
+    type Event = Event;
+}
+
+parameter_types! {
+    // Used to determine the account for storing the funds used to pay the oracles.
+    pub const FeedPalletId: PalletId = PalletId(*b"linkfeed");
+    // Minimum amount of funds that need to be present in the fund account
+    pub const MinimumReserve: Balance = 100;
+    // Maximum allowed string length for feed names
+    pub const StringLimit: u32 = 15;
+    // Maximum number of oracles per feed
+    pub const OracleLimit: u32 = 10;
+    // Maximum number of feeds
+    pub const FeedLimit: u16 = 10;
+    // Number of rounds to keep around per feed
+    pub const PruningWindow: u32 = 3;
+}
+
+impl pallet_chainlink_feed::Config for Runtime {
+    type Event = Event;
+    type FeedId = FeedId;
+    type Value = Value;
+    type Currency = Balances;
+    type PalletId = FeedPalletId;
+    type MinimumReserve = MinimumReserve;
+    type StringLimit = StringLimit;
+    type OracleCountLimit = OracleLimit;
+    type FeedLimit = FeedLimit;
+    type PruningWindow = PruningWindow;
+    type WeightInfo = ();
+}
+
+parameter_types! {
+    pub LockupPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
+    pub MinimumRedemption: u32 = 0;
+    pub WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
+    pub DOTContributionLimit: Balance = 999;
+}
+
+impl pallet_asset_index::Config for Runtime {
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type Event = Event;
+    type AssetId = AssetId;
+    type IndexToken = Balances;
+    type LockupPeriod = LockupPeriod;
+    type MinimumRedemption = MinimumRedemption;
+    type WithdrawalPeriod = WithdrawalPeriod;
+    type DOTContributionLimit = DOTContributionLimit;
+    type RemoteAssetManager = RemoteAssetManager;
+    type MultiAssetDepository = AssetDepository;
+    type PriceFeed = PriceFeed;
+}
+
+parameter_types! {
+    pub const RelayChainAssetId: AssetId = 0;
+    pub const PINTAssetId: AssetId = 1;
+    pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain { id: ParachainInfo::parachain_id().into() });
+}
+
+pub struct AssetIdConvert;
+impl Convert<AssetId, MultiLocation> for AssetIdConvert {
+    fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
+        AssetIndex::native_asset_location(&asset).ok_or(asset)
+    }
+}
+impl Convert<MultiLocation, AssetId> for AssetIdConvert {
+    fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
+        match &location {
+            MultiLocation::X1(Junction::Parent) => return Ok(RelayChainAssetId::get()),
+            MultiLocation::X3(
+                Junction::Parent,
+                Junction::Parachain { id },
+                Junction::GeneralKey(key),
+            ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+                // decode the general key
+                if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+                    // check `asset_id` is supported
+                    if AssetIndex::is_liquid_asset(&asset_id) {
+                        return Ok(asset_id);
+                    }
+                }
+            }
+            _ => {}
+        }
+        Err(location)
+    }
+}
+
+impl Convert<MultiAsset, AssetId> for AssetIdConvert {
+    fn convert(asset: MultiAsset) -> sp_std::result::Result<AssetId, MultiAsset> {
+        if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
+            Self::convert(id.clone()).map_err(|_| asset)
+        } else {
+            Err(asset)
+        }
+    }
+}
+
+/// Type to check if an asset is supported and then convert it into native balance
+pub struct IsAsset;
+impl MatchesFungible<Balance> for IsAsset {
+    fn matches_fungible(a: &MultiAsset) -> Option<Balance> {
+        if let MultiAsset::ConcreteFungible { id, amount } = a {
+            if AssetIdConvert::convert(id.clone()).is_ok() {
+                return Some(*amount);
+            }
+        }
+        None
+    }
+}
+
+pub struct AccountId32Convert;
+impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
+    fn convert(account_id: AccountId) -> [u8; 32] {
+        account_id.into()
+    }
+}
+
+impl pallet_remote_asset_manager::Config for Runtime {
+    type Balance = Balance;
+    type AssetId = AssetId;
+    type AssetIdConvert = AssetIdConvert;
+    type AccountId32Convert = AccountId32Convert;
+    type SelfAssetId = PINTAssetId;
+    type SelfLocation = SelfLocation;
+    type RelayChainAssetId = RelayChainAssetId;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Event = Event;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub enum Runtime where
@@ -443,7 +637,14 @@ construct_runtime!(
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 
         // PINT pallets
-        LocalTreasuryPallet: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
+        AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
+        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
+        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>},
+        LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
+        SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
+        RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
+        PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
+        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>},
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},

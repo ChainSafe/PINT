@@ -16,17 +16,14 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    pub use crate::traits::RemoteAssetManager;
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned, Convert},
-        traits::Get,
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
+        sp_runtime::traits::AtLeast32BitUnsigned, traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::MultiLocation;
-
-    pub use crate::traits::RemoteAssetManager;
-    use crate::traits::XcmHandler;
+    use xcm::v0::{ExecuteXcm, MultiLocation};
+    use xcm_executor::traits::Convert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -45,10 +42,13 @@ pub mod pallet {
         type AssetId: Parameter + Member + Clone;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
-        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
+        type AssetIdConvert: Convert<Self::AssetId, MultiLocation>;
 
         /// Convert `Self::Account` to `AccountId32`
-        type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
+        type AccountId32Convert: frame_support::sp_runtime::traits::Convert<
+            Self::AccountId,
+            [u8; 32],
+        >;
 
         /// The native asset id
         #[pallet::constant]
@@ -62,11 +62,8 @@ pub mod pallet {
         #[pallet::constant]
         type RelayChainAssetId: Get<Self::AssetId>;
 
-        /// Used to convert accounts to locations
-        type AccountIdConverter: Convert<MultiLocation, Option<AccountIdFor<Self>>>;
-
         /// Executor for cross chain messages.
-        type XcmHandler: XcmHandler<AccountIdFor<Self>, Self::Call>;
+        type XcmExecutor: ExecuteXcm<Self::Call>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -90,6 +87,16 @@ pub mod pallet {
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
+        }
+    }
+
+    impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
+        fn reserve_withdraw_and_deposit(
+            _who: AccountIdFor<T>,
+            _asset: T::AssetId,
+            _amount: T::Balance,
+        ) -> DispatchResult {
+            todo!()
         }
     }
 }
