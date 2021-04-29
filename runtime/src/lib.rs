@@ -28,19 +28,19 @@ use sp_version::RuntimeVersion;
 use frame_system::limits::{BlockLength, BlockWeights};
 
 // Polkadot imports
+use cumulus_primitives_core::ParaId;
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiLocation, NetworkId, Xcm};
+use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId};
 use xcm_builder::{
-    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter,
-    EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-    SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation,
-    TakeWeightCredit,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
+    FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter, NativeAsset, ParentIsDefault,
+    RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+    SignedAccountId32AsNative, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{Config, XcmExecutor};
+use xcm_executor::{traits::Convert, Config, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
-use frame_support::dispatch::DispatchResult;
+use codec::Decode;
 pub use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{All, IsInVec, Randomness},
@@ -50,13 +50,13 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
+use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
-use pallet_remote_asset_manager::pallet::XcmHandler as PintXcmHandler;
 pub use pallet_timestamp::Call as TimestampCall;
-use sp_runtime::traits::Convert;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
+use xcm_executor::traits::MatchesFungible;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -331,15 +331,23 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
-    // Use this currency:
-    Balances,
-    // Use this currency when it is a fungible asset matching the given location or name:
-    IsConcrete<RococoLocation>,
-    // Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-    LocationToAccountId,
-    // Our chain's account ID type (we can't get away without mentioning it explicitly):
+pub type LocalAssetTransactor = MultiAssetAdapter<
+    // Use this balance type
+    Balance,
+    // Use this depository for asset balances
+    AssetDepository,
+    // Use this for a registry of supported asset
+    AssetIndex,
+    // Use this to convert from fungible to balance type
+    IsAsset,
+    // The account type
     AccountId,
+    // Use this to convert Multilocations to accounts
+    LocationToAccountId,
+    // The asset identifier type
+    AssetId,
+    // Use this to determine convert a Multiasset to an AssetId
+    AssetIdConvert,
 >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
@@ -424,13 +432,6 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type ChannelInfo = ParachainSystem;
-}
-
-pub struct HandleXcm;
-impl PintXcmHandler<AccountId, Call> for HandleXcm {
-    fn execute_xcm(origin: AccountId, xcm: Xcm<Call>) -> DispatchResult {
-        todo!("configure weights first before plugging PolkadotXcm::execute")
-    }
 }
 
 parameter_types! {
@@ -543,19 +544,59 @@ parameter_types! {
 }
 
 pub struct AssetIdConvert;
-impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
-    fn convert(id: AssetId) -> Option<MultiLocation> {
-        None
+impl Convert<AssetId, MultiLocation> for AssetIdConvert {
+    fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
+        AssetIndex::native_asset_location(&asset).ok_or(asset)
     }
 }
-impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
-    fn convert(location: MultiLocation) -> Option<AssetId> {
+impl Convert<MultiLocation, AssetId> for AssetIdConvert {
+    fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
+        match &location {
+            MultiLocation::X1(Junction::Parent) => return Ok(RelayChainAssetId::get()),
+            MultiLocation::X3(
+                Junction::Parent,
+                Junction::Parachain { id },
+                Junction::GeneralKey(key),
+            ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+                // decode the general key
+                if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+                    // check `asset_id` is supported
+                    if AssetIndex::is_liquid_asset(&asset_id) {
+                        return Ok(asset_id);
+                    }
+                }
+            }
+            _ => {}
+        }
+        Err(location)
+    }
+}
+
+impl Convert<MultiAsset, AssetId> for AssetIdConvert {
+    fn convert(asset: MultiAsset) -> sp_std::result::Result<AssetId, MultiAsset> {
+        if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
+            Self::convert(id.clone()).map_err(|_| asset)
+        } else {
+            Err(asset)
+        }
+    }
+}
+
+/// Type to check if an asset is supported and then convert it into native balance
+pub struct IsAsset;
+impl MatchesFungible<Balance> for IsAsset {
+    fn matches_fungible(a: &MultiAsset) -> Option<Balance> {
+        if let MultiAsset::ConcreteFungible { id, amount } = a {
+            if AssetIdConvert::convert(id.clone()).is_ok() {
+                return Some(*amount);
+            }
+        }
         None
     }
 }
 
 pub struct AccountId32Convert;
-impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
+impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
     }
@@ -569,7 +610,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type RelayChainAssetId = RelayChainAssetId;
-    type XcmHandler = HandleXcm;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
     type Event = Event;
 }
 
