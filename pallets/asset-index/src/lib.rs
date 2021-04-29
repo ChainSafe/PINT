@@ -36,7 +36,7 @@ pub mod pallet {
     use pallet_asset_depository::MultiAssetDepository;
     use pallet_price_feed::PriceFeed;
     use pallet_remote_asset_manager::RemoteAssetManager;
-    use xcm::opaque::v0::{MultiLocation};
+    use xcm::opaque::v0::MultiLocation;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type BalanceFor<T> = <<T as Config>::IndexToken as Currency<AccountIdFor<T>>>::Balance;

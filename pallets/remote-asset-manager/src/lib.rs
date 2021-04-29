@@ -16,15 +16,13 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    pub use crate::traits::{RemoteAssetManager};
+    pub use crate::traits::RemoteAssetManager;
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
-        pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned},
-        traits::Get,
+        dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
+        sp_runtime::traits::AtLeast32BitUnsigned, traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{MultiLocation, ExecuteXcm};
+    use xcm::v0::{ExecuteXcm, MultiLocation};
     use xcm_executor::traits::Convert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -47,7 +45,10 @@ pub mod pallet {
         type AssetIdConvert: Convert<Self::AssetId, MultiLocation>;
 
         /// Convert `Self::Account` to `AccountId32`
-        type AccountId32Convert: frame_support::sp_runtime::traits::Convert<Self::AccountId, [u8; 32]>;
+        type AccountId32Convert: frame_support::sp_runtime::traits::Convert<
+            Self::AccountId,
+            [u8; 32],
+        >;
 
         /// The native asset id
         #[pallet::constant]

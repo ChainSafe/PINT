@@ -4,7 +4,7 @@
 use crate::traits::MultiAssetRegistry;
 use codec::FullCodec;
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned};
+use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use frame_support::sp_runtime::SaturatedConversion;
 use pallet_asset_depository::MultiAssetDepository;
 use sp_std::{
@@ -16,9 +16,8 @@ use sp_std::{
 };
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
-    traits::{MatchesFungible, TransactAsset, Convert},
+    traits::{Convert, MatchesFungible, TransactAsset},
     Assets,
-
 };
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -105,7 +104,7 @@ pub struct MultiAssetAdapter<
     AssetRegistry: MultiAssetRegistry<AssetId>,
     Matcher: MatchesFungible<Balance>,
     AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
-    AccountIdConvert:  Convert<MultiLocation, AccountId>,
+    AccountIdConvert: Convert<MultiLocation, AccountId>,
     AssetId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
     AssetIdConvert: Convert<MultiAsset, AssetId>,
 >(
@@ -148,10 +147,8 @@ impl<
             Matcher::matches_fungible(asset),
         ) {
             // known asset
-            (Ok(who), Ok(asset_id), Some(amount)) => {
-                MultiAssets::deposit(&asset_id, &who, amount)
-                    .map_err(|e| XcmError::FailedToTransactAsset(e.into()))
-            }
+            (Ok(who), Ok(asset_id), Some(amount)) => MultiAssets::deposit(&asset_id, &who, amount)
+                .map_err(|e| XcmError::FailedToTransactAsset(e.into())),
             // unknown asset
             _ => Err(XcmError::FailedToTransactAsset("Unknown Asset")),
         }
