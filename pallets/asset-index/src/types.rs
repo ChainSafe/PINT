@@ -4,7 +4,7 @@
 use crate::traits::MultiAssetRegistry;
 use codec::FullCodec;
 use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, Convert};
+use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned};
 use frame_support::sp_runtime::SaturatedConversion;
 use pallet_asset_depository::MultiAssetDepository;
 use sp_std::{
@@ -16,8 +16,9 @@ use sp_std::{
 };
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
-    traits::{MatchesFungible, TransactAsset},
+    traits::{MatchesFungible, TransactAsset, Convert},
     Assets,
+
 };
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -99,14 +100,14 @@ impl From<Error> for XcmError {
 
 /// The `TransactAsset` implementation, to handle deposit/withdraw for a `MultiAsset`.
 pub struct MultiAssetAdapter<
-    Balance,
-    MultiAssets,
-    AssetRegistry,
-    Matcher,
-    AccountId,
-    AccountIdConvert,
-    AssetId,
-    AssetIdConvert,
+    Balance: AtLeast32BitUnsigned,
+    MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
+    AssetRegistry: MultiAssetRegistry<AssetId>,
+    Matcher: MatchesFungible<Balance>,
+    AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
+    AccountIdConvert:  Convert<MultiLocation, AccountId>,
+    AssetId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
+    AssetIdConvert: Convert<MultiAsset, AssetId>,
 >(
     PhantomData<(
         Balance,
@@ -124,10 +125,10 @@ impl<
         MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
         AssetRegistry: MultiAssetRegistry<AssetId>,
         Matcher: MatchesFungible<Balance>,
-        AccountId: sp_std::fmt::Debug,
-        AccountIdConvert: Convert<MultiLocation, Option<AccountId>>,
+        AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
+        AccountIdConvert: Convert<MultiLocation, AccountId>,
         AssetId: FullCodec + Eq + PartialEq + Copy + MaybeSerializeDeserialize + Debug,
-        AssetIdConvert: Convert<MultiAsset, Option<AssetId>>,
+        AssetIdConvert: Convert<MultiAsset, AssetId>,
     > TransactAsset
     for MultiAssetAdapter<
         Balance,
@@ -147,7 +148,7 @@ impl<
             Matcher::matches_fungible(asset),
         ) {
             // known asset
-            (Some(who), Some(asset_id), Some(amount)) => {
+            (Ok(who), Ok(asset_id), Some(amount)) => {
                 MultiAssets::deposit(&asset_id, &who, amount)
                     .map_err(|e| XcmError::FailedToTransactAsset(e.into()))
             }
@@ -161,9 +162,9 @@ impl<
         location: &MultiLocation,
     ) -> result::Result<Assets, XcmError> {
         let who = AccountIdConvert::convert(location.clone())
-            .ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
+            .map_err(|_| XcmError::from(Error::AccountIdConversionFailed))?;
         let asset_id = AssetIdConvert::convert(asset.clone())
-            .ok_or_else(|| XcmError::from(Error::CurrencyIdConversionFailed))?;
+            .map_err(|_| XcmError::from(Error::CurrencyIdConversionFailed))?;
         let amount: Balance = Matcher::matches_fungible(&asset)
             .ok_or_else(|| XcmError::from(Error::FailedToMatchFungible))?
             .saturated_into();

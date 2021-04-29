@@ -16,15 +16,16 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    pub use crate::traits::{RemoteAssetManager, XcmHandler};
+    pub use crate::traits::{RemoteAssetManager};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned, Convert},
+        sp_runtime::traits::{AtLeast32BitUnsigned},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::MultiLocation;
+    use xcm::v0::{MultiLocation, ExecuteXcm};
+    use xcm_executor::traits::Convert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -43,10 +44,10 @@ pub mod pallet {
         type AssetId: Parameter + Member + Clone;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
-        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
+        type AssetIdConvert: Convert<Self::AssetId, MultiLocation>;
 
         /// Convert `Self::Account` to `AccountId32`
-        type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
+        type AccountId32Convert: frame_support::sp_runtime::traits::Convert<Self::AccountId, [u8; 32]>;
 
         /// The native asset id
         #[pallet::constant]
@@ -61,7 +62,7 @@ pub mod pallet {
         type RelayChainAssetId: Get<Self::AssetId>;
 
         /// Executor for cross chain messages.
-        type XcmHandler: XcmHandler<AccountIdFor<Self>, Self::Call>;
+        type XcmExecutor: ExecuteXcm<Self::Call>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
