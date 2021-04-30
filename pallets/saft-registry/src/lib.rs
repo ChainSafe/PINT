@@ -59,6 +59,7 @@ pub mod pallet {
     >;
 
     #[pallet::event]
+    #[pallet::metadata(T::AssetId = "AssetId", T::Balance = "Balance")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new SAFT was added
