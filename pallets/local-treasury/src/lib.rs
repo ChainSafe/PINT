@@ -45,10 +45,11 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::event]
+    #[pallet::metadata(AccountIdFor<T> = "AccountId", BalanceFor<T> = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// Admin successfully transferred some funds from the treasury to another account
-        /// parameters. [initiator, recipient, amount]
+        /// parameters. \[initiator, recipient, amount\]
         Withdrawl(AccountIdFor<T>, BalanceFor<T>),
     }
 

@@ -118,6 +118,7 @@ pub mod pallet {
     // end storage defs
 
     #[pallet::event]
+    #[pallet::metadata(T::ProposalNonce = "ProposalNonce",T::Hash = "Hash", AccountIdFor<T> = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new proposal has been created
