@@ -22,25 +22,27 @@
   },
   "parachains": [
     {
-      "bin": "./target/release/pint",
+      "bin": "./target/target/pint",
       "chain": "pint-dev",
       "id": "1",
       "wsPort": 9988,
       "port": 31200,
       "balance": "1000000000000000000000",
       "flags": [
+        "-lruntime=debug",
         "--",
         "--execution=wasm"
       ]
     },
     {
-      "bin": "./target/release/pint",
-      "chain": "pint-dev",
+      "bin": "./bin/statemint",
+      "chain": "statemint-dev",
       "id": "300",
       "wsPort": 9999,
       "port": 31300,
       "balance": "1000000000000000000000",
       "flags": [
+        "-lruntime=debug",
         "--",
         "--execution=wasm"
       ]
