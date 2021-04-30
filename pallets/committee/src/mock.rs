@@ -83,12 +83,19 @@ ord_parameter_types! {
 
 }
 
+type EnsureSignedByCommittee = frame_system::EnsureOneOf<
+    AccountId,
+    frame_system::EnsureRoot<AccountId>,
+    crate::EnsureProportionMoreThan<sp_core::u32_trait::_1, AccountId, u64>,
+>;
+
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
+    type CommitteeOrigin = EnsureSignedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;

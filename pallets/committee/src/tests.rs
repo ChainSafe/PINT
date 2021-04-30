@@ -480,9 +480,9 @@ fn propose_constituent_works() {
         initialize_council(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4);
 
         // propose a new consituent
-        assert_ok!(Committee::propose_constituent(
+        assert_ok!(Committee::propose(
             Origin::signed(PROPOSER_ACCOUNT_ID),
-            42
+            Box::new(Call::Committee(crate::Call::add_constituent(42)))
         ));
 
         // test if proposal submitted with event
@@ -504,7 +504,7 @@ fn propose_constituent_works() {
             panic!("Could not get proposal hash from events");
         }
 
-        // vote Aye on adding new constituent
-        <pallet::Members<Test>>::contains_key(42);
+        // check if counstitent committee contains 42
+        assert!(<pallet::Members<Test>>::contains_key(42));
     });
 }

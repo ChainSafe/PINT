@@ -34,12 +34,11 @@ pub mod pallet {
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
-        sp_std::{boxed::Box, collections::btree_map::BTreeMap, vec::Vec},
+        sp_std::{boxed::Box, vec::Vec},
         traits::{ChangeMembers, InitializeMembers},
         weights::{GetDispatchInfo, PostDispatchInfo},
-        StoragePrefixedMap,
     };
-    use frame_system::{pallet_prelude::*, Call as SystemCall};
+    use frame_system::pallet_prelude::*;
     use sp_runtime::traits::{CheckedAdd, One, Zero};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -80,6 +79,9 @@ pub mod pallet {
 
         /// Origin that is permitted to execute approved proposals
         type ProposalExecutionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
+        /// Origin that is permitted to execute `add_constituent`
+        type CommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -278,33 +280,6 @@ pub mod pallet {
                 })
             })
         }
-
-        /// Add a new constituent member and returns the storage key value pair
-        ///
-        /// This call only triggers after the approving of `propose_constituent`
-        fn add_constituent_encoded(
-            constituent: AccountIdFor<T>,
-        ) -> Result<(Vec<u8>, Vec<u8>), Error<T>> {
-            let mut members = <Members<T>>::iter().collect::<Vec<(T::AccountId, MemberType)>>();
-            members.push((constituent, MemberType::Constituent));
-
-            // sort members
-            members.sort();
-
-            // construct new storage value
-            //
-            // see `sp_storage::StorageMap`
-            let mut value = BTreeMap::new();
-            if let Some(_) = members
-                .into_iter()
-                .map(|(k, v)| value.insert(k, v))
-                .collect::<Option<Vec<_>>>()
-            {
-                Err(<Error<T>>::MemberExists.into())
-            } else {
-                Ok((<Members<T>>::final_prefix().to_vec(), value.encode()))
-            }
-        }
     }
 
     #[pallet::call]
@@ -427,30 +402,18 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
-        /// Propose a new constituent to the constituent committee
-        ///
-        /// * This call only can be called by `MemberType::Council`
-        /// * This call will propose a call which will rewrite the
-        ///   storage value of `Members`.
-        ///
-        /// ## NOTE
-        ///
-        /// This function contains a HACK, `frame_system::set_storage` directly.
-        pub fn propose_constituent(
+        pub fn add_constituent(
             origin: OriginFor<T>,
             constituent: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
-            Self::ensure_member(origin.clone(), true)?;
-            Self::propose(
-                origin,
-                Box::new(
-                    SystemCall::set_storage(Vec::from([Self::add_constituent_encoded(
-                        constituent,
-                    )?]))
-                    .into(),
-                ),
-            )?;
-
+            T::CommitteeOrigin::ensure_origin(origin)?;
+            <Self as ChangeMembers<T::AccountId>>::set_members_sorted(
+                &[constituent],
+                <Members<T>>::iter()
+                    .map(|(k, _)| k)
+                    .collect::<Vec<T::AccountId>>()
+                    .as_slice(),
+            );
             Ok(().into())
         }
     }

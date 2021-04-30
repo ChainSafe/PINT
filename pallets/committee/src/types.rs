@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate::Config;
-use frame_support::pallet_prelude::*;
-use frame_support::sp_std::{self, prelude::Vec};
+use frame_support::{
+    pallet_prelude::*,
+    sp_std::{self, prelude::Vec},
+};
+use sp_core::u32_trait::Value as U32;
 use sp_runtime::traits::Hash;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -80,6 +83,20 @@ pub struct VoteAggregate<AccountId, BlockNumber> {
     pub votes: Vec<MemberVote<AccountId>>,
     /// The hard end time of this vote.
     pub end: BlockNumber,
+}
+
+impl<I, B> VoteAggregate<I, B> {
+    /// Get the votes of I
+    pub fn count_votes(&self) -> (u32, u32, u32) {
+        let (mut aye, mut nay, mut abstain) = (0, 0, 0);
+        self.votes.iter().for_each(|v| match v.vote {
+            Vote::Aye => aye += 1,
+            Vote::Nay => nay += 1,
+            Vote::Abstain => abstain += 1,
+        });
+
+        (aye, nay, abstain)
+    }
 }
 
 pub enum VoteRejectionReason {
@@ -171,4 +188,23 @@ pub enum Vote {
     Aye,
     Nay,
     Abstain,
+}
+
+pub struct EnsureProportionMoreThan<N: U32, AccountId, BlockNumber>(
+    sp_std::marker::PhantomData<(N, AccountId, BlockNumber)>,
+);
+impl<
+        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
+            + From<CommitteeOrigin<AccountId, BlockNumber>>,
+        N: U32,
+        AccountId,
+        BlockNumber,
+    > EnsureOrigin<O> for EnsureProportionMoreThan<N, AccountId, BlockNumber>
+{
+    type Success = ();
+    fn try_origin(o: O) -> Result<Self::Success, O> {
+        o.into().and_then(|o| match o {
+            CommitteeOrigin::ApprovedByCommittee(_, _) => Ok(()),
+        })
+    }
 }
