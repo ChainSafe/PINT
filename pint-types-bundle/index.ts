@@ -6,6 +6,8 @@ export const definitions = {
             // on all versions
             minmax: [0, undefined],
             types: {
+                Address: "MultiAddress",
+                LookupSource: "MultiAddress",
                 AssetId: "u32",
                 AccountIdFor: "AccountId",
                 Balance: "u128",
