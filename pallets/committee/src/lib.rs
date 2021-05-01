@@ -142,6 +142,9 @@ pub mod pallet {
         /// are included
         /// \[proposal_hash, result\]
         ClosedAndExecutedProposal(T::Hash, DispatchResult),
+        /// A new consituent has been added
+        /// \[constituent_address]
+        Newconstituent(AccountIdFor<T>),
     }
 
     #[pallet::error]
@@ -405,12 +408,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
             <Self as ChangeMembers<T::AccountId>>::set_members_sorted(
-                &[constituent],
+                &[constituent.clone()],
                 <Members<T>>::iter()
                     .map(|(k, _)| k)
                     .collect::<Vec<T::AccountId>>()
                     .as_slice(),
             );
+
+            Self::deposit_event(Event::Newconstituent(constituent));
             Ok(().into())
         }
     }
