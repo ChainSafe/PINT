@@ -179,7 +179,7 @@ pub enum Vote {
 /// An implementation of EnsureOrigin
 ///
 //  This is for the extrinsics only can be called after the
-/// approving of the committee
+/// approval of the committee
 pub struct EnsureApprovedByCommittee<N: U32, AccountId, BlockNumber>(
     sp_std::marker::PhantomData<(N, AccountId, BlockNumber)>,
 );

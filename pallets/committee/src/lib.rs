@@ -148,10 +148,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// The origin making the call is not a member and it is a requirement that they are
         NotMember,
-        /// The origin making the call is not a council member and it is a requirement that they are
-        NotCouncilMember,
-        /// Member has already in committee
-        MemberExists,
         /// Member has attempted to vote multiple times on a single proposal
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
