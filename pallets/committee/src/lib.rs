@@ -394,6 +394,11 @@ pub mod pallet {
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
+        /// Add new constituent to the committee
+        ///
+        /// NOTE:
+        ///
+        /// This call can only be called after the approval of the committee
         pub fn add_constituent(
             origin: OriginFor<T>,
             constituent: AccountIdFor<T>,
