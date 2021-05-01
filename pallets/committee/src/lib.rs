@@ -232,13 +232,9 @@ pub mod pallet {
         /// the committee
         pub fn ensure_member(
             origin: OriginFor<T>,
-            council: bool,
         ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
             let who = ensure_signed(origin)?;
             if let Some(member_type) = Members::<T>::get(who.clone()) {
-                let _ = council
-                    && member_type == MemberType::Constituent
-                    && Err(<Error<T>>::NotCouncilMember)?;
                 Ok(CommitteeMember::new(who, member_type))
             } else {
                 Err(Error::<T>::NotMember.into())
@@ -324,7 +320,7 @@ pub mod pallet {
             vote: Vote,
         ) -> DispatchResultWithPostInfo {
             // Only members can vote
-            let voter = Self::ensure_member(origin, vote != Vote::Nay)?;
+            let voter = Self::ensure_member(origin)?;
 
             Votes::<T>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {

@@ -26,7 +26,7 @@ impl<T: Config> Proposal<T> {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, RuntimeDebug, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council proposals
