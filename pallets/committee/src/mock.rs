@@ -11,7 +11,7 @@ use frame_support::{
 };
 use frame_system as system;
 
-use sp_core::H256;
+use sp_core::{u32_trait::_1, H256};
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -83,10 +83,10 @@ ord_parameter_types! {
 
 }
 
-type EnsureSignedByCommittee = frame_system::EnsureOneOf<
+type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    crate::EnsureProportionMoreThan<sp_core::u32_trait::_1, AccountId, u64>,
+    crate::EnsureApprovedByCommittee<_1, AccountId, u64>,
 >;
 
 impl pallet_committee::Config for Test {
@@ -95,7 +95,7 @@ impl pallet_committee::Config for Test {
     type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
-    type CommitteeOrigin = EnsureSignedByCommittee;
+    type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;

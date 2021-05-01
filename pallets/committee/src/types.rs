@@ -85,20 +85,6 @@ pub struct VoteAggregate<AccountId, BlockNumber> {
     pub end: BlockNumber,
 }
 
-impl<I, B> VoteAggregate<I, B> {
-    /// Get the votes of I
-    pub fn count_votes(&self) -> (u32, u32, u32) {
-        let (mut aye, mut nay, mut abstain) = (0, 0, 0);
-        self.votes.iter().for_each(|v| match v.vote {
-            Vote::Aye => aye += 1,
-            Vote::Nay => nay += 1,
-            Vote::Abstain => abstain += 1,
-        });
-
-        (aye, nay, abstain)
-    }
-}
-
 pub enum VoteRejectionReason {
     InsuffientVotes,
     ConstituentVeto,
@@ -190,21 +176,31 @@ pub enum Vote {
     Abstain,
 }
 
-pub struct EnsureProportionMoreThan<N: U32, AccountId, BlockNumber>(
+/// An implementation of EnsureOrigin
+///
+//  This is for the extrinsics only can be called after the
+/// approving of the committee
+pub struct EnsureApprovedByCommittee<N: U32, AccountId, BlockNumber>(
     sp_std::marker::PhantomData<(N, AccountId, BlockNumber)>,
 );
 impl<
         O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
             + From<CommitteeOrigin<AccountId, BlockNumber>>,
         N: U32,
-        AccountId,
-        BlockNumber,
-    > EnsureOrigin<O> for EnsureProportionMoreThan<N, AccountId, BlockNumber>
+        AccountId: PartialEq + Default,
+        BlockNumber: Default,
+    > EnsureOrigin<O> for EnsureApprovedByCommittee<N, AccountId, BlockNumber>
 {
     type Success = ();
     fn try_origin(o: O) -> Result<Self::Success, O> {
         o.into().and_then(|o| match o {
-            CommitteeOrigin::ApprovedByCommittee(_, _) => Ok(()),
+            CommitteeOrigin::ApprovedByCommittee(i, v) => {
+                if v.is_accepted(N::VALUE as usize).is_ok() {
+                    Ok(())
+                } else {
+                    Err(O::from(CommitteeOrigin::ApprovedByCommittee(i, v)))
+                }
+            }
         })
     }
 }

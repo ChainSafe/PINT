@@ -81,7 +81,7 @@ pub mod pallet {
         type ProposalExecutionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         /// Origin that is permitted to execute `add_constituent`
-        type CommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -406,7 +406,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             constituent: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
-            T::CommitteeOrigin::ensure_origin(origin)?;
+            T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
             <Self as ChangeMembers<T::AccountId>>::set_members_sorted(
                 &[constituent],
                 <Members<T>>::iter()
