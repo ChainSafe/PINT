@@ -3,7 +3,7 @@
 
 use crate as pallet;
 use crate::mock::*;
-use crate::{CommitteeMember, MemberType, Vote, VoteAggregate};
+use crate::{CommitteeMember, CommitteeOrigin, MemberType, Vote, VoteAggregate};
 use frame_support::{assert_noop, assert_ok, codec::Encode};
 use frame_system as system;
 use sp_runtime::traits::BadOrigin;
@@ -450,6 +450,42 @@ fn cannot_execute_proposal_twice() {
 //
 // Constituent Committee Council Selection
 //
+
+/// An `ApprovedByCommittee` origin
+fn approved_by_committee() -> CommitteeOrigin<AccountId, u64> {
+    CommitteeOrigin::ApprovedByCommittee(
+        PROPOSER_ACCOUNT_ID,
+        VoteAggregate {
+            votes: Vec::new(),
+            end: START_OF_V1,
+        },
+    )
+}
+
+#[test]
+fn cannot_add_constituent_if_alread_is_council() {
+    new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
+        assert_noop!(
+            Committee::add_constituent(approved_by_committee().into(), PROPOSER_ACCOUNT_ID),
+            <pallet::Error<Test>>::AlreadyCouncilMember
+        );
+    });
+}
+
+#[test]
+fn cannot_add_constituent_if_already_is_constituent() {
+    new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
+        assert_ok!(Committee::add_constituent(
+            approved_by_committee().into(),
+            42
+        ));
+
+        assert_noop!(
+            Committee::add_constituent(approved_by_committee().into(), 42),
+            <pallet::Error<Test>>::AlreadyConstituentMember
+        );
+    });
+}
 
 #[test]
 fn propose_constituent_works() {
