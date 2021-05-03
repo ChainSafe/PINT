@@ -440,15 +440,18 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-            if let Some(ty) = <Members<T>>::get(constituent.clone()) {
-                return Err(match ty {
-                    MemberType::Council => <Error<T>>::AlreadyCouncilMember,
-                    MemberType::Constituent => <Error<T>>::AlreadyConstituentMember,
+            <Members<T>>::try_mutate(constituent.clone(), |member| -> Result<(), DispatchError> {
+                if let Some(ty) = member {
+                    Err(match ty {
+                        MemberType::Council => <Error<T>>::AlreadyCouncilMember,
+                        MemberType::Constituent => <Error<T>>::AlreadyConstituentMember,
+                    }
+                    .into())
+                } else {
+                    *member = Some(MemberType::Constituent);
+                    Ok(())
                 }
-                .into());
-            } else {
-                Members::<T>::insert(constituent.clone(), MemberType::Constituent);
-            }
+            })?;
 
             Self::deposit_event(Event::NewConstituent(constituent));
             Ok(().into())
