@@ -183,7 +183,7 @@ pub mod pallet {
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
-        /// Attempted to add a member which is arealdy in council
+        /// Attempted to add a constituent that is already a member of the council
         AlreadyCouncilMember,
         /// Attempted to add a member which is arealdy a constituent
         AlreadyConstituentMember,
