@@ -184,7 +184,7 @@ pub mod pallet {
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
         /// Attempted to add a member which is arealdy in council
-        ExistedCouncilMember,
+        AlreadyCouncilMember,
         /// Attempted to add a member which is arealdy a constituent
         ExistedConstituentMember,
         /// Attempted to close a proposal before the voting period is over
