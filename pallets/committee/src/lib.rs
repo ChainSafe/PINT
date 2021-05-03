@@ -186,7 +186,7 @@ pub mod pallet {
         /// Attempted to add a member which is arealdy in council
         AlreadyCouncilMember,
         /// Attempted to add a member which is arealdy a constituent
-        ExistedConstituentMember,
+        AlreadyConstituentMember,
         /// Attempted to close a proposal before the voting period is over
         VotingPeriodNotElapsed,
         /// Tried to close a proposal but not enough council members voted
