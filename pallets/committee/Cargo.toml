@@ -14,7 +14,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'sp-core/std',
     'sp-runtime/std',
     'serde/std',
 ]
@@ -31,12 +30,6 @@ branch = 'rococo-v1'
 version = '3.0.0'
 
 [dependencies.frame-system]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
-
-[dependencies.sp-core]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'

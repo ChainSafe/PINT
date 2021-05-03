@@ -18,6 +18,8 @@ const ASHLEY_COUNCIL: CommitteeMember<AccountId> = CommitteeMember {
 
 const ASHLEY_RANGE: std::ops::Range<AccountId> = 0..1;
 
+const EMPTY_RANGE: std::ops::Range<AccountId> = 0..0;
+
 // Start of the first submission period
 const START_OF_S1: <Test as system::Config>::BlockNumber =
     VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
@@ -46,7 +48,7 @@ fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
 
 #[test]
 fn proposer_can_create_a_proposal() {
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         let proposal = submit_proposal(123);
         assert!(Committee::active_proposals().contains(&proposal.hash()));
         assert!(Committee::get_proposal(&proposal.hash()) == Some(proposal));
@@ -55,7 +57,7 @@ fn proposer_can_create_a_proposal() {
 
 #[test]
 fn non_proposer_cannot_create_a_proposal() {
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         assert_noop!(
             Committee::propose(Origin::signed(ASHLEY), Box::new(make_action(123))),
             BadOrigin
@@ -67,7 +69,7 @@ fn non_proposer_cannot_create_a_proposal() {
 #[test]
 fn can_create_multiple_proposals_from_same_action() {
     // Each should get a unique nonce and there should be no hash collisions
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         let action = make_action(123);
         let repeats = 3;
 
@@ -88,7 +90,7 @@ fn can_create_multiple_proposals_from_same_action() {
 
 #[test]
 fn cannot_exceed_max_nonce() {
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         super::ProposalCount::<Test>::set(<Test as pallet::Config>::ProposalNonce::max_value() - 1);
 
         // should work, uses last nonce
@@ -106,7 +108,7 @@ fn cannot_exceed_max_nonce() {
 
 #[test]
 fn upkeep_drops_proposal_from_active_list() {
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         let proposal = submit_proposal(123);
 
         assert!(Committee::active_proposals().contains(&proposal.hash()));
@@ -123,7 +125,7 @@ fn upkeep_drops_proposal_from_active_list() {
 
 #[test]
 fn non_member_cannot_vote() {
-    new_test_ext(0..0).execute_with(|| {
+    new_test_ext(EMPTY_RANGE).execute_with(|| {
         let proposal = submit_proposal(123);
         let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
         assert_noop!(
