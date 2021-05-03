@@ -2,9 +2,14 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate::Config;
-use frame_support::pallet_prelude::*;
-use frame_support::sp_std::{self, prelude::Vec};
+use frame_support::{
+    pallet_prelude::*,
+    sp_std::{self, prelude::Vec},
+};
 use sp_runtime::traits::Hash;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
@@ -24,6 +29,7 @@ impl<T: Config> Proposal<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council proposals
@@ -171,4 +177,26 @@ pub enum Vote {
     Aye,
     Nay,
     Abstain,
+}
+
+/// An implementation of EnsureOrigin
+///
+//  This is for the extrinsics only can be called after the
+/// approval of the committee
+pub struct EnsureApprovedByCommittee<AccountId, BlockNumber>(
+    sp_std::marker::PhantomData<(AccountId, BlockNumber)>,
+);
+impl<
+        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
+            + From<CommitteeOrigin<AccountId, BlockNumber>>,
+        AccountId: PartialEq + Default,
+        BlockNumber: Default,
+    > EnsureOrigin<O> for EnsureApprovedByCommittee<AccountId, BlockNumber>
+{
+    type Success = AccountId;
+    fn try_origin(o: O) -> Result<Self::Success, O> {
+        o.into().and_then(|o| match o {
+            CommitteeOrigin::ApprovedByCommittee(i, _) => Ok(i),
+        })
+    }
 }

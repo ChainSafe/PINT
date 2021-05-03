@@ -464,6 +464,12 @@ ord_parameter_types! {
      pub const MinCouncilVotes: usize = 4;
 }
 
+type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
+    AccountId,
+    frame_system::EnsureRoot<AccountId>,
+    pallet_committee::EnsureApprovedByCommittee<AccountId, BlockNumber>,
+>;
+
 impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
@@ -471,6 +477,7 @@ impl pallet_committee::Config for Runtime {
     // Using root as the admin origin for now
     type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
+    type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;

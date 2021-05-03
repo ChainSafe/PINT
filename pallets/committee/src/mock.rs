@@ -5,6 +5,8 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_committee;
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 use frame_support::{
     ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
@@ -83,12 +85,19 @@ ord_parameter_types! {
 
 }
 
+type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
+    AccountId,
+    frame_system::EnsureRoot<AccountId>,
+    crate::EnsureApprovedByCommittee<AccountId, u64>,
+>;
+
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
+    type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;
@@ -107,9 +116,28 @@ pub fn run_to_block(n: u64) {
 }
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+pub fn new_test_ext<I>(members: I) -> sp_io::TestExternalities
+where
+    I: IntoIterator<Item = AccountId>,
+{
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
+    pallet_committee::GenesisConfig::<Test> {
+        council_members: members.into_iter().collect(),
+        constituent_members: Default::default(),
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
     t.into()
+}
+
+// Get last event
+pub fn last_event() -> Event {
+    system::Pallet::<Test>::events()
+        .pop()
+        .expect("Event expected")
+        .event
 }

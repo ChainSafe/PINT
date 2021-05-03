@@ -1,6 +1,14 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # Committee Pallet
+//!
+//! The Committee pallet uses a set of AccountIds to identify who
+//! can vote on proposals. This set can be modified via proposals to
+//! the Governance Committee. Members may be added, removed or swapped
+//! with new members. There is no bound on how many members may exist
+//! in the committee.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -26,7 +34,7 @@ pub mod pallet {
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
-        traits::{ChangeMembers, InitializeMembers},
+        sp_std::{boxed::Box, vec::Vec},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
@@ -70,6 +78,9 @@ pub mod pallet {
 
         /// Origin that is permitted to execute approved proposals
         type ProposalExecutionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+
+        /// Origin that is permitted to execute `add_constituent`
+        type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -115,6 +126,35 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub council_members: Vec<T::AccountId>,
+        pub constituent_members: Vec<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                council_members: Default::default(),
+                constituent_members: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            for member in &self.council_members {
+                Members::<T>::insert(member, MemberType::Council);
+            }
+
+            for member in &self.constituent_members {
+                Members::<T>::insert(member, MemberType::Constituent);
+            }
+        }
+    }
+
     // end storage defs
 
     #[pallet::event]
@@ -131,6 +171,9 @@ pub mod pallet {
         /// are included
         /// \[proposal_hash, result\]
         ClosedAndExecutedProposal(T::Hash, DispatchResult),
+        /// A new consituent has been added
+        /// \[constituent_address]
+        NewConstituent(AccountIdFor<T>),
     }
 
     #[pallet::error]
@@ -141,6 +184,10 @@ pub mod pallet {
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
+        /// Attempted to add a constituent that is already a member of the council
+        AlreadyCouncilMember,
+        /// Attempted to add a constituent that is already a constituent
+        AlreadyConstituentMember,
         /// Attempted to close a proposal before the voting period is over
         VotingPeriodNotElapsed,
         /// Tried to close a proposal but not enough council members voted
@@ -381,48 +428,34 @@ pub mod pallet {
 
             Ok(().into())
         }
-    }
 
-    /// Initialize council members. Can only be done once.
-    /// Constituent members must be initialized later by voting by the council
-    impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
-        fn initialize_members(members: &[AccountIdFor<T>]) {
-            if !members.is_empty() {
-                assert_eq!(
-                    Members::<T>::iter().count(),
-                    0,
-                    "Members are already initialized!"
-                );
-                for member in members {
-                    Members::<T>::insert(member, MemberType::Council);
-                }
-            }
-        }
-    }
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Add new constituent to the committee
+        ///
+        /// NOTE:
+        ///
+        /// This call can only be called after the approval of the committee
+        pub fn add_constituent(
+            origin: OriginFor<T>,
+            constituent: AccountIdFor<T>,
+        ) -> DispatchResultWithPostInfo {
+            T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-    /// Used to add and remove constituent members.
-    /// Council members must be added by first adding them as constituents.
-    /// The existing council can then vote to add them as concil members
-    impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
-        fn change_members_sorted(
-            incoming: &[AccountIdFor<T>],
-            outgoing: &[AccountIdFor<T>],
-            _sorted_new: &[AccountIdFor<T>],
-        ) {
-            // Remove outgoing members from any currently active votes
-            for proposal_hash in ActiveProposals::<T>::get() {
-                Votes::<T>::mutate(&proposal_hash, |votes| {
-                    if let Some(votes) = votes {
-                        votes.remove_voters(outgoing); // mutates votes in place
+            <Members<T>>::try_mutate(constituent.clone(), |member| -> Result<(), DispatchError> {
+                if let Some(ty) = member {
+                    Err(match ty {
+                        MemberType::Council => <Error<T>>::AlreadyCouncilMember,
+                        MemberType::Constituent => <Error<T>>::AlreadyConstituentMember,
                     }
-                });
-            }
-            for leaving_member in outgoing {
-                Members::<T>::remove(leaving_member)
-            }
-            for member in incoming {
-                Members::<T>::insert(member, MemberType::Constituent);
-            }
+                    .into())
+                } else {
+                    *member = Some(MemberType::Constituent);
+                    Ok(())
+                }
+            })?;
+
+            Self::deposit_event(Event::NewConstituent(constituent));
+            Ok(().into())
         }
     }
 }
