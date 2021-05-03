@@ -125,7 +125,8 @@ where
         .unwrap();
 
     pallet_committee::GenesisConfig::<Test> {
-        members: members.into_iter().collect(),
+        council_members: members.into_iter().collect(),
+        constituent_members: Default::default(),
     }
     .assimilate_storage(&mut t)
     .unwrap();

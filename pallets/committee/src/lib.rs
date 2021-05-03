@@ -128,14 +128,16 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        pub members: Vec<T::AccountId>,
+        pub council_members: Vec<T::AccountId>,
+        pub constituent_members: Vec<T::AccountId>,
     }
 
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
-                members: Default::default(),
+                council_members: Default::default(),
+                constituent_members: Default::default(),
             }
         }
     }
@@ -143,8 +145,12 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            for member in &self.members {
+            for member in &self.council_members {
                 Members::<T>::insert(member, MemberType::Council);
+            }
+
+            for member in &self.constituent_members {
+                Members::<T>::insert(member, MemberType::Constituent);
             }
         }
     }
@@ -177,6 +183,10 @@ pub mod pallet {
         DuplicateVote,
         /// Attempted to cast a vote outside the accepted voting period for a proposal
         NotInVotingPeriod,
+        /// Attempted to add a member which is arealdy in council
+        ExistedCouncilMember,
+        /// Attempted to add a member which is arealdy in council
+        ExistedConstituentMember,
         /// Attempted to close a proposal before the voting period is over
         VotingPeriodNotElapsed,
         /// Tried to close a proposal but not enough council members voted
@@ -430,7 +440,15 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-            Members::<T>::insert(constituent.clone(), MemberType::Constituent);
+            if let Some(ty) = <Members<T>>::get(constituent.clone()) {
+                return Err(match ty {
+                    MemberType::Council => <Error<T>>::ExistedCouncilMember,
+                    MemberType::Constituent => <Error<T>>::ExistedConstituentMember,
+                }
+                .into());
+            } else {
+                Members::<T>::insert(constituent.clone(), MemberType::Constituent);
+            }
 
             Self::deposit_event(Event::NewConstituent(constituent));
             Ok(().into())
