@@ -6,8 +6,10 @@ use frame_support::{
     pallet_prelude::*,
     sp_std::{self, prelude::Vec},
 };
-use sp_core::u32_trait::Value as U32;
 use sp_runtime::traits::Hash;
+
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
@@ -27,6 +29,7 @@ impl<T: Config> Proposal<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council proposals
@@ -180,27 +183,20 @@ pub enum Vote {
 ///
 //  This is for the extrinsics only can be called after the
 /// approval of the committee
-pub struct EnsureApprovedByCommittee<N: U32, AccountId, BlockNumber>(
-    sp_std::marker::PhantomData<(N, AccountId, BlockNumber)>,
+pub struct EnsureApprovedByCommittee<AccountId, BlockNumber>(
+    sp_std::marker::PhantomData<(AccountId, BlockNumber)>,
 );
 impl<
         O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
             + From<CommitteeOrigin<AccountId, BlockNumber>>,
-        N: U32,
         AccountId: PartialEq + Default,
         BlockNumber: Default,
-    > EnsureOrigin<O> for EnsureApprovedByCommittee<N, AccountId, BlockNumber>
+    > EnsureOrigin<O> for EnsureApprovedByCommittee<AccountId, BlockNumber>
 {
-    type Success = ();
+    type Success = AccountId;
     fn try_origin(o: O) -> Result<Self::Success, O> {
         o.into().and_then(|o| match o {
-            CommitteeOrigin::ApprovedByCommittee(i, v) => {
-                if v.is_accepted(N::VALUE as usize).is_ok() {
-                    Ok(())
-                } else {
-                    Err(O::from(CommitteeOrigin::ApprovedByCommittee(i, v)))
-                }
-            }
+            CommitteeOrigin::ApprovedByCommittee(i, _) => Ok(i),
         })
     }
 }

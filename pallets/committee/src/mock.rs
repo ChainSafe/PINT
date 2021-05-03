@@ -5,13 +5,15 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_committee;
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 use frame_support::{
     ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
 use frame_system as system;
 
-use sp_core::{u32_trait::_1, H256};
+use sp_core::H256;
 use sp_runtime::{
     testing::Header,
     traits::{BlakeTwo256, IdentityLookup},
@@ -86,7 +88,7 @@ ord_parameter_types! {
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    crate::EnsureApprovedByCommittee<_1, AccountId, u64>,
+    crate::EnsureApprovedByCommittee<AccountId, u64>,
 >;
 
 impl pallet_committee::Config for Test {
@@ -114,10 +116,19 @@ pub fn run_to_block(n: u64) {
 }
 
 // Build genesis storage according to the mock runtime.
-pub fn new_test_ext() -> sp_io::TestExternalities {
-    let t = frame_system::GenesisConfig::default()
+pub fn new_test_ext<I>(members: I) -> sp_io::TestExternalities
+where
+    I: IntoIterator<Item = AccountId>,
+{
+    let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Test>()
         .unwrap();
+
+    pallet_committee::GenesisConfig::<Test> {
+        members: members.into_iter().collect(),
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     t.into()
 }

@@ -35,7 +35,6 @@ pub mod pallet {
         pallet_prelude::*,
         sp_runtime::traits::Dispatchable,
         sp_std::{boxed::Box, vec::Vec},
-        traits::{ChangeMembers, InitializeMembers},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
@@ -127,6 +126,29 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub members: Vec<T::AccountId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                members: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            for member in &self.members {
+                Members::<T>::insert(member, MemberType::Council);
+            }
+        }
+    }
+
     // end storage defs
 
     #[pallet::event]
@@ -144,7 +166,7 @@ pub mod pallet {
         ClosedAndExecutedProposal(T::Hash, DispatchResult),
         /// A new consituent has been added
         /// \[constituent_address]
-        Newconstituent(AccountIdFor<T>),
+        NewConstituent(AccountIdFor<T>),
     }
 
     #[pallet::error]
@@ -407,59 +429,11 @@ pub mod pallet {
             constituent: AccountIdFor<T>,
         ) -> DispatchResultWithPostInfo {
             T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
-            <Self as ChangeMembers<T::AccountId>>::set_members_sorted(
-                &[constituent.clone()],
-                <Members<T>>::iter()
-                    .map(|(k, _)| k)
-                    .collect::<Vec<T::AccountId>>()
-                    .as_slice(),
-            );
 
-            Self::deposit_event(Event::Newconstituent(constituent));
+            Members::<T>::insert(constituent.clone(), MemberType::Constituent);
+
+            Self::deposit_event(Event::NewConstituent(constituent));
             Ok(().into())
-        }
-    }
-
-    /// Initialize council members. Can only be done once.
-    /// Constituent members must be initialized later by voting by the council
-    impl<T: Config> InitializeMembers<AccountIdFor<T>> for Pallet<T> {
-        fn initialize_members(members: &[AccountIdFor<T>]) {
-            if !members.is_empty() {
-                assert_eq!(
-                    Members::<T>::iter().count(),
-                    0,
-                    "Members are already initialized!"
-                );
-                for member in members {
-                    Members::<T>::insert(member, MemberType::Council);
-                }
-            }
-        }
-    }
-
-    /// Used to add and remove constituent members.
-    /// Council members must be added by first adding them as constituents.
-    /// The existing council can then vote to add them as concil members
-    impl<T: Config> ChangeMembers<AccountIdFor<T>> for Pallet<T> {
-        fn change_members_sorted(
-            incoming: &[AccountIdFor<T>],
-            outgoing: &[AccountIdFor<T>],
-            _sorted_new: &[AccountIdFor<T>],
-        ) {
-            // Remove outgoing members from any currently active votes
-            for proposal_hash in ActiveProposals::<T>::get() {
-                Votes::<T>::mutate(&proposal_hash, |votes| {
-                    if let Some(votes) = votes {
-                        votes.remove_voters(outgoing); // mutates votes in place
-                    }
-                });
-            }
-            for leaving_member in outgoing {
-                Members::<T>::remove(leaving_member)
-            }
-            for member in incoming {
-                Members::<T>::insert(member, MemberType::Constituent);
-            }
         }
     }
 }

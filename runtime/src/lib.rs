@@ -467,7 +467,7 @@ ord_parameter_types! {
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    pallet_committee::EnsureApprovedByCommittee<sp_core::u32_trait::_1, AccountId, BlockNumber>,
+    pallet_committee::EnsureApprovedByCommittee<AccountId, BlockNumber>,
 >;
 
 impl pallet_committee::Config for Runtime {
