@@ -463,7 +463,7 @@ fn approved_by_committee() -> CommitteeOrigin<AccountId, u64> {
 }
 
 #[test]
-fn cannot_add_constituent_if_alread_is_council() {
+fn cannot_add_constituent_if_already_is_council() {
     new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
         assert_noop!(
             Committee::add_constituent(approved_by_committee().into(), PROPOSER_ACCOUNT_ID),
