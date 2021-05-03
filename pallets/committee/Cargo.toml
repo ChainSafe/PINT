@@ -12,11 +12,12 @@ version = '0.0.1'
 default = ['std']
 std = [
     'codec/std',
+    'serde/std',
     'frame-support/std',
     'frame-system/std',
     'sp-runtime/std',
-    'serde/std',
 ]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
