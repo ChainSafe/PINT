@@ -442,8 +442,8 @@ pub mod pallet {
 
             if let Some(ty) = <Members<T>>::get(constituent.clone()) {
                 return Err(match ty {
-                    MemberType::Council => <Error<T>>::ExistedCouncilMember,
-                    MemberType::Constituent => <Error<T>>::ExistedConstituentMember,
+                    MemberType::Council => <Error<T>>::AlreadyCouncilMember,
+                    MemberType::Constituent => <Error<T>>::AlreadyConstituentMember,
                 }
                 .into());
             } else {
