@@ -261,6 +261,11 @@ pub mod pallet {
             Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid()))
         }
 
+        /// Calculates the NAV of all SAFT the Index token
+        pub fn saft_nav() -> Result<T::Balance, DispatchError> {
+            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| !holding.is_saft()))
+        }
+
         fn calculate_nav(
             iter: impl Iterator<Item = (T::AssetId, IndexAssetData<T::Balance>)>,
         ) -> Result<T::Balance, DispatchError> {

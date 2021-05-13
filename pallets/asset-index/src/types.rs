@@ -51,6 +51,11 @@ impl<Balance> IndexAssetData<Balance> {
     pub fn is_liquid(&self) -> bool {
         matches!(self.availability, AssetAvailability::Liquid(_))
     }
+
+    /// Whether this asset data represents a SAFT
+    pub fn is_saft(&self) -> bool {
+        matches!(self.availability, AssetAvailability::Saft)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
