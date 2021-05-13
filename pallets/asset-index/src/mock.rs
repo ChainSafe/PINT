@@ -129,6 +129,7 @@ impl pallet_asset_index::Config for Test {
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;
+    type Balance = Balance;
     type LockupPeriod = LockupPeriod;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
@@ -136,6 +137,7 @@ impl pallet_asset_index::Config for Test {
     type RemoteAssetManager = MockRemoteAssetManager;
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = MockPriceFeed;
+    type WithdrawalFee = ();
 }
 
 pub struct MockRemoteAssetManager;
