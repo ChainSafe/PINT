@@ -184,12 +184,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let price = T::PriceFeed::get_price(asset_id.clone())?;
-            let units: u128 = amount.into();
-            let pint_amount: T::Balance = price
-                .volume(units)
-                .ok_or(Error::<T>::AssetVolumeOverflow)
-                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
+            let pint_amount = Self::asset_nav(asset_id.clone())?;
 
             // make sure we can store the additional deposit
             holding.units = holding
@@ -263,14 +258,18 @@ pub mod pallet {
             todo!()
         }
 
-        /// Calculates the NAV for the given units of the asset
+        /// Calculates the NAV for the given amount of the asset
         fn calculate_asset_nav(
             asset: T::AssetId,
-            units: T::Balance,
+            amount: T::Balance,
         ) -> Result<T::Balance, DispatchError> {
             let price = T::PriceFeed::get_price(asset)?;
-
-            todo!()
+            let units: u128 = amount.into();
+            let pint_amount: T::Balance = price
+                .volume(units)
+                .ok_or(Error::<T>::AssetVolumeOverflow)
+                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
+            Ok(pint_amount)
         }
 
         /// Calculates the NAV of a single asset
