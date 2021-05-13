@@ -266,6 +266,7 @@ pub mod pallet {
             Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| !holding.is_saft()))
         }
 
+        /// Calculates the total NAV of all holdings
         fn calculate_nav(
             iter: impl Iterator<Item = (T::AssetId, IndexAssetData<T::Balance>)>,
         ) -> Result<T::Balance, DispatchError> {
