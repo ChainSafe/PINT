@@ -26,7 +26,7 @@ pub mod pallet {
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
-    use frame_support::sp_runtime::traits::CheckedSub;
+    use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, CheckedSub};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -41,33 +41,40 @@ pub mod pallet {
     use xcm::opaque::v0::MultiLocation;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-    type BalanceFor<T> = <<T as Config>::IndexToken as Currency<AccountIdFor<T>>>::Balance;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// Origin that is allowed to administer the index
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// Currency implementation to use as the index token
-        type IndexToken: LockableCurrency<Self::AccountId>;
+        type IndexToken: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
+        /// The balance type used within this pallet
+        type Balance: Parameter
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Into<u128>;
         /// Period after the minting of the index token for which 100% is locked up.
         /// Only applies to users contributing assets directly to index
         #[pallet::constant]
         type LockupPeriod: Get<Self::BlockNumber>;
         /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
         #[pallet::constant]
-        type MinimumRedemption: Get<BalanceFor<Self>>;
+        type MinimumRedemption: Get<Self::Balance>;
         /// Minimum amount of time between redeeming index tokens
         /// and being able to withdraw the awarded assets
         #[pallet::constant]
         type WithdrawalPeriod: Get<Self::BlockNumber>;
         /// The maximum amount of DOT that can exist in the index
         #[pallet::constant]
-        type DOTContributionLimit: Get<BalanceFor<Self>>;
+        type DOTContributionLimit: Get<Self::Balance>;
         /// Type that handles cross chain transfers
         type RemoteAssetManager: RemoteAssetManager<
             AccountIdFor<Self>,
             Self::AssetId,
-            BalanceFor<Self>,
+            Self::Balance,
         >;
         /// Type used to identify assets
         type AssetId: Parameter + Member;
@@ -75,12 +82,12 @@ pub mod pallet {
         type MultiAssetDepository: MultiAssetDepository<
             Self::AssetId,
             AccountIdFor<Self>,
-            BalanceFor<Self>,
+            Self::Balance,
         >;
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
         /// The type that calculates the withdrawal fee
-        type WithdrawalFee: WithdrawalFee<BalanceFor<Self>>;
+        type WithdrawalFee: WithdrawalFee<Self::Balance>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -91,12 +98,12 @@ pub mod pallet {
     #[pallet::storage]
     /// (AssetId) -> IndexAssetData
     pub type Holdings<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<BalanceFor<T>>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<T::Balance>, OptionQuery>;
 
     #[pallet::storage]
     /// (AccountId) -> Balance. Tracks how much each LP has contributed in PINT.
     pub type Depositors<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, BalanceFor<T>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, OptionQuery>;
 
     #[pallet::storage]
     ///  (AccountId) -> Vec<PendingRedemption>
@@ -104,20 +111,20 @@ pub mod pallet {
         _,
         Blake2_128Concat,
         T::AccountId,
-        Vec<PendingRedemption<T::AssetId, BalanceFor<T>, BlockNumberFor<T>>>,
+        Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
         OptionQuery,
     >;
 
     #[pallet::event]
-    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", BalanceFor<T> = "Balance")]
+    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", T::Balance = "Balance")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
         // A new asset was added to the index and some index token paid out
         // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
-        AssetAdded(T::AssetId, BalanceFor<T>, AccountIdFor<T>, BalanceFor<T>),
+        AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
         // A new deposit of an asset into the index has been performed
         // \[AssetId, AssetUnits, Account, PINTPayout\]
-        Deposited(T::AssetId, BalanceFor<T>, AccountIdFor<T>, BalanceFor<T>),
+        Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
     }
 
     #[pallet::error]
@@ -146,13 +153,13 @@ pub mod pallet {
         pub fn add_asset(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            units: BalanceFor<T>,
+            units: T::Balance,
             availability: AssetAvailability,
-            value: BalanceFor<T>,
+            value: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
-            <Self as AssetRecorder<T::AssetId, BalanceFor<T>>>::add_asset(
+            <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
                 &asset_id,
                 &units,
                 &availability,
@@ -169,7 +176,7 @@ pub mod pallet {
         pub fn deposit(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            amount: BalanceFor<T>,
+            amount: T::Balance,
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
@@ -178,10 +185,8 @@ pub mod pallet {
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
             let price = T::PriceFeed::get_price(asset_id.clone())?;
-            let units: u128 = amount
-                .try_into()
-                .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
-            let pint_amount: BalanceFor<T> = price
+            let units: u128 = amount.into();
+            let pint_amount: T::Balance = price
                 .volume(units)
                 .ok_or(Error::<T>::AssetVolumeOverflow)
                 .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
@@ -210,7 +215,7 @@ pub mod pallet {
         /// how long the assets remained in the index.
         /// The remaining PINT will be burned to match the new NAV after this withdrawal.
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn withdraw(origin: OriginFor<T>, amount: BalanceFor<T>) -> DispatchResultWithPostInfo {
+        pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
             ensure!(
                 amount >= T::MinimumRedemption::get(),
@@ -244,62 +249,56 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// The amount of index tokens held by the given user
-        pub fn index_token_balance(account: &T::AccountId) -> BalanceFor<T> {
+        pub fn index_token_balance(account: &T::AccountId) -> T::Balance {
             T::IndexToken::total_balance(account)
         }
 
         /// Calculates the total NAV of the Index token
-        pub fn total_nav() -> Result<BalanceFor<T>, DispatchError> {
+        pub fn total_nav() -> Result<T::Balance, DispatchError> {
             todo!()
         }
 
         /// Calculates the NAV of all liquid assets the Index token
-        pub fn liquid_nav() -> Result<BalanceFor<T>, DispatchError> {
+        pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
             todo!()
         }
 
         /// Calculates the NAV for the given units of the asset
         fn calculate_asset_nav(
             asset: T::AssetId,
-            units: BalanceFor<T>,
-        ) -> Result<BalanceFor<T>, DispatchError> {
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
             let price = T::PriceFeed::get_price(asset)?;
 
             todo!()
         }
 
         /// Calculates the NAV of a single asset
-        pub fn asset_nav(asset: T::AssetId) -> Result<BalanceFor<T>, DispatchError> {
+        pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
             let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
             Self::calculate_asset_nav(asset, holding.units)
         }
 
         /// Calculates the distribution of assets equal to the value being redeemed and equivalent
         /// to the ration of the assets in the index is awarded to the redeemer.
-        fn distribution(
-            total_nav: BalanceFor<T>,
-            nav: BalanceFor<T>,
-        ) -> Vec<(T::AssetId, BalanceFor<T>)> {
+        fn distribution(total_nav: T::Balance, nav: T::Balance) -> Vec<(T::AssetId, T::Balance)> {
             // total nav
             // partial for each asset -> nav
             todo!()
         }
     }
 
-    impl<T: Config> AssetRecorder<T::AssetId, BalanceFor<T>> for Pallet<T> {
+    impl<T: Config> AssetRecorder<T::AssetId, T::Balance> for Pallet<T> {
         /// Creates IndexAssetData if entry with given assetID does not exist.
         /// Otherwise adds the units to the existing holding
         fn add_asset(
             asset_id: &T::AssetId,
-            units: &BalanceFor<T>,
+            units: &T::Balance,
             availability: &AssetAvailability,
         ) -> DispatchResult {
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
-                    IndexAssetData::<BalanceFor<T>>::new(
-                        BalanceFor::<T>::zero(),
-                        availability.clone(),
-                    )
+                    IndexAssetData::<T::Balance>::new(T::Balance::zero(), availability.clone())
                 });
                 index_asset_data.units = index_asset_data
                     .units
