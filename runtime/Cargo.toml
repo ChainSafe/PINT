@@ -280,6 +280,10 @@ runtime-benchmarks = [
 	'frame-system/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
+    'pallet-committee/runtime-benchmarks',
+    'pallet-xcm/runtime-benchmarks',
+    'pallet-remote-asset-manager/runtime-benchmarks',
+    'xcm-builder/runtime-benchmarks'
 ]
 std = [
 	'codec/std',

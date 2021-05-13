@@ -17,6 +17,8 @@ std = [
     'frame-system/std',
     'sp-runtime/std',
 ]
+# this feature is only for compilation now
+runtime-benchmarks = []
 
 [dependencies.codec]
 default-features = false
