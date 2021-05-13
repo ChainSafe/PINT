@@ -251,17 +251,17 @@ pub mod pallet {
             T::IndexToken::total_issuance()
         }
 
-        /// Calculates the total NAV of the Index token
+        /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total pint`
         pub fn total_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(Holdings::<T>::iter())
         }
 
-        /// Calculates the NAV of all liquid assets the Index token
+        /// Calculates the NAV of all liquid assets the Index token: `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid()))
         }
 
-        /// Calculates the NAV of all SAFT the Index token
+        /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) / total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_saft()))
         }
