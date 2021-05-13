@@ -185,7 +185,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let pint_amount = Self::asset_nav(asset_id.clone())?;
+            let pint_amount = Self::calculate_asset_nav(asset_id.clone(), amount)?;
 
             // make sure we can store the additional deposit
             holding.units = holding
