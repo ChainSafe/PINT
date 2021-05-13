@@ -155,7 +155,11 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 
 pub const PINT_ASSET_ID: AssetId = 0u32;
 pub const ASSET_A_ID: AssetId = 1u32;
-pub const UNKNOWN_ASSET_ID: AssetId = 2u32;
+pub const ASSET_B_ID: AssetId = 2u32;
+pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
+
+pub const ASSET_A_PRICE_MULTIPLIER: Balance = 2;
+pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
@@ -171,11 +175,16 @@ impl PriceFeed<AssetId> for MockPriceFeed {
         base: AssetId,
         quote: AssetId,
     ) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        Ok(AssetPricePair {
-            base,
-            quote,
-            price: Price::checked_from_rational(600, 300).unwrap(),
-        })
+        let price = match quote {
+            ASSET_A_ID => {
+                Price::checked_from_rational(600, 600 / ASSET_A_PRICE_MULTIPLIER).unwrap()
+            }
+            ASSET_B_ID => {
+                Price::checked_from_rational(900, 900 / ASSET_B_PRICE_MULTIPLIER).unwrap()
+            }
+            _ => return Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into()),
+        };
+        Ok(AssetPricePair { base, quote, price })
     }
 }
 
