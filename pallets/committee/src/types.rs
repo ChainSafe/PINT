@@ -199,4 +199,12 @@ impl<
             CommitteeOrigin::ApprovedByCommittee(i, _) => Ok(i),
         })
     }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn successful_origin() -> O {
+        O::from(CommitteeOrigin::ApprovedByCommittee(
+            Default::default(),
+            Default::default(),
+        ))
+    }
 }

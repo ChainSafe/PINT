@@ -17,6 +17,9 @@ std = [
     'xcm/std',
     'xcm-executor/std',
 ]
+# this feature is only for compilation now
+runtime-benchmarks = []
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
