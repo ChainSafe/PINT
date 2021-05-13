@@ -196,3 +196,62 @@ fn deposit_fails_on_overflowing() {
         ));
     })
 }
+
+#[test]
+fn can_calculates_nav() {
+    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
+    new_test_ext(initial_balances).execute_with(|| {
+        let a_units = 100;
+        let b_units = 3000;
+        let liquid_units = 5;
+        let saft_units = 50;
+
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            a_units,
+            AssetAvailability::Liquid(MultiLocation::Null),
+            liquid_units
+        ));
+
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_B_ID,
+            b_units,
+            AssetAvailability::Saft,
+            saft_units
+        ));
+
+        let total_pint = AssetIndex::index_token_issuance();
+        assert_eq!(total_pint, saft_units + liquid_units);
+
+        let asset_volume = a_units * ASSET_A_PRICE_MULTIPLIER + b_units * ASSET_B_PRICE_MULTIPLIER;
+
+        let total_nav = AssetIndex::total_nav().unwrap();
+        assert_eq!(total_nav, asset_volume / total_pint);
+
+        let saft_nav = AssetIndex::saft_nav().unwrap();
+        assert_eq!(saft_nav, b_units * ASSET_B_PRICE_MULTIPLIER / total_pint);
+
+        let liquid_nav = AssetIndex::liquid_nav().unwrap();
+        assert_eq!(liquid_nav, a_units * ASSET_A_PRICE_MULTIPLIER / total_pint);
+
+        assert_ok!(AssetDepository::deposit(&ASSET_A_ID, &ASHLEY, 100_000));
+        assert_ok!(AssetIndex::deposit(
+            Origin::signed(ASHLEY),
+            ASSET_A_ID,
+            1_000
+        ));
+
+        let total_pint = AssetIndex::index_token_issuance();
+        assert_eq!(
+            total_pint,
+            saft_units + liquid_units + 1_000 * ASSET_A_PRICE_MULTIPLIER
+        );
+
+        let asset_volume =
+            (a_units + 1_000) * ASSET_A_PRICE_MULTIPLIER + b_units * ASSET_B_PRICE_MULTIPLIER;
+        let total_nav = AssetIndex::total_nav().unwrap();
+        assert_eq!(total_nav, asset_volume / total_pint);
+    })
+}

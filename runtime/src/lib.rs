@@ -541,6 +541,7 @@ impl pallet_asset_index::Config for Runtime {
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;
+    type Balance = Balance;
     type LockupPeriod = LockupPeriod;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
@@ -548,6 +549,7 @@ impl pallet_asset_index::Config for Runtime {
     type RemoteAssetManager = RemoteAssetManager;
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = PriceFeed;
+    type WithdrawalFee = ();
 }
 
 parameter_types! {

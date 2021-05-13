@@ -46,6 +46,16 @@ impl<Balance> IndexAssetData<Balance> {
             availability,
         }
     }
+
+    /// Whether this asset data represents a liquid asset
+    pub fn is_liquid(&self) -> bool {
+        matches!(self.availability, AssetAvailability::Liquid(_))
+    }
+
+    /// Whether this asset data represents a SAFT
+    pub fn is_saft(&self) -> bool {
+        matches!(self.availability, AssetAvailability::Saft)
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -98,6 +108,7 @@ impl From<Error> for XcmError {
 }
 
 /// The `TransactAsset` implementation, to handle deposit/withdraw for a `MultiAsset`.
+#[allow(clippy::type_complexity)]
 pub struct MultiAssetAdapter<
     Balance: AtLeast32BitUnsigned,
     MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
