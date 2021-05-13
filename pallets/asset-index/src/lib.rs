@@ -240,7 +240,7 @@ pub mod pallet {
         ///
         /// All pending withdrawals need to have completed their lockup period
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+        pub fn complete_withdraw(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             todo!()
         }
     }
