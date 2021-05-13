@@ -22,14 +22,16 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant)]
 pub mod pallet {
+    use crate::traits::WithdrawalFee;
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
+    use frame_support::sp_runtime::traits::CheckedSub;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::traits::{CheckedAdd, Zero},
-        sp_std::{convert::TryInto, prelude::*},
+        sp_std::{convert::TryInto, prelude::*, result::Result},
         traits::{Currency, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
@@ -77,6 +79,8 @@ pub mod pallet {
         >;
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
+        /// The type that calculates the withdrawal fee
+        type WithdrawalFee: WithdrawalFee<BalanceFor<Self>>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -90,7 +94,7 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<BalanceFor<T>>, OptionQuery>;
 
     #[pallet::storage]
-    /// (AccountId) -> Balance. Tracks how much each LP has contributed
+    /// (AccountId) -> Balance. Tracks how much each LP has contributed in PINT.
     pub type Depositors<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, BalanceFor<T>, OptionQuery>;
 
@@ -124,6 +128,10 @@ pub mod pallet {
         UnsupportedAsset,
         /// Thrown if calculating the volume of units of an asset with it's price overflows.
         AssetVolumeOverflow,
+        /// Thrown if the given amount of PINT to redeem is too low
+        MinimumRedemption,
+        /// Thrown when the redeemer does not have enough PINT as is requested for withdrawal.
+        InsufficientDeposit,
     }
 
     #[pallet::hooks]
@@ -194,12 +202,42 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Starts the withdraw process for the given amount of PINT to redeem for a distribution
+        /// of underlying assets.
+        ///
+        /// All withdrawals undergo an unlocking period after which the assets can be withdrawn.
+        /// A withdrawal fee will be deducted from the PINT being redeemed by the LP depending on
+        /// how long the assets remained in the index.
+        /// The remaining PINT will be burned to match the new NAV after this withdrawal.
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn withdraw(
-            origin: OriginFor<T>,
-            _amount: BalanceFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            let _caller = ensure_signed(origin)?;
+        pub fn withdraw(origin: OriginFor<T>, amount: BalanceFor<T>) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+            ensure!(
+                amount >= T::MinimumRedemption::get(),
+                Error::<T>::MinimumRedemption
+            );
+
+            let deposit = Depositors::<T>::get(&caller).ok_or(Error::<T>::InsufficientDeposit)?;
+            ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
+
+            let fee = T::WithdrawalFee::withdrawal_fee(amount);
+            let redeem = amount
+                .checked_sub(&fee)
+                .ok_or(Error::<T>::InsufficientDeposit)?;
+
+            // calculate the distribution of the underlying assets
+
+            // if total supply of any asset drops to 0 it gets removed from the index.
+
+            todo!();
+        }
+
+        /// Completes the unbonding process on other parachains and
+        /// transfers the redeemed assets into the sovereign account of the owner.
+        ///
+        /// All pending withdrawals need to have completed their lockup period
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             todo!();
         }
     }
