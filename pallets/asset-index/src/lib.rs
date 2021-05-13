@@ -100,11 +100,6 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<T::Balance>, OptionQuery>;
 
     #[pallet::storage]
-    /// (AccountId) -> Balance. Tracks how much each LP has contributed in PINT.
-    pub type Depositors<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, OptionQuery>;
-
-    #[pallet::storage]
     ///  (AccountId) -> Vec<PendingRedemption>
     pub type PendingWithdrawals<T: Config> = StorageMap<
         _,
@@ -220,7 +215,7 @@ pub mod pallet {
                 Error::<T>::MinimumRedemption
             );
 
-            let deposit = Depositors::<T>::get(&caller).ok_or(Error::<T>::InsufficientDeposit)?;
+            let deposit = Self::index_token_balance(&caller);
             ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
 
             let fee = T::WithdrawalFee::withdrawal_fee(amount);
@@ -249,6 +244,11 @@ pub mod pallet {
         /// The amount of index tokens held by the given user
         pub fn index_token_balance(account: &T::AccountId) -> T::Balance {
             T::IndexToken::total_balance(account)
+        }
+
+        /// The amount of index tokens
+        pub fn index_token_issuance() -> T::Balance {
+            T::IndexToken::total_issuance()
         }
 
         /// Calculates the total NAV of the Index token
