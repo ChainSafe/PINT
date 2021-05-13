@@ -247,6 +247,43 @@ pub mod pallet {
         pub fn index_token_balance(account: &T::AccountId) -> BalanceFor<T> {
             T::IndexToken::total_balance(account)
         }
+
+        /// Calculates the total NAV of the Index token
+        pub fn total_nav() -> Result<BalanceFor<T>, DispatchError> {
+            todo!()
+        }
+
+        /// Calculates the NAV of all liquid assets the Index token
+        pub fn liquid_nav() -> Result<BalanceFor<T>, DispatchError> {
+            todo!()
+        }
+
+        /// Calculates the NAV for the given units of the asset
+        fn calculate_asset_nav(
+            asset: T::AssetId,
+            units: BalanceFor<T>,
+        ) -> Result<BalanceFor<T>, DispatchError> {
+            let price = T::PriceFeed::get_price(asset)?;
+
+            todo!()
+        }
+
+        /// Calculates the NAV of a single asset
+        pub fn asset_nav(asset: T::AssetId) -> Result<BalanceFor<T>, DispatchError> {
+            let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
+            Self::calculate_asset_nav(asset, holding.units)
+        }
+
+        /// Calculates the distribution of assets equal to the value being redeemed and equivalent
+        /// to the ration of the assets in the index is awarded to the redeemer.
+        fn distribution(
+            total_nav: BalanceFor<T>,
+            nav: BalanceFor<T>,
+        ) -> Vec<(T::AssetId, BalanceFor<T>)> {
+            // total nav
+            // partial for each asset -> nav
+            todo!()
+        }
     }
 
     impl<T: Config> AssetRecorder<T::AssetId, BalanceFor<T>> for Pallet<T> {
