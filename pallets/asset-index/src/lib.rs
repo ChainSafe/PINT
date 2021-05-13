@@ -26,11 +26,10 @@ pub mod pallet {
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
-    use frame_support::sp_runtime::traits::{AtLeast32BitUnsigned, CheckedSub};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{CheckedAdd, Zero},
+        sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
         sp_std::{convert::TryInto, prelude::*, result::Result},
         traits::{Currency, LockableCurrency},
     };
@@ -139,6 +138,8 @@ pub mod pallet {
         MinimumRedemption,
         /// Thrown when the redeemer does not have enough PINT as is requested for withdrawal.
         InsufficientDeposit,
+        /// Thrown when calculating the NAV resulted in a overflow
+        NAVOverflow,
     }
 
     #[pallet::hooks]
@@ -250,12 +251,30 @@ pub mod pallet {
 
         /// Calculates the total NAV of the Index token
         pub fn total_nav() -> Result<T::Balance, DispatchError> {
-            todo!()
+            Self::calculate_nav(Holdings::<T>::iter())
         }
 
         /// Calculates the NAV of all liquid assets the Index token
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
-            todo!()
+            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid()))
+        }
+
+        fn calculate_nav(
+            iter: impl Iterator<Item = (T::AssetId, IndexAssetData<T::Balance>)>,
+        ) -> Result<T::Balance, DispatchError> {
+            let total_issuance = T::IndexToken::total_issuance();
+            if total_issuance.is_zero() {
+                return Ok(T::Balance::zero());
+            }
+            let mut nav = T::Balance::zero();
+            for (asset, holding) in iter {
+                nav = nav
+                    .checked_add(&Self::calculate_asset_nav(asset, holding.units)?)
+                    .ok_or(Error::<T>::NAVOverflow)?;
+            }
+            Ok(nav
+                .checked_div(&total_issuance)
+                .ok_or(Error::<T>::NAVOverflow)?)
         }
 
         /// Calculates the NAV for the given amount of the asset
@@ -326,7 +345,7 @@ pub mod pallet {
 
         fn is_liquid_asset(asset: &T::AssetId) -> bool {
             Holdings::<T>::get(asset)
-                .map(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
+                .map(|holding| holding.is_liquid())
                 .unwrap_or_default()
         }
     }
