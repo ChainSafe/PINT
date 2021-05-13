@@ -263,7 +263,7 @@ pub mod pallet {
 
         /// Calculates the NAV of all SAFT the Index token
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| !holding.is_saft()))
+            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_saft()))
         }
 
         /// Calculates the total NAV of all holdings
