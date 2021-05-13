@@ -210,6 +210,8 @@ pub mod pallet {
         /// A withdrawal fee will be deducted from the PINT being redeemed by the LP depending on
         /// how long the assets remained in the index.
         /// The remaining PINT will be burned to match the new NAV after this withdrawal.
+        ///
+        /// The distribution of the underlying assets will be equivalent to the ratio of the liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -222,15 +224,15 @@ pub mod pallet {
             ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
 
             let fee = T::WithdrawalFee::withdrawal_fee(amount);
-            let redeem = amount
+            let _redeem = amount
                 .checked_sub(&fee)
                 .ok_or(Error::<T>::InsufficientDeposit)?;
 
-            // calculate the distribution of the underlying assets
+            // TODO calculate the distribution of assets
 
-            // if total supply of any asset drops to 0 it gets removed from the index.
+            // TODO if total supply of any asset drops to 0 it gets removed from the index.
 
-            todo!();
+            todo!()
         }
 
         /// Completes the unbonding process on other parachains and
@@ -239,7 +241,7 @@ pub mod pallet {
         /// All pending withdrawals need to have completed their lockup period
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            todo!();
+            todo!()
         }
     }
 
@@ -295,14 +297,6 @@ pub mod pallet {
         pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
             let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
             Self::calculate_asset_nav(asset, holding.units)
-        }
-
-        /// Calculates the distribution of assets equal to the value being redeemed and equivalent
-        /// to the ration of the assets in the index is awarded to the redeemer.
-        fn distribution(total_nav: T::Balance, nav: T::Balance) -> Vec<(T::AssetId, T::Balance)> {
-            // total nav
-            // partial for each asset -> nav
-            todo!()
         }
     }
 
