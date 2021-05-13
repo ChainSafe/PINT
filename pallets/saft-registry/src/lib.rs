@@ -21,6 +21,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
+    use xcm::opaque::v0::MultiLocation;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -104,6 +105,8 @@ pub mod pallet {
         pub fn remove_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
+            units: T::Balance,
+            receipient: Option<MultiLocation>,
             index: u32,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
@@ -113,7 +116,7 @@ pub mod pallet {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
                     safts.remove(index_usize);
-                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
+                    <T as Config>::AssetRecorder::remove_asset(&asset_id, &units, receipient)?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())

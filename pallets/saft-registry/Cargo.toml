@@ -14,7 +14,8 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-asset-index/std'
+    'pallet-asset-index/std',
+    'xcm/std'
 ]
 
 [dependencies.pallet-asset-index]
@@ -38,6 +39,11 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dependencies.xcm]
+default-features = false
+git = "https://github.com/paritytech/polkadot"
+branch = 'rococo-v1'
 
 [dev-dependencies]
 serde = { version = "1.0.101" }

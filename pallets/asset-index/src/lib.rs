@@ -327,7 +327,14 @@ pub mod pallet {
             Ok(())
         }
 
-        fn remove_asset(_: &T::AssetId) -> DispatchResult {
+        fn remove_asset(
+            asset_id: &T::AssetId,
+            units: &T::Balance,
+            recipient: Option<MultiLocation>,
+        ) -> DispatchResult {
+            if Self::is_liquid_asset(asset_id) {
+            } else {
+            }
             todo!();
         }
     }

@@ -15,7 +15,11 @@ pub trait AssetRecorder<AssetId, Balance> {
     fn add_asset(id: &AssetId, units: &Balance, availability: &AssetAvailability)
         -> DispatchResult;
 
-    fn remove_asset(id: &AssetId) -> DispatchResult;
+    fn remove_asset(
+        id: &AssetId,
+        units: &Balance,
+        recipient: Option<MultiLocation>,
+    ) -> DispatchResult;
 }
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
