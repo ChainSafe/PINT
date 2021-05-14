@@ -28,13 +28,15 @@ pub mod pallet {
     use crate::types::{
         AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
     };
+    use frame_support::sp_runtime::traits::{AccountIdConversion, Saturating};
     use frame_support::sp_runtime::{FixedPointNumber, FixedU128};
+    use frame_support::traits::{ExistenceRequirement, WithdrawReasons};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, LockableCurrency},
+        traits::{Currency, Imbalance, LockableCurrency},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -122,12 +124,15 @@ pub mod pallet {
     #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", T::Balance = "Balance")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        // A new asset was added to the index and some index token paid out
-        // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
+        /// A new asset was added to the index and some index token paid out
+        /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
-        // A new deposit of an asset into the index has been performed
-        // \[AssetId, AssetUnits, Account, PINTPayout\]
+        /// A new deposit of an asset into the index has been performed
+        /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+        /// Started the withdrawal process
+        /// \[Account, PINTAmount\]
+        WithdrawalInitiated(AccountIdFor<T>, T::Balance),
     }
 
     #[pallet::error]
@@ -207,7 +212,7 @@ pub mod pallet {
             let issued = T::IndexToken::issue(pint_amount);
 
             // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, pint_amount);
+            T::IndexToken::resolve_creating(&caller, issued);
             Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
             Ok(().into())
         }
@@ -230,8 +235,13 @@ pub mod pallet {
                 Error::<T>::MinimumRedemption
             );
 
-            let deposit = Self::index_token_balance(&caller);
-            ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
+            let free_balance = T::IndexToken::free_balance(&caller);
+            T::IndexToken::ensure_can_withdraw(
+                &caller,
+                amount,
+                WithdrawReasons::TRANSFER,
+                free_balance.saturating_sub(amount),
+            )?;
 
             let fee = T::WithdrawalFee::withdrawal_fee(amount);
             let redeem = amount
@@ -265,6 +275,23 @@ pub mod pallet {
                     })?;
             }
 
+            // update the index balance by burning all of the redeemed tokens and
+            // issuing new tokens for the tx fee into the treasury's account
+            let burned = T::IndexToken::burn(amount);
+            if let Err(burned) = T::IndexToken::settle(
+                &caller,
+                burned,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::KeepAlive,
+            ) {
+                // TODO can this even happen after ensure_can_withdraw?
+                T::IndexToken::issue(burned.peek());
+                return Err(Error::<T>::InsufficientDeposit.into());
+            }
+
+            let fee = T::IndexToken::issue(fee);
+            T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
+
             let mut assets = Vec::with_capacity(asset_prices.len());
             // start bonding and locking
             for (price, units) in asset_prices {
@@ -280,6 +307,17 @@ pub mod pallet {
                     //  nothing was dispatched to another parachain
                     RedemptionState::Initiated
                 };
+
+                // update the holding balance
+                Holdings::<T>::mutate_exists(&asset, |maybe_asset_data| {
+                    if let Some(mut data) = maybe_asset_data.take() {
+                        data.units = data.units.saturating_sub(units);
+                        if !data.units.is_zero() {
+                            return Some(data);
+                        }
+                    }
+                    None
+                });
 
                 assets.push(AssetWithdrawal {
                     asset,
@@ -297,9 +335,8 @@ pub mod pallet {
                 })
             });
 
-            // update the index
-
-            todo!()
+            Self::deposit_event(Event::WithdrawalInitiated(caller, amount));
+            Ok(().into())
         }
 
         /// Completes the unbonding process on other parachains and
