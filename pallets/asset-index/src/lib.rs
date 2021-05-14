@@ -35,6 +35,7 @@ pub mod pallet {
         sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
         sp_std::{convert::TryInto, prelude::*, result::Result},
         traits::{Currency, LockableCurrency},
+        PalletId,
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_depository::MultiAssetDepository;
@@ -92,6 +93,9 @@ pub mod pallet {
         type PriceFeed: PriceFeed<Self::AssetId>;
         /// The type that calculates the withdrawal fee
         type WithdrawalFee: WithdrawalFee<Self::Balance>;
+        /// The treasury's pallet id, used for deriving its sovereign account ID.
+        #[pallet::constant]
+        type TreasuryPalletId: Get<PalletId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
