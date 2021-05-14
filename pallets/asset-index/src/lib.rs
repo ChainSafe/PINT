@@ -35,7 +35,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_depository::MultiAssetDepository;
-    use pallet_price_feed::PriceFeed;
+    use pallet_price_feed::{AssetPricePair, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
     use xcm::opaque::v0::MultiLocation;
 
@@ -167,7 +167,8 @@ pub mod pallet {
 
         /// Initiate a transfer from the user's sovereign account into the index.
         ///
-        /// This will withdraw the given amount from the user's sovereign account and mints PINT proportionally using the latest available price pairs
+        /// This will withdraw the given amount from the user's sovereign account and mints PINT
+        /// proportionally using the latest available price pairs
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn deposit(
             origin: OriginFor<T>,
@@ -180,7 +181,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let pint_amount = Self::calculate_asset_nav(asset_id.clone(), amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id.clone(), amount)?;
 
             // make sure we can store the additional deposit
             holding.units = holding
@@ -206,7 +207,8 @@ pub mod pallet {
         /// how long the assets remained in the index.
         /// The remaining PINT will be burned to match the new NAV after this withdrawal.
         ///
-        /// The distribution of the underlying assets will be equivalent to the ratio of the liquid assets in the index.
+        /// The distribution of the underlying assets will be equivalent to the ratio of the
+        /// liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -223,7 +225,17 @@ pub mod pallet {
                 .checked_sub(&fee)
                 .ok_or(Error::<T>::InsufficientDeposit)?;
 
-            // TODO calculate the distribution of assets
+            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
+            let mut nav = T::Balance::zero();
+            let mut assets = Vec::new();
+            for (asset, holding) in Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid())
+            {
+                let price = T::PriceFeed::get_price(asset.clone())?;
+
+                nav = nav
+                    .checked_add(&Self::calculate_pint_equivalent(asset, holding.units)?)
+                    .ok_or(Error::<T>::NAVOverflow)?;
+            }
 
             // TODO if total supply of any asset drops to 0 it gets removed from the index.
 
@@ -277,7 +289,7 @@ pub mod pallet {
             let mut nav = T::Balance::zero();
             for (asset, holding) in iter {
                 nav = nav
-                    .checked_add(&Self::calculate_asset_nav(asset, holding.units)?)
+                    .checked_add(&Self::calculate_pint_equivalent(asset, holding.units)?)
                     .ok_or(Error::<T>::NAVOverflow)?;
             }
             Ok(nav
@@ -285,24 +297,29 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
-        /// Calculates the NAV for the given amount of the asset
-        fn calculate_asset_nav(
-            asset: T::AssetId,
-            amount: T::Balance,
+        fn calculate_amount(
+            units: T::Balance,
+            price: AssetPricePair<T::AssetId>,
         ) -> Result<T::Balance, DispatchError> {
-            let price = T::PriceFeed::get_price(asset)?;
-            let units: u128 = amount.into();
-            let pint_amount: T::Balance = price
+            let units: u128 = units.into();
+            Ok(price
                 .volume(units)
                 .ok_or(Error::<T>::AssetVolumeOverflow)
-                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
-            Ok(pint_amount)
+                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?)
+        }
+
+        /// Calculates the amount of PINT token the given units of the asset are worth
+        fn calculate_pint_equivalent(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
+            Self::calculate_amount(units, T::PriceFeed::get_price(asset)?)
         }
 
         /// Calculates the NAV of a single asset
         pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
             let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
-            Self::calculate_asset_nav(asset, holding.units)
+            Self::calculate_pint_equivalent(asset, holding.units)
         }
     }
 
