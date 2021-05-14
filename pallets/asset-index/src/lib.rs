@@ -198,8 +198,12 @@ pub mod pallet {
             T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
             // update the holding
             Holdings::<T>::insert(asset_id.clone(), holding);
+
+            // increase the total issuance
+            let issued = T::IndexToken::issue(pint_amount);
+
             // add minted PINT to user's balance
-            T::IndexToken::deposit_creating(&caller, pint_amount);
+            T::IndexToken::resolve_creating(&caller, pint_amount);
             Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
             Ok(().into())
         }
