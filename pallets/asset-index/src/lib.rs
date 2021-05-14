@@ -25,7 +25,10 @@ pub mod pallet {
     use crate::traits::WithdrawalFee;
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
-    use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
+    use crate::types::{
+        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
+    };
+    use frame_support::sp_runtime::{FixedPointNumber, FixedU128};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -40,6 +43,8 @@ pub mod pallet {
     use xcm::opaque::v0::MultiLocation;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+
+    type Ratio = FixedU128;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -221,23 +226,70 @@ pub mod pallet {
             ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
 
             let fee = T::WithdrawalFee::withdrawal_fee(amount);
-            let _redeem = amount
+            let redeem = amount
                 .checked_sub(&fee)
-                .ok_or(Error::<T>::InsufficientDeposit)?;
+                .ok_or(Error::<T>::InsufficientDeposit)?
+                .into();
 
             // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
-            let mut nav = T::Balance::zero();
-            let mut assets = Vec::new();
+            let mut liquid_assets_vol = T::Balance::zero();
+            let mut asset_prices = Vec::new();
             for (asset, holding) in Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid())
             {
-                let price = T::PriceFeed::get_price(asset.clone())?;
-
-                nav = nav
-                    .checked_add(&Self::calculate_pint_equivalent(asset, holding.units)?)
+                let price = T::PriceFeed::get_price(asset)?;
+                let vol = Self::calculate_volume(holding.units, &price)?;
+                liquid_assets_vol = liquid_assets_vol
+                    .checked_add(&vol)
                     .ok_or(Error::<T>::NAVOverflow)?;
+                asset_prices.push((price, vol));
             }
 
-            // TODO if total supply of any asset drops to 0 it gets removed from the index.
+            for (price, vol) in &mut asset_prices {
+                let ratio = Ratio::checked_from_rational(liquid_assets_vol.into(), (*vol).into())
+                    .ok_or(Error::<T>::NAVOverflow)?;
+                // overwrite the value with the units the user gets for that asset
+                *vol = ratio
+                    .checked_mul_int(redeem)
+                    .and_then(|units| price.reciprocal_volume(units))
+                    .ok_or(Error::<T>::AssetVolumeOverflow)
+                    .and_then(|units| {
+                        units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
+                    })?;
+            }
+
+            let mut assets = Vec::with_capacity(asset_prices.len());
+            // start bonding and locking
+            for (price, units) in asset_prices {
+                let asset = price.quote;
+                // try to start the unbonding process
+                let state = if T::RemoteAssetManager::unbond(asset.clone(), units).is_ok() {
+                    // the XCM call was dispatched successfully, however, this is
+                    //  *NOT* synonymous with a successful completion of the unbonding process.
+                    //  instead, this state implies that XCM is now being processed on a different parachain
+                    RedemptionState::Unbonding
+                } else {
+                    // the manager encountered an error before being able to send the XCM call,
+                    //  nothing was dispatched to another parachain
+                    RedemptionState::Initiated
+                };
+
+                assets.push(AssetWithdrawal {
+                    asset,
+                    state,
+                    units,
+                });
+            }
+
+            // lock the assets for the withdrawal period starting at current block
+            PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
+                let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
+                redemption.push(PendingRedemption {
+                    initiated: frame_system::Pallet::<T>::block_number(),
+                    assets,
+                })
+            });
+
+            // update the index
 
             todo!()
         }
@@ -297,9 +349,9 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
-        fn calculate_amount(
+        fn calculate_volume(
             units: T::Balance,
-            price: AssetPricePair<T::AssetId>,
+            price: &AssetPricePair<T::AssetId>,
         ) -> Result<T::Balance, DispatchError> {
             let units: u128 = units.into();
             Ok(price
@@ -313,7 +365,7 @@ pub mod pallet {
             asset: T::AssetId,
             units: T::Balance,
         ) -> Result<T::Balance, DispatchError> {
-            Self::calculate_amount(units, T::PriceFeed::get_price(asset)?)
+            Self::calculate_volume(units, &T::PriceFeed::get_price(asset)?)
         }
 
         /// Calculates the NAV of a single asset
