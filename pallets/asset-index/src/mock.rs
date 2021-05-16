@@ -5,13 +5,12 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_asset_index;
+use frame_support::dispatch::DispatchResult;
+use frame_support::sp_runtime::FixedPointNumber;
 use frame_support::traits::StorageMapShim;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
-
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::FixedPointNumber;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
@@ -20,6 +19,8 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup},
     DispatchError,
 };
+
+use xcm::opaque::v0::MultiLocation;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -85,7 +86,11 @@ impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
         Ok(())
     }
-    fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {
+    fn remove_asset(
+        _: &AssetId,
+        _: &Balance,
+        _: Option<MultiLocation>,
+    ) -> Result<(), DispatchError> {
         Ok(())
     }
 }

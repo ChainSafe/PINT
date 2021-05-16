@@ -18,7 +18,7 @@ fn non_admin_cannot_call_any_extrinsics() {
             BadOrigin
         );
         assert_noop!(
-            SaftRegistry::remove_saft(Origin::signed(ASHLEY), ASSET_A, 0),
+            SaftRegistry::remove_saft(Origin::signed(ASHLEY), ASSET_A, 0, 0, None),
             BadOrigin
         );
         assert_noop!(
@@ -46,7 +46,9 @@ fn admin_can_add_and_remove_saft() {
         assert_ok!(SaftRegistry::remove_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A,
-            0
+            0,
+            0,
+            None,
         ));
         assert_eq!(super::ActiveSAFTs::<Test>::get(ASSET_A), vec![]);
     });
@@ -111,6 +113,8 @@ fn admin_cannot_update_or_remove_invalid_index() {
                 Origin::signed(ADMIN_ACCOUNT_ID),
                 ASSET_A,
                 1, // index
+                0,
+                None,
             ),
             pallet::Error::<Test>::AssetIndexOutOfBounds
         );

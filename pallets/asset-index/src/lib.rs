@@ -135,7 +135,7 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
-        /// Remove asset without recipient
+        /// Thrown when trying to remove liquid assets without recipient
         NoRecipient,
     }
 
@@ -344,6 +344,10 @@ pub mod pallet {
                 Ok(())
             } else {
                 // Burn SAFT
+                //
+                // ## Safty
+                //
+                // Only have this one `try_mutate` in current function
                 Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                     if let Some(index_asset_data) = value {
                         index_asset_data.units = index_asset_data

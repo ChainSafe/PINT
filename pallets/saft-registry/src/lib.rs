@@ -105,9 +105,9 @@ pub mod pallet {
         pub fn remove_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
+            index: u32,
             units: T::Balance,
             receipient: Option<MultiLocation>,
-            index: u32,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
             let index_usize: usize = index as usize;
