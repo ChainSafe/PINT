@@ -135,6 +135,8 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
+        /// Remove asset without recipient
+        NoRecipient,
     }
 
     #[pallet::hooks]
@@ -333,9 +335,28 @@ pub mod pallet {
             recipient: Option<MultiLocation>,
         ) -> DispatchResult {
             if Self::is_liquid_asset(asset_id) {
+                if recipient.is_none() {
+                    // If asset is liquid, recipient must be provided
+                    return Err(<Error<T>>::NoRecipient.into());
+                }
+
+                // TODO: Transfer for liquid assets
+                Ok(())
             } else {
+                // Burn SAFT
+                Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
+                    if let Some(index_asset_data) = value {
+                        index_asset_data.units = index_asset_data
+                            .units
+                            .checked_sub(units)
+                            .ok_or(Error::AssetUnitsOverflow)?;
+                        Ok(())
+                    } else {
+                        Err(<Error<T>>::UnsupportedAsset.into())
+                    }
+                })?;
+                Ok(())
             }
-            todo!();
         }
     }
 
