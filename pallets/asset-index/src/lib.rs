@@ -266,7 +266,7 @@ pub mod pallet {
             }
 
             for (price, vol) in &mut asset_prices {
-                let ratio = Ratio::checked_from_rational(liquid_assets_vol.into(), (*vol).into())
+                let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
                     .ok_or(Error::<T>::NAVOverflow)?;
                 // overwrite the value with the units the user gets for that asset
                 *vol = ratio
