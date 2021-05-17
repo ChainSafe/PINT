@@ -6,11 +6,12 @@
 
 use crate as pallet_asset_index;
 use frame_support::traits::StorageMapShim;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
 use frame_support::dispatch::DispatchResult;
+use frame_support::pallet_prelude::Get;
 use frame_support::sp_runtime::FixedPointNumber;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
@@ -122,6 +123,7 @@ parameter_types! {
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
+    pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 }
 
 impl pallet_asset_index::Config for Test {
@@ -137,6 +139,7 @@ impl pallet_asset_index::Config for Test {
     type RemoteAssetManager = MockRemoteAssetManager;
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = MockPriceFeed;
+    type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
 }
 
@@ -149,6 +152,14 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
         _asset: AssetId,
         _amount: Balance,
     ) -> DispatchResult {
+        Ok(().into())
+    }
+
+    fn bond(asset: AssetId, amount: Balance) -> DispatchResult {
+        Ok(().into())
+    }
+
+    fn unbond(asset: AssetId, amount: Balance) -> DispatchResult {
         Ok(().into())
     }
 }
