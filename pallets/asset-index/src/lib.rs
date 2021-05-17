@@ -329,38 +329,45 @@ pub mod pallet {
             Ok(())
         }
 
+        /// Remove asset with provied units.
+        ///
+        /// * If is liquid asset, transfer the ownership to the provied recipient
+        /// * Remove asset with provied units directly if is SAFT
         fn remove_asset(
             asset_id: &T::AssetId,
             units: &T::Balance,
             recipient: Option<MultiLocation>,
         ) -> DispatchResult {
-            if Self::is_liquid_asset(asset_id) {
-                if recipient.is_none() {
-                    // If asset is liquid, recipient must be provided
-                    return Err(<Error<T>>::NoRecipient.into());
-                }
-
-                // TODO: Transfer for liquid assets
-                Ok(())
-            } else {
-                // Burn SAFT
-                //
-                // ## Safty
-                //
-                // Only have this one `try_mutate` in current function
-                Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
-                    if let Some(index_asset_data) = value {
+            // Burn SAFT
+            //
+            // ## Safty
+            //
+            // Only have this one `try_mutate` in current function
+            Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
+                if let Some(index_asset_data) = value {
+                    if index_asset_data.is_liquid() {
+                        // If is liquid asset, transfer ownership to the provied
+                        // recipient or throw error
+                        if let Some(recipient) = recipient {
+                            index_asset_data.availability = AssetAvailability::Liquid(recipient);
+                        } else {
+                            return Err(<Error<T>>::NoRecipient.into());
+                        }
+                    } else {
+                        // If is SAFT, remove directly
                         index_asset_data.units = index_asset_data
                             .units
                             .checked_sub(units)
                             .ok_or(Error::AssetUnitsOverflow)?;
-                        Ok(())
-                    } else {
-                        Err(<Error<T>>::UnsupportedAsset.into())
                     }
-                })?;
-                Ok(())
-            }
+                    Ok(())
+                } else {
+                    // Throw error if assset not exists
+                    Err(<Error<T>>::UnsupportedAsset.into())
+                }
+            })?;
+
+            Ok(())
         }
     }
 
