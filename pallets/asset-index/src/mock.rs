@@ -11,7 +11,6 @@ use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
 use frame_support::dispatch::DispatchResult;
-use frame_support::pallet_prelude::Get;
 use frame_support::sp_runtime::FixedPointNumber;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
