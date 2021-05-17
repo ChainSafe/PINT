@@ -196,9 +196,10 @@ pub mod pallet {
                 &asset_id, &units, recipient,
             )?;
 
+            // Updates IndexToken
             if Self::is_liquid_asset(&asset_id) {
+                // Transfer to the recipient
                 if let Some(account) = &recipient_account {
-                    // Transfer to the recipient
                     T::IndexToken::transfer(
                         &caller,
                         account,

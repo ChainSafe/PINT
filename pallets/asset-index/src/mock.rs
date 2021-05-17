@@ -75,6 +75,7 @@ impl system::Config for Test {
 }
 
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
+pub(crate) const RECEIPIENT_ACCOUNT_ID: AccountId = 89;
 
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
