@@ -39,7 +39,7 @@ pub mod pallet {
             FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, ExistenceRequirement, Imbalance, LockableCurrency, WithdrawReasons},
+        traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -265,33 +265,40 @@ pub mod pallet {
                 asset_prices.push((price, vol));
             }
 
+            // keep track of the pint units that are actually redeemed, to account for rounding
+            let mut redeemed_pint = 0;
             for (price, vol) in &mut asset_prices {
                 let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
                     .ok_or(Error::<T>::NAVOverflow)?;
                 // overwrite the value with the units the user gets for that asset
                 *vol = ratio
                     .checked_mul_int(redeem)
-                    .and_then(|units| price.reciprocal_volume(units))
+                    .and_then(|pint_units| {
+                        redeemed_pint += pint_units;
+                        price.reciprocal_volume(pint_units)
+                    })
                     .ok_or(Error::<T>::AssetVolumeOverflow)
                     .and_then(|units| {
                         units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
                     })?;
             }
+            // update the index balance by burning all of the redeemed tokens and the fee
+            let burned = T::IndexToken::burn(
+                fee + redeemed_pint
+                    .try_into()
+                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?,
+            );
 
-            // update the index balance by burning all of the redeemed tokens and
-            // issuing new tokens for the tx fee into the treasury's account
-            let burned = T::IndexToken::burn(amount);
-            if let Err(burned) = T::IndexToken::settle(
+            T::IndexToken::settle(
                 &caller,
                 burned,
                 WithdrawReasons::TRANSFER,
                 ExistenceRequirement::KeepAlive,
-            ) {
-                // TODO can this even happen after ensure_can_withdraw?
-                T::IndexToken::issue(burned.peek());
-                return Err(Error::<T>::InsufficientDeposit.into());
-            }
+            )
+            .map_err(|_| ())
+            .expect("ensured can withdraw; qed");
 
+            // issue new tokens to compensate the fee and put it into the treasury
             let fee = T::IndexToken::issue(fee);
             T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
 
