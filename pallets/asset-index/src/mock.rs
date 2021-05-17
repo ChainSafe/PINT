@@ -152,15 +152,15 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
         _asset: AssetId,
         _amount: Balance,
     ) -> DispatchResult {
-        Ok(().into())
+        Ok(())
     }
 
-    fn bond(asset: AssetId, amount: Balance) -> DispatchResult {
-        Ok(().into())
+    fn bond(_: AssetId, _: Balance) -> DispatchResult {
+        Ok(())
     }
 
-    fn unbond(asset: AssetId, amount: Balance) -> DispatchResult {
-        Ok(().into())
+    fn unbond(_: AssetId, _: Balance) -> DispatchResult {
+        Ok(())
     }
 }
 
