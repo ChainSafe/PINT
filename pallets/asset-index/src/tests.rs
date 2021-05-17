@@ -4,7 +4,6 @@
 use crate as pallet;
 use crate::mock::*;
 use crate::types::{AssetWithdrawal, RedemptionState};
-use frame_support::sp_runtime::traits::One;
 use frame_support::sp_runtime::FixedU128;
 use frame_support::{assert_noop, assert_ok};
 use pallet::types::{AssetAvailability, IndexAssetData};
@@ -353,13 +352,22 @@ fn can_withdraw() {
 
         assert!(a_proportional_tokens + b_proportional_tokens <= user_pint);
 
+        // all SAFT holdings are ignored during withdrawal and don't have any effect on the payout
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            99,
+            1_000,
+            AssetAvailability::Saft,
+            2_000
+        ));
+
         // withdraw all funds
         assert_ok!(AssetIndex::withdraw(
             Origin::signed(ASHLEY),
             AssetIndex::index_token_balance(&ASHLEY)
         ));
 
-        // accounts for rounding
+        // account for rounding
         let remaining = user_pint - (a_proportional_tokens + b_proportional_tokens);
         assert_eq!(AssetIndex::index_token_balance(&ASHLEY), remaining);
 
