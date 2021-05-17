@@ -28,15 +28,18 @@ pub mod pallet {
     use crate::types::{
         AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
     };
-    use frame_support::sp_runtime::traits::{AccountIdConversion, Saturating};
-    use frame_support::sp_runtime::{FixedPointNumber, FixedU128};
-    use frame_support::traits::{ExistenceRequirement, WithdrawReasons};
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
+        sp_runtime::{
+            traits::{
+                AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub,
+                Saturating, Zero,
+            },
+            FixedPointNumber, FixedU128,
+        },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, Imbalance, LockableCurrency},
+        traits::{Currency, ExistenceRequirement, Imbalance, LockableCurrency, WithdrawReasons},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -280,7 +283,7 @@ pub mod pallet {
             let burned = T::IndexToken::burn(amount);
             if let Err(burned) = T::IndexToken::settle(
                 &caller,
-                burned,
+                amount,
                 WithdrawReasons::TRANSFER,
                 ExistenceRequirement::KeepAlive,
             ) {
