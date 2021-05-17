@@ -53,6 +53,34 @@ fn admin_can_add_asset() {
 }
 
 #[test]
+fn admin_can_remove_saft_asset() {
+    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
+    new_test_ext(initial_balances).execute_with(|| {
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            AssetAvailability::Saft,
+            5
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+
+        // remove saft asset
+        assert_ok!(AssetIndex::remove_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            None,
+            None,
+            5,
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
+    });
+}
+
+#[test]
 fn admin_can_add_asset_twice_and_units_accumulate() {
     let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
     new_test_ext(initial_balances).execute_with(|| {

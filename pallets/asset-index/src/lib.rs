@@ -31,7 +31,7 @@ pub mod pallet {
         pallet_prelude::*,
         sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, LockableCurrency},
+        traits::{Currency, ExistenceRequirement, LockableCurrency},
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_depository::MultiAssetDepository;
@@ -116,6 +116,15 @@ pub mod pallet {
         // A new asset was added to the index and some index token paid out
         // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+        // An asset was removed to the index and some index token transfered or slashed
+        // \[AssetIndex, AssetUnits, IndexTokenRecipient, NewIndexTokenRecipient, IndexTokenPayout\]
+        AssetRemoved(
+            T::AssetId,
+            T::Balance,
+            AccountIdFor<T>,
+            Option<AccountIdFor<T>>,
+            T::Balance,
+        ),
         // A new deposit of an asset into the index has been performed
         // \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -164,6 +173,55 @@ pub mod pallet {
             )?;
             T::IndexToken::deposit_into_existing(&caller, value)?;
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Callable by an admin to remove assets from the index
+        /// and maybe transfer some IndexToken
+        ///
+        /// Caller balance and recipient are updated to allocate
+        /// the correct amount of the IndexToken
+        pub fn remove_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            recipient: Option<MultiLocation>,
+            recipient_account: Option<T::AccountId>,
+            value: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
+            <Self as AssetRecorder<T::AssetId, T::Balance>>::remove_asset(
+                &asset_id, &units, recipient,
+            )?;
+
+            if Self::is_liquid_asset(&asset_id) {
+                if let Some(account) = &recipient_account {
+                    // Transfer to the recipient
+                    T::IndexToken::transfer(
+                        &caller,
+                        account,
+                        value,
+                        ExistenceRequirement::KeepAlive,
+                    )?;
+                } else {
+                    return Err(<Error<T>>::NoRecipient.into());
+                }
+            } else {
+                // TODO:
+                //
+                // Use `slash` or `resolving_into_exists` ?
+                T::IndexToken::slash(&caller, value);
+            }
+
+            Self::deposit_event(Event::AssetRemoved(
+                asset_id,
+                units,
+                caller,
+                recipient_account,
+                value,
+            ));
             Ok(().into())
         }
 
