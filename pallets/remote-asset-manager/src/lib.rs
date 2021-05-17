@@ -100,14 +100,14 @@ pub mod pallet {
         }
 
         fn bond(_asset: <T as Config>::AssetId, _amount: <T as Config>::Balance) -> DispatchResult {
-            todo!()
+            Ok(().into())
         }
 
         fn unbond(
             _asset: <T as Config>::AssetId,
             _amount: <T as Config>::Balance,
         ) -> DispatchResult {
-            todo!()
+            Ok(().into())
         }
     }
 }

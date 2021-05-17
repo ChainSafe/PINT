@@ -283,7 +283,7 @@ pub mod pallet {
             let burned = T::IndexToken::burn(amount);
             if let Err(burned) = T::IndexToken::settle(
                 &caller,
-                amount,
+                burned,
                 WithdrawReasons::TRANSFER,
                 ExistenceRequirement::KeepAlive,
             ) {
