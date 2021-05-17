@@ -120,7 +120,7 @@ impl pallet_asset_depository::Config for Test {
 
 parameter_types! {
     pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
-    pub MinimumRedemption: u32 = 0;
+    pub MinimumRedemption: u32 = 2;
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
