@@ -549,6 +549,7 @@ impl pallet_asset_index::Config for Runtime {
     type RemoteAssetManager = RemoteAssetManager;
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = PriceFeed;
+    type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
 }
 

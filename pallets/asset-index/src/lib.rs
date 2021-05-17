@@ -25,21 +25,32 @@ pub mod pallet {
     use crate::traits::WithdrawalFee;
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
-    use crate::types::{AssetAvailability, IndexAssetData, PendingRedemption};
+    use crate::types::{
+        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
+    };
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Zero},
+        sp_runtime::{
+            traits::{
+                AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub,
+                Saturating, Zero,
+            },
+            FixedPointNumber, FixedU128,
+        },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, LockableCurrency},
+        traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+        PalletId,
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_depository::MultiAssetDepository;
-    use pallet_price_feed::PriceFeed;
+    use pallet_price_feed::{AssetPricePair, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
     use xcm::opaque::v0::MultiLocation;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+
+    type Ratio = FixedU128;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -87,6 +98,9 @@ pub mod pallet {
         type PriceFeed: PriceFeed<Self::AssetId>;
         /// The type that calculates the withdrawal fee
         type WithdrawalFee: WithdrawalFee<Self::Balance>;
+        /// The treasury's pallet id, used for deriving its sovereign account ID.
+        #[pallet::constant]
+        type TreasuryPalletId: Get<PalletId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
@@ -113,12 +127,15 @@ pub mod pallet {
     #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", T::Balance = "Balance")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        // A new asset was added to the index and some index token paid out
-        // \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
+        /// A new asset was added to the index and some index token paid out
+        /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
-        // A new deposit of an asset into the index has been performed
-        // \[AssetId, AssetUnits, Account, PINTPayout\]
+        /// A new deposit of an asset into the index has been performed
+        /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+        /// Started the withdrawal process
+        /// \[Account, PINTAmount\]
+        WithdrawalInitiated(AccountIdFor<T>, T::Balance),
     }
 
     #[pallet::error]
@@ -167,7 +184,8 @@ pub mod pallet {
 
         /// Initiate a transfer from the user's sovereign account into the index.
         ///
-        /// This will withdraw the given amount from the user's sovereign account and mints PINT proportionally using the latest available price pairs
+        /// This will withdraw the given amount from the user's sovereign account and mints PINT
+        /// proportionally using the latest available price pairs
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn deposit(
             origin: OriginFor<T>,
@@ -180,7 +198,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let pint_amount = Self::calculate_asset_nav(asset_id.clone(), amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id.clone(), amount)?;
 
             // make sure we can store the additional deposit
             holding.units = holding
@@ -192,8 +210,12 @@ pub mod pallet {
             T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
             // update the holding
             Holdings::<T>::insert(asset_id.clone(), holding);
+
+            // increase the total issuance
+            let issued = T::IndexToken::issue(pint_amount);
+
             // add minted PINT to user's balance
-            T::IndexToken::deposit_creating(&caller, pint_amount);
+            T::IndexToken::resolve_creating(&caller, issued);
             Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
             Ok(().into())
         }
@@ -206,7 +228,8 @@ pub mod pallet {
         /// how long the assets remained in the index.
         /// The remaining PINT will be burned to match the new NAV after this withdrawal.
         ///
-        /// The distribution of the underlying assets will be equivalent to the ratio of the liquid assets in the index.
+        /// The distribution of the underlying assets will be equivalent to the ratio of the
+        /// liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -215,19 +238,114 @@ pub mod pallet {
                 Error::<T>::MinimumRedemption
             );
 
-            let deposit = Self::index_token_balance(&caller);
-            ensure!(deposit >= amount, Error::<T>::InsufficientDeposit);
+            let free_balance = T::IndexToken::free_balance(&caller);
+            T::IndexToken::ensure_can_withdraw(
+                &caller,
+                amount,
+                WithdrawReasons::TRANSFER,
+                free_balance.saturating_sub(amount),
+            )?;
 
             let fee = T::WithdrawalFee::withdrawal_fee(amount);
-            let _redeem = amount
+            let redeem = amount
                 .checked_sub(&fee)
-                .ok_or(Error::<T>::InsufficientDeposit)?;
+                .ok_or(Error::<T>::InsufficientDeposit)?
+                .into();
 
-            // TODO calculate the distribution of assets
+            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
+            let mut liquid_assets_vol = T::Balance::zero();
+            let mut asset_prices = Vec::new();
+            for (asset, holding) in Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid())
+            {
+                let price = T::PriceFeed::get_price(asset)?;
+                let vol = Self::calculate_volume(holding.units, &price)?;
+                liquid_assets_vol = liquid_assets_vol
+                    .checked_add(&vol)
+                    .ok_or(Error::<T>::NAVOverflow)?;
+                asset_prices.push((price, vol));
+            }
 
-            // TODO if total supply of any asset drops to 0 it gets removed from the index.
+            // keep track of the pint units that are actually redeemed, to account for rounding
+            let mut redeemed_pint = 0;
+            for (price, vol) in &mut asset_prices {
+                let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
+                    .ok_or(Error::<T>::NAVOverflow)?;
+                // overwrite the value with the units the user gets for that asset
+                *vol = ratio
+                    .checked_mul_int(redeem)
+                    .and_then(|pint_units| {
+                        redeemed_pint += pint_units;
+                        price.reciprocal_volume(pint_units)
+                    })
+                    .ok_or(Error::<T>::AssetVolumeOverflow)
+                    .and_then(|units| {
+                        units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
+                    })?;
+            }
+            // update the index balance by burning all of the redeemed tokens and the fee
+            let effectively_withdrawn = fee
+                + redeemed_pint
+                    .try_into()
+                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+            let burned = T::IndexToken::burn(effectively_withdrawn);
 
-            todo!()
+            T::IndexToken::settle(
+                &caller,
+                burned,
+                WithdrawReasons::TRANSFER,
+                ExistenceRequirement::KeepAlive,
+            )
+            .map_err(|_| ())
+            .expect("ensured can withdraw; qed");
+
+            // issue new tokens to compensate the fee and put it into the treasury
+            let fee = T::IndexToken::issue(fee);
+            T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
+
+            let mut assets = Vec::with_capacity(asset_prices.len());
+            // start bonding and locking
+            for (price, units) in asset_prices {
+                let asset = price.quote;
+                // try to start the unbonding process
+                let state = if T::RemoteAssetManager::unbond(asset.clone(), units).is_ok() {
+                    // the XCM call was dispatched successfully, however, this is
+                    //  *NOT* synonymous with a successful completion of the unbonding process.
+                    //  instead, this state implies that XCM is now being processed on a different parachain
+                    RedemptionState::Unbonding
+                } else {
+                    // the manager encountered an error before being able to send the XCM call,
+                    //  nothing was dispatched to another parachain
+                    RedemptionState::Initiated
+                };
+
+                // update the holding balance
+                Holdings::<T>::mutate_exists(&asset, |maybe_asset_data| {
+                    if let Some(mut data) = maybe_asset_data.take() {
+                        data.units = data.units.saturating_sub(units);
+                        if !data.units.is_zero() {
+                            *maybe_asset_data = Some(data);
+                        }
+                    }
+                });
+
+                assets.push(AssetWithdrawal {
+                    asset,
+                    state,
+                    units,
+                });
+            }
+
+            // lock the assets for the withdrawal period starting at current block
+            PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
+                let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
+                redemption.push(PendingRedemption {
+                    initiated: frame_system::Pallet::<T>::block_number(),
+                    assets,
+                })
+            });
+
+            Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
+            Ok(().into())
         }
 
         /// Completes the unbonding process on other parachains and
@@ -277,7 +395,7 @@ pub mod pallet {
             let mut nav = T::Balance::zero();
             for (asset, holding) in iter {
                 nav = nav
-                    .checked_add(&Self::calculate_asset_nav(asset, holding.units)?)
+                    .checked_add(&Self::calculate_pint_equivalent(asset, holding.units)?)
                     .ok_or(Error::<T>::NAVOverflow)?;
             }
             Ok(nav
@@ -285,24 +403,29 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
-        /// Calculates the NAV for the given amount of the asset
-        fn calculate_asset_nav(
-            asset: T::AssetId,
-            amount: T::Balance,
+        fn calculate_volume(
+            units: T::Balance,
+            price: &AssetPricePair<T::AssetId>,
         ) -> Result<T::Balance, DispatchError> {
-            let price = T::PriceFeed::get_price(asset)?;
-            let units: u128 = amount.into();
-            let pint_amount: T::Balance = price
+            let units: u128 = units.into();
+            Ok(price
                 .volume(units)
                 .ok_or(Error::<T>::AssetVolumeOverflow)
-                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
-            Ok(pint_amount)
+                .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?)
+        }
+
+        /// Calculates the amount of PINT token the given units of the asset are worth
+        fn calculate_pint_equivalent(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
+            Self::calculate_volume(units, &T::PriceFeed::get_price(asset)?)
         }
 
         /// Calculates the NAV of a single asset
         pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
             let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
-            Self::calculate_asset_nav(asset, holding.units)
+            Self::calculate_pint_equivalent(asset, holding.units)
         }
     }
 

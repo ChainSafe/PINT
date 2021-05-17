@@ -69,16 +69,16 @@ pub enum RedemptionState {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Represents a single asset being withdrawn
 pub struct AssetWithdrawal<AssetId, Balance> {
-    asset: AssetId,
-    state: RedemptionState,
-    units: Balance,
+    pub asset: AssetId,
+    pub state: RedemptionState,
+    pub units: Balance,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
-    initiated: BlockNumber,
-    assets: Vec<AssetWithdrawal<AssetId, Balance>>,
+    pub initiated: BlockNumber,
+    pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
 
 /// Asset transaction errors.
