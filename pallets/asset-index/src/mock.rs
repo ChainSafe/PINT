@@ -5,10 +5,10 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_asset_index;
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::FixedPointNumber;
-use frame_support::traits::StorageMapShim;
-use frame_support::{ord_parameter_types, parameter_types};
+use frame_support::{
+    dispatch::DispatchResult, ord_parameter_types, parameter_types, sp_runtime::FixedPointNumber,
+    traits::StorageMapShim,
+};
 use frame_system as system;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
