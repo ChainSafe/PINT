@@ -405,5 +405,15 @@ fn can_withdraw() {
                 units: b_redeemed_units
             }
         );
+
+        // make sure the holding balance is updated
+        assert_eq!(
+            pallet::Holdings::<Test>::get(&ASSET_A_ID).unwrap().units,
+            asset_a_units - a_redeemed_units
+        );
+        assert_eq!(
+            pallet::Holdings::<Test>::get(&ASSET_B_ID).unwrap().units,
+            asset_b_units - b_redeemed_units
+        );
     })
 }
