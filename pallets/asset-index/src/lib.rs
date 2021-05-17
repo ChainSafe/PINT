@@ -136,6 +136,15 @@ pub mod pallet {
         /// Started the withdrawal process
         /// \[Account, PINTAmount\]
         WithdrawalInitiated(AccountIdFor<T>, T::Balance),
+        /// Completed a single asset withdrawal
+        /// \[Account, AssetId, AssetUnits\]
+        Withdrawn(AccountIdFor<T>, T::AssetId, T::Balance),
+        /// Completed a pending asset withdrawal
+        /// \[Account, Assets\]
+        WithdrawalCompleted(
+            AccountIdFor<T>,
+            Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
+        ),
     }
 
     #[pallet::error]
@@ -351,10 +360,70 @@ pub mod pallet {
         /// Completes the unbonding process on other parachains and
         /// transfers the redeemed assets into the sovereign account of the owner.
         ///
-        /// All pending withdrawals need to have completed their lockup period
+        /// Only pending withdrawals that have completed their lockup period will be withdrawn.
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn complete_withdraw(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            todo!()
+        pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+
+            let current_block = frame_system::Pallet::<T>::block_number();
+            let period = T::WithdrawalPeriod::get();
+
+            PendingWithdrawals::<T>::mutate_exists(&caller, |maybe_pending| {
+                if let Some(pending) = maybe_pending.take() {
+                    let still_pending: Vec<_> = pending
+                        .into_iter()
+                        .filter_map(|mut redemption| {
+                            if redemption.initiated + period > current_block {
+                                let mut all_withdrawn = true;
+                                for asset in &mut redemption.assets {
+                                    match asset.state {
+                                        RedemptionState::Initiated => {
+                                            // unbonding processes failed
+                                            // TODO retry or handle this separately?
+                                            all_withdrawn = false;
+                                        }
+                                        RedemptionState::Unbonding => {
+                                            // unbonding process already started, try to complete it
+                                            if T::RemoteAssetManager::withdraw_unbonded(
+                                                caller.clone(),
+                                                asset.asset.clone(),
+                                                asset.units,
+                                            )
+                                            .is_ok()
+                                            {
+                                                // TODO put the units in the user's sovereign account or transfer?
+                                                asset.state = RedemptionState::Transferred;
+                                            } else {
+                                                all_withdrawn = false;
+                                            }
+                                        }
+                                        RedemptionState::Transferred => {}
+                                    }
+                                }
+
+                                if all_withdrawn {
+                                    // all done, delete from storage
+                                    Self::deposit_event(Event::WithdrawalCompleted(
+                                        caller.clone(),
+                                        redemption.assets,
+                                    ));
+                                    None
+                                } else {
+                                    Some(redemption)
+                                }
+                            } else {
+                                Some(redemption)
+                            }
+                        })
+                        .collect();
+
+                    if !still_pending.is_empty() {
+                        *maybe_pending = Some(still_pending);
+                    }
+                }
+            });
+
+            Ok(().into())
         }
     }
 
