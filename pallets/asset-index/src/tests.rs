@@ -49,6 +49,9 @@ fn admin_can_add_asset() {
             ))
         );
         assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+
+        assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), 5);
+        assert_eq!(AssetIndex::index_token_issuance(), 5);
     });
 }
 
@@ -134,6 +137,7 @@ fn deposit_works_with_user_balance() {
             .unwrap();
 
         assert_eq!(AssetIndex::index_token_balance(&ASHLEY), expected_balance);
+        assert_eq!(AssetIndex::index_token_issuance(), expected_balance + 5);
     });
 }
 
