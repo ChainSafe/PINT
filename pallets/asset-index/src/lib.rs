@@ -397,11 +397,13 @@ pub mod pallet {
             units: &T::Balance,
             recipient: Option<MultiLocation>,
         ) -> DispatchResult {
-            // Burn SAFT
+            // TODO:
             //
-            // ## Safty
+            // Should we force check if AssetId and recipient are paired?
             //
-            // Only have this one `try_mutate` in current function
+            // For example:
+            //
+            // If `!is_liquid`, the recipient must be none?
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 if let Some(index_asset_data) = value {
                     if index_asset_data.is_liquid() {

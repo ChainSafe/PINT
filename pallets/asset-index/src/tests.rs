@@ -157,6 +157,39 @@ fn admin_can_remove_asset_twice_and_units_accumulate() {
 }
 
 #[test]
+fn admin_remove_saft_asset_with_recipient_provied() {
+    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
+    new_test_ext(initial_balances).execute_with(|| {
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            AssetAvailability::Saft,
+            5
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+
+        // remove asset with verbose arguments
+        //
+        // TODO:
+        //
+        // Should we force check if AssetId and recipient are paired?
+        // If so, the assert below should be `assert_noop`
+        assert_ok!(AssetIndex::remove_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            Some(MultiLocation::Null),
+            Some(RECEIPIENT_ACCOUNT_ID),
+            5
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
+    });
+}
+
+#[test]
 fn admin_can_remove_liquid_asset() {
     let initial_balances: Vec<(AccountId, Balance)> =
         vec![(ADMIN_ACCOUNT_ID, 0), (RECEIPIENT_ACCOUNT_ID, 0)];
