@@ -323,10 +323,9 @@ pub mod pallet {
                     if let Some(mut data) = maybe_asset_data.take() {
                         data.units = data.units.saturating_sub(units);
                         if !data.units.is_zero() {
-                            return Some(data);
+                            *maybe_asset_data = Some(data);
                         }
                     }
-                    None
                 });
 
                 assets.push(AssetWithdrawal {
