@@ -283,11 +283,11 @@ pub mod pallet {
                     })?;
             }
             // update the index balance by burning all of the redeemed tokens and the fee
-            let burned = T::IndexToken::burn(
-                fee + redeemed_pint
+            let effectively_withdrawn = fee
+                + redeemed_pint
                     .try_into()
-                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?,
-            );
+                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+            let burned = T::IndexToken::burn(effectively_withdrawn);
 
             T::IndexToken::settle(
                 &caller,
@@ -345,7 +345,7 @@ pub mod pallet {
                 })
             });
 
-            Self::deposit_event(Event::WithdrawalInitiated(caller, amount));
+            Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
 
