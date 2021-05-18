@@ -100,6 +100,7 @@ fn admin_can_remove_saft_asset() {
         ));
 
         assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+        assert_eq!(Balances::total_issuance(), 5);
 
         // remove saft asset
         assert_ok!(AssetIndex::remove_asset(
@@ -111,6 +112,36 @@ fn admin_can_remove_saft_asset() {
         ));
 
         assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
+        assert_eq!(Balances::total_issuance(), 0);
+    });
+}
+
+#[test]
+fn admin_can_remove_liquid_asset() {
+    let initial_balances: Vec<(AccountId, Balance)> =
+        vec![(ADMIN_ACCOUNT_ID, 0), (RECEIPIENT_ACCOUNT_ID, 0)];
+    new_test_ext(initial_balances).execute_with(|| {
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            AssetAvailability::Liquid(MultiLocation::Null),
+            5
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+
+        // remove liquid asset
+        assert_ok!(AssetIndex::remove_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            Some(MultiLocation::Null),
+            Some(RECEIPIENT_ACCOUNT_ID),
+        ));
+
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
+        assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 5);
     });
 }
 
@@ -188,35 +219,6 @@ fn admin_remove_saft_asset_with_recipient_provied() {
         ));
 
         assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
-    });
-}
-
-#[test]
-fn admin_can_remove_liquid_asset() {
-    let initial_balances: Vec<(AccountId, Balance)> =
-        vec![(ADMIN_ACCOUNT_ID, 0), (RECEIPIENT_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
-        assert_ok!(AssetIndex::add_asset(
-            Origin::signed(ADMIN_ACCOUNT_ID),
-            ASSET_A_ID,
-            100,
-            AssetAvailability::Liquid(MultiLocation::Null),
-            5
-        ));
-
-        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
-
-        // remove saft asset
-        assert_ok!(AssetIndex::remove_asset(
-            Origin::signed(ADMIN_ACCOUNT_ID),
-            ASSET_A_ID,
-            100,
-            Some(MultiLocation::Null),
-            Some(RECEIPIENT_ACCOUNT_ID),
-        ));
-
-        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
-        assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 5);
     });
 }
 

@@ -164,6 +164,8 @@ pub mod pallet {
         NAVOverflow,
         /// Thrown when trying to remove liquid assets without recipient
         NoRecipient,
+        /// Thrown when the total issuance does not enough to be burned
+        EmptyIssuance,
     }
 
     #[pallet::hooks]
@@ -242,10 +244,8 @@ pub mod pallet {
                     return Err(<Error<T>>::NoRecipient.into());
                 }
             } else {
-                // TODO:
-                //
-                // Use `slash` or `resolving_into_exists` ?
-                T::IndexToken::slash(&caller, value);
+                T::IndexToken::slash(&caller, value.clone());
+                T::IndexToken::burn(value);
             }
 
             Self::deposit_event(Event::AssetRemoved(
