@@ -531,30 +531,28 @@ pub mod pallet {
             //
             // If `!is_liquid`, the recipient must be none?
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
-                if let Some(index_asset_data) = value {
-                    if index_asset_data.is_liquid() {
-                        // If is liquid asset, transfer ownership to the provied
-                        // recipient or throw error
-                        if let Some(recipient) = recipient {
-                            // TODO:
-                            //
-                            // XCM transfer?
-                            index_asset_data.availability = AssetAvailability::Liquid(recipient);
-                        } else {
-                            return Err(<Error<T>>::NoRecipient.into());
-                        }
-                    } else {
-                        // If is SAFT, remove directly
-                        index_asset_data.units = index_asset_data
-                            .units
-                            .checked_sub(units)
-                            .ok_or(Error::AssetUnitsOverflow)?;
-                    }
-                    Ok(())
+                let mut index_asset_data =
+                    value.clone().ok_or(<Error<T>>::UnsupportedAsset.into())?;
+                if index_asset_data.is_liquid() {
+                    // If is liquid asset, transfer ownership to the provied
+                    // recipient or throw error
+                    //
+                    // TODO:
+                    //
+                    // XCM transfer?
+                    index_asset_data.availability =
+                        AssetAvailability::Liquid(recipient.ok_or(<Error<T>>::NoRecipient.into())?);
                 } else {
-                    // Throw error if assset not exists
-                    Err(<Error<T>>::UnsupportedAsset.into())
+                    // If is SAFT, remove directly
+                    index_asset_data.units = index_asset_data
+                        .units
+                        .checked_sub(units)
+                        .ok_or(Error::AssetUnitsOverflow)?;
                 }
+
+                // apply modification
+                *value = Some(index_asset_data);
+                Ok(())
             })?;
 
             Ok(())
