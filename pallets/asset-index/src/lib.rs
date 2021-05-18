@@ -216,19 +216,7 @@ pub mod pallet {
             )?;
 
             // Get current value from PriceFeed
-            let value = {
-                // TODO: need to check this with test `admin_can_remove_liquid_asset`
-                //
-                // If this value reach the total balance of IndexToken,
-                // modify to the max
-                let value = Self::calculate_pint_equivalent(asset_id.clone(), units)?;
-                let total_balance = T::IndexToken::total_balance(&caller);
-                if total_balance > value {
-                    value
-                } else {
-                    total_balance
-                }
-            };
+            let value = Self::calculate_pint_equivalent(asset_id.clone(), units)?;
 
             // Updates IndexToken
             if Self::is_liquid_asset(&asset_id) {
@@ -548,6 +536,9 @@ pub mod pallet {
                         // If is liquid asset, transfer ownership to the provied
                         // recipient or throw error
                         if let Some(recipient) = recipient {
+                            // TODO:
+                            //
+                            // XCM transfer?
                             index_asset_data.availability = AssetAvailability::Liquid(recipient);
                         } else {
                             return Err(<Error<T>>::NoRecipient.into());

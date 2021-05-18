@@ -126,10 +126,11 @@ fn admin_can_remove_liquid_asset() {
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
-            5
+            // PINT(200) = ASSET_A_PRICE_MULTIPLIER(2) * units(100)
+            200
         ));
 
-        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 200);
 
         // remove liquid asset
         assert_ok!(AssetIndex::remove_asset(
@@ -141,7 +142,7 @@ fn admin_can_remove_liquid_asset() {
         ));
 
         assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
-        assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 5);
+        assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 200);
     });
 }
 
