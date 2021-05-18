@@ -352,7 +352,6 @@ pub mod pallet {
                     assets,
                 })
             });
-
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
