@@ -214,14 +214,12 @@ pub mod pallet {
             )?;
 
             // Get current value from PriceFeed
-
             let value = {
-                // TODO: need to check this
+                // TODO: need to check this with test `admin_can_remove_liquid_asset`
                 //
                 // If this value reach the total balance of IndexToken,
-                // modify to the max value
-                let value =
-                    Self::calculate_volume(units, &T::PriceFeed::get_price(asset_id.clone())?)?;
+                // modify to the max
+                let value = Self::calculate_pint_equivalent(asset_id.clone(), units)?;
                 let total_balance = T::IndexToken::total_balance(&caller);
                 if total_balance > value {
                     value

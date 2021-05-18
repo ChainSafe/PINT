@@ -215,8 +215,8 @@ fn admin_can_remove_liquid_asset() {
             Some(RECEIPIENT_ACCOUNT_ID),
         ));
 
-        // assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
-        // assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 5);
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 0);
+        assert_eq!(Balances::free_balance(RECEIPIENT_ACCOUNT_ID), 5);
     });
 }
 
