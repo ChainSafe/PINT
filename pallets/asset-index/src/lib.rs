@@ -206,13 +206,29 @@ pub mod pallet {
             units: T::Balance,
             recipient: Option<MultiLocation>,
             recipient_account: Option<T::AccountId>,
-            value: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
             <Self as AssetRecorder<T::AssetId, T::Balance>>::remove_asset(
                 &asset_id, &units, recipient,
             )?;
+
+            // Get current value from PriceFeed
+
+            let value = {
+                // TODO: need to check this
+                //
+                // If this value reach the total balance of IndexToken,
+                // modify to the max value
+                let value =
+                    Self::calculate_volume(units, &T::PriceFeed::get_price(asset_id.clone())?)?;
+                let total_balance = T::IndexToken::total_balance(&caller);
+                if total_balance > value {
+                    value
+                } else {
+                    total_balance
+                }
+            };
 
             // Updates IndexToken
             if Self::is_liquid_asset(&asset_id) {
