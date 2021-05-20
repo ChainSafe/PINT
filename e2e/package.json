@@ -1,0 +1,20 @@
+{
+  "name": "pint-e2e",
+  "version": "0.0.1",
+  "description": "E2E tests for PINT",
+  "main": "index.js",
+  "repository": "https://github.com/ChainSafe/PINT",
+  "author": "ChainSafe",
+  "license": "GNU-v3",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^15.3.1",
+    "@types/yargs": "^16.0.2",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "@polkadot/api": "^4.10.1",
+    "yargs": "^17.0.1"
+  }
+}
