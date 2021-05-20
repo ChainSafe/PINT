@@ -131,8 +131,8 @@ pub mod pallet {
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
 
-        // An asset was removed to the index and some index token transfered or slashed
-        // \[AssetIndex, AssetUnits, IndexTokenRecipient, NewIndexTokenRecipient, IndexTokenPayout\]
+        /// An asset was removed from the index and some index token transfered or burned
+        /// \[AssetIndex, AssetUnits, IndexTokenRecipient, NewIndexTokenRecipient, IndexTokenPayout\]
         AssetRemoved(
             T::AssetId,
             T::Balance,
@@ -518,6 +518,10 @@ pub mod pallet {
         ///
         /// * If is liquid asset, transfer the ownership to the provied recipient
         /// * Remove asset with provied units directly if is SAFT
+        ///
+        /// TODO:
+        ///
+        /// Make the function safe after refactoring
         fn remove_asset(
             asset_id: &T::AssetId,
             units: &T::Balance,
@@ -532,7 +536,7 @@ pub mod pallet {
             // If `!is_liquid`, the recipient must be none?
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let mut index_asset_data =
-                    value.clone().ok_or(<Error<T>>::UnsupportedAsset.into())?;
+                    value.take().ok_or(<Error<T>>::UnsupportedAsset.into())?;
                 if index_asset_data.is_liquid() {
                     // If is liquid asset, transfer ownership to the provied
                     // recipient or throw error
