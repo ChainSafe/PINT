@@ -368,57 +368,57 @@ pub mod pallet {
             let period = T::WithdrawalPeriod::get();
 
             PendingWithdrawals::<T>::mutate_exists(&caller, |maybe_pending| {
-                if let Some(pending) = maybe_pending.take() {
-                    let still_pending: Vec<_> = pending
-                        .into_iter()
-                        .filter_map(|mut redemption| {
-                            if redemption.initiated + period > current_block {
-                                let mut all_withdrawn = true;
-                                for asset in &mut redemption.assets {
-                                    match asset.state {
-                                        RedemptionState::Initiated => {
-                                            // unbonding processes failed
-                                            // TODO retry or handle this separately?
+                let pending = maybe_pending.ok_or(|_| <Error<T>>::NoPendingWithdrawals)?;
+                let still_pending: Vec<_> = pending
+                    .into_iter()
+                    .filter_map(|mut redemption| {
+                        if redemption.initiated + period > current_block {
+                            // whether all assets reached state `Transferred`
+                            let mut all_withdrawn = true;
+                            for asset in &mut redemption.assets {
+                                match asset.state {
+                                    RedemptionState::Initiated => {
+                                        // unbonding processes failed
+                                        // TODO retry or handle this separately?
+                                        all_withdrawn = false;
+                                    }
+                                    RedemptionState::Unbonding => {
+                                        // unbonding process already started, try to complete it
+                                        if T::RemoteAssetManager::withdraw_unbonded(
+                                            caller.clone(),
+                                            asset.asset.clone(),
+                                            asset.units,
+                                        )
+                                        .is_ok()
+                                        {
+                                            // TODO put the units in the user's sovereign account or transfer?
+                                            asset.state = RedemptionState::Transferred;
+                                        } else {
                                             all_withdrawn = false;
                                         }
-                                        RedemptionState::Unbonding => {
-                                            // unbonding process already started, try to complete it
-                                            if T::RemoteAssetManager::withdraw_unbonded(
-                                                caller.clone(),
-                                                asset.asset.clone(),
-                                                asset.units,
-                                            )
-                                            .is_ok()
-                                            {
-                                                // TODO put the units in the user's sovereign account or transfer?
-                                                asset.state = RedemptionState::Transferred;
-                                            } else {
-                                                all_withdrawn = false;
-                                            }
-                                        }
-                                        RedemptionState::Transferred => {}
                                     }
+                                    RedemptionState::Transferred => {}
                                 }
+                            }
 
-                                if all_withdrawn {
-                                    // all done, delete from storage
-                                    Self::deposit_event(Event::WithdrawalCompleted(
-                                        caller.clone(),
-                                        redemption.assets,
-                                    ));
-                                    None
-                                } else {
-                                    Some(redemption)
-                                }
+                            if all_withdrawn {
+                                // all done, delete from storage
+                                Self::deposit_event(Event::WithdrawalCompleted(
+                                    caller.clone(),
+                                    redemption.assets,
+                                ));
+                                None
                             } else {
                                 Some(redemption)
                             }
-                        })
-                        .collect();
+                        } else {
+                            Some(redemption)
+                        }
+                    })
+                    .collect();
 
-                    if !still_pending.is_empty() {
-                        *maybe_pending = Some(still_pending);
-                    }
+                if !still_pending.is_empty() {
+                    *maybe_pending = Some(still_pending);
                 }
             });
 
