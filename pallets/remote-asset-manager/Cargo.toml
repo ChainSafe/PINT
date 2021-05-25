@@ -14,6 +14,7 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'pallet-staking/std',
     'xcm/std',
     'xcm-executor/std',
 ]
@@ -33,6 +34,12 @@ branch = 'rococo-v1'
 version = '3.0.0'
 
 [dependencies.frame-system]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dependencies.pallet-staking]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
