@@ -17,9 +17,13 @@ mod traits;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     pub use crate::traits::RemoteAssetManager;
+    use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
+    use cumulus_primitives_core::ParaId;
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
-        sp_runtime::traits::AtLeast32BitUnsigned, traits::Get,
+        dispatch::DispatchResultWithPostInfo,
+        pallet_prelude::*,
+        sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned},
+        traits::Get,
     };
     use frame_system::pallet_prelude::*;
     use xcm::v0::{ExecuteXcm, MultiLocation};
@@ -28,7 +32,7 @@ pub mod pallet {
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_staking::Config {
         /// The balance type for cross chain transfers
         type Balance: Parameter
             + Member
@@ -58,12 +62,23 @@ pub mod pallet {
         #[pallet::constant]
         type SelfLocation: Get<MultiLocation>;
 
+        /// Returns the parachain ID we are running with.
+        #[pallet::constant]
+        type SelfParaId: Get<ParaId>;
+
         /// Identifier for the relay chain's specific asset
         #[pallet::constant]
         type RelayChainAssetId: Get<Self::AssetId>;
 
         /// Executor for cross chain messages.
-        type XcmExecutor: ExecuteXcm<Self::Call>;
+        type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
+
+        /// The overarching call type; we assume sibling chains use the same type.
+        type Call: From<pallet_staking::Call<Self>> + Encode;
+
+        /// The origin type that can be converted into a cumulus origin
+        type Origin: From<<Self as frame_system::Config>::Origin>
+            + Into<Result<CumulusOrigin, <Self as Config>::Origin>>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -72,9 +87,15 @@ pub mod pallet {
     #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(_);
 
+    // TODO: store xcm query id with unbond procedures?
+
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
-    pub enum Event<T: Config> {}
+    pub enum Event<T: Config> {
+        Attempted(xcm::v0::Outcome),
+        SentBondExtra,
+        SentUnbond,
+    }
 
     #[pallet::error]
     pub enum Error<T> {}
@@ -87,6 +108,15 @@ pub mod pallet {
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
+        }
+    }
+
+    impl<T: Config> Pallet<T> {
+        /// Transacts a `bond_extra` extrinsic
+        pub fn xcm_bond_extra(dest: MultiLocation) {
+            log::debug!(target: "pint_xcm", "Attempting bond_extra  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+
+
         }
     }
 
