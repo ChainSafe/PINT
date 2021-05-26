@@ -22,7 +22,7 @@
   },
   "parachains": [
     {
-      "bin": "./target/target/pint",
+      "bin": "./target/release/pint",
       "chain": "pint-dev",
       "id": "1",
       "wsPort": 9988,
