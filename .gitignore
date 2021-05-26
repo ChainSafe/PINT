@@ -19,4 +19,7 @@ node_modules
 # The cache for chain data in container
 .local
 
+# Binaries for launching PINT with polkadot
+launch/bin
+
 local-test
