@@ -4,8 +4,11 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 #
 # This Dockerfile builds the environment of e2e tests
-FROM ubuntu:latest
+FROM debian:buster-slim
 COPY launch launch
+COPY --from=chainsafe/pint /usr/local/bin/pint /launch/bin
+COPY --from=clearloop/rococo-v1 /usr/local/bin/polkadot /launch/bin
+COPY --from=clearloop/statemint /usr/local/bin/statemint /launch/bin
 ENV CARGO_TERM_COLOR=always
 RUN apt-get update -y \
     && apt-get install openssl curl git -y \
