@@ -14,3 +14,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/git \
     && cd statemint \
     && cargo build --release \
     && mv target/release/statemint /statemint
+
+# Only a binary for debian
+FROM scratch
+COPY --from=builder /statemint /usr/local/bin/

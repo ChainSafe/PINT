@@ -13,4 +13,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/git \
     git clone https://github.com/paritytech/polkadot.git -b rococo-v1 \
     && cd polkadot \
     && cargo build --release \
-    && mv target/release/polkadot /usr/local/bin/polkadot
+    && mv target/release/polkadot /polkadot
+
+# Only a binary for debian
+FROM scratch
+COPY --from=builder /polkadot /usr/local/bin
