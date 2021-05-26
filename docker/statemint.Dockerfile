@@ -10,11 +10,11 @@ ENV CARGO_TERM_COLOR=always
 RUN --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,sharing=private,target=target \
-    git clone https://github.com/paritytech/statemint.git \
+    git clone https://github.com/paritytech/statemint.git --depth=1 \
     && cd statemint \
     && cargo build --release \
-    && mv target/release/statemint /statemint
+    && mv target/release/statemilnt /statemint
 
 # Only a binary for debian
 FROM scratch
-COPY --from=builder /statemint /usr/local/bin/
+COPY --from=builder /statemint /
