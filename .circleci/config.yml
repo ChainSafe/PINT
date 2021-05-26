@@ -133,7 +133,7 @@ jobs:
       - checkout
       - run:
           name: Build docker image
-          command: BUILDKIT_PROGRESS=plain DOCKER_BUILDKIT=1 docker build -f docker/release -t $IMAGE_NAME:latest .
+          command: BUILDKIT_PROGRESS=plain DOCKER_BUILDKIT=1 docker build -f docker/release.Dockerfile -t $IMAGE_NAME:latest .
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
