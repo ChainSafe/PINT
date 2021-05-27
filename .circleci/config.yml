@@ -141,6 +141,18 @@ jobs:
           root: .
           paths:
             - ./image.tar
+  docker-run-e2e:
+    executor: test-executor
+    description: Build and run e2e tests
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Load Archived Docker Image
+          command: docker load -i /tmp/workspace/image.tar
+      - run:
+          name: Build e2e Image
+          command: docker build -f docker/e2e.Dockerfile -t e2e .
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
