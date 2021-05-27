@@ -537,7 +537,7 @@ parameter_types! {
 
 impl pallet_asset_index::Config for Runtime {
     // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;

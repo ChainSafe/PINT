@@ -2,14 +2,13 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import { typesBundle } from "@pint/types";
-import { Result } from "./result";
 
 /**
  *  Tester
  */
-class Tester {
-  api: ApiPromise;
-  pair: KeyringPair;
+export class Api {
+  public api: ApiPromise;
+  public pair: KeyringPair;
 
   /**
    * Init API with provided config
@@ -19,7 +18,7 @@ class Tester {
     wsPort: string = "ws://0.0.0.0:9988",
     // Testing account
     uri: string = "//Alice"
-  ): Promise<Tester> {
+  ): Promise<Api> {
     // init api
     const provider = new WsProvider(wsPort);
     const api = await ApiPromise.create({ provider, typesBundle: typesBundle });
@@ -28,14 +27,7 @@ class Tester {
     const keyring = new Keyring({ type: "sr25519" });
     const pair = keyring.addFromUri(uri);
 
-    return new Tester(api, pair);
-  }
-
-  /**
-   * Run tests
-   */
-  static async run(): Promise<Result<void>> {
-    return new Result(null);
+    return new Api(api, pair);
   }
 
   constructor(api: ApiPromise, pair: KeyringPair) {

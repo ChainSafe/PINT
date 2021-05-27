@@ -6,14 +6,14 @@ export class Result<T> {
   constructor(inner: T | Error, reason: string | undefined = undefined) {
     this.inner = inner;
     if (inner instanceof Error) {
-      (this.inner as Error).message = reason;
+      (this.inner as Error).message = String(reason);
     }
   }
 
   /**
    * resolve inner value or throw Error
    *
-   * @return T
+   * @returns {T}
    */
   unwrap(): T {
     if (this.inner instanceof Error) {
