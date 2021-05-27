@@ -152,11 +152,10 @@ jobs:
           command: docker load -i /tmp/workspace/image.tar
       - checkout
       - run:
-          name: init submodule
-          comamnd: gitub submodule update --init
-      - run:
           name: Build PINT launch Image
-          command: docker build -f docker/launch.Dockerfile -t launch .
+          command: |
+            git submodule update --init
+            docker build -f docker/launch.Dockerfile -t launch .
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
