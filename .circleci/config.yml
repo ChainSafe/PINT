@@ -196,6 +196,9 @@ workflows:
   docker:
     jobs:
       - docker-build-release
+      - docker-run-e2e:
+          requires:
+            - docker-build-release
       - docker-publish-latest:
           requires:
             - docker-build-release
