@@ -1,26 +1,26 @@
 {
-  "name": "@pint/api",
-  "version": "1.0.0",
-  "description": "E2E tests for PINT",
-  "main": "index.js",
-  "repository": "https://github.com/ChainSafe/PINT",
-  "author": "ChainSafe",
-  "license": "GNU-v3",
-  "private": true,
-  "devDependencies": {
-    "@types/node": "^15.3.1",
-    "ts-node": "^9.1.1",
-    "tslint": "^6.1.3",
-    "typescript": "^4.2.4"
-  },
-  "dependencies": {
-    "@pint/types": "^1",
-    "@polkadot/api": "^4.10.1",
-    "@polkadot/keyring": "^6.5.1",
-    "yargs": "^17.0.1"
-  },
-  "scripts": {
-    "build": "tsc --strict",
-    "lint": "tsc --noEmit --strict && tslint --project ./tsconfig.json"
-  }
+    "name": "@pint/api",
+    "version": "1.0.0",
+    "description": "E2E tests for PINT",
+    "main": "lib/src/index.js",
+    "repository": "https://github.com/ChainSafe/PINT",
+    "author": "ChainSafe",
+    "license": "GNU-v3",
+    "private": true,
+    "devDependencies": {
+        "@types/node": "^15.3.1",
+        "ts-node": "^9.1.1",
+        "tslint": "^6.1.3",
+        "typescript": "^4.2.4"
+    },
+    "dependencies": {
+        "@pint/types": "^1",
+        "@polkadot/api": "^4.10.1",
+        "@polkadot/keyring": "^6.5.1",
+        "yargs": "^17.0.1"
+    },
+    "scripts": {
+        "build": "tsc --strict",
+        "lint": "tsc --noEmit --strict && tslint --project ./tsconfig.json"
+    }
 }

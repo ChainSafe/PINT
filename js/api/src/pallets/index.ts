@@ -11,7 +11,7 @@ export type Call = (api: Api, ...args: any[]) => Result<null>;
  * Pallet
  */
 export interface Pallet {
-  [index: string]: Call;
+    [index: string]: Call;
 }
 
 export default {};

@@ -8,12 +8,7 @@
   "scripts": {
     "build": "tsc"
   },
-  "keywords": [
-    "pint",
-    "types",
-    "polkadot",
-    "api"
-  ],
+  "keywords": ["pint", "types", "polkadot", "api"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChainSafe/PINT.git"

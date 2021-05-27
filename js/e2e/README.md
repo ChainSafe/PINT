@@ -1,6 +1,7 @@
 # E2E
 
-E2E tests for PINT.
+E2E tests for PINT
+
 
 ## LICENSE
 
