@@ -1,12 +1,18 @@
 {
+  "indent": [true, "spaces", 2],
   "compilerOptions": {
-    "target": "es5",
-    "module": "commonjs",
-    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "declaration": true,
     "esModuleInterop": true,
+    "outDir": "lib",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noImplicitAny": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "lib"
+    "target": "es6"
   },
   "include": ["index.ts", "src/**/*"],
   "exclude": ["node_modules"]

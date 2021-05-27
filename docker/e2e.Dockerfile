@@ -5,10 +5,10 @@
 #
 # This Dockerfile builds the environment of e2e tests
 FROM debian:buster-slim
-COPY launch launch
-COPY --from=chainsafe/pint /usr/local/bin/pint /launch/bin/
-COPY --from=clearloop/rococo-v1 /polkadot /launch/bin/
-COPY --from=clearloop/statemint /statemint /launch/bin/
+COPY config.json config.json
+COPY --from=chainsafe/pint /usr/local/bin/pint bin/
+COPY --from=clearloop/rococo-v1 /polkadot bin/
+COPY --from=clearloop/statemint /statemint bin/
 ENV CARGO_TERM_COLOR=always
 RUN apt-get update -y \
     && apt-get install openssl curl git -y \
@@ -23,4 +23,4 @@ RUN apt-get update -y \
 EXPOSE 9966
 EXPOSE 9988
 EXPOSE 9999
-ENTRYPOINT [ "node", "polkadot-launch/dist/index.js", "launch/config.json" ]
+ENTRYPOINT [ "node", "polkadot-launch/dist/index.js", "config.json" ]

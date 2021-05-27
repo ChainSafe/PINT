@@ -20,6 +20,9 @@ node_modules
 .local
 
 # Binaries for launching PINT with polkadot
-launch/bin
+bin
+
+# Libraries of js output
+e2e/lib
 
 local-test
