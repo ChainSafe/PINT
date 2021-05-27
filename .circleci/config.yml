@@ -150,6 +150,7 @@ jobs:
       - run:
           name: Load Archived Docker Image
           command: docker load -i /tmp/workspace/image.tar
+      - checkout
       - run:
           name: Build e2e Image
           command: docker build -f docker/e2e.Dockerfile -t e2e .
