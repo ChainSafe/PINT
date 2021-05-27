@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "workspaces": ["api", "e2e", "launch", "pint-types-bundle"]
+}

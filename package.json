@@ -1,4 +1,0 @@
-{
-  "private": true,
-  "workspaces": ["pint-types-bundle", "e2e"]
-}

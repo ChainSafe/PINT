@@ -23,6 +23,6 @@ node_modules
 bin
 
 # Libraries of js output
-e2e/lib
+js/**/*/lib
 
 local-test
