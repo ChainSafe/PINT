@@ -1,5 +1,3 @@
-import cmd from "./src/cmd";
-
 (() => {
-  cmd();
+  console.log("hello");
 })();
