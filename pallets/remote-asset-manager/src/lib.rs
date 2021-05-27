@@ -11,6 +11,7 @@
 pub use pallet::*;
 
 mod traits;
+mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
@@ -22,12 +23,12 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned},
+        sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
     use xcm::v0::{ExecuteXcm, MultiLocation};
-    use xcm_executor::traits::Convert;
+    use xcm_executor::traits::Convert as XcmConvert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -43,16 +44,15 @@ pub mod pallet {
             + Into<u128>;
 
         /// Asset Id that is used to identify different kinds of assets.
-        type AssetId: Parameter + Member + Clone;
+        type AssetId: Parameter + Member + Clone + MaybeSerializeDeserialize;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
-        type AssetIdConvert: Convert<Self::AssetId, MultiLocation>;
+        type AssetIdConvert: XcmConvert<Self::AssetId, MultiLocation>;
 
         /// Convert `Self::Account` to `AccountId32`
-        type AccountId32Convert: frame_support::sp_runtime::traits::Convert<
-            Self::AccountId,
-            [u8; 32],
-        >;
+        type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
+
+        // type BalanceConvert: Convert< >
 
         /// The native asset id
         #[pallet::constant]
@@ -89,6 +89,31 @@ pub mod pallet {
 
     // TODO: store xcm query id with unbond procedures?
 
+    /// The index of `pallet_staking` in the runtime of the parachain.
+    #[pallet::storage]
+    pub type PalletStakingIndex<T: Config> =
+        StorageMap<_, Twox64Concat, <T as Config>::AssetId, u8, OptionQuery>;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        /// key-value pairs for the `PalletStakingIndex` storage map
+        pub staking_indices: Vec<(T::AssetId, u8)>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                staking_indices: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {}
+    }
+
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
@@ -115,8 +140,6 @@ pub mod pallet {
         /// Transacts a `bond_extra` extrinsic
         pub fn xcm_bond_extra(dest: MultiLocation) {
             log::debug!(target: "pint_xcm", "Attempting bond_extra  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
-
-
         }
     }
 

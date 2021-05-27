@@ -81,6 +81,20 @@ pub enum RewardDestination<AccountId> {
     None,
 }
 
+/// The `pallet_staking` configuration for a particular chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct StakingConfig {
+    /// The index of `pallet_index` within the parachain's runtime
+    pub pallet_index: u32,
+    /// The limitation to the number of fund-chunks that can be scheduled to be unlocked via `unbond`.
+    ///
+    /// If this is reached, the bonded account _must_ first wait until successful call to
+    /// `withdraw_unbonded` to remove some of the chunks.
+    pub max_unlocking_chunks: u32,
+    /// Counter for the sent `unbond` calls.
+    pub pending_unbond_calls: u32,
+}
+
 pub enum StakingSupport {
     None,
 }
