@@ -10,7 +10,7 @@ import { fork, ChildProcess, StdioOptions, spawn } from "child_process";
  */
 export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
     return fork("js/polkadot-launch", ["config.json"], {
-        cwd: path.resolve(await findUp("Cargo.toml"), ".."),
+        cwd: path.resolve(String(await findUp("Cargo.toml")), ".."),
         stdio,
     });
 }

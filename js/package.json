@@ -1,4 +1,4 @@
 {
   "private": true,
-  "workspaces": ["api", "e2e", "launch", "pint-types-bundle", "polkadot-launch"]
+  "workspaces": ["e2e", "pint-types-bundle"]
 }
