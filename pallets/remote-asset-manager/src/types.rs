@@ -3,12 +3,13 @@
 
 //! Additional types for the remote asset manager pallet
 use codec::{Decode, Encode, EncodeLike};
-use frame_support::{
-    dispatch::{CallableCallFor, Output},
-    sp_runtime::RuntimeDebug,
-    sp_std::prelude::*,
-    traits::Currency,
-};
+use frame_support::{dispatch::Output, sp_runtime::RuntimeDebug, sp_std::prelude::*};
+use xcm::v0::Outcome as XcmOutcome;
+
+use crate::traits::BalanceEncoder;
+use frame_support::sp_std::marker::PhantomData;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 pub struct TransactCall<Call: Encode> {
     /// The index of the call's pallet within the runtime.
@@ -29,18 +30,32 @@ impl<Call: EncodeLike> Encode for TransactCall<Call> {
     }
 }
 
-// TODO: MAX_UNLOCKING_CHUNKS in pallet_staking
+/// Encodes a `u128` using `CompactRef` regardless of the asset id
+pub struct CompactU128BalanceEncoder<T>(PhantomData<T>);
+
+impl<AssetId> BalanceEncoder<AssetId, u128> for CompactU128BalanceEncoder<AssetId> {
+    fn encoded_balance(_: &AssetId, balance: u128) -> Option<Vec<u8>> {
+        let encoded =
+            <<u128 as codec::HasCompact>::Type as codec::EncodeAsRef<'_, u128>>::RefType::from(
+                &balance,
+            )
+            .encode();
+        Some(encoded)
+    }
+}
 
 /// Represents dispatchable calls of the FRAME `pallet_staking` pallet.
 #[derive(Encode)]
-pub enum StakingCall<AccountId: Encode, Balance: Encode, Source: Encode> {
+pub enum StakingCall<AccountId: Encode, CompactBalance: Encode, Source: Encode> {
     /// The [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the stash account.
     #[codec(index = 0)]
     Bond(
+        // The controller to use
+        // on polkadot this is of type `MultiAddress<AcountId, AccountIndex>`
         Source,
-        #[codec(compact)] Balance,
+        CompactBalance,
         RewardDestination<AccountId>,
     ),
 
@@ -48,12 +63,12 @@ pub enum StakingCall<AccountId: Encode, Balance: Encode, Source: Encode> {
     ///
     /// The dispatch origin for this call must be _Signed_ by the stash, not the controller.
     #[codec(index = 1)]
-    BondExtra(#[codec(compact)] Balance),
+    BondExtra(CompactBalance),
     /// The [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
     #[codec(index = 2)]
-    Unbond(#[codec(compact)] Balance),
+    Unbond(CompactBalance),
     /// The [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
@@ -68,6 +83,7 @@ pub enum StakingCall<AccountId: Encode, Balance: Encode, Source: Encode> {
 
 /// A destination account for payment.
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum RewardDestination<AccountId> {
     /// Pay into the stash account, increasing the amount at stake accordingly.
     Staked,
@@ -83,7 +99,8 @@ pub enum RewardDestination<AccountId> {
 
 /// The `pallet_staking` configuration for a particular chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct StakingConfig {
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct StakingConfig<AccountId, Balance> {
     /// The index of `pallet_index` within the parachain's runtime
     pub pallet_index: u32,
     /// The limitation to the number of fund-chunks that can be scheduled to be unlocked via `unbond`.
@@ -93,8 +110,18 @@ pub struct StakingConfig {
     pub max_unlocking_chunks: u32,
     /// Counter for the sent `unbond` calls.
     pub pending_unbond_calls: u32,
+    /// The configured reward destination
+    pub reward_destination: RewardDestination<AccountId>,
+    /// The specified `minimum_balance` specified the parachain's `T::Currency`
+    pub minimum_balance: Balance,
 }
-
-pub enum StakingSupport {
-    None,
+/// Outcome of an XCM staking execution.
+#[derive(Clone, Encode, Decode, Eq, PartialEq, Debug)]
+pub enum StakingOutcome {
+    /// Staking is not supported for the given asset
+    ///
+    /// No `StakingConfig` found
+    NotSupported,
+    /// Outcome of the executed staking xcm routine
+    XcmOutcome(XcmOutcome),
 }

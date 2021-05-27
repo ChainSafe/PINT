@@ -17,7 +17,9 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    use crate::traits::BalanceEncoder;
     pub use crate::traits::RemoteAssetManager;
+    use crate::types::StakingConfig;
     use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
     use cumulus_primitives_core::ParaId;
     use frame_support::{
@@ -31,6 +33,8 @@ pub mod pallet {
     use xcm_executor::traits::Convert as XcmConvert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
+
+    type BalanceEncoded = Vec<u8>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config + pallet_staking::Config {
@@ -52,7 +56,8 @@ pub mod pallet {
         /// Convert `Self::Account` to `AccountId32`
         type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
 
-        // type BalanceConvert: Convert< >
+        /// Converts the local `Balance` type into the representation expected on the asset's parachain
+        type BalanceEncoder: BalanceEncoder<Self::AssetId, Self::Balance>;
 
         /// The native asset id
         #[pallet::constant]
@@ -90,21 +95,28 @@ pub mod pallet {
     // TODO: store xcm query id with unbond procedures?
 
     /// The index of `pallet_staking` in the runtime of the parachain.
+    // TODO: Location as key?
     #[pallet::storage]
-    pub type PalletStakingIndex<T: Config> =
-        StorageMap<_, Twox64Concat, <T as Config>::AssetId, u8, OptionQuery>;
+    pub type AssetStakingConfig<T: Config> = StorageMap<
+        _,
+        Twox64Concat,
+        <T as Config>::AssetId,
+        // TODO: this assumes the same balance type
+        StakingConfig<T::AccountId, T::Balance>,
+        OptionQuery,
+    >;
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
         /// key-value pairs for the `PalletStakingIndex` storage map
-        pub staking_indices: Vec<(T::AssetId, u8)>,
+        pub staking_configs: Vec<(T::AssetId, StakingConfig<T::AccountId, T::Balance>)>,
     }
 
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T> {
         fn default() -> Self {
             Self {
-                staking_indices: Default::default(),
+                staking_configs: Default::default(),
             }
         }
     }
