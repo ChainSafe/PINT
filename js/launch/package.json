@@ -13,6 +13,7 @@
     "typescript": "^4.2.4"
   },
   "dependencies": {
+    "find-up": "^5.0.0",
     "polkadot-launch": "1.5.0"
   },
   "scripts": {
