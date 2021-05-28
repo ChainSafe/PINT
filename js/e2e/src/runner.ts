@@ -1,33 +1,106 @@
 /**
  * Runner extensions
  */
-import { Config, Extrinsic } from "./config";
 import { ISubmittableResult } from "@polkadot/types/types";
 import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { Keyring } from "@polkadot/keyring";
+import { KeyringPair } from "@polkadot/keyring/types";
+import { typesBundle } from "@pint/types";
+import { Config, Extrinsic } from "./config";
+import { launch } from "./launch";
+
+// Extrinsics builder
+type Builder = (api: ApiPromise) => Extrinsic[];
+
+// Message of launching complete
+const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 /**
  * E2E runner
  */
-export default class Runner {
-    private config: Config;
+export default class Runner implements Config {
+    public api: ApiPromise;
+    public pair: KeyringPair;
+    public exs: Extrinsic[];
 
-    constructor(config: Config) {
-        this.config = config;
+    /**
+     * run E2E tests
+     *
+     * @param {Builder} exs - Extrinsic builder
+     * @param {string} ws - "ws://0.0.0.0:9988" by default
+     * @param {string} uri - "//Alice" by default
+     * @returns {Promise<Runner>}
+     */
+    static async run(
+        exs: Builder,
+        ws: string = "ws://0.0.0.0:9988",
+        uri: string = "//Alice"
+    ): Promise<void> {
+        const ps = await launch("inherit");
+        ps.stdout.on("data", async (chunk: string) => {
+            console.log(`chunk: ${chunk}`);
+            if (chunk.includes(LAUNCH_COMPLETE)) {
+                console.log("boot e2e tests...");
+                const runner = await Runner.build(exs, ws, uri);
+                await runner.runTxs();
+            }
+        });
+
+        // Kill all processes when exiting.
+        process.on("exit", () => {
+            ps.send("exit");
+        });
+
+        // Handle ctrl+c to trigger `exit`.
+        process.on("SIGINT", function () {
+            ps.send("exit");
+            process.exit(2);
+        });
     }
 
     /**
-     * Run e2e tests
+     * Build runner
+     *
+     * @param {string} ws - "ws://0.0.0.0:9988" by default
+     * @param {string} uri - "//Alice" by default
+     * @param {Extrinsic[]} exs - extrinsics
+     * @returns {Promise<Runner>}
      */
-    public run() {
-        this.config.exs.forEach(async (ex: Extrinsic) => {
+    static async build(
+        exs: Builder,
+        ws: string = "ws://0.0.0.0:9988",
+        uri: string = "//Alice"
+    ): Promise<Runner> {
+        const provider = new WsProvider(ws);
+        const keyring = new Keyring({ type: "sr25519" });
+        const pair = keyring.addFromUri(uri);
+        const api = await ApiPromise.create({ provider, typesBundle });
+
+        return new Runner({ api, pair, exs: exs(api) });
+    }
+
+    constructor(config: Config) {
+        this.api = config.api;
+        this.pair = config.pair;
+        this.exs = config.exs;
+    }
+
+    /**
+     * Execute transactions
+     *
+     * @returns void
+     */
+    public async runTxs(): Promise<void> {
+        this.exs.forEach(async (ex: Extrinsic) => {
             console.log(`run extrinsic ${ex.pallet}.${ex.call}...`);
             console.log(`\t arguments: ${JSON.stringify(ex.args)}`);
 
             if (ex.block) await this.waitBlock(ex.block);
             await this.timeout(
-                this.config.api.tx[ex.pallet]
+                this.api.tx[ex.pallet]
                     [ex.call](...ex.args)
-                    .signAndSend(this.config.pair, (res) => {
+                    .signAndSend(this.pair, (res) => {
                         this.checkError(res);
                     }),
                 ex.timeout
@@ -35,6 +108,10 @@ export default class Runner {
                 throw e;
             });
         });
+
+        // exit
+        console.log("COMPLETE TESTS!");
+        process.exit(0);
     }
 
     /**
@@ -101,7 +178,7 @@ export default class Runner {
 
                         if ((value.event.data[0] as DispatchError).isModule) {
                             reject(
-                                this.config.api.registry.findMetaError(
+                                this.api.registry.findMetaError(
                                     (value.event
                                         .data[0] as DispatchError).asModule.toU8a()
                                 )

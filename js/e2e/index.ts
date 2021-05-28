@@ -1,18 +1,24 @@
 /**
  * E2E tests for PINT
  */
+import { Runner, Extrinsic } from "./src";
+import { ApiPromise } from "@polkadot/api";
 
-/**
- * Extrinsic definition
- */
-export interface Extrinsic {
-    pallet: string;
-    call: string;
-    args: any[];
-    timeout?: undefined | number;
-}
+// Tests
+const TESTS = (api: ApiPromise): Extrinsic[] => [
+    {
+        pallet: "assetIndex",
+        call: "addAsset",
+        args: [
+            42,
+            1000000,
+            api.createType("AssetAvailability" as any),
+            1000000,
+        ],
+    },
+];
 
-/**
- * Traverse all extrinsics
- */
-export async function run(exs: Extrinsic[]) {}
+// main
+(async () => {
+    await Runner.run(TESTS);
+})();

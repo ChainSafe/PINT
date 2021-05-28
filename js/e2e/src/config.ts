@@ -15,6 +15,9 @@ export interface Extrinsic {
     timeout?: number;
 }
 
+/**
+ * The config of e2e tests
+ */
 export interface Config {
     api: ApiPromise;
     pair: KeyringPair;
