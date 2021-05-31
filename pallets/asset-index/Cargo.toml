@@ -21,6 +21,15 @@ std = [
     'xcm/std',
     'xcm-executor/std',
 ]
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'sp-runtime/runtime-benchmarks',
+    'frame-support/runtime-benchmarks',
+    'pallet-remote-asset-manager/runtime-benchmarks',
+    'pallet-asset-depository/runtime-benchmarks',
+    'pallet-price-feed/runtime-benchmarks',
+]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -44,6 +53,12 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate'
+branch = 'rococo-v1'
+optional = true
 
 [dependencies.xcm]
 git = "https://github.com/paritytech/polkadot"

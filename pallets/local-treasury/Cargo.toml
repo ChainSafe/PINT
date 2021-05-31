@@ -15,6 +15,12 @@ std = [
     'frame-support/std',
     'frame-system/std',
 ]
+runtime-benchmarks = [
+    'codec/std',
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks',
+]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -32,6 +38,13 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
 
 [dev-dependencies]
 serde = { version = "1.0.101" }

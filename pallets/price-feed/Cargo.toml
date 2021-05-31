@@ -17,6 +17,12 @@ std = [
     'frame-system/std',
     'pallet-chainlink-feed/std',
 ]
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks',
+    # 'pallet-chainlink-feed/runtime-benchmarks',
+]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -46,6 +52,13 @@ branch = "substrate-v3"
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
 
 [dev-dependencies.pallet-balances]
 default-features = false
