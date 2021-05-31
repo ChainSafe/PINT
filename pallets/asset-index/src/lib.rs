@@ -161,6 +161,8 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
+        /// Thrown when to withdrawals are availablee to complete
+        NoPendingWithdrawals
     }
 
     #[pallet::hooks]
