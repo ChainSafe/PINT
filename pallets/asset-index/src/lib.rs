@@ -15,6 +15,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod traits;
 mod types;
 
@@ -87,7 +89,7 @@ pub mod pallet {
             Self::Balance,
         >;
         /// Type used to identify assets
-        type AssetId: Parameter + Member;
+        type AssetId: Parameter + Member + From<u32> + Copy;
         /// Handles asset depositing and withdrawing from sovereign user accounts
         type MultiAssetDepository: MultiAssetDepository<
             Self::AssetId,

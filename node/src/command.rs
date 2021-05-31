@@ -258,6 +258,17 @@ pub fn run() -> Result<()> {
 
             Ok(())
         }
+        Some(Subcommand::Benchmark(params)) => {
+            if cfg!(feature = "runtime-benchmarks") {
+                let runner = cli.create_runner(params)?;
+
+                runner.sync_run(|config| params.run::<Block, crate::service::Executor>(config))
+            } else {
+                Err("Benchmarking wasn't enabled when building the node. \
+                     You can enable it with `--features runtime-benchmarks`."
+                    .into())
+            }
+        }
         None => {
             let runner = cli.create_runner(&*cli.run)?;
 
