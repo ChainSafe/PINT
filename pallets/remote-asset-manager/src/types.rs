@@ -10,6 +10,7 @@ use crate::traits::BalanceEncoder;
 use frame_support::sp_std::marker::PhantomData;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+use xcm::opaque::v0::Outcome;
 
 pub struct TransactCall<Call: Encode> {
     /// The index of the call's pallet within the runtime.
@@ -45,6 +46,8 @@ impl<AssetId> BalanceEncoder<AssetId, u128> for CompactU128BalanceEncoder<AssetI
 }
 
 /// Represents dispatchable calls of the FRAME `pallet_staking` pallet.
+///
+/// *NOTE*: `CompactBalance` is expected to encode with `HasCompact`
 #[derive(Encode)]
 pub enum StakingCall<AccountId: Encode, CompactBalance: Encode, Source: Encode> {
     /// The [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) extrinsic.
@@ -114,6 +117,7 @@ pub struct StakingConfig<AccountId, Balance> {
     pub reward_destination: RewardDestination<AccountId>,
     /// The specified `minimum_balance` specified the parachain's `T::Currency`
     pub minimum_balance: Balance,
+    // TODO add minumum (un)bond  that has to be met for executing XCM (un)bonding calls
 }
 /// Outcome of an XCM staking execution.
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Debug)]
@@ -124,4 +128,10 @@ pub enum StakingOutcome {
     NotSupported,
     /// Outcome of the executed staking xcm routine
     XcmOutcome(XcmOutcome),
+}
+
+impl From<XcmOutcome> for StakingOutcome {
+    fn from(outcome: XcmOutcome) -> Self {
+        StakingOutcome::XcmOutcome(outcome)
+    }
 }

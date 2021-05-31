@@ -17,19 +17,25 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::traits::BalanceEncoder;
-    pub use crate::traits::RemoteAssetManager;
-    use crate::types::StakingConfig;
+    pub use crate::traits::*;
+    pub use crate::types::*;
+    use crate::types::{RewardDestination, StakingCall, StakingConfig, StakingOutcome};
     use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
+        sp_runtime::MultiAddress,
+        sp_std::{prelude::*, result::Result},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use xcm::v0::{ExecuteXcm, MultiLocation};
+    use xcm::opaque::v0::SendXcm;
+    use xcm::v0::{
+        Error as XcmError, ExecuteXcm, MultiAsset, MultiLocation, Order, OriginKind, Xcm,
+    };
+    use xcm::DoubleEncoded;
     use xcm_executor::traits::Convert as XcmConvert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -78,12 +84,15 @@ pub mod pallet {
         /// Executor for cross chain messages.
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
 
-        /// The overarching call type; we assume sibling chains use the same type.
-        type Call: From<pallet_staking::Call<Self>> + Encode;
+        /// How to send an onward XCM message.
+        type XcmSender: SendXcm;
 
-        /// The origin type that can be converted into a cumulus origin
-        type Origin: From<<Self as frame_system::Config>::Origin>
-            + Into<Result<CumulusOrigin, <Self as Config>::Origin>>;
+        // /// The overarching call type; we assume sibling chains use the same type.
+        // type Call: From<pallet_staking::Call<Self>> + Encode;
+        //
+        // /// The origin type that can be converted into a cumulus origin
+        // type Origin: From<<Self as frame_system::Config>::Origin>
+        //     + Into<Result<CumulusOrigin, <Self as Config>::Origin>>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
@@ -101,7 +110,7 @@ pub mod pallet {
         _,
         Twox64Concat,
         <T as Config>::AssetId,
-        // TODO: this assumes the same balance type
+        // TODO: this assumes the same balance type, possibly conversion necessary
         StakingConfig<T::AccountId, T::Balance>,
         OptionQuery,
     >;
@@ -146,12 +155,95 @@ pub mod pallet {
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
         }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn bond(
+            _origin: OriginFor<T>,
+            dest: MultiLocation,
+            asset: T::AssetId,
+            weight: u64,
+            amount: T::Balance,
+        ) -> DispatchResultWithPostInfo {
+            log::debug!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+
+            let account: T::AccountId = T::SelfParaId::get().into_account();
+            let bond = StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::Bond(
+                account.into(),
+                T::BalanceEncoder::encoded_balance(&asset, amount).expect("Should not fail"),
+                RewardDestination::Staked,
+            );
+            let xcm = Xcm::WithdrawAsset {
+                assets: vec![MultiAsset::ConcreteFungible {
+                    id: MultiLocation::Null,
+                    amount: 1_000,
+                }],
+                effects: vec![Order::BuyExecution {
+                    fees: MultiAsset::ConcreteFungible {
+                        id: MultiLocation::Null,
+                        amount: 1_000,
+                    },
+                    // weight allowed to spent
+                    weight,
+                    debt: 0,
+                    halt_on_error: false,
+                    xcm: vec![Xcm::Transact {
+                        origin_type: OriginKind::SovereignAccount,
+                        require_weight_at_most: weight / 2,
+                        call: bond.encode().into(),
+                    }],
+                }],
+            };
+            let result = T::XcmSender::send_xcm(dest, xcm);
+            log::debug!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            Ok(().into())
+        }
     }
 
     impl<T: Config> Pallet<T> {
         /// Transacts a `bond_extra` extrinsic
-        pub fn xcm_bond_extra(dest: MultiLocation) {
+        pub fn xcm_bond_extra(
+            dest: MultiLocation,
+            asset: T::AssetId,
+            amount: T::Balance,
+        ) -> Result<(), XcmError> {
             log::debug!(target: "pint_xcm", "Attempting bond_extra  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+
+            if let Some(config) = AssetStakingConfig::<T>::get(&asset) {
+                // staking is supported
+                let call =
+                    StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::BondExtra(
+                        T::BalanceEncoder::encoded_balance(&asset, amount)
+                            .expect("Should not fail"),
+                    );
+                // 1. first withdraw asset from PINT's parachain account into a temporary holding
+                // 2. buy xcm execution for executing staking calls
+                // 3. execute call
+                let xcm = Xcm::WithdrawAsset {
+                    assets: vec![MultiAsset::ConcreteFungible {
+                        id: MultiLocation::Null,
+                        amount: 1_000,
+                    }],
+                    effects: vec![Order::BuyExecution {
+                        fees: MultiAsset::ConcreteFungible {
+                            id: MultiLocation::Null,
+                            amount: 1_000,
+                        },
+                        // weight allowed to spent
+                        weight: 10_000_000_000,
+                        debt: 0,
+                        halt_on_error: false,
+                        xcm: vec![Xcm::Transact {
+                            origin_type: OriginKind::SovereignAccount,
+                            require_weight_at_most: 500_000_000,
+                            call: call.encode().into(),
+                        }],
+                    }],
+                };
+
+                Ok(T::XcmSender::send_xcm(dest, xcm)?)
+            } else {
+                Ok(())
+            }
         }
     }
 

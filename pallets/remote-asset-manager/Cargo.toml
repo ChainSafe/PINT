@@ -11,6 +11,7 @@ version = '0.0.1'
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
@@ -26,6 +27,7 @@ runtime-benchmarks = []
 
 [dependencies]
 log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.101", features = ["derive"], optional = true }
 
 [dependencies.codec]
 default-features = false
@@ -70,9 +72,6 @@ branch = 'rococo-v1'
 default-features = false
 git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
-
-[dev-dependencies]
-serde = { version = "1.0.101" }
 
 [dev-dependencies.xcm-builder]
 default-features = false
