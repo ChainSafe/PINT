@@ -280,7 +280,6 @@ runtime-benchmarks = [
 	'frame-system/runtime-benchmarks',
     'pallet-asset-depository/runtime-benchmarks',
     'pallet-asset-index/runtime-benchmarks',
-    'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',

@@ -536,8 +536,10 @@ parameter_types! {
 }
 
 impl pallet_asset_index::Config for Runtime {
-    // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    // TODO:
+    //
+    // Using signed as the admin origin for testing now
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;
@@ -819,6 +821,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+            add_benchmark!(params, batches, pallet_asset_index, AssetIndex);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
