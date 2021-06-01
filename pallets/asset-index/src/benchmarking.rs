@@ -1,8 +1,5 @@
-//! benchmarks
-//!
-//! add_asset
-//! deposit
-//! withdraw
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
 use crate::types::{AssetAvailability, IndexAssetData};
 use frame_benchmarking::{benchmarks, whitelisted_caller};
@@ -44,6 +41,9 @@ benchmarks! {
         // assert_eq!(<Pallet<T>>::index_token_issuance(), total);
     }
 
+    // TODO:
+    //
+    // AssetPriceFeed not found
     deposit {
         let asset_id = 42.into();
         let caller: T::AccountId = whitelisted_caller();
@@ -71,4 +71,16 @@ benchmarks! {
             ))
         );
     }
+
+    // TODO:
+    //
+    // Too complex and incompleted
+    //
+    // withdraw {
+    //
+    // }: _(
+    //
+    // ) verify {
+    //
+    // }
 }
