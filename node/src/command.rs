@@ -259,6 +259,7 @@ pub fn run() -> Result<()> {
 
             Ok(())
         }
+        #[cfg(feature = "runtime-benchmarks")]
         Some(Subcommand::Benchmark(params)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(params)?;
