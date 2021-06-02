@@ -1,9 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use codec::Encode;
-use frame_support::dispatch::Output;
-use frame_support::{dispatch::DispatchResult, sp_runtime::RuntimeDebug, sp_std::vec::Vec};
+use frame_support::{dispatch::DispatchResult, sp_std::vec::Vec};
 
 /// Facility for remote asset transactions.
 pub trait RemoteAssetManager<AccountId, AssetId, Balance> {

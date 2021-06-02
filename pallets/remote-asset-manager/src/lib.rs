@@ -19,13 +19,12 @@ mod types;
 pub mod pallet {
     pub use crate::traits::*;
     pub use crate::types::*;
-    use cumulus_pallet_xcm::{ensure_sibling_para, Origin as CumulusOrigin};
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::{
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup},
+            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
             MultiAddress,
         },
         sp_std::{prelude::*, result::Result},
@@ -34,15 +33,11 @@ pub mod pallet {
     use frame_system::pallet_prelude::*;
     use xcm::{
         opaque::v0::SendXcm,
-        v0::{Error as XcmError, ExecuteXcm, MultiAsset, MultiLocation, Order, OriginKind, Xcm},
-        DoubleEncoded,
+        v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-
-    // The type to lookup the account from
-    type LookupOf<T> = <T as frame_system::Config>::Lookup;
 
     type PalletStakingCall<T> = StakingCall<AccountIdFor<T>, WrappedEncoded, WrappedEncoded>;
 
@@ -200,8 +195,7 @@ pub mod pallet {
             _origin: OriginFor<T>,
             dest: MultiLocation,
             asset: T::AssetId,
-            weight: u64,
-            amount: T::Balance,
+            controller: T::Balance,
         ) -> DispatchResultWithPostInfo {
             log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
 
@@ -214,7 +208,7 @@ pub mod pallet {
                     .expect("Should not fail")
                     .into(),
                 // amount
-                T::BalanceEncoder::encoded_with(&asset, amount)
+                T::BalanceEncoder::encoded_with(&asset, controller)
                     .expect("Should not fail")
                     .into(),
                 // rewards

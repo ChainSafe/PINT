@@ -15,7 +15,6 @@ use frame_support::{
 };
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
-use xcm::opaque::v0::Outcome;
 
 /// A Wrapper around an already encoded item that does not include the item's length when encoded
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
