@@ -198,22 +198,21 @@ mod tests {
     use frame_support::traits::Imbalance;
     use frame_support::traits::OnUnbalanced;
     use frame_support::{
-        assert_ok, parameter_types,
-        traits::{Currency, FindAuthor, Get, OnFinalize, OnInitialize, OneSessionHandler},
+        parameter_types,
+        traits::{Currency, FindAuthor,OneSessionHandler},
         weights::constants::RocksDbWeight,
-        IterableStorageMap, StorageDoubleMap, StorageMap, StorageValue,
     };
     use pallet_staking as staking;
     use pallet_staking::*;
     use sp_core::H256;
-    use sp_io;
     use sp_runtime::{
         curve::PiecewiseLinear,
         testing::{Header, TestXt, UintAuthorityId},
-        traits::{IdentityLookup, Zero},
+        traits::{IdentityLookup},
         Perbill,
     };
     use std::{cell::RefCell, collections::HashSet};
+    use xcm::DoubleEncoded;
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
@@ -276,7 +275,10 @@ mod tests {
             System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
             Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
             Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
-            Staking: staking::{Pallet, Call, Storage, Event<T>},
+
+            // use index 7
+            Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
+
             Session: pallet_session::{Pallet, Call, Storage, Event},
         }
     );
@@ -439,10 +441,94 @@ mod tests {
         Call: From<LocalCall>,
     {
         type OverarchingCall = Call;
-        type Extrinsic = Extrinsic;
+        type Extrinsic = TestXt<Call, ()>;
     }
 
-    pub type Extrinsic = TestXt<Call, ()>;
-    pub(crate) type StakingCall = pallet_staking::Call<Test>;
-    pub(crate) type TestRuntimeCall = <Test as frame_system::Config>::Call;
+    type PalletStakingCall = pallet_staking::Call<Test>;
+    type RemoteStakingCall = StakingCall<AccountId, CompactEncoded, AccountId>;
+
+    #[test]
+    fn test_pallet_staking_call_codec() {
+        let bond_extra = PalletStakingCall::bond_extra(100);
+        let call: Call = bond_extra.clone().into();
+        let mut encoded: DoubleEncoded<Call> = call.encode().into();
+        assert!(encoded.ensure_decoded().is_ok());
+        assert_eq!(encoded.take_decoded().unwrap(), call)
+    }
+
+    #[test]
+    fn can_encode_decode_bond_extra() {
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+        let remote_bond_extra = RemoteStakingCall::BondExtra(balance);
+        let bond_extra = PalletStakingCall::bond_extra(100);
+
+        let remote_pallet_call_encoded = remote_bond_extra.encode();
+        let call_encoded = bond_extra.encode();
+        assert_eq!(remote_pallet_call_encoded, call_encoded);
+
+        let bond_extra_decoded =
+            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(bond_extra, bond_extra_decoded);
+
+        let runtime_call: Call = bond_extra.into();
+        let remote_runtime_call_encoded = remote_bond_extra.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
+
+    #[test]
+    fn can_encode_decode_bond() {
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+        let account = 1337;
+
+        let remote_bond =
+            RemoteStakingCall::Bond(account, balance, super::RewardDestination::Stash);
+        let bond = PalletStakingCall::bond(account, 100, pallet_staking::RewardDestination::Stash);
+
+        let remote_pallet_call_encoded = remote_bond.encode();
+        let call_encoded = bond.encode();
+        assert_eq!(remote_pallet_call_encoded, call_encoded);
+
+        let bond_extra_decoded =
+            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(bond, bond_extra_decoded);
+
+        let runtime_call: Call = bond.into();
+        let remote_runtime_call_encoded = remote_bond.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
+
+    #[test]
+    fn can_encode_decode_unbond() {
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+
+        let remote_unbond = RemoteStakingCall::Unbond(balance);
+        let unbond = PalletStakingCall::unbond(100);
+
+        let remote_pallet_call_encoded = remote_unbond.encode();
+        let call_encoded = unbond.encode();
+        assert_eq!(remote_pallet_call_encoded, call_encoded);
+
+        let bond_extra_decoded =
+            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(unbond, bond_extra_decoded);
+
+        let runtime_call: Call = unbond.into();
+        let remote_runtime_call_encoded = remote_unbond.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
 }
