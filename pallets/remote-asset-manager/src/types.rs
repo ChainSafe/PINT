@@ -7,7 +7,7 @@ use frame_support::{dispatch::Output, sp_runtime::RuntimeDebug, sp_std::prelude:
 use xcm::v0::Outcome as XcmOutcome;
 
 use crate::traits::BalanceEncoder;
-use crate::CompactEncoded;
+use crate::EncodedBalance;
 use frame_support::sp_std::marker::PhantomData;
 use frame_support::weights::constants::RocksDbWeight;
 use frame_support::weights::Weight;
@@ -39,7 +39,7 @@ impl<Call: EncodeLike> Encode for RuntimeCall<Call> {
 pub struct CompactU128BalanceEncoder<T>(PhantomData<T>);
 
 impl<AssetId> BalanceEncoder<AssetId, u128> for CompactU128BalanceEncoder<AssetId> {
-    fn encoded_balance(_: &AssetId, balance: u128) -> Option<CompactEncoded> {
+    fn encoded_balance(_: &AssetId, balance: u128) -> Option<EncodedBalance> {
         // Compact(balance).encode()
         let encoded =
             <<u128 as codec::HasCompact>::Type as codec::EncodeAsRef<'_, u128>>::RefType::from(
@@ -445,7 +445,7 @@ mod tests {
     }
 
     type PalletStakingCall = pallet_staking::Call<Test>;
-    type RemoteStakingCall = StakingCall<AccountId, CompactEncoded, AccountId>;
+    type RemoteStakingCall = StakingCall<AccountId, EncodedBalance, AccountId>;
 
     #[test]
     fn test_pallet_staking_call_codec() {

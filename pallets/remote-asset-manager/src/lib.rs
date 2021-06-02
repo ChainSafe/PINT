@@ -151,7 +151,43 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
+        pub fn transfer(origin: OriginFor<T>,    dest: MultiLocation, asset: T::AssetId, amount: T::Balance, weight: u64) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin)?;
+            let account: T::AccountId = T::SelfParaId::get().into_account();
+
+            log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  account);
+
+            let amount = T::BalanceEncoder::encoded_balance(&asset, amount).expect("Should not fail");
+
+            #[derive(codec::Encode)]
+            enum TransferCall<AccountId, Value> {
+                #[codec(index = 0)]
+                Transfer(
+                    MultiAddress<AccountId, ()>,
+                    Value
+                )
+            }
+
+            let transfer = TransferCall::Transfer(
+                who.into(),
+               amount
+            );
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: weight,
+                call: RuntimeCall {
+                    pallet_index: 4,
+                    call: transfer
+                }
+                    .encode()
+                    .into(),
+            };
+
+            let result = T::XcmSender::send_xcm(dest, xcm);
+            log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            Self::deposit_event(Event::SentBond(result));
+
             Ok(().into())
         }
 
@@ -169,8 +205,11 @@ pub mod pallet {
 
             let account: T::AccountId = T::SelfParaId::get().into_account();
             let bond = StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::Bond(
+                // controller
                 account.into(),
+                // amount
                 T::BalanceEncoder::encoded_balance(&asset, amount).expect("Should not fail"),
+                // rewards
                 RewardDestination::Staked,
             );
 
