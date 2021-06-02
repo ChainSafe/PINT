@@ -39,7 +39,12 @@ pub mod pallet {
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
+    // A `pallet_staking` dispatchable on another chain
     type PalletStakingCall<T> = StakingCall<AccountIdFor<T>, WrappedEncoded, WrappedEncoded>;
+
+    // A `pallet_proxy` dispatchable on another chain
+    // expects a `ProxyType` of u8 and blocknumber of u32
+    type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, u8, u32>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {

@@ -79,6 +79,41 @@ where
     }
 }
 
+/// The index of `pallet_staking` in the polkadot runtime
+pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
+
+/// The identifier the `ProxyType::Staking` variant encodes to
+pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 6u8;
+
+/// Represents dispatchable calls of the FRAME `pallet_proxy` pallet.
+#[derive(Encode)]
+pub enum ProxyCall<AccountId, ProxyType, BlockNumber> {
+    /// The [`add_proxy`](https://crates.parity.io/pallet_proxy/pallet/enum.Call.html#variant.add_proxy) extrinsic.
+    ///
+    /// Register a proxy account for the sender that is able to make calls on its behalf.
+    #[codec(index = 1)]
+    AddProxy {
+        /// The account that the `caller` would like to make a proxy.
+        proxy: AccountId,
+        /// The permissions allowed for this proxy account.
+        proxy_type: ProxyType,
+        /// The announcement period required of the initial proxy. Will generally be zero
+        delay: BlockNumber,
+    },
+}
+
+impl<AccountId: Encode, ProxyType: Encode, BlockNumber: Encode>
+    ProxyCall<AccountId, ProxyType, BlockNumber>
+{
+    /// Wraps the proxy pallet call into a `RuntimeCall`
+    pub fn into_runtime_call(self, pallet_index: u8) -> RuntimeCall<Self> {
+        RuntimeCall {
+            pallet_index,
+            call: self,
+        }
+    }
+}
+
 /// Represents dispatchable calls of the FRAME `pallet_staking` pallet.
 ///
 /// *NOTE*: `CompactBalance` is expected to encode with `HasCompact`
@@ -224,8 +259,9 @@ mod tests {
     use super::*;
 
     use frame_election_provider_support::onchain;
-    use frame_support::traits::Imbalance;
+    use frame_support::sp_runtime::traits::BlakeTwo256;
     use frame_support::traits::OnUnbalanced;
+    use frame_support::traits::{Imbalance, InstanceFilter};
     use frame_support::{
         parameter_types,
         traits::{Currency, FindAuthor, OneSessionHandler},
@@ -305,10 +341,13 @@ mod tests {
             Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
             Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 
-            // use index 7
+            // use polkadot index 7
             Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
 
             Session: pallet_session::{Pallet, Call, Storage, Event},
+
+            // use polkadot index 29
+            Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 29,
         }
     );
 
@@ -463,6 +502,53 @@ mod tests {
         type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
         type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
         type WeightInfo = ();
+    }
+
+    parameter_types! {
+        pub const ProxyDepositBase: Balance = 100;
+        pub const ProxyDepositFactor: Balance = 100;
+        pub const MaxProxies: u16 = 32;
+        pub const AnnouncementDepositBase: Balance = 100;
+        pub const AnnouncementDepositFactor: Balance = 100;
+        pub const MaxPending: u16 = 32;
+    }
+
+    /// The type used to represent the kinds of proxying allowed.
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+    pub enum ProxyType {
+        Any = 0,
+        NonTransfer = 1,
+        Governance = 2,
+        Staking = 3,
+        // Skip 4 as it is now removed (was SudoBalances)
+        IdentityJudgement = 5,
+        CancelProxy = 6,
+    }
+
+    impl Default for ProxyType {
+        fn default() -> Self {
+            Self::Any
+        }
+    }
+    impl InstanceFilter<Call> for ProxyType {
+        fn filter(&self, _: &Call) -> bool {
+            true
+        }
+    }
+
+    impl pallet_proxy::Config for Test {
+        type Event = Event;
+        type Call = Call;
+        type Currency = Balances;
+        type ProxyType = ProxyType;
+        type ProxyDepositBase = ProxyDepositBase;
+        type ProxyDepositFactor = ProxyDepositFactor;
+        type MaxProxies = MaxProxies;
+        type WeightInfo = ();
+        type MaxPending = MaxPending;
+        type CallHasher = BlakeTwo256;
+        type AnnouncementDepositBase = AnnouncementDepositBase;
+        type AnnouncementDepositFactor = AnnouncementDepositFactor;
     }
 
     impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
