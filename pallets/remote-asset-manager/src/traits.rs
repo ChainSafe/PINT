@@ -28,26 +28,8 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
     fn withdraw_unbonded(caller: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
 }
 
-/// A Wrapper around an encoded balance that does not encode its length
-#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
-pub struct EncodedBalance(pub Vec<u8>);
-
-impl Encode for EncodedBalance {
-    fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
-        for item in &self.0 {
-            item.encode_to(dest);
-        }
-    }
-}
-
-impl From<Vec<u8>> for EncodedBalance {
-    fn from(encoded: Vec<u8>) -> Self {
-        EncodedBalance(encoded)
-    }
-}
-
-/// Helper trait to encode the local Balance into the expected format on the target chain
-pub trait BalanceEncoder<AssetId, Balance> {
-    /// Convert the balance based on the given asset and append it to the destination.
-    fn encoded_balance(asset: &AssetId, balance: Balance) -> Option<EncodedBalance>;
+/// A helper to encode an item using the provided context
+pub trait EncodeWith<T, I> {
+    /// Encodes the given info if possible
+    fn encoded_with(ctx: &T, input: I) -> Option<Vec<u8>>;
 }

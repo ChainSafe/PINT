@@ -2,18 +2,38 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 //! Additional types for the remote asset manager pallet
-use codec::{Decode, Encode, EncodeLike};
-use frame_support::{dispatch::Output, sp_runtime::RuntimeDebug, sp_std::prelude::*};
+use codec::{Compact, Decode, Encode, EncodeLike, HasCompact};
 use xcm::v0::Outcome as XcmOutcome;
 
-use crate::traits::BalanceEncoder;
-use crate::EncodedBalance;
-use frame_support::sp_std::marker::PhantomData;
-use frame_support::weights::constants::RocksDbWeight;
-use frame_support::weights::Weight;
+use crate::EncodeWith;
+use frame_support::{
+    dispatch::Output,
+    sp_runtime::{MultiAddress, RuntimeDebug},
+    sp_std::{marker::PhantomData, prelude::*},
+    weights::constants::RocksDbWeight,
+    weights::Weight,
+};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use xcm::opaque::v0::Outcome;
+
+/// A Wrapper around an already encoded item that does not include the item's length when encoded
+#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
+pub struct WrappedEncoded(pub Vec<u8>);
+
+impl Encode for WrappedEncoded {
+    fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
+        for item in &self.0 {
+            item.encode_to(dest);
+        }
+    }
+}
+
+impl From<Vec<u8>> for WrappedEncoded {
+    fn from(encoded: Vec<u8>) -> Self {
+        WrappedEncoded(encoded)
+    }
+}
 
 /// Represents an extrinsic of a pallet configured inside a runtime
 pub struct RuntimeCall<Call: Encode> {
@@ -38,15 +58,25 @@ impl<Call: EncodeLike> Encode for RuntimeCall<Call> {
 /// Encodes a `u128` using `CompactRef` regardless of the asset id
 pub struct CompactU128BalanceEncoder<T>(PhantomData<T>);
 
-impl<AssetId> BalanceEncoder<AssetId, u128> for CompactU128BalanceEncoder<AssetId> {
-    fn encoded_balance(_: &AssetId, balance: u128) -> Option<EncodedBalance> {
-        // Compact(balance).encode()
-        let encoded =
-            <<u128 as codec::HasCompact>::Type as codec::EncodeAsRef<'_, u128>>::RefType::from(
-                &balance,
-            )
-            .encode();
-        Some(encoded.into())
+impl<AssetId> EncodeWith<AssetId, u128> for CompactU128BalanceEncoder<AssetId> {
+    fn encoded_with(_: &AssetId, balance: u128) -> Option<Vec<u8>> {
+        Some(Compact(balance).encode())
+    }
+}
+
+/// Encodes an `AccountId` as `Multiaddress` regardless of the asset id
+pub struct MultiAddressLookupSourceEncoder<AssetId, AccountId, AccountIndex>(
+    PhantomData<(AssetId, AccountId, AccountIndex)>,
+);
+
+impl<AssetId, AccountId, AccountIndex> EncodeWith<AssetId, AccountId>
+    for MultiAddressLookupSourceEncoder<AssetId, AccountId, AccountIndex>
+where
+    AccountId: Encode,
+    AccountIndex: HasCompact,
+{
+    fn encoded_with(_: &AssetId, account: AccountId) -> Option<Vec<u8>> {
+        Some(MultiAddress::<AccountId, AccountIndex>::from(account).encode())
     }
 }
 
@@ -101,7 +131,7 @@ impl<AccountId: Encode, CompactBalance: Encode, Source: Encode>
     }
 }
 
-/// A destination account for payment.
+/// A destination account for payment. mirrored from `pallet_staking`
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum RewardDestination<AccountId> {
@@ -122,7 +152,7 @@ pub enum RewardDestination<AccountId> {
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct StakingConfig<AccountId, Balance> {
     /// The index of `pallet_index` within the parachain's runtime
-    pub pallet_index: u32,
+    pub pallet_index: u8,
     /// The limitation to the number of fund-chunks that can be scheduled to be unlocked via `unbond`.
     ///
     /// If this is reached, the bonded account _must_ first wait until successful call to
@@ -199,7 +229,7 @@ mod tests {
     use frame_support::traits::OnUnbalanced;
     use frame_support::{
         parameter_types,
-        traits::{Currency, FindAuthor,OneSessionHandler},
+        traits::{Currency, FindAuthor, OneSessionHandler},
         weights::constants::RocksDbWeight,
     };
     use pallet_staking as staking;
@@ -208,7 +238,7 @@ mod tests {
     use sp_runtime::{
         curve::PiecewiseLinear,
         testing::{Header, TestXt, UintAuthorityId},
-        traits::{IdentityLookup},
+        traits::IdentityLookup,
         Perbill,
     };
     use std::{cell::RefCell, collections::HashSet};
@@ -445,7 +475,7 @@ mod tests {
     }
 
     type PalletStakingCall = pallet_staking::Call<Test>;
-    type RemoteStakingCall = StakingCall<AccountId, EncodedBalance, AccountId>;
+    type RemoteStakingCall = StakingCall<AccountId, WrappedEncoded, AccountId>;
 
     #[test]
     fn test_pallet_staking_call_codec() {
@@ -458,7 +488,9 @@ mod tests {
 
     #[test]
     fn can_encode_decode_bond_extra() {
-        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_with(&0, 100)
+            .unwrap()
+            .into();
         let remote_bond_extra = RemoteStakingCall::BondExtra(balance);
         let bond_extra = PalletStakingCall::bond_extra(100);
 
@@ -482,7 +514,9 @@ mod tests {
 
     #[test]
     fn can_encode_decode_bond() {
-        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_with(&0, 100)
+            .unwrap()
+            .into();
         let account = 1337;
 
         let remote_bond =
@@ -509,7 +543,9 @@ mod tests {
 
     #[test]
     fn can_encode_decode_unbond() {
-        let balance = CompactU128BalanceEncoder::<u128>::encoded_balance(&0, 100).unwrap();
+        let balance = CompactU128BalanceEncoder::<u128>::encoded_with(&0, 100)
+            .unwrap()
+            .into();
 
         let remote_unbond = RemoteStakingCall::Unbond(balance);
         let unbond = PalletStakingCall::unbond(100);
