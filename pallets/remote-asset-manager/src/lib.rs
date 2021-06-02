@@ -40,8 +40,6 @@ pub mod pallet {
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
-    type BalanceEncoded = Vec<u8>;
-
     #[pallet::config]
     pub trait Config: frame_system::Config {
         /// The balance type for cross chain transfers
