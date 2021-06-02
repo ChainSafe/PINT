@@ -43,7 +43,7 @@ pub mod pallet {
     type BalanceEncoded = Vec<u8>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_staking::Config {
+    pub trait Config: frame_system::Config {
         /// The balance type for cross chain transfers
         type Balance: Parameter
             + Member
@@ -138,6 +138,7 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
+        SentBond(Result<(), XcmError>),
         Attempted(xcm::v0::Outcome),
         SentBondExtra,
         SentUnbond,
@@ -164,7 +165,9 @@ pub mod pallet {
             weight: u64,
             amount: T::Balance,
         ) -> DispatchResultWithPostInfo {
-            log::debug!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+            log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+
+            let weight = StakingWeights::polkadot();
 
             let account: T::AccountId = T::SelfParaId::get().into_account();
             let bond = StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::Bond(
@@ -172,29 +175,19 @@ pub mod pallet {
                 T::BalanceEncoder::encoded_balance(&asset, amount).expect("Should not fail"),
                 RewardDestination::Staked,
             );
-            let xcm = Xcm::WithdrawAsset {
-                assets: vec![MultiAsset::ConcreteFungible {
-                    id: MultiLocation::Null,
-                    amount: 1_000,
-                }],
-                effects: vec![Order::BuyExecution {
-                    fees: MultiAsset::ConcreteFungible {
-                        id: MultiLocation::Null,
-                        amount: 1_000,
-                    },
-                    // weight allowed to spent
-                    weight,
-                    debt: 0,
-                    halt_on_error: false,
-                    xcm: vec![Xcm::Transact {
-                        origin_type: OriginKind::SovereignAccount,
-                        require_weight_at_most: weight / 2,
-                        call: bond.encode().into(),
-                    }],
-                }],
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: weight.bond_extra * 2,
+                call: bond
+                    .into_runtime_call(POLKADOT_PALLET_STAKING_INDEX)
+                    .encode()
+                    .into(),
             };
+
             let result = T::XcmSender::send_xcm(dest, xcm);
-            log::debug!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            Self::deposit_event(Event::SentBond(result));
             Ok(().into())
         }
     }

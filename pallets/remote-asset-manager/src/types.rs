@@ -8,11 +8,14 @@ use xcm::v0::Outcome as XcmOutcome;
 
 use crate::traits::BalanceEncoder;
 use frame_support::sp_std::marker::PhantomData;
+use frame_support::weights::constants::RocksDbWeight;
+use frame_support::weights::Weight;
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use xcm::opaque::v0::Outcome;
 
-pub struct TransactCall<Call: Encode> {
+/// Represents an extrinsic of a pallet configured inside a runtime
+pub struct RuntimeCall<Call: Encode> {
     /// The index of the call's pallet within the runtime.
     ///
     /// This must be equivalent with the `#[codec(index = <pallet_index>)]` annotation.
@@ -22,9 +25,9 @@ pub struct TransactCall<Call: Encode> {
     pub call: Call,
 }
 
-impl<Call: EncodeLike> EncodeLike for TransactCall<Call> {}
+impl<Call: EncodeLike> EncodeLike for RuntimeCall<Call> {}
 
-impl<Call: EncodeLike> Encode for TransactCall<Call> {
+impl<Call: EncodeLike> Encode for RuntimeCall<Call> {
     fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
         dest.push_byte(self.pallet_index);
         self.call.encode_to(dest)
@@ -84,6 +87,18 @@ pub enum StakingCall<AccountId: Encode, CompactBalance: Encode, Source: Encode> 
     Nominate(Vec<Source>),
 }
 
+impl<AccountId: Encode, CompactBalance: Encode, Source: Encode>
+    StakingCall<AccountId, CompactBalance, Source>
+{
+    /// Wraps the staking pallet call into a `RuntimeCall`
+    pub fn into_runtime_call(self, pallet_index: u8) -> RuntimeCall<Self> {
+        RuntimeCall {
+            pallet_index,
+            call: self,
+        }
+    }
+}
+
 /// A destination account for payment.
 #[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
@@ -117,8 +132,45 @@ pub struct StakingConfig<AccountId, Balance> {
     pub reward_destination: RewardDestination<AccountId>,
     /// The specified `minimum_balance` specified the parachain's `T::Currency`
     pub minimum_balance: Balance,
+    /// The configured weights for `pallet_staking`
+    pub weights: StakingWeights,
     // TODO add minumum (un)bond  that has to be met for executing XCM (un)bonding calls
 }
+
+/// The index of `pallet_staking` in the polkadot runtime
+pub const POLKADOT_PALLET_STAKING_INDEX: u8 = 7u8;
+
+/// Represents an excerpt from the `pallet_staking` weights
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct StakingWeights {
+    /// Weight for `bond` extrinsic
+    pub bond: Weight,
+    /// Weight for `bond_extra` extrinsic
+    pub bond_extra: Weight,
+    /// Weight for `unbond` extrinsic
+    pub unbond: Weight,
+}
+
+impl StakingWeights {
+    /// The weights as defined in `pallet_staking` on polkadot
+    // TODO: import pallet_staking weights directly?
+    pub fn polkadot() -> Self {
+        let weight = RocksDbWeight::get();
+        Self {
+            bond: (75_102_000 as Weight)
+                .saturating_add(weight.reads(5 as Weight))
+                .saturating_add(weight.writes(4 as Weight)),
+            bond_extra: (57_637_000 as Weight)
+                .saturating_add(weight.reads(3 as Weight))
+                .saturating_add(weight.writes(2 as Weight)),
+            unbond: (52_115_000 as Weight)
+                .saturating_add(weight.reads(4 as Weight))
+                .saturating_add(weight.writes(3 as Weight)),
+        }
+    }
+}
+
 /// Outcome of an XCM staking execution.
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Debug)]
 pub enum StakingOutcome {
