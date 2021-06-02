@@ -475,8 +475,8 @@ impl pallet_committee::Config for Runtime {
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
     // Using root as the admin origin for now
-    type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
+    type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
@@ -822,6 +822,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_asset_index, AssetIndex);
+            add_benchmark!(params, batches, pallet_committee, Committee);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
