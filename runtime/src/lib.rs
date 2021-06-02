@@ -40,7 +40,7 @@ use xcm_builder::{
 use xcm_executor::{traits::Convert, Config, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
-use codec::{Decode, Encode};
+use codec::Decode;
 pub use frame_support::{
     construct_runtime, ord_parameter_types, parameter_types,
     traits::{All, IsInVec, Randomness},
@@ -52,16 +52,12 @@ pub use frame_support::{
 };
 use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
+use pallet_remote_asset_manager::{CompactU128BalanceEncoder, MultiAddressLookupSourceEncoder};
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 use xcm_executor::traits::MatchesFungible;
-use cumulus_pallet_xcm::Origin;
-use xcm::opaque::v0::SendXcm;
-use frame_benchmarking::frame_support::pallet_prelude::Get;
-use cumulus_pallet_parachain_system::validate_block::polkadot_parachain::primitives::Id;
-use pallet_remote_asset_manager::CompactU128BalanceEncoder;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -628,15 +624,16 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type AssetId = AssetId;
     type AssetIdConvert = AssetIdConvert;
     type AccountId32Convert = AccountId32Convert;
+    // Encodes balances as u128 before sending calls to other chains
     type BalanceEncoder = CompactU128BalanceEncoder<AssetId>;
+    // Converter for the account lookup mechanism on other chains
+    type LookupSourceEncoder = MultiAddressLookupSourceEncoder<AssetId, AccountId, ()>;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmSender = XcmRouter;
-    // type Call = ();
-    // type Origin = ();
     type Event = Event;
 }
 
