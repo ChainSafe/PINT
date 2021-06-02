@@ -83,7 +83,7 @@ where
 pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
 
 /// The identifier the `ProxyType::Staking` variant encodes to
-pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 6u8;
+pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 
 /// Represents dispatchable calls of the FRAME `pallet_proxy` pallet.
 #[derive(Encode)]
@@ -560,7 +560,9 @@ mod tests {
     }
 
     type PalletStakingCall = pallet_staking::Call<Test>;
+    type PalletProxyCall = pallet_proxy::Call<Test>;
     type RemoteStakingCall = StakingCall<AccountId, WrappedEncoded, AccountId>;
+    type RemoteProxyCall = ProxyCall<AccountId, u8, BlockNumber>;
 
     #[test]
     fn test_pallet_staking_call_codec() {
@@ -645,6 +647,37 @@ mod tests {
 
         let runtime_call: Call = unbond.into();
         let remote_runtime_call_encoded = remote_unbond.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
+
+    #[test]
+    fn can_encode_decode_add_proxy() {
+        let delegate = 1337;
+        let remote_add_proxy = RemoteProxyCall::AddProxy {
+            proxy: delegate,
+            proxy_type: POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX,
+            delay: 0,
+        };
+
+        let add_proxy = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
+
+        let remote_pallet_call_encoded = remote_add_proxy.encode();
+        let call_encoded = add_proxy.encode();
+        assert_eq!(remote_pallet_call_encoded, call_encoded);
+
+        let add_proxy_decoded =
+            PalletProxyCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(add_proxy, add_proxy_decoded);
+
+        let runtime_call: Call = add_proxy.into();
+        let remote_runtime_call_encoded = remote_add_proxy
+            .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
+            .encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
 
