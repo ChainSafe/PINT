@@ -16,7 +16,6 @@ std = [
     'frame-system/std',
 ]
 runtime-benchmarks = [
-    'codec/std',
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
 ]

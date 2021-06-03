@@ -12,7 +12,7 @@ benchmarks! {
         SystemOrigin::Signed(caller.clone()),
         Box::new(<SystemCall<T>>::remark(vec![0; 0]).into())
     ) verify {
-        // TODO:
+        // TODO: verify event
         //
         // assert_eq!(
         //     <System<T>>::events().pop().expect("Event expected").event,
@@ -38,16 +38,31 @@ benchmarks! {
         proposal.hash(),
         Vote::Abstain
     ) verify {
-
+        // TODO: verify event
+        //
+        // assert_eq!(
+        //     <System<T>>::events().pop().expect("Event expected").event,
+        //     Event::pallet_committee(crate::Event::Proposed(caller, _, _))
+        // );
     }
+
     // close {
+    //     let caller: T::AccountId = whitelisted_caller();
+    //     let action: T::Action = <SystemCall<T>>::remark(vec![0; 0]).into();
+    //     assert_ok!(<Pallet<T>>::propose(
+    //         SystemOrigin::Signed(caller.clone()).into(),
+    //         Box::new(action.clone())),
+    //     );
     //
+    //     // for i in 0..4 {
+    //     //     let voter =
+    //     // }
     // }: _(
     //
     // ) verify {
     //
     // }
-    //
+
     // add_constituent {
     //
     // }: _(

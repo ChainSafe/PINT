@@ -281,6 +281,7 @@ runtime-benchmarks = [
     'pallet-asset-depository/runtime-benchmarks',
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
+    'pallet-local-treasury/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
     'pallet-committee/runtime-benchmarks',

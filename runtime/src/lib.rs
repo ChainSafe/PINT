@@ -440,7 +440,7 @@ parameter_types! {
 
 impl pallet_local_treasury::Config for Runtime {
     // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type Event = Event;
@@ -823,6 +823,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
             add_benchmark!(params, batches, pallet_asset_index, AssetIndex);
             add_benchmark!(params, batches, pallet_committee, Committee);
+            add_benchmark!(params, batches, pallet_local_treasury, LocalTreasury);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)
