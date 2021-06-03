@@ -439,7 +439,7 @@ parameter_types! {
 }
 
 impl pallet_local_treasury::Config for Runtime {
-    // Using root as the admin origin for now
+    // Using signed as the admin origin for now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
@@ -447,7 +447,7 @@ impl pallet_local_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-    // Using root as the admin origin for now
+    // Using signed as the admin origin for now
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type Event = Event;
     type Balance = Balance;
@@ -474,7 +474,7 @@ impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    // Using root as the admin origin for now
+    // Using signed as the admin origin for now
     type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
     type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
@@ -491,8 +491,8 @@ impl pallet_asset_depository::Config for Runtime {
 }
 
 impl pallet_price_feed::Config for Runtime {
-    // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    // Using signed as the admin origin for now
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type SelfAssetId = PINTAssetId;
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
@@ -824,6 +824,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_asset_index, AssetIndex);
             add_benchmark!(params, batches, pallet_committee, Committee);
             add_benchmark!(params, batches, pallet_local_treasury, LocalTreasury);
+            add_benchmark!(params, batches, pallet_price_feed, PriceFeed);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

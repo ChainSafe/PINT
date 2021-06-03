@@ -10,6 +10,8 @@ mod mock;
 #[cfg(test)]
 pub use mock::FeedBuilder;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 
