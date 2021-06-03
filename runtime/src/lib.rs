@@ -474,9 +474,9 @@ impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    // Using signed as the admin origin for now
-    type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
+    // Using root as the admin origin for now
+    type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
@@ -491,8 +491,8 @@ impl pallet_asset_depository::Config for Runtime {
 }
 
 impl pallet_price_feed::Config for Runtime {
-    // Using signed as the admin origin for now
-    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type SelfAssetId = PINTAssetId;
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;

@@ -6,7 +6,6 @@ use frame_system::Origin;
 
 benchmarks! {
     transfer {
-
     }: _(
         <Origin<T>>::Signed(whitelisted_caller()),
         10_000_u32.into()
