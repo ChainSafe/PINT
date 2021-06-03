@@ -826,6 +826,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_local_treasury, LocalTreasury);
             add_benchmark!(params, batches, pallet_price_feed, PriceFeed);
             add_benchmark!(params, batches, pallet_remote_asset_manager, RemoteAssetManager);
+            add_benchmark!(params, batches, pallet_saft_registry, SaftRegistry);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

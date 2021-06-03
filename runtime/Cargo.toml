@@ -286,6 +286,7 @@ runtime-benchmarks = [
 	'pallet-timestamp/runtime-benchmarks',
     'pallet-committee/runtime-benchmarks',
     'pallet-xcm/runtime-benchmarks',
+    'pallet-saft-registry/runtime-benchmarks',
     'pallet-remote-asset-manager/runtime-benchmarks',
     'xcm-builder/runtime-benchmarks'
 ]

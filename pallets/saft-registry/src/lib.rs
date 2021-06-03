@@ -8,6 +8,8 @@ pub use pallet::*;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 
@@ -28,7 +30,7 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         type AssetRecorder: AssetRecorder<Self::AssetId, Self::Balance>;
         type Balance: Parameter + AtLeast32BitUnsigned;
-        type AssetId: Parameter;
+        type AssetId: Parameter + From<u32>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
     }
 
