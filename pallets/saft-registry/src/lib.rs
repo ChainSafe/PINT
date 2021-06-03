@@ -32,6 +32,8 @@ pub mod pallet {
         type Balance: Parameter + AtLeast32BitUnsigned;
         type AssetId: Parameter + From<u32>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -150,6 +152,26 @@ pub mod pallet {
                 }
             })?;
             Ok(().into())
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn add_saft() -> Weight;
+        // TODO: (incompleted)
+        //
+        // fn remove_saft() -> Weight;
+        fn report_nav() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn add_saft() -> Weight {
+            Default::default()
+        }
+
+        fn report_nav() -> Weight {
+            Default::default()
         }
     }
 }
