@@ -17,7 +17,6 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-mod default_weights;
 pub mod traits;
 mod types;
 
