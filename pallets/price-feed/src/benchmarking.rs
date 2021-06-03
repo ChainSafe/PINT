@@ -7,9 +7,8 @@ use frame_system::Origin;
 
 benchmarks! {
     track_asset_price_feed {
-        let caller: T::AccountId = whitelisted_caller();
     }: _(
-        <Origin<T>>::Signed(caller.clone()),
+        <Origin<T>>::Root,
         T::SelfAssetId::get(),
         Zero::zero()
     ) verify {
@@ -17,9 +16,8 @@ benchmarks! {
     }
 
     untrack_asset_price_feed {
-        let caller: T::AccountId = whitelisted_caller();
     }: _(
-        <Origin<T>>::Signed(caller.clone()),
+        <Origin<T>>::Root,
         T::SelfAssetId::get()
     ) verify {
 

@@ -126,6 +126,7 @@ impl pallet_price_feed::Config for Test {
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 #[derive(Debug, Clone, Default)]

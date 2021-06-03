@@ -86,8 +86,8 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// The weight for this pallet's extrinsics.
-        type WeightInfo: WeightInfo;
+        // /// The weight for this pallet's extrinsics.
+        // type WeightInfo: WeightInfo;
     }
 
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;

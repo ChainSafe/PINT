@@ -502,6 +502,7 @@ impl pallet_price_feed::Config for Runtime {
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
     type Event = Event;
+    type WeightInfo = weights::pallet_price_feed::WeightInfo<Runtime>;
 }
 
 parameter_types! {
