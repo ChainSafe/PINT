@@ -68,6 +68,9 @@ pub mod pallet {
         type XcmExecutor: ExecuteXcm<Self::Call>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -111,5 +114,10 @@ pub mod pallet {
         ) -> DispatchResult {
             Ok(())
         }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn transfer() -> Weight;
     }
 }

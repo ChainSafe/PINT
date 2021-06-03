@@ -632,6 +632,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type Event = Event;
+    type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
