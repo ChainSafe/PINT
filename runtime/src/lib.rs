@@ -447,6 +447,7 @@ impl pallet_local_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type Event = Event;
+    type WeightInfo = weights::pallet_local_treasury::WeightInfo<Self>;
 }
 
 impl pallet_saft_registry::Config for Runtime {
