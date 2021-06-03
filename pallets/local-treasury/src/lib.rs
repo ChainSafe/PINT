@@ -96,4 +96,11 @@ pub mod pallet {
     pub trait WeightInfo {
         fn withdraw() -> Weight;
     }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn withdraw() -> Weight {
+            Default::default()
+        }
+    }
 }

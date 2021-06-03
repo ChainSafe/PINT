@@ -17,6 +17,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+mod default_weights;
 pub mod traits;
 mod types;
 
@@ -481,5 +482,12 @@ pub mod pallet {
     /// Trait for the asset-index pallet extrinsic weights.
     pub trait WeightInfo {
         fn add_asset() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn add_asset() -> Weight {
+            Default::default()
+        }
     }
 }
