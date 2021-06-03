@@ -93,6 +93,9 @@ pub type FeedId = u64;
 /// Value type for price feeds.
 pub type Value = u128;
 
+/// Weights of pallets
+mod weights;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -536,8 +539,6 @@ parameter_types! {
 }
 
 impl pallet_asset_index::Config for Runtime {
-    // TODO:
-    //
     // Using signed as the admin origin for testing now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
@@ -553,6 +554,7 @@ impl pallet_asset_index::Config for Runtime {
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
+    type WeightInfo = weights::pallet_asset_index::WeightInfo<Self>;
 }
 
 parameter_types! {

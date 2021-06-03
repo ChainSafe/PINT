@@ -104,6 +104,9 @@ pub mod pallet {
         #[pallet::constant]
         type TreasuryPalletId: Get<PalletId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -161,7 +164,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_asset())] // TODO: Set weights
         /// Callable by an admin to add new assets to the index and mint some IndexToken
         /// Caller balance is updated to allocate the correct amount of the IndexToken
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
@@ -473,5 +476,10 @@ pub mod pallet {
                 .map(|holding| holding.is_liquid())
                 .unwrap_or_default()
         }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn add_asset() -> Weight;
     }
 }
