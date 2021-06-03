@@ -102,6 +102,7 @@ impl pallet_committee::Config for Test {
     type Origin = Origin;
     type Action = Call;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 pub fn run_to_block(n: u64) {

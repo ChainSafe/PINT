@@ -486,6 +486,7 @@ impl pallet_committee::Config for Runtime {
     type Origin = Origin;
     type Action = Call;
     type Event = Event;
+    // type WeightInfo =
 }
 
 impl pallet_asset_depository::Config for Runtime {

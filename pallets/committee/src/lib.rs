@@ -85,6 +85,9 @@ pub mod pallet {
         type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
@@ -458,6 +461,28 @@ pub mod pallet {
 
             Self::deposit_event(Event::NewConstituent(constituent));
             Ok(().into())
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn propose() -> Weight;
+        fn vote() -> Weight;
+        fn close() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn propose() -> Weight {
+            Default::default()
+        }
+
+        fn vote() -> Weight {
+            Default::default()
+        }
+
+        fn close() -> Weight {
+            Default::default()
         }
     }
 }
