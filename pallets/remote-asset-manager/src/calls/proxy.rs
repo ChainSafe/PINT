@@ -12,6 +12,17 @@ pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
 /// The identifier the `ProxyType::Staking` variant encodes to
 pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 
+/// Denotes an enum based (identified by an `u8`) proxy type
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+pub struct ProxyType(pub u8);
+
+impl ProxyType {
+    /// Represents the `Staking` variant of the polkadot `ProxyType` enum
+    pub const fn polkadot_staking() -> Self {
+        ProxyType(POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX)
+    }
+}
+
 /// Provides encoder types to encode the associated types of the  `pallet_proxy::Config` trait depending on the configured Context.
 pub trait ProxyCallEncoder<AccountId, ProxyType, BlockNumber>: PalletCallEncoder {
     /// Encodes the `<pallet_proxy::Config>::AccountId` depending on the context
@@ -75,4 +86,11 @@ impl<AccountId, ProxyType, BlockNumber> PalletCall
             ProxyCall::RemoveProxy(_) => 2,
         }
     }
+}
+
+/// Denotes the current state of proxies for the PINT chain's account
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, Default)]
+pub struct ProxyState {
+    /// All the added Proxy types
+    pub added: Vec<ProxyType>,
 }

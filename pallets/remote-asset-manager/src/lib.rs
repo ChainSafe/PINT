@@ -36,7 +36,7 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use crate::calls::proxy::ProxyCallEncoder;
+    use crate::calls::proxy::{ProxyCallEncoder, ProxyState, ProxyType};
     use crate::calls::staking::{StakingCall, StakingCallEncoder, StakingConfig};
     pub use crate::calls::*;
     pub use crate::traits::*;
@@ -85,7 +85,7 @@ pub mod pallet {
         /// The encoder to use for encoding when transacting a `pallet_proxy` Call
         type PalletProxyCallEncoder: ProxyCallEncoder<
             Self::AccountId,
-            u8,
+            ProxyType,
             Self::BlockNumber,
             Context = Self::AssetId,
         >;
@@ -119,8 +119,6 @@ pub mod pallet {
     #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(_);
 
-    // TODO: store xcm query id with unbond procedures?
-
     /// The index of `pallet_staking` in the runtime of the parachain.
     // TODO: Location as key?
     #[pallet::storage]
@@ -128,9 +126,22 @@ pub mod pallet {
         _,
         Twox64Concat,
         <T as Config>::AssetId,
-        // TODO: this assumes the same balance type, possibly conversion necessary
         StakingConfig<T::AccountId, T::Balance>,
         OptionQuery,
+    >;
+
+    /// Denotes the current state of proxies on a parachain for the PINT chain's account with the delegates being the second key in this map
+    ///
+    /// `location identifier` -> `delegate` -> `proxies`
+    #[pallet::storage]
+    pub type Proxies<T: Config> = StorageDoubleMap<
+        _,
+        Blake2_128Concat,
+        T::AssetId,
+        Twox64Concat,
+        AccountIdFor<T>,
+        ProxyState,
+        ValueQuery,
     >;
 
     #[pallet::genesis_config]
