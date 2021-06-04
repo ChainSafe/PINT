@@ -23,7 +23,7 @@ pub mod pallet {
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::{
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
+            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup},
             MultiAddress,
         },
         sp_std::{prelude::*, result::Result},
@@ -36,7 +36,8 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use crate::calls::staking::StakingConfig;
+    use crate::calls::proxy::ProxyCallEncoder;
+    use crate::calls::staking::{StakingCall, StakingCallEncoder, StakingConfig};
     pub use crate::calls::*;
     pub use crate::traits::*;
     pub use crate::types::*;
@@ -44,7 +45,7 @@ pub mod pallet {
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
     // // A `pallet_staking` dispatchable on another chain
-    // type PalletStakingCall<T> = StakingCall<AccountIdFor<T>, WrappedEncoded, WrappedEncoded>;
+    // type PalletStakingCall<T: Config> = StakingCall<AccountIdFor<T>, T::Balance, AccountIdFor<T>>;
 
     // A `pallet_proxy` dispatchable on another chain
     // expects a `ProxyType` of u8 and blocknumber of u32
@@ -73,8 +74,21 @@ pub mod pallet {
         /// Encodes the local `Balance` type into the representation expected on the asset's parachain.
         type BalanceEncoder: EncodeWith<Self::AssetId, Self::Balance>;
 
-        /// Encodes the local `AccountId` type into the representation expected on the asset's parachain.
-        type LookupSourceEncoder: EncodeWith<Self::AssetId, Self::AccountId>;
+        /// The encoder to use for encoding when transacting a `pallet_staking` Call
+        type PalletStakingCallEncoder: StakingCallEncoder<
+            <Self::Lookup as StaticLookup>::Source,
+            Self::Balance,
+            Self::AccountId,
+            Context = Self::AssetId,
+        >;
+
+        /// The encoder to use for encoding when transacting a `pallet_proxy` Call
+        type PalletProxyCallEncoder: ProxyCallEncoder<
+            Self::AccountId,
+            u8,
+            Self::BlockNumber,
+            Context = Self::AssetId,
+        >;
 
         /// The native asset id
         #[pallet::constant]
