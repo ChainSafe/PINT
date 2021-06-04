@@ -88,6 +88,10 @@ where
 mod tests {
     use super::*;
 
+    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
+    use crate::{
+        PassthroughCompactEncoder, PassthroughEncoder, MultiAddressLookupSourceEncoder,
+    };
     use frame_election_provider_support::onchain;
     use frame_support::sp_runtime::traits::BlakeTwo256;
     use frame_support::traits::OnUnbalanced;
@@ -106,10 +110,10 @@ mod tests {
         traits::IdentityLookup,
         Perbill,
     };
+
+    use codec::{Decode, Encode};
     use std::{cell::RefCell, collections::HashSet};
     use xcm::DoubleEncoded;
-    use crate::calls::staking::{StakingCallEncoder, StakingCall};
-    use crate::{CompactU128BalanceEncoder, MultiAddressLookupSourceEncoder};
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
