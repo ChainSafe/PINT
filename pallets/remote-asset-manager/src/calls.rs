@@ -11,7 +11,8 @@ use codec::{Encode, EncodeLike, Output};
 use frame_support::sp_std::marker::PhantomData;
 
 /// Represents an extrinsic of a pallet configured inside a runtime
-pub struct RuntimeCall<Call: Encode> {
+#[derive(Encode)]
+pub struct RuntimeCall<Call> {
     /// The index of the call's pallet within the runtime.
     ///
     /// This must be equivalent with the `#[codec(index = <pallet_index>)]` annotation.
@@ -21,46 +22,53 @@ pub struct RuntimeCall<Call: Encode> {
     pub call: Call,
 }
 
-impl<Call: EncodeLike> EncodeLike for RuntimeCall<Call> {}
+pub trait PalletCall: Sized {
+    /// Returns the index of the call within its pallet
+    fn pallet_call_index(&self) -> u8;
 
-impl<Call: EncodeLike> Encode for RuntimeCall<Call> {
-    fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
-        dest.push_byte(self.pallet_index);
-        self.call.encode_to(dest)
+    fn encoder<'a, 'b, Config: PalletCallEncoder>(
+        &'a self,
+        ctx: &'b Config::Context,
+    ) -> CallEncoder<'a, 'b, Self, Config> {
+        CallEncoder::new(self, ctx)
     }
 }
 
-pub trait PalletCall {
-    /// Returns the index of the call within its pallet
-    fn pallet_call_index(&self) -> u8;
-}
-
 /// Common trait for encoders of pallet calls
-pub trait PalletCallEncoder<Context> {
+pub trait PalletCallEncoder {
+    type Context;
     /// Whether the encoder can be applied
-    fn can_encode(ctx: &Context) -> bool;
+    fn can_encode(ctx: &Self::Context) -> bool;
 }
 
 /// Helps encoding the inner call with additional context
-pub struct CallEncoder<'a, Call, Config, Context> {
+pub struct CallEncoder<'a, 'b, Call, Config: PalletCallEncoder> {
     /// The call to encode
     pub call: &'a Call,
     /// additional context required for encoding
-    pub ctx: &'a Context,
+    pub ctx: &'b Config::Context,
     marker: PhantomData<Config>,
 }
 
-impl<'a, Call, Config, Context> CallEncoder<'a, Call, Config, Context> {
-    pub fn new(call: &'a Call, ctx: &'a Context) -> Self {
+impl<'a, 'b, Call, Config: PalletCallEncoder> CallEncoder<'a, 'b, Call, Config> {
+    pub fn new(call: &'a Call, ctx: &'b Config::Context) -> Self {
         Self {
             call,
             ctx,
             marker: Default::default(),
         }
     }
+
+    /// Wraps the pallet call into a `RuntimeCall` with the given pallet index
+    pub fn into_runtime_call(self, pallet_index: u8) -> RuntimeCall<Self> {
+        RuntimeCall {
+            pallet_index,
+            call: self,
+        }
+    }
 }
 
-/// Wrapper around somethind to encode with additional context
+/// Wrapper around something to encode with additional context
 pub struct ContextEncode<'a, I, C, E> {
     pub input: &'a I,
     pub ctx: &'a C,
@@ -338,7 +346,7 @@ mod tests {
     }
 
     /// The type used to represent the kinds of proxying allowed.
-    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug)]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug)]
     pub enum ProxyType {
         Any = 0,
         NonTransfer = 1,
@@ -386,13 +394,14 @@ mod tests {
     type AssetId = u64;
 
     struct PalletStakingEncoder;
-    impl StakingCallEncoder<AssetId, AccountId, Balance, AccountId> for PalletStakingEncoder {
-        type CompactBalanceEncoder = CompactU128BalanceEncoder<AssetId>;
-        type SourceEncoder = MultiAddressLookupSourceEncoder<AssetId, AccountId, ()>;
-        type AccountIdEncoder = CompactU128BalanceEncoder<AssetId>;
+    impl StakingCallEncoder<AccountId, Balance, AccountId> for PalletStakingEncoder {
+        type CompactBalanceEncoder = PassthroughCompactEncoder<Balance,AssetId>;
+        type SourceEncoder = PassthroughEncoder<AccountId, AssetId>;
+        type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
     }
 
-    impl PalletCallEncoder<AssetId> for PalletStakingEncoder {
+    impl PalletCallEncoder for PalletStakingEncoder {
+        type Context = AssetId;
         fn can_encode(ctx: &u64) -> bool {
             true
         }
@@ -418,8 +427,8 @@ mod tests {
     fn can_encode_decode_bond_extra() {
         let remote_bond_extra = RemoteStakingCall::BondExtra(100);
         let bond_extra = PalletStakingCall::bond_extra(100);
-
-        let remote_pallet_call_encoded = remote_bond_extra.encode();
+        let remote_encoder = remote_bond_extra.encoder::<PalletStakingEncoder>(&0);
+        let remote_pallet_call_encoded = remote_encoder.encode();
         let call_encoded = bond_extra.encode();
         assert_eq!(remote_pallet_call_encoded, call_encoded);
 
@@ -428,7 +437,7 @@ mod tests {
         assert_eq!(bond_extra, bond_extra_decoded);
 
         let runtime_call: Call = bond_extra.into();
-        let remote_runtime_call_encoded = remote_bond_extra.into_runtime_call(7).encode();
+        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
 
@@ -437,61 +446,59 @@ mod tests {
         assert_eq!(runtime_call, runtime_call_decoded);
     }
 
-    // #[test]
-    // fn can_encode_decode_bond() {
-    //     let balance = CompactU128BalanceEncoder::<u128>::encoded_with(&0, 100)
-    //         .unwrap()
-    //         .into();
-    //     let account = 1337;
-    //
-    //     let remote_bond =
-    //         RemoteStakingCall::Bond(account, balance, super::RewardDestination::Stash);
-    //     let bond = PalletStakingCall::bond(account, 100, pallet_staking::RewardDestination::Stash);
-    //
-    //     let remote_pallet_call_encoded = remote_bond.encode();
-    //     let call_encoded = bond.encode();
-    //     assert_eq!(remote_pallet_call_encoded, call_encoded);
-    //
-    //     let bond_extra_decoded =
-    //         PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(bond, bond_extra_decoded);
-    //
-    //     let runtime_call: Call = bond.into();
-    //     let remote_runtime_call_encoded = remote_bond.into_runtime_call(7).encode();
-    //     let runtime_call_encoded = runtime_call.encode();
-    //     assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
-    //
-    //     let runtime_call_decoded =
-    //         Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(runtime_call, runtime_call_decoded);
-    // }
-    //
-    // #[test]
-    // fn can_encode_decode_unbond() {
-    //     let balance = CompactU128BalanceEncoder::<u128>::encoded_with(&0, 100)
-    //         .unwrap()
-    //         .into();
-    //
-    //     let remote_unbond = RemoteStakingCall::Unbond(balance);
-    //     let unbond = PalletStakingCall::unbond(100);
-    //
-    //     let remote_pallet_call_encoded = remote_unbond.encode();
-    //     let call_encoded = unbond.encode();
-    //     assert_eq!(remote_pallet_call_encoded, call_encoded);
-    //
-    //     let bond_extra_decoded =
-    //         PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(unbond, bond_extra_decoded);
-    //
-    //     let runtime_call: Call = unbond.into();
-    //     let remote_runtime_call_encoded = remote_unbond.into_runtime_call(7).encode();
-    //     let runtime_call_encoded = runtime_call.encode();
-    //     assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
-    //
-    //     let runtime_call_decoded =
-    //         Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(runtime_call, runtime_call_decoded);
-    // }
+    #[test]
+    fn can_encode_decode_bond() {
+        let controller = 9;
+        let value = 100;
+
+        let remote_bond = RemoteStakingCall::Bond(Bond {
+            controller,
+            value,
+            payee: super::staking::RewardDestination::Stash,
+        });
+        let bond =
+            PalletStakingCall::bond(controller, value, pallet_staking::RewardDestination::Stash);
+
+        let remote_encoder = remote_bond.encoder::<PalletStakingEncoder>(&0);
+        let remote_pallet_call_encoded = remote_encoder.encode();
+        assert_eq!(remote_pallet_call_encoded, bond.encode());
+
+        let bond_extra_decoded =
+            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(bond, bond_extra_decoded);
+
+        let runtime_call: Call = bond.into();
+        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
+
+    #[test]
+    fn can_encode_decode_unbond() {
+        let remote_unbond = RemoteStakingCall::Unbond(100);
+        let unbond = PalletStakingCall::unbond(100);
+
+        let remote_encoder = remote_unbond.encoder::<PalletStakingEncoder>(&0);
+        let remote_pallet_call_encoded = remote_encoder.encode();
+        assert_eq!(remote_pallet_call_encoded, unbond.encode());
+
+        let bond_extra_decoded =
+            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(unbond, bond_extra_decoded);
+
+        let runtime_call: Call = unbond.into();
+        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded =
+            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
 
     // #[test]
     // fn can_encode_decode_add_proxy() {

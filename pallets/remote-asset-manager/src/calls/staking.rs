@@ -18,29 +18,26 @@ pub const POLKADOT_PALLET_STAKING_INDEX: u8 = 7u8;
 
 /// Provides encoder types to encode the on associated types of `pallet_staking::Config` depending parameters
 /// call parameters depending on the Context
-pub trait StakingCallEncoder<Context, Source, Balance, AccountId>:
-    PalletCallEncoder<Context>
-{
+pub trait StakingCallEncoder<Source, Balance, AccountId>: PalletCallEncoder {
     /// Encodes the `<pallet_staking::Config>::Balance` depending on the context
-    type CompactBalanceEncoder: EncodeWith<Balance, Context>;
+    type CompactBalanceEncoder: EncodeWith<Balance, Self::Context>;
 
     /// Encodes the `<pallet_staking::Config>::Source` depending on the context
-    type SourceEncoder: EncodeWith<Source, Context>;
+    type SourceEncoder: EncodeWith<Source, Self::Context>;
 
     /// Encodes the `<pallet_staking::Config>::AccountId` depending on the context
-    type AccountIdEncoder: EncodeWith<AccountId, Context>;
+    type AccountIdEncoder: EncodeWith<AccountId, Self::Context>;
 }
 
-impl<'a, Source, Balance, AccountId, Config, Context> Encode
-    for CallEncoder<'a, StakingCall<Source, Balance, AccountId>, Config, Context>
+impl<'a, 'b, Source, Balance, AccountId, Config> Encode
+    for CallEncoder<'a, 'b, StakingCall<Source, Balance, AccountId>, Config>
 where
-    Config: StakingCallEncoder<Context, Source, Balance, AccountId>,
+    Config: StakingCallEncoder<Source, Balance, AccountId>,
 {
     /// Convert self to a slice and append it to the destination.
     fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
         // include the pallet identifier
         dest.push_byte(self.call.pallet_call_index());
-
         match self.call {
             StakingCall::Bond(bond) => {
                 Config::SourceEncoder::encode_to_with(&bond.controller, &self.ctx, dest);
@@ -111,11 +108,6 @@ pub enum StakingCall<Source, Balance, AccountId> {
     // #[codec(index = 5)]
     Nominate(Vec<Source>),
 }
-
-// impl<Source, Balance, AccountId> StakingCall<Source, Balance, AccountId> {
-//
-//     pub fn encoder<Context, Config>(&self, ctx: &Context) -> CallEncoder<Self,Config,> where
-// }
 
 impl<Source, Balance, AccountId> PalletCall for StakingCall<Source, Balance, AccountId> {
     /// the indices of the corresponding calls within the `pallet_staking`
