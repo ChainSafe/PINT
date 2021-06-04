@@ -86,8 +86,8 @@ pub mod pallet {
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        // /// The weight for this pallet's extrinsics.
-        // type WeightInfo: WeightInfo;
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
@@ -390,7 +390,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let closer = ensure_signed(origin.clone())?;
+            let closer = Self::ensure_member(origin.clone())?.account_id;
             T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
             // ensure proposal has not already been executed
@@ -469,6 +469,7 @@ pub mod pallet {
         fn propose() -> Weight;
         fn vote() -> Weight;
         fn close() -> Weight;
+        fn add_constituent() -> Weight;
     }
 
     /// For backwards compatibility and tests
@@ -482,6 +483,10 @@ pub mod pallet {
         }
 
         fn close() -> Weight {
+            Default::default()
+        }
+
+        fn add_constituent() -> Weight {
             Default::default()
         }
     }

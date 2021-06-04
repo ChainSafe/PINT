@@ -442,8 +442,8 @@ parameter_types! {
 }
 
 impl pallet_local_treasury::Config for Runtime {
-    // Using signed as the admin origin for now
-    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type Event = Event;
@@ -479,15 +479,15 @@ impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    // Using root as the admin origin for now
-    type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
+    // Using signed as the admin origin for now
+    type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;
     type Event = Event;
-    // type WeightInfo =
+    type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
 }
 
 impl pallet_asset_depository::Config for Runtime {
@@ -544,7 +544,7 @@ parameter_types! {
 
 impl pallet_asset_index::Config for Runtime {
     // Using signed as the admin origin for testing now
-    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;

@@ -1,7 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
-use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_benchmarking::benchmarks;
 use frame_support::assert_ok;
 use frame_system::Origin;
 
