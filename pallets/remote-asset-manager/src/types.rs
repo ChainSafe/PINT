@@ -6,6 +6,7 @@ use codec::{Compact, Decode, Encode, EncodeLike, HasCompact};
 use xcm::v0::Outcome as XcmOutcome;
 
 use crate::EncodeWith;
+use frame_support::dispatch::EncodeAsRef;
 use frame_support::{
     dispatch::Output,
     sp_runtime::{MultiAddress, RuntimeDebug},
@@ -34,27 +35,36 @@ impl From<Vec<u8>> for WrappedEncoded {
     }
 }
 
-/// Encodes a `u128` using `CompactRef` regardless of the asset id
-pub struct CompactU128BalanceEncoder<T>(PhantomData<T>);
+/// Encodes the type as it is
+pub struct PassthroughEncoder<I, T>(PhantomData<(I, T)>);
 
-impl<AssetId> EncodeWith<u128, AssetId> for CompactU128BalanceEncoder<AssetId> {
-    fn encode_to_with<T: Output + ?Sized>(balance: &u128, _: &AssetId, dest: &mut T) {
-        Compact(*balance).encode_to(dest)
+impl<I: Encode, Context> EncodeWith<I, Context> for PassthroughEncoder<I, Context> {
+    fn encode_to_with<T: Output + ?Sized>(input: &I, _: &Context, dest: &mut T) {
+        input.encode_to(dest)
+    }
+}
+
+/// Encodes the type as it is but compact
+pub struct PassthroughCompactEncoder<I, T>(PhantomData<(I, T)>);
+
+impl<I: HasCompact, Context> EncodeWith<I, Context> for PassthroughCompactEncoder<I, Context> {
+    fn encode_to_with<T: Output + ?Sized>(input: &I, _: &Context, dest: &mut T) {
+        <<I as HasCompact>::Type as EncodeAsRef<'_, I>>::RefType::from(input).encode_to(dest)
     }
 }
 
 /// Encodes an `AccountId` as `Multiaddress` regardless of the asset id
-pub struct MultiAddressLookupSourceEncoder<AssetId, AccountId, AccountIndex>(
-    PhantomData<(AssetId, AccountId, AccountIndex)>,
+pub struct MultiAddressLookupSourceEncoder<AccountId, AccountIndex, Context>(
+    PhantomData<(AccountId, AccountIndex, Context)>,
 );
 
-impl<AssetId, AccountId, AccountIndex> EncodeWith<AccountId, AssetId>
-    for MultiAddressLookupSourceEncoder<AssetId, AccountId, AccountIndex>
+impl<AccountId, AccountIndex, Context> EncodeWith<AccountId, Context>
+    for MultiAddressLookupSourceEncoder<AccountId, AccountIndex, Context>
 where
     AccountId: Encode + Clone,
     AccountIndex: HasCompact,
 {
-    fn encode_to_with<T: Output + ?Sized>(account: &AccountId, _: &AssetId, dest: &mut T) {
+    fn encode_to_with<T: Output + ?Sized>(account: &AccountId, _: &Context, dest: &mut T) {
         MultiAddress::<AccountId, AccountIndex>::from(account.clone()).encode_to(dest)
     }
 }
