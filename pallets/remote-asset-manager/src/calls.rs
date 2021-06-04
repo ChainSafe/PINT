@@ -114,6 +114,9 @@ mod tests {
     use crate::{MultiAddressLookupSourceEncoder, PassthroughCompactEncoder, PassthroughEncoder};
 
     use super::*;
+    use crate::calls::proxy::{
+        ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX,
+    };
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
@@ -411,12 +414,25 @@ mod tests {
         }
     }
 
+    struct PalletProxyEncoder;
+    impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
+        type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+        type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
+        type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
+    }
+
+    impl PalletCallEncoder for PalletProxyEncoder {
+        type Context = AssetId;
+        fn can_encode(ctx: &u64) -> bool {
+            true
+        }
+    }
+
     type PalletStakingCall = pallet_staking::Call<Test>;
     type PalletProxyCall = pallet_proxy::Call<Test>;
 
-    type RemoteStakingCall = StakingCall<AccountId, Balance, AccountId>;
-
-    // type RemoteProxyCall = ProxyCall<AccountId, u8, BlockNumber>;
+    type XcmStakingCall = StakingCall<AccountId, Balance, AccountId>;
+    type XcmProxyCall = ProxyCall<AccountId, ProxyType, BlockNumber>;
 
     #[test]
     fn test_pallet_staking_call_codec() {
@@ -429,24 +445,23 @@ mod tests {
 
     #[test]
     fn can_encode_decode_bond_extra() {
-        let remote_bond_extra = RemoteStakingCall::BondExtra(100);
+        let xcm_bond_extra = XcmStakingCall::BondExtra(100);
         let bond_extra = PalletStakingCall::bond_extra(100);
-        let remote_encoder = remote_bond_extra.encoder::<PalletStakingEncoder>(&0);
-        let remote_pallet_call_encoded = remote_encoder.encode();
+        let xcm_encoder = xcm_bond_extra.encoder::<PalletStakingEncoder>(&0);
+        let xcm_pallet_call_encoded = xcm_encoder.encode();
         let call_encoded = bond_extra.encode();
-        assert_eq!(remote_pallet_call_encoded, call_encoded);
+        assert_eq!(xcm_pallet_call_encoded, call_encoded);
 
         let bond_extra_decoded =
-            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
         assert_eq!(bond_extra, bond_extra_decoded);
 
         let runtime_call: Call = bond_extra.into();
-        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
-        let runtime_call_decoded =
-            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
         assert_eq!(runtime_call, runtime_call_decoded);
     }
 
@@ -455,7 +470,7 @@ mod tests {
         let controller = 9;
         let value = 100;
 
-        let remote_bond = RemoteStakingCall::Bond(Bond {
+        let xcm_bond = XcmStakingCall::Bond(Bond {
             controller,
             value,
             payee: super::staking::RewardDestination::Stash,
@@ -463,75 +478,100 @@ mod tests {
         let bond =
             PalletStakingCall::bond(controller, value, pallet_staking::RewardDestination::Stash);
 
-        let remote_encoder = remote_bond.encoder::<PalletStakingEncoder>(&0);
-        let remote_pallet_call_encoded = remote_encoder.encode();
-        assert_eq!(remote_pallet_call_encoded, bond.encode());
+        let xcm_encoder = xcm_bond.encoder::<PalletStakingEncoder>(&0);
+        let xcm_pallet_call_encoded = xcm_encoder.encode();
+        assert_eq!(xcm_pallet_call_encoded, bond.encode());
 
         let bond_extra_decoded =
-            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
         assert_eq!(bond, bond_extra_decoded);
 
         let runtime_call: Call = bond.into();
-        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
-        let runtime_call_decoded =
-            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
         assert_eq!(runtime_call, runtime_call_decoded);
     }
 
     #[test]
     fn can_encode_decode_unbond() {
-        let remote_unbond = RemoteStakingCall::Unbond(100);
+        let xcm_unbond = XcmStakingCall::Unbond(100);
         let unbond = PalletStakingCall::unbond(100);
 
-        let remote_encoder = remote_unbond.encoder::<PalletStakingEncoder>(&0);
-        let remote_pallet_call_encoded = remote_encoder.encode();
-        assert_eq!(remote_pallet_call_encoded, unbond.encode());
+        let xcm_encoder = xcm_unbond.encoder::<PalletStakingEncoder>(&0);
+        let xcm_pallet_call_encoded = xcm_encoder.encode();
+        assert_eq!(xcm_pallet_call_encoded, unbond.encode());
 
         let bond_extra_decoded =
-            PalletStakingCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
+            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
         assert_eq!(unbond, bond_extra_decoded);
 
         let runtime_call: Call = unbond.into();
-        let remote_runtime_call_encoded = remote_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
+        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
-        let runtime_call_decoded =
-            Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
+        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
         assert_eq!(runtime_call, runtime_call_decoded);
     }
 
-    // #[test]
-    // fn can_encode_decode_add_proxy() {
-    //     let delegate = 1337;
-    //     let remote_add_proxy = RemoteProxyCall::AddProxy {
-    //         proxy: delegate,
-    //         proxy_type: POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX,
-    //         delay: 0,
-    //     };
-    //
-    //     let add_proxy = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
-    //
-    //     let remote_pallet_call_encoded = remote_add_proxy.encode();
-    //     let call_encoded = add_proxy.encode();
-    //     assert_eq!(remote_pallet_call_encoded, call_encoded);
-    //
-    //     let add_proxy_decoded =
-    //         PalletProxyCall::decode(&mut remote_pallet_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(add_proxy, add_proxy_decoded);
-    //
-    //     let runtime_call: Call = add_proxy.into();
-    //     let remote_runtime_call_encoded = remote_add_proxy
-    //         .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
-    //         .encode();
-    //     let runtime_call_encoded = runtime_call.encode();
-    //     assert_eq!(remote_runtime_call_encoded, runtime_call_encoded);
-    //
-    //     let runtime_call_decoded =
-    //         Call::decode(&mut remote_runtime_call_encoded.as_slice()).unwrap();
-    //     assert_eq!(runtime_call, runtime_call_decoded);
-    // }
+    #[test]
+    fn can_encode_decode_add_proxy() {
+        let delegate = 1337;
+        let xcm_add_proxy = XcmProxyCall::AddProxy(ProxyParams {
+            delegate,
+            proxy_type: ProxyType::Staking,
+            delay: 0,
+        });
+
+        let add_proxy = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
+        let xcm_encoder = xcm_add_proxy.encoder::<PalletProxyEncoder>(&0);
+        let xcm_pallet_call_encoded = xcm_encoder.encode();
+        assert_eq!(xcm_pallet_call_encoded, add_proxy.encode());
+
+        let add_proxy_decoded =
+            PalletProxyCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(add_proxy, add_proxy_decoded);
+
+        let runtime_call: Call = add_proxy.into();
+        let xcm_runtime_call_encoded = xcm_encoder
+            .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
+            .encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
+
+    #[test]
+    fn can_encode_decode_remove_proxy() {
+        let delegate = 1337;
+        let xcm_remove_proxy = XcmProxyCall::RemoveProxy(ProxyParams {
+            delegate,
+            proxy_type: ProxyType::Any,
+            delay: 0,
+        });
+
+        let add_proxy = PalletProxyCall::remove_proxy(delegate, ProxyType::Any, 0);
+        let xcm_encoder = xcm_remove_proxy.encoder::<PalletProxyEncoder>(&0);
+        let xcm_pallet_call_encoded = xcm_encoder.encode();
+        assert_eq!(xcm_pallet_call_encoded, add_proxy.encode());
+
+        let add_proxy_decoded =
+            PalletProxyCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
+        assert_eq!(add_proxy, add_proxy_decoded);
+
+        let runtime_call: Call = add_proxy.into();
+        let xcm_runtime_call_encoded = xcm_encoder
+            .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
+            .encode();
+        let runtime_call_encoded = runtime_call.encode();
+        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
+
+        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
+        assert_eq!(runtime_call, runtime_call_decoded);
+    }
 }

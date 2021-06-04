@@ -58,11 +58,11 @@ pub enum ProxyCall<AccountId, ProxyType, BlockNumber> {
 #[derive(Clone, PartialEq, RuntimeDebug)]
 pub struct ProxyParams<AccountId, ProxyType, BlockNumber> {
     /// The account that the `caller` would like to make a proxy.
-    delegate: AccountId,
+    pub delegate: AccountId,
     /// The permissions to add/remove for this proxy account.
-    proxy_type: ProxyType,
+    pub proxy_type: ProxyType,
     /// The announcement period required of the initial proxy. Will generally be zero
-    delay: BlockNumber,
+    pub delay: BlockNumber,
 }
 
 impl<AccountId, ProxyType, BlockNumber> PalletCall
