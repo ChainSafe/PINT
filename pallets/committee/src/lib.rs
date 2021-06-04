@@ -390,7 +390,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let closer = Self::ensure_member(origin.clone())?.account_id;
+            let closer = ensure_signed(origin.clone())?;
             T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
             // ensure proposal has not already been executed

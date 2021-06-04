@@ -208,8 +208,7 @@ version = '0.0.1'
 [dependencies.pallet-chainlink-feed]
 default_features = false
 package = 'pallet-chainlink-feed'
-git = "https://github.com/mattsse/chainlink-polkadot"
-branch = "substrate-v3"
+git = "https://github.com/ChainSafe/chainlink-polkadot"
 
 # Cumulus dependencies
 [dependencies.parachain-info]

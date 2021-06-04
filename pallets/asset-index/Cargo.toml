@@ -27,6 +27,7 @@ runtime-benchmarks = [
     'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-asset-depository/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
+    'pallet-chainlink-feed/runtime-benchmarks',
 ]
 
 [dependencies.codec]
@@ -57,6 +58,12 @@ version = '3.0.0'
 default-features = false
 git = 'https://github.com/paritytech/substrate'
 branch = 'rococo-v1'
+optional = true
+
+[dependencies.pallet-chainlink-feed]
+default_features = false
+package = 'pallet-chainlink-feed'
+git = "https://github.com/ChainSafe/chainlink-polkadot"
 optional = true
 
 [dependencies.xcm]

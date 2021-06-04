@@ -517,8 +517,8 @@ parameter_types! {
     pub const OracleLimit: u32 = 10;
     // Maximum number of feeds
     pub const FeedLimit: u16 = 10;
-    // Number of rounds to keep around per feed
-    pub const PruningWindow: u32 = 3;
+    // Free for valid submission
+    pub const PaysFeeConf: pallet_chainlink_feed::SubmitterPaysFee = pallet_chainlink_feed::SubmitterPaysFee::FreeForValidSubmission;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
@@ -531,8 +531,9 @@ impl pallet_chainlink_feed::Config for Runtime {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type PruningWindow = PruningWindow;
-    type WeightInfo = ();
+    type OnAnswerHandler = ();
+    type SubmitterPaysFee = PaysFeeConf;
+    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -544,7 +545,7 @@ parameter_types! {
 
 impl pallet_asset_index::Config for Runtime {
     // Using signed as the admin origin for testing now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;
