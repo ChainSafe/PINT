@@ -3,21 +3,22 @@
 
 //! Xcm support for `pallet_staking` calls
 
-use crate::calls::PalletCallEncoder;
-use crate::{CallEncoder, EncodeWith, PalletCall};
-use codec::{Compact, Decode, Encode, EncodeLike, Output};
-use frame_support::sp_std::marker::PhantomData;
-use frame_support::weights::constants::RocksDbWeight;
-use frame_support::weights::Weight;
-use frame_support::RuntimeDebug;
+use codec::{Compact, Decode, Encode, Output};
+use frame_support::{
+    sp_std::marker::PhantomData,
+    weights::{constants::RocksDbWeight, Weight},
+    RuntimeDebug,
+};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+use crate::calls::PalletCallEncoder;
+use crate::{CallEncoder, EncodeWith, PalletCall};
 
 /// The index of `pallet_staking` in the polkadot runtime
 pub const POLKADOT_PALLET_STAKING_INDEX: u8 = 7u8;
 
-/// Provides encoder types to encode the on associated types of `pallet_staking::Config` depending parameters
-/// call parameters depending on the Context
+/// Provides encoder types to encode the associated types of the  `pallet_staking::Config` trait depending on the configured Context.
 pub trait StakingCallEncoder<Source, Balance, AccountId>: PalletCallEncoder {
     /// Encodes the `<pallet_staking::Config>::Balance` depending on the context
     type CompactBalanceEncoder: EncodeWith<Balance, Self::Context>;
@@ -34,14 +35,13 @@ impl<'a, 'b, Source, Balance, AccountId, Config> Encode
 where
     Config: StakingCallEncoder<Source, Balance, AccountId>,
 {
-    /// Convert self to a slice and append it to the destination.
     fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
         // include the pallet identifier
         dest.push_byte(self.call.pallet_call_index());
         match self.call {
             StakingCall::Bond(bond) => {
-                Config::SourceEncoder::encode_to_with(&bond.controller, &self.ctx, dest);
-                Config::CompactBalanceEncoder::encode_to_with(&bond.value, &self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(&bond.controller, self.ctx, dest);
+                Config::CompactBalanceEncoder::encode_to_with(&bond.value, self.ctx, dest);
 
                 match &bond.payee {
                     RewardDestination::Staked => {
@@ -55,22 +55,22 @@ where
                     }
                     RewardDestination::Account(ref account) => {
                         dest.push_byte(3);
-                        Config::AccountIdEncoder::encode_to_with(account, &self.ctx, dest);
+                        Config::AccountIdEncoder::encode_to_with(account, self.ctx, dest);
                     }
                     _ => {}
                 }
             }
             StakingCall::BondExtra(val) => {
-                Config::CompactBalanceEncoder::encode_to_with(val, &self.ctx, dest);
+                Config::CompactBalanceEncoder::encode_to_with(val, self.ctx, dest);
             }
             StakingCall::Unbond(val) => {
-                Config::CompactBalanceEncoder::encode_to_with(val, &self.ctx, dest);
+                Config::CompactBalanceEncoder::encode_to_with(val, self.ctx, dest);
             }
             StakingCall::WithdrawUnbonded(val) => val.encode_to(dest),
             StakingCall::Nominate(sources) => {
                 Compact(sources.len() as u32).encode_to(dest);
                 for source in sources {
-                    Config::SourceEncoder::encode_to_with(source, &self.ctx, dest);
+                    Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
                 }
             }
         }

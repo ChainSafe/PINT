@@ -3,12 +3,13 @@
 
 //! Support for creating XCM calls to be used within `Xcm::Transact`
 
-pub mod proxy;
-pub mod staking;
-
-use crate::EncodeWith;
 use codec::{Encode, EncodeLike, Output};
 use frame_support::sp_std::marker::PhantomData;
+
+use crate::EncodeWith;
+
+pub mod proxy;
+pub mod staking;
 
 /// Represents an extrinsic of a pallet configured inside a runtime
 #[derive(Encode)]
@@ -86,12 +87,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::{cell::RefCell, collections::HashSet};
 
-    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
-    use crate::{
-        PassthroughCompactEncoder, PassthroughEncoder, MultiAddressLookupSourceEncoder,
-    };
+    use codec::{Decode, Encode};
     use frame_election_provider_support::onchain;
     use frame_support::sp_runtime::traits::BlakeTwo256;
     use frame_support::traits::OnUnbalanced;
@@ -110,10 +108,12 @@ mod tests {
         traits::IdentityLookup,
         Perbill,
     };
-
-    use codec::{Decode, Encode};
-    use std::{cell::RefCell, collections::HashSet};
     use xcm::DoubleEncoded;
+
+    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
+    use crate::{MultiAddressLookupSourceEncoder, PassthroughCompactEncoder, PassthroughEncoder};
+
+    use super::*;
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
@@ -399,7 +399,7 @@ mod tests {
 
     struct PalletStakingEncoder;
     impl StakingCallEncoder<AccountId, Balance, AccountId> for PalletStakingEncoder {
-        type CompactBalanceEncoder = PassthroughCompactEncoder<Balance,AssetId>;
+        type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
         type SourceEncoder = PassthroughEncoder<AccountId, AssetId>;
         type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
     }

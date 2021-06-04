@@ -18,10 +18,6 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::calls::staking::StakingConfig;
-    pub use crate::calls::*;
-    pub use crate::traits::*;
-    pub use crate::types::*;
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -40,6 +36,11 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
+    use crate::calls::staking::StakingConfig;
+    pub use crate::calls::*;
+    pub use crate::traits::*;
+    pub use crate::types::*;
+
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
     // // A `pallet_staking` dispatchable on another chain
@@ -47,7 +48,7 @@ pub mod pallet {
 
     // A `pallet_proxy` dispatchable on another chain
     // expects a `ProxyType` of u8 and blocknumber of u32
-    type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, u8, u32>;
+    // type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, u8, u32>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
