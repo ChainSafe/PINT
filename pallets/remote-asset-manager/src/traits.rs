@@ -1,6 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+use frame_support::dispatch::Output;
 use frame_support::{dispatch::DispatchResult, sp_std::vec::Vec};
 
 /// Facility for remote asset transactions.
@@ -27,7 +28,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 }
 
 /// A helper to encode an item using the provided context
-pub trait EncodeWith<T, I> {
-    /// Encodes the given info if possible
-    fn encoded_with(ctx: &T, input: I) -> Option<Vec<u8>>;
+pub trait EncodeWith<Input, Context> {
+    /// Same as `Encode::encode_to` but with additional context
+    fn encode_to_with<T: Output + ?Sized>(input: &Input, ctx: &Context, dest: &mut T);
 }

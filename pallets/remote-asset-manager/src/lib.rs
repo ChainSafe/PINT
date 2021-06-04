@@ -10,6 +10,7 @@
 
 pub use pallet::*;
 
+mod calls;
 mod traits;
 mod types;
 
@@ -17,6 +18,8 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    use crate::calls::staking::StakingConfig;
+    pub use crate::calls::*;
     pub use crate::traits::*;
     pub use crate::types::*;
     use cumulus_primitives_core::ParaId;
@@ -39,8 +42,8 @@ pub mod pallet {
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
-    // A `pallet_staking` dispatchable on another chain
-    type PalletStakingCall<T> = StakingCall<AccountIdFor<T>, WrappedEncoded, WrappedEncoded>;
+    // // A `pallet_staking` dispatchable on another chain
+    // type PalletStakingCall<T> = StakingCall<AccountIdFor<T>, WrappedEncoded, WrappedEncoded>;
 
     // A `pallet_proxy` dispatchable on another chain
     // expects a `ProxyType` of u8 and blocknumber of u32
@@ -160,37 +163,37 @@ pub mod pallet {
             amount: T::Balance,
             weight: u64,
         ) -> DispatchResultWithPostInfo {
-            let who = ensure_signed(origin)?;
-            let account: T::AccountId = T::SelfParaId::get().into_account();
-
-            log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  account);
-
-            let amount: WrappedEncoded = T::BalanceEncoder::encoded_with(&asset, amount)
-                .expect("Should not fail")
-                .into();
-
-            #[derive(codec::Encode)]
-            enum TransferCall<AccountId, Value> {
-                #[codec(index = 0)]
-                Transfer(MultiAddress<AccountId, ()>, Value),
-            }
-
-            let transfer = TransferCall::Transfer(who.into(), amount);
-
-            let xcm = Xcm::Transact {
-                origin_type: OriginKind::SovereignAccount,
-                require_weight_at_most: weight,
-                call: RuntimeCall {
-                    pallet_index: 4,
-                    call: transfer,
-                }
-                .encode()
-                .into(),
-            };
-
-            let result = T::XcmSender::send_xcm(dest, xcm);
-            log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
-            Self::deposit_event(Event::SentBond(result));
+            // let who = ensure_signed(origin)?;
+            // let account: T::AccountId = T::SelfParaId::get().into_account();
+            //
+            // log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  account);
+            //
+            // let amount: WrappedEncoded = T::BalanceEncoder::encoded_with(&asset, amount)
+            //     .expect("Should not fail")
+            //     .into();
+            //
+            // #[derive(codec::Encode)]
+            // enum TransferCall<AccountId, Value> {
+            //     #[codec(index = 0)]
+            //     Transfer(MultiAddress<AccountId, ()>, Value),
+            // }
+            //
+            // let transfer = TransferCall::Transfer(who.into(), amount);
+            //
+            // let xcm = Xcm::Transact {
+            //     origin_type: OriginKind::SovereignAccount,
+            //     require_weight_at_most: weight,
+            //     call: RuntimeCall {
+            //         pallet_index: 4,
+            //         call: transfer,
+            //     }
+            //     .encode()
+            //     .into(),
+            // };
+            //
+            // let result = T::XcmSender::send_xcm(dest, xcm);
+            // log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            // Self::deposit_event(Event::SentBond(result));
 
             Ok(().into())
         }
@@ -202,36 +205,36 @@ pub mod pallet {
             asset: T::AssetId,
             controller: T::Balance,
         ) -> DispatchResultWithPostInfo {
-            log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
-
-            let weight = StakingWeights::polkadot();
-
-            let account: T::AccountId = T::SelfParaId::get().into_account();
-            let bond = PalletStakingCall::<T>::Bond(
-                // controller
-                T::LookupSourceEncoder::encoded_with(&asset, account)
-                    .expect("Should not fail")
-                    .into(),
-                // amount
-                T::BalanceEncoder::encoded_with(&asset, controller)
-                    .expect("Should not fail")
-                    .into(),
-                // rewards
-                RewardDestination::Staked,
-            );
-
-            let xcm = Xcm::Transact {
-                origin_type: OriginKind::SovereignAccount,
-                require_weight_at_most: weight.bond_extra * 2,
-                call: bond
-                    .into_runtime_call(POLKADOT_PALLET_STAKING_INDEX)
-                    .encode()
-                    .into(),
-            };
-
-            let result = T::XcmSender::send_xcm(dest, xcm);
-            log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
-            Self::deposit_event(Event::SentBond(result));
+            // log::info!(target: "pint_xcm", "Attempting bond_nominate  on: {:?} with pint para account {:?}",dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+            //
+            // let weight = StakingWeights::polkadot();
+            //
+            // let account: T::AccountId = T::SelfParaId::get().into_account();
+            // let bond = PalletStakingCall::<T>::Bond(
+            //     // controller
+            //     T::LookupSourceEncoder::encoded_with(&asset, account)
+            //         .expect("Should not fail")
+            //         .into(),
+            //     // amount
+            //     T::BalanceEncoder::encoded_with(&asset, controller)
+            //         .expect("Should not fail")
+            //         .into(),
+            //     // rewards
+            //     RewardDestination::Staked,
+            // );
+            //
+            // let xcm = Xcm::Transact {
+            //     origin_type: OriginKind::SovereignAccount,
+            //     require_weight_at_most: weight.bond_extra * 2,
+            //     call: bond
+            //         .into_runtime_call(POLKADOT_PALLET_STAKING_INDEX)
+            //         .encode()
+            //         .into(),
+            // };
+            //
+            // let result = T::XcmSender::send_xcm(dest, xcm);
+            // log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
+            // Self::deposit_event(Event::SentBond(result));
             Ok(().into())
         }
     }
@@ -243,24 +246,26 @@ pub mod pallet {
             asset: T::AssetId,
             amount: T::Balance,
         ) -> Result<(), XcmError> {
-            log::debug!(target: "pint_xcm", "Attempting bond_extra  on: {:?} with pint para account {:?}", dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+            // log::debug!(target: "pint_xcm", "Attempting bond_extra  on: {:?} with pint para account {:?}", dest,  AccountIdConversion::<AccountIdFor<T>>::into_account(&T::SelfParaId::get()));
+            //
+            // if let Some(config) = AssetStakingConfig::<T>::get(&asset) {
+            //     let call =
+            //         StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::BondExtra(
+            //             T::BalanceEncoder::encoded_with(&asset, amount).expect("Should not fail"),
+            //         );
+            //     let xcm = Xcm::Transact {
+            //         origin_type: OriginKind::SovereignAccount,
+            //         require_weight_at_most: config.weights.bond_extra,
+            //         call: call.into_runtime_call(config.pallet_index).encode().into(),
+            //     };
+            //
+            //     Ok(T::XcmSender::send_xcm(dest, xcm)?)
+            // } else {
+            //     // nothing to bond
+            //     Ok(())
+            // }
 
-            if let Some(config) = AssetStakingConfig::<T>::get(&asset) {
-                let call =
-                    StakingCall::<T::AccountId, _, MultiAddress<T::AccountId, ()>>::BondExtra(
-                        T::BalanceEncoder::encoded_with(&asset, amount).expect("Should not fail"),
-                    );
-                let xcm = Xcm::Transact {
-                    origin_type: OriginKind::SovereignAccount,
-                    require_weight_at_most: config.weights.bond_extra,
-                    call: call.into_runtime_call(config.pallet_index).encode().into(),
-                };
-
-                Ok(T::XcmSender::send_xcm(dest, xcm)?)
-            } else {
-                // nothing to bond
-                Ok(())
-            }
+            Ok(())
         }
     }
 
