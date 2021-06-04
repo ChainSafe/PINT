@@ -317,7 +317,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::propose())] // TODO: Set weights
         /// Extrinsic to propose a new action to be voted upon in the next voting period.
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
@@ -346,7 +346,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::vote())] // TODO: Set weights
         /// Extrinsic to vote on an existing proposal.
         /// This can only be called by members of the committee.
         /// Successfully cast votes will be recorded in the state and a proposal
@@ -382,7 +382,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::close())] // TODO: Set weights
         /// Extrinsic to close and execute a proposal.
         /// Proposal must have been voted on and have majority approval.
         /// Only the proposal execution origin can execute.
@@ -434,7 +434,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_constituent())] // TODO: Set weights
         /// Add new constituent to the committee
         ///
         /// NOTE:

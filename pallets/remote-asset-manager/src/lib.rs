@@ -89,7 +89,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::transfer())] // TODO: Set weights
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
         }

@@ -12,9 +12,9 @@ benchmarks! {
         let admin: <T as frame_system::Config>::AccountId = account("admin", 0, 0);
     }: _(
         <Origin<T>>::Signed(admin),
-        10_000_u32.into(),
+        5_000_000_u32.into(),
         admin.clone()
     ) verify {
-
+        // T::Currency::freee
     }
 }
