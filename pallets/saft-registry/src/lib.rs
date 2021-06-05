@@ -160,6 +160,8 @@ pub mod pallet {
         fn add_saft() -> Weight;
         // TODO: (incompleted)
         //
+        // https://github.com/ChainSafe/PINT/pull/73
+        //
         // fn remove_saft() -> Weight;
         fn report_nav() -> Weight;
     }

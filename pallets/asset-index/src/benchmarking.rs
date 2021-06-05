@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
 use crate::types::{AssetAvailability, IndexAssetData};
-use frame_benchmarking::{benchmarks, whitelisted_caller, Zero};
-use frame_support::{assert_ok, traits::Currency};
+use frame_benchmarking::{benchmarks, whitelisted_caller};
+use frame_support::traits::Currency;
 use frame_system::RawOrigin;
-use pallet_chainlink_feed::Pallet as ChainlinkFeed;
 use xcm::v0::MultiLocation;
 
 benchmarks! {
@@ -46,6 +45,7 @@ benchmarks! {
     //
     // AssetPriceFeed not found
     //
+    // https://github.com/ChainSafe/PINT/issues/95
     //
     // deposit {
     //     let feed_id = Zero::zero();
