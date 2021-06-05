@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Box};
-use frame_support::{assert_ok, traits::Get};
+use frame_support::{assert_noop, assert_ok, traits::Get};
 use frame_system::{Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
 
 fn submit_proposal<T: Config>(caller: T::AccountId) -> pallet::Proposal<T> {
@@ -18,13 +18,12 @@ fn submit_proposal<T: Config>(caller: T::AccountId) -> pallet::Proposal<T> {
 benchmarks! {
     propose {
         let caller: T::AccountId = whitelisted_caller();
+        let proposal = submit_proposal::<T>(caller.clone());
     }: _(
-        SystemOrigin::Signed(caller),
+        SystemOrigin::Signed(caller.clone()),
         Box::new(<SystemCall<T>>::remark(vec![0; 0]).into())
     ) verify {
-        // TODO:
-        //
-        // verify last event
+        assert!(<Pallet<T>>::get_proposal(&proposal.hash()) == Some(proposal));
     }
 
     vote {
@@ -33,15 +32,20 @@ benchmarks! {
         assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
 
         // run to voting period
-        <System<T>>::set_block_number(<System<T>>::block_number() + <T as Config>::VotingPeriod::get() + <T as Config>::ProposalSubmissionPeriod::get() + 1_u32.into());
+        <System<T>>::set_block_number(
+            <System<T>>::block_number()
+                + <T as Config>::VotingPeriod::get()
+                + <T as Config>::ProposalSubmissionPeriod::get() + 1_u32.into(),
+        );
     }: _(
-        SystemOrigin::Signed(caller),
+        SystemOrigin::Signed(caller.clone()),
         proposal.hash(),
         Vote::Abstain
     ) verify {
-        // TODO:
-        //
-        // verify last event
+        assert_eq!(
+            <Pallet<T>>::get_votes_for(&proposal.hash()).unwrap().votes.len(),
+            1,
+        );
     }
 
     close {
@@ -74,12 +78,13 @@ benchmarks! {
                 + 1_u32.into()
         );
     }: _(
-        SystemOrigin::Signed(caller),
+        SystemOrigin::Signed(caller.clone()),
         proposal.hash()
     ) verify {
-        // TODO:
-        //
-        // verify last event
+        assert_noop!(
+            <Pallet<T>>::close(SystemOrigin::Signed(caller.clone()).into(), proposal.hash()),
+            <Error<T>>::ProposalAlreadyExecuted
+        );
     }
 
     add_constituent {
