@@ -11,10 +11,13 @@ benchmarks! {
         T::Currency::deposit_creating(&local_treasury, 10_000_000_u32.into());
         let admin: <T as frame_system::Config>::AccountId = account("admin", 0, 0);
     }: _(
-        <Origin<T>>::Signed(admin),
+        <Origin<T>>::Root,
         5_000_000_u32.into(),
         admin.clone()
     ) verify {
-        // T::Currency::freee
+        assert_eq!(
+            T::Currency::free_balance(&admin),
+            5_000_000_u32.into(),
+        );
     }
 }
