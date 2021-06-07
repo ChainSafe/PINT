@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
 use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Box};
-use frame_support::{assert_noop, assert_ok, traits::Get};
+use frame_support::{assert_ok, traits::Get};
 use frame_system::{Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
 
 fn submit_proposal<T: Config>(caller: T::AccountId) -> pallet::Proposal<T> {
@@ -78,11 +78,11 @@ benchmarks! {
                 + 1_u32.into()
         );
     }: _(
-        SystemOrigin::Signed(caller.clone()),
+        SystemOrigin::Signed(caller),
         proposal.hash()
     ) verify {
         assert_noop!(
-            <Pallet<T>>::close(SystemOrigin::Signed(caller.clone()).into(), proposal.hash()),
+            <Pallet<T>>::close(SystemOrigin::S(caller.clone()), proposal.hash()),
             <Error<T>>::ProposalAlreadyExecuted
         );
     }
