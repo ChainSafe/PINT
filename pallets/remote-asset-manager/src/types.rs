@@ -3,7 +3,7 @@
 
 //! Additional types for the remote asset manager pallet
 use crate::EncodeWith;
-use codec::{Compact, Decode, Encode, EncodeAsRef, HasCompact, Output};
+use codec::{Encode, EncodeAsRef, HasCompact, Output};
 use frame_support::{sp_runtime::MultiAddress, sp_std::marker::PhantomData};
 
 /// Encodes the type as it is

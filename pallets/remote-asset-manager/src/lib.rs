@@ -22,10 +22,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup},
-            MultiAddress,
-        },
+        sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup},
         sp_std::{prelude::*, result::Result},
         traits::Get,
     };
@@ -36,11 +33,14 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use crate::calls::proxy::{ProxyCallEncoder, ProxyState, ProxyType};
+    use crate::calls::proxy::{
+        ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
+    };
     use crate::calls::staking::{StakingCall, StakingCallEncoder, StakingConfig};
     pub use crate::calls::*;
     pub use crate::traits::*;
     pub use crate::types::*;
+    use frame_support::sp_runtime::traits::Zero;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -49,7 +49,8 @@ pub mod pallet {
 
     // A `pallet_proxy` dispatchable on another chain
     // expects a `ProxyType` of u8 and blocknumber of u32
-    // type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, u8, u32>;
+    type PalletProxyCall<T> =
+        ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -109,6 +110,9 @@ pub mod pallet {
         /// Executor for cross chain messages.
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
 
+        /// Origin that is allowed to send cross chain messages on behalf of the PINT chain
+        type AdminOrigin: EnsureOrigin<Self::Origin>;
+
         /// How to send an onward XCM message.
         type XcmSender: SendXcm;
 
@@ -119,16 +123,22 @@ pub mod pallet {
     #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(_);
 
-    /// The index of `pallet_staking` in the runtime of the parachain.
+    /// The config of `pallet_staking` in the runtime of the parachain.
     // TODO: Location as key?
     #[pallet::storage]
-    pub type AssetStakingConfig<T: Config> = StorageMap<
+    pub type PalletStakingConfig<T: Config> = StorageMap<
         _,
         Twox64Concat,
         <T as Config>::AssetId,
         StakingConfig<T::AccountId, T::Balance>,
         OptionQuery,
     >;
+
+    /// The config of `pallet_proxy` in the runtime of the parachain.
+    // TODO: Location as key?
+    #[pallet::storage]
+    pub type PalletProxyConfig<T: Config> =
+        StorageMap<_, Twox64Concat, <T as Config>::AssetId, ProxyConfig, OptionQuery>;
 
     /// Denotes the current state of proxies on a parachain for the PINT chain's account with the delegates being the second key in this map
     ///
@@ -146,8 +156,10 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
-        /// key-value pairs for the `PalletStakingIndex` storage map
+        /// key-value pairs for the `PalletStakingConfig` storage map
         pub staking_configs: Vec<(T::AssetId, StakingConfig<T::AccountId, T::Balance>)>,
+        /// key-value pairs for the `PalletProxyConfig` storage map
+        pub proxy_configs: Vec<(T::AssetId, ProxyConfig)>,
     }
 
     #[cfg(feature = "std")]
@@ -155,6 +167,7 @@ pub mod pallet {
         fn default() -> Self {
             Self {
                 staking_configs: Default::default(),
+                proxy_configs: Default::default(),
             }
         }
     }
@@ -167,14 +180,29 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
-        SentBond(Result<(), XcmError>),
-        Attempted(xcm::v0::Outcome),
         SentBondExtra,
         SentUnbond,
+        /// Successfully sent a cross chain message to add a proxy. \[destination, delegate, proxy type\]
+        SentAddProxy(MultiLocation, AccountIdFor<T>, ProxyType),
+        /// Successfully sent a cross chain message to remove a proxy. \[destination, delegate, proxy type\]
+        SentRemoveProxy(MultiLocation, AccountIdFor<T>, ProxyType),
     }
 
     #[pallet::error]
-    pub enum Error<T> {}
+    pub enum Error<T> {
+        /// Thrown when the proxy type was already set.
+        AlreadyProxy,
+        /// Thrown when the requested proxy type to removed was not added before.
+        NoProxyFound,
+        /// Thrown when the requested cross-chain call could not be encoded for the given location.
+        NotEncodableForLocation,
+        /// Thrown when no config was found for the requested location
+        NoPalletConfigFound,
+        /// Thrown when sending an Xcm `pallet_proxy::add_proxy` failed
+        FailedToSendAddProxyXcm,
+        /// Thrown when sending an Xcm `pallet_proxy::remove_proxy` failed
+        FailedToSendRemoveProxyXcm,
+    }
 
     #[pallet::hooks]
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
@@ -226,7 +254,7 @@ pub mod pallet {
 
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn bond(
-            _origin: OriginFor<T>,
+            origin: OriginFor<T>,
             dest: MultiLocation,
             asset: T::AssetId,
             controller: T::Balance,
@@ -261,6 +289,62 @@ pub mod pallet {
             // let result = T::XcmSender::send_xcm(dest, xcm);
             // log::info!(target: "pint_xcm", "Bond xcm send result: {:?} ",result);
             // Self::deposit_event(Event::SentBond(result));
+            Ok(().into())
+        }
+
+        /// Transacts a `pallet_proxy::Call::add_proxy` call to add a proxy on behalf of the PINT parachain's account on the target chain.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn send_add_proxy(
+            origin: OriginFor<T>,
+            dest: MultiLocation,
+            asset: T::AssetId,
+            proxy_type: ProxyType,
+            delegate: Option<AccountIdFor<T>>,
+        ) -> DispatchResultWithPostInfo {
+            let who = ensure_signed(origin.clone())?;
+            T::AdminOrigin::ensure_origin(origin)?;
+            let delegate = delegate.unwrap_or(who);
+
+            log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
+
+            // ensures that the call is encodeable for the destination
+            ensure!(
+                T::PalletProxyCallEncoder::can_encode(&asset),
+                Error::<T>::NotEncodableForLocation
+            );
+
+            let mut proxies = Proxies::<T>::get(&asset, &delegate);
+            ensure!(!proxies.contains(&proxy_type), Error::<T>::AlreadyProxy);
+
+            let config =
+                PalletProxyConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
+
+            let call = PalletProxyCall::<T>::AddProxy(ProxyParams {
+                delegate: delegate.clone(),
+                proxy_type,
+                delay: T::BlockNumber::zero(),
+            });
+            let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: config.weights.add_proxy,
+                call: encoder
+                    .encode_runtime_call(config.pallet_index)
+                    .encode()
+                    .into(),
+            };
+
+            let result = T::XcmSender::send_xcm(dest.clone(), xcm);
+            log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
+
+            ensure!(result.is_ok(), Error::<T>::FailedToSendAddProxyXcm);
+
+            // update the proxy for this delegate
+            proxies.add(proxy_type);
+            Proxies::<T>::insert(asset, delegate.clone(), proxies);
+
+            Self::deposit_event(Event::SentAddProxy(dest, delegate, proxy_type));
             Ok(().into())
         }
     }

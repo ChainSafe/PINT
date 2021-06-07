@@ -5,7 +5,6 @@
 
 use codec::{Compact, Decode, Encode, Output};
 use frame_support::{
-    sp_std::marker::PhantomData,
     weights::{constants::RocksDbWeight, Weight},
     RuntimeDebug,
 };

@@ -3,8 +3,10 @@
 
 //! Xcm support for `pallet_proxy` calls
 use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
-use codec::{Compact, Decode, Encode, Output};
-use frame_support::{sp_std::marker::PhantomData, RuntimeDebug};
+use codec::{Decode, Encode, Output};
+use frame_support::{weights::Weight, RuntimeDebug};
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 
 /// The index of `pallet_proxy` in the polkadot runtime
 pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
@@ -13,7 +15,7 @@ pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
 pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 
 /// Denotes an enum based (identified by an `u8`) proxy type
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
 pub struct ProxyType(pub u8);
 
 impl ProxyType {
@@ -93,4 +95,38 @@ impl<AccountId, ProxyType, BlockNumber> PalletCall
 pub struct ProxyState {
     /// All the added Proxy types
     pub added: Vec<ProxyType>,
+}
+
+impl ProxyState {
+    /// Whether the given proxy is already set
+    pub fn contains(&self, proxy: &ProxyType) -> bool {
+        self.added.contains(&proxy)
+    }
+
+    /// Adds the proxy to the list
+    ///
+    /// *NOTE:* the caller must check `contains` first
+    pub fn add(&mut self, proxy: ProxyType) {
+        self.added.push(proxy)
+    }
+}
+
+/// The `pallet_proxy` configuration for a particular chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct ProxyConfig {
+    /// The index of `pallet_index` within the parachain's runtime
+    pub pallet_index: u8,
+    /// The configured weights for `pallet_proxy`
+    pub weights: ProxyWeights,
+}
+
+/// Represents an excerpt from the `pallet_proxy` weights
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct ProxyWeights {
+    /// Weight for `add_proxy` extrinsic
+    pub add_proxy: Weight,
+    /// Weight for `remove_proxy` extrinsic
+    pub remove_proxy: Weight,
 }

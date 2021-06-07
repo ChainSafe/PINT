@@ -3,7 +3,7 @@
 
 //! Support for creating XCM calls to be used within `Xcm::Transact`
 
-use codec::{Encode, EncodeLike, Output};
+use codec::{Encode, Output};
 use frame_support::sp_std::marker::PhantomData;
 
 use crate::EncodeWith;
@@ -61,7 +61,7 @@ impl<'a, 'b, Call, Config: PalletCallEncoder> CallEncoder<'a, 'b, Call, Config> 
     }
 
     /// Wraps the pallet call into a `RuntimeCall` with the given pallet index
-    pub fn into_runtime_call(self, pallet_index: u8) -> RuntimeCall<Self> {
+    pub fn encode_runtime_call(self, pallet_index: u8) -> RuntimeCall<Self> {
         RuntimeCall {
             pallet_index,
             call: self,
@@ -457,7 +457,7 @@ mod tests {
         assert_eq!(bond_extra, bond_extra_decoded);
 
         let runtime_call: Call = bond_extra.into();
-        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
@@ -487,7 +487,7 @@ mod tests {
         assert_eq!(bond, bond_extra_decoded);
 
         let runtime_call: Call = bond.into();
-        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
@@ -509,7 +509,7 @@ mod tests {
         assert_eq!(unbond, bond_extra_decoded);
 
         let runtime_call: Call = unbond.into();
-        let xcm_runtime_call_encoded = xcm_encoder.into_runtime_call(7).encode();
+        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
 
@@ -537,7 +537,7 @@ mod tests {
 
         let runtime_call: Call = add_proxy.into();
         let xcm_runtime_call_encoded = xcm_encoder
-            .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
+            .encode_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
             .encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
@@ -566,7 +566,7 @@ mod tests {
 
         let runtime_call: Call = add_proxy.into();
         let xcm_runtime_call_encoded = xcm_encoder
-            .into_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
+            .encode_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
             .encode();
         let runtime_call_encoded = runtime_call.encode();
         assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
