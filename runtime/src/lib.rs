@@ -52,7 +52,11 @@ pub use frame_support::{
 };
 use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
-use pallet_remote_asset_manager::{CompactU128BalanceEncoder, MultiAddressLookupSourceEncoder};
+use pallet_remote_asset_manager::{
+    pallet::proxy::{ProxyCallEncoder, ProxyType},
+    pallet::staking::StakingCallEncoder,
+    PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
+};
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -619,15 +623,44 @@ impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
     }
 }
 
+/// The encoder to use when transacting `pallet_proxy` calls
+pub struct PalletProxyEncoder;
+impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
+    type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+    type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
+    type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
+}
+impl PalletCallEncoder for PalletProxyEncoder {
+    type Context = AssetId;
+    fn can_encode(_ctx: &Self::Context) -> bool {
+        // TODO check in `AssetRegistry`
+        true
+    }
+}
+
+type AccountLookupSource = sp_runtime::MultiAddress<AccountId, ()>;
+
+/// The encoder to use when transacting `pallet_staking` calls
+pub struct PalletStakingEncoder;
+impl StakingCallEncoder<AccountLookupSource, Balance, AccountId> for PalletStakingEncoder {
+    type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+    type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
+    type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+}
+
+impl PalletCallEncoder for PalletStakingEncoder {
+    type Context = AssetId;
+    fn can_encode(_ctx: &Self::Context) -> bool {
+        // TODO check in `AssetRegistry`
+        true
+    }
+}
+
 impl pallet_remote_asset_manager::Config for Runtime {
     type Balance = Balance;
     type AssetId = AssetId;
     type AssetIdConvert = AssetIdConvert;
     type AccountId32Convert = AccountId32Convert;
-    // Encodes balances as u128 before sending calls to other chains
-    type BalanceEncoder = CompactU128BalanceEncoder<AssetId>;
-    // Converter for the account lookup mechanism on other chains
-    type LookupSourceEncoder = MultiAddressLookupSourceEncoder<AssetId, AccountId, ()>;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;
@@ -635,6 +668,12 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmSender = XcmRouter;
     type Event = Event;
+    // Encodes `pallet_staking` calls before transaction them to other chains
+    type PalletStakingCallEncoder = PalletStakingEncoder;
+    // Encodes `pallet_proxy` calls before transaction them to other chains
+    type PalletProxyCallEncoder = PalletProxyEncoder;
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
