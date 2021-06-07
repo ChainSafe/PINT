@@ -19,17 +19,18 @@ mod types;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     use cumulus_primitives_core::ParaId;
+    use frame_support::sp_runtime::traits::Zero;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup},
-        sp_std::{prelude::*, result::Result},
+        sp_runtime::traits::{AtLeast32BitUnsigned, Convert, StaticLookup},
+        sp_std::prelude::*,
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
     use xcm::{
         opaque::v0::SendXcm,
-        v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Xcm},
+        v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
@@ -42,7 +43,6 @@ pub mod pallet {
     pub use crate::calls::*;
     pub use crate::traits::*;
     pub use crate::types::*;
-    use frame_support::sp_runtime::traits::Zero;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;

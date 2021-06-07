@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 //! Additional types for the remote asset manager pallet
-use crate::EncodeWith;
 use codec::{Encode, EncodeAsRef, HasCompact, Output};
 use frame_support::{sp_runtime::MultiAddress, sp_std::marker::PhantomData};
+
+use crate::EncodeWith;
 
 /// Encodes the type as it is
 pub struct PassthroughEncoder<I, T>(PhantomData<(I, T)>);

@@ -2,11 +2,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 //! Xcm support for `pallet_proxy` calls
-use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 use codec::{Decode, Encode, Output};
 use frame_support::{weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
+
+use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 
 /// The index of `pallet_proxy` in the polkadot runtime
 pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;

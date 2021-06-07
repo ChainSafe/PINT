@@ -110,13 +110,13 @@ mod tests {
     };
     use xcm::DoubleEncoded;
 
-    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
-    use crate::{MultiAddressLookupSourceEncoder, PassthroughCompactEncoder, PassthroughEncoder};
-
-    use super::*;
     use crate::calls::proxy::{
         ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX,
     };
+    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
+    use crate::{PassthroughCompactEncoder, PassthroughEncoder};
+
+    use super::*;
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
@@ -409,7 +409,7 @@ mod tests {
 
     impl PalletCallEncoder for PalletStakingEncoder {
         type Context = AssetId;
-        fn can_encode(ctx: &u64) -> bool {
+        fn can_encode(_ctx: &u64) -> bool {
             true
         }
     }
@@ -423,7 +423,7 @@ mod tests {
 
     impl PalletCallEncoder for PalletProxyEncoder {
         type Context = AssetId;
-        fn can_encode(ctx: &u64) -> bool {
+        fn can_encode(_ctx: &u64) -> bool {
             true
         }
     }
