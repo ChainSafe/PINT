@@ -172,6 +172,16 @@ pub struct StakingConfig<AccountId, Balance> {
     // TODO add minumum (un)bond  that has to be met for executing XCM (un)bonding calls
 }
 
+/// Represents the bond state of the PINT's sovereign account on a chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct StakingBondState<Source, Balance> {
+    /// The controller
+    pub controller: Source,
+
+    /// The amount bonded
+    pub bonded: Balance,
+}
+
 /// Represents an excerpt from the `pallet_staking` weights
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
