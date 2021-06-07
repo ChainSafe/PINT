@@ -3,7 +3,7 @@
 
 //! Xcm support for `pallet_proxy` calls
 use codec::{Decode, Encode, Output};
-use frame_support::{weights::Weight, RuntimeDebug};
+use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 

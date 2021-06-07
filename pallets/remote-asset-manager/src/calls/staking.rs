@@ -5,6 +5,7 @@
 
 use codec::{Compact, Decode, Encode, Output};
 use frame_support::{
+    sp_std::vec::Vec,
     weights::{constants::RocksDbWeight, Weight},
     RuntimeDebug,
 };

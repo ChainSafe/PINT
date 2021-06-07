@@ -76,9 +76,6 @@ pub mod pallet {
         /// Convert `Self::Account` to `AccountId32`
         type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
 
-        /// Encodes the local `Balance` type into the representation expected on the asset's parachain.
-        type BalanceEncoder: EncodeWith<Self::AssetId, Self::Balance>;
-
         /// The encoder to use for encoding when transacting a `pallet_staking` Call
         type PalletStakingCallEncoder: StakingCallEncoder<
             <Self::Lookup as StaticLookup>::Source,
