@@ -164,7 +164,7 @@ pub mod pallet {
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
         /// Thrown when to withdrawals are available to complete
-        NoPendingWithdrawals
+        NoPendingWithdrawals,
     }
 
     #[pallet::hooks]
@@ -377,9 +377,12 @@ pub mod pallet {
                     let pending = maybe_pending
                         .take()
                         .ok_or(<Error<T>>::NoPendingWithdrawals)?;
+
+                    // try to redeem each redemption, but only close it if all assets could be redeemed
                     let still_pending: Vec<_> = pending
                         .into_iter()
                         .filter_map(|mut redemption| {
+                            // only try to close if the lockup period is over
                             if redemption.initiated + period > current_block {
                                 // whether all assets reached state `Transferred`
                                 let mut all_withdrawn = true;
@@ -410,7 +413,7 @@ pub mod pallet {
                                 }
 
                                 if all_withdrawn {
-                                    // all done, delete from storage
+                                    // all redemptions completed, remove from storage
                                     Self::deposit_event(Event::WithdrawalCompleted(
                                         caller.clone(),
                                         redemption.assets,
