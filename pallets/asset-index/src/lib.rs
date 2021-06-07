@@ -25,16 +25,16 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        PalletId,
         sp_runtime::{
-            FixedPointNumber,
-            FixedU128, traits::{
+            traits::{
                 AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub,
                 Saturating, Zero,
             },
+            FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
         traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+        PalletId,
     };
     use frame_system::pallet_prelude::*;
     use xcm::opaque::v0::MultiLocation;
@@ -43,12 +43,12 @@ pub mod pallet {
     use pallet_price_feed::{AssetPricePair, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
 
-    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     use crate::traits::WithdrawalFee;
+    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
+    pub use crate::types::MultiAssetAdapter;
     use crate::types::{
         AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
     };
-    pub use crate::types::MultiAssetAdapter;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -59,15 +59,15 @@ pub mod pallet {
         /// Origin that is allowed to administer the index
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// Currency implementation to use as the index token
-        type IndexToken: LockableCurrency<Self::AccountId, Balance=Self::Balance>;
+        type IndexToken: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
         /// The balance type used within this pallet
         type Balance: Parameter
-        + Member
-        + AtLeast32BitUnsigned
-        + Default
-        + Copy
-        + MaybeSerializeDeserialize
-        + Into<u128>;
+            + Member
+            + AtLeast32BitUnsigned
+            + Default
+            + Copy
+            + MaybeSerializeDeserialize
+            + Into<u128>;
         /// Period after the minting of the index token for which 100% is locked up.
         /// Only applies to users contributing assets directly to index
         #[pallet::constant]
@@ -113,7 +113,7 @@ pub mod pallet {
     #[pallet::storage]
     /// (AssetId) -> IndexAssetData
     pub type Holdings<T: Config> =
-    StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<T::Balance>, OptionQuery>;
+        StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<T::Balance>, OptionQuery>;
 
     #[pallet::storage]
     ///  (AccountId) -> Vec<PendingRedemption>
@@ -163,7 +163,7 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
-        /// Thrown when to withdrawals are availablee to complete
+        /// Thrown when to withdrawals are available to complete
         NoPendingWithdrawals,
     }
 
@@ -298,8 +298,8 @@ pub mod pallet {
             // update the index balance by burning all of the redeemed tokens and the fee
             let effectively_withdrawn = fee
                 + redeemed_pint
-                .try_into()
-                .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+                    .try_into()
+                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
             let burned = T::IndexToken::burn(effectively_withdrawn);
 
             T::IndexToken::settle(
@@ -308,8 +308,8 @@ pub mod pallet {
                 WithdrawReasons::TRANSFER,
                 ExistenceRequirement::KeepAlive,
             )
-                .map_err(|_| ())
-                .expect("ensured can withdraw; qed");
+            .map_err(|_| ())
+            .expect("ensured can withdraw; qed");
 
             // issue new tokens to compensate the fee and put it into the treasury
             let fee = T::IndexToken::issue(fee);
@@ -371,62 +371,69 @@ pub mod pallet {
             let current_block = frame_system::Pallet::<T>::block_number();
             let period = T::WithdrawalPeriod::get();
 
-            PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
-                let pending = maybe_pending.take().ok_or(<Error<T>>::NoPendingWithdrawals)?;
-                let still_pending: Vec<_> = pending
-                    .into_iter()
-                    .filter_map(|mut redemption| {
-                        if redemption.initiated + period > current_block {
-                            // whether all assets reached state `Transferred`
-                            let mut all_withdrawn = true;
-                            for asset in &mut redemption.assets {
-                                match asset.state {
-                                    RedemptionState::Initiated => {
-                                        // unbonding processes failed
-                                        // TODO retry or handle this separately?
-                                        all_withdrawn = false;
-                                    }
-                                    RedemptionState::Unbonding => {
-                                        // unbonding process already started, try to complete it
-                                        if T::RemoteAssetManager::withdraw_unbonded(
-                                            caller.clone(),
-                                            asset.asset.clone(),
-                                            asset.units,
-                                        )
-                                            .is_ok()
-                                        {
-                                            // TODO put the units in the user's sovereign account or transfer?
-                                            asset.state = RedemptionState::Transferred;
-                                        } else {
+            PendingWithdrawals::<T>::try_mutate_exists(
+                &caller,
+                |maybe_pending| -> DispatchResult {
+                    let pending = maybe_pending
+                        .take()
+                        .ok_or(<Error<T>>::NoPendingWithdrawals)?;
+
+                    // try to redeem each redemption, but only close it if all assets could be redeemed
+                    let still_pending: Vec<_> = pending
+                        .into_iter()
+                        .filter_map(|mut redemption| {
+                            // only try to close if the lockup period is over
+                            if redemption.initiated + period > current_block {
+                                // whether all assets reached state `Transferred`
+                                let mut all_withdrawn = true;
+                                for asset in &mut redemption.assets {
+                                    match asset.state {
+                                        RedemptionState::Initiated => {
+                                            // unbonding processes failed
+                                            // TODO retry or handle this separately?
                                             all_withdrawn = false;
                                         }
+                                        RedemptionState::Unbonding => {
+                                            // unbonding process already started, try to complete it
+                                            if T::RemoteAssetManager::withdraw_unbonded(
+                                                caller.clone(),
+                                                asset.asset.clone(),
+                                                asset.units,
+                                            )
+                                            .is_ok()
+                                            {
+                                                // TODO put the units in the user's sovereign account or transfer?
+                                                asset.state = RedemptionState::Transferred;
+                                            } else {
+                                                all_withdrawn = false;
+                                            }
+                                        }
+                                        RedemptionState::Transferred => {}
                                     }
-                                    RedemptionState::Transferred => {}
                                 }
-                            }
 
-                            if all_withdrawn {
-                                // all done, delete from storage
-                                Self::deposit_event(Event::WithdrawalCompleted(
-                                    caller.clone(),
-                                    redemption.assets,
-                                ));
-                                None
+                                if all_withdrawn {
+                                    // all redemptions completed, remove from storage
+                                    Self::deposit_event(Event::WithdrawalCompleted(
+                                        caller.clone(),
+                                        redemption.assets,
+                                    ));
+                                    None
+                                } else {
+                                    Some(redemption)
+                                }
                             } else {
                                 Some(redemption)
                             }
-                        } else {
-                            Some(redemption)
-                        }
-                    })
-                    .collect();
+                        })
+                        .collect();
 
-                if !still_pending.is_empty() {
-                    *maybe_pending = Some(still_pending);
-                }
-                Ok(().into())
-            })?;
-
+                    if !still_pending.is_empty() {
+                        *maybe_pending = Some(still_pending);
+                    }
+                    Ok(())
+                },
+            )?;
             Ok(().into())
         }
     }
@@ -459,7 +466,7 @@ pub mod pallet {
 
         /// Calculates the total NAV of all holdings
         fn calculate_nav(
-            iter: impl Iterator<Item=(T::AssetId, IndexAssetData<T::Balance>)>,
+            iter: impl Iterator<Item = (T::AssetId, IndexAssetData<T::Balance>)>,
         ) -> Result<T::Balance, DispatchError> {
             let total_issuance = T::IndexToken::total_issuance();
             if total_issuance.is_zero() {
