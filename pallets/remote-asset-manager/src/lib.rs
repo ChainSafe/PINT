@@ -103,9 +103,14 @@ pub mod pallet {
             Ok(())
         }
 
-        fn unbond(
-            _asset: <T as Config>::AssetId,
-            _amount: <T as Config>::Balance,
+        fn unbond(_asset: T::AssetId, _amount: T::Balance) -> DispatchResult {
+            Ok(())
+        }
+
+        fn withdraw_unbonded(
+            _who: AccountIdFor<T>,
+            _asset: T::AssetId,
+            _amount: T::Balance,
         ) -> DispatchResult {
             Ok(())
         }

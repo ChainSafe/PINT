@@ -22,12 +22,6 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant)]
 pub mod pallet {
-    use crate::traits::WithdrawalFee;
-    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
-    pub use crate::types::MultiAssetAdapter;
-    use crate::types::{
-        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
-    };
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -43,10 +37,18 @@ pub mod pallet {
         PalletId,
     };
     use frame_system::pallet_prelude::*;
+    use xcm::opaque::v0::MultiLocation;
+
     use pallet_asset_depository::MultiAssetDepository;
     use pallet_price_feed::{AssetPricePair, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
-    use xcm::opaque::v0::MultiLocation;
+
+    use crate::traits::WithdrawalFee;
+    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
+    pub use crate::types::MultiAssetAdapter;
+    use crate::types::{
+        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
+    };
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -105,7 +107,7 @@ pub mod pallet {
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -124,8 +126,8 @@ pub mod pallet {
     >;
 
     #[pallet::event]
-    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", T::Balance = "Balance")]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor < T > = "AccountId", T::Balance = "Balance")]
+    #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
@@ -136,6 +138,15 @@ pub mod pallet {
         /// Started the withdrawal process
         /// \[Account, PINTAmount\]
         WithdrawalInitiated(AccountIdFor<T>, T::Balance),
+        /// Completed a single asset withdrawal
+        /// \[Account, AssetId, AssetUnits\]
+        Withdrawn(AccountIdFor<T>, T::AssetId, T::Balance),
+        /// Completed a pending asset withdrawal
+        /// \[Account, Assets\]
+        WithdrawalCompleted(
+            AccountIdFor<T>,
+            Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
+        ),
     }
 
     #[pallet::error]
@@ -152,6 +163,8 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
+        /// Thrown when to withdrawals are available to complete
+        NoPendingWithdrawals,
     }
 
     #[pallet::hooks]
@@ -343,7 +356,6 @@ pub mod pallet {
                     assets,
                 })
             });
-
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
@@ -351,10 +363,79 @@ pub mod pallet {
         /// Completes the unbonding process on other parachains and
         /// transfers the redeemed assets into the sovereign account of the owner.
         ///
-        /// All pending withdrawals need to have completed their lockup period
+        /// Only pending withdrawals that have completed their lockup period will be withdrawn.
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn complete_withdraw(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            todo!()
+        pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+
+            let current_block = frame_system::Pallet::<T>::block_number();
+            let period = T::WithdrawalPeriod::get();
+
+            PendingWithdrawals::<T>::try_mutate_exists(
+                &caller,
+                |maybe_pending| -> DispatchResult {
+                    let pending = maybe_pending
+                        .take()
+                        .ok_or(<Error<T>>::NoPendingWithdrawals)?;
+
+                    // try to redeem each redemption, but only close it if all assets could be redeemed
+                    let still_pending: Vec<_> = pending
+                        .into_iter()
+                        .filter_map(|mut redemption| {
+                            // only try to close if the lockup period is over
+                            if redemption.initiated + period > current_block {
+                                // whether all assets reached state `Transferred`
+                                let mut all_withdrawn = true;
+                                for asset in &mut redemption.assets {
+                                    match asset.state {
+                                        RedemptionState::Initiated => {
+                                            // unbonding processes failed
+                                            // TODO retry or handle this separately?
+                                            all_withdrawn = false;
+                                        }
+                                        RedemptionState::Unbonding => {
+                                            // unbonding process already started, try to complete it
+                                            if T::RemoteAssetManager::withdraw_unbonded(
+                                                caller.clone(),
+                                                asset.asset.clone(),
+                                                asset.units,
+                                            )
+                                            .is_ok()
+                                            {
+                                                // TODO put the units in the user's sovereign account or transfer?
+                                                asset.state = RedemptionState::Transferred;
+                                            } else {
+                                                all_withdrawn = false;
+                                            }
+                                        }
+                                        RedemptionState::Transferred => {}
+                                    }
+                                }
+
+                                if all_withdrawn {
+                                    // all redemptions completed, remove from storage
+                                    Self::deposit_event(Event::WithdrawalCompleted(
+                                        caller.clone(),
+                                        redemption.assets,
+                                    ));
+                                    None
+                                } else {
+                                    Some(redemption)
+                                }
+                            } else {
+                                Some(redemption)
+                            }
+                        })
+                        .collect();
+
+                    if !still_pending.is_empty() {
+                        *maybe_pending = Some(still_pending);
+                    }
+                    Ok(())
+                },
+            )?;
+
+            Ok(().into())
         }
     }
 
