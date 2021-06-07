@@ -42,12 +42,12 @@ version = '3.0.0'
 
 [dependencies.xcm]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dependencies.xcm-executor]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dev-dependencies]
@@ -55,7 +55,7 @@ serde = { version = "1.0.101" }
 
 [dev-dependencies.xcm-builder]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dev-dependencies.pallet-balances]

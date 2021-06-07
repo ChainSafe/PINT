@@ -48,22 +48,22 @@ version = '3.0.0'
 
 [dependencies.xcm]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dependencies.xcm-executor]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dependencies.cumulus-pallet-xcm]
 default-features = false
-git = 'https://github.com/mattsse/cumulus'
+git = 'https://github.com/paritytech/cumulus'
 branch = 'rococo-v1'
 
 [dependencies.cumulus-primitives-core]
 default-features = false
-git = 'https://github.com/mattsse/cumulus'
+git = 'https://github.com/paritytech/cumulus'
 branch = 'rococo-v1'
 
 [dev-dependencies.pallet-staking]
@@ -78,7 +78,7 @@ version = '3.0.0'
 
 [dev-dependencies.xcm-builder]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dev-dependencies.pallet-balances]

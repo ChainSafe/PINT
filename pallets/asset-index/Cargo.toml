@@ -46,13 +46,13 @@ branch = 'rococo-v1'
 version = '3.0.0'
 
 [dependencies.xcm]
-git = "https://github.com/mattsse/polkadot"
+git = "https://github.com/paritytech/polkadot"
 branch = 'rococo-v1'
 default-features = false
 
 [dependencies.xcm-executor]
 default-features = false
-git = 'https://github.com/mattsse/polkadot'
+git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
 [dependencies.pallet-remote-asset-manager]
