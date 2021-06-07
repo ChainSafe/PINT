@@ -163,7 +163,7 @@ pub mod pallet {
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
-        /// Thrown when to withdrawals are availablee to complete
+        /// Thrown when to withdrawals are available to complete
         NoPendingWithdrawals
     }
 
@@ -428,7 +428,7 @@ pub mod pallet {
                     if !still_pending.is_empty() {
                         *maybe_pending = Some(still_pending);
                     }
-                    Ok(().into())
+                    Ok(())
                 },
             )?;
 
