@@ -10,9 +10,7 @@
 
 pub use pallet::*;
 
-mod calls;
 mod traits;
-mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
@@ -34,15 +32,15 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use crate::calls::proxy::{
-        ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
-    };
-    use crate::calls::staking::{
-        Bond, RewardDestination, StakingBondState, StakingCall, StakingCallEncoder, StakingConfig,
-    };
-    pub use crate::calls::*;
     pub use crate::traits::*;
-    pub use crate::types::*;
+    use xcm_calls::{
+        proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
+        staking::{
+            Bond, RewardDestination, StakingBondState, StakingCall, StakingCallEncoder,
+            StakingConfig,
+        },
+        PalletCall, PalletCallEncoder,
+    };
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;

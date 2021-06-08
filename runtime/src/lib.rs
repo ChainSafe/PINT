@@ -52,15 +52,15 @@ pub use frame_support::{
 };
 use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
-use pallet_remote_asset_manager::{
-    pallet::proxy::{ProxyCallEncoder, ProxyType},
-    pallet::staking::StakingCallEncoder,
-    PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
-};
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
+use xcm_calls::{
+    proxy::{ProxyCallEncoder, ProxyType},
+    staking::StakingCallEncoder,
+    PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
+};
 use xcm_executor::traits::MatchesFungible;
 
 /// An index to a block.
@@ -661,19 +661,19 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type AssetId = AssetId;
     type AssetIdConvert = AssetIdConvert;
     type AccountId32Convert = AccountId32Convert;
+    // Encodes `pallet_staking` calls before transaction them to other chains
+    type PalletStakingCallEncoder = PalletStakingEncoder;
+    // Encodes `pallet_proxy` calls before transaction them to other chains
+    type PalletProxyCallEncoder = PalletProxyEncoder;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmSender = XcmRouter;
-    type Event = Event;
-    // Encodes `pallet_staking` calls before transaction them to other chains
-    type PalletStakingCallEncoder = PalletStakingEncoder;
-    // Encodes `pallet_proxy` calls before transaction them to other chains
-    type PalletProxyCallEncoder = PalletProxyEncoder;
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type XcmSender = XcmRouter;
+    type Event = Event;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

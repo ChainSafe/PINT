@@ -12,7 +12,7 @@ use frame_support::{
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use crate::calls::PalletCallEncoder;
+use crate::PalletCallEncoder;
 use crate::{CallEncoder, EncodeWith, PalletCall};
 
 /// The index of `pallet_staking` in the polkadot runtime

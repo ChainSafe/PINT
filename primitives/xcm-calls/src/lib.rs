@@ -1,13 +1,16 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-//! Support for creating XCM calls to be used within `Xcm::Transact`
+//! Support for creating XCM calls that are used within `Xcm::Transact`
+
+#![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Encode, Output};
 use frame_support::sp_std::marker::PhantomData;
 
-use crate::EncodeWith;
+pub use encode_with::*;
 
+mod encode_with;
 pub mod proxy;
 pub mod staking;
 
@@ -110,10 +113,8 @@ mod tests {
     };
     use xcm::DoubleEncoded;
 
-    use crate::calls::proxy::{
-        ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX,
-    };
-    use crate::calls::staking::{Bond, StakingCall, StakingCallEncoder};
+    use crate::proxy::{ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX};
+    use crate::staking::{Bond, StakingCall, StakingCallEncoder};
     use crate::{PassthroughCompactEncoder, PassthroughEncoder};
 
     use super::*;

@@ -5,7 +5,11 @@
 use codec::{Encode, EncodeAsRef, HasCompact, Output};
 use frame_support::{sp_runtime::MultiAddress, sp_std::marker::PhantomData};
 
-use crate::EncodeWith;
+/// A helper to encode an item using the provided context
+pub trait EncodeWith<Input, Context> {
+    /// Same as `Encode::encode_to` but with additional context
+    fn encode_to_with<T: Output + ?Sized>(input: &Input, ctx: &Context, dest: &mut T);
+}
 
 /// Encodes the type as it is
 pub struct PassthroughEncoder<I, T>(PhantomData<(I, T)>);
