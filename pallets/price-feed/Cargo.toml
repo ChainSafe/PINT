@@ -15,8 +15,15 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'pallet-balances/std',
     'pallet-chainlink-feed/std',
 ]
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks',
+    'pallet-chainlink-feed/runtime-benchmarks',
+]
+
 [dependencies.codec]
 default-features = false
 features = ['derive']
@@ -38,14 +45,17 @@ version = '3.0.0'
 [dependencies.pallet-chainlink-feed]
 default_features = false
 package = 'pallet-chainlink-feed'
-git = "https://github.com/mattsse/chainlink-polkadot"
-# this is substrate v3 branch that is upstreamed with rococo-v1
-# and requires https://github.com/ChainSafe/PINT/issues/37
-# see also https://github.com/ChainSafe/PINT/pull/39
-branch = "substrate-v3"
+git = "https://github.com/ChainSafe/chainlink-polkadot"
 
 [dependencies]
 serde = { version = "1.0.101", optional = true }
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
 
 [dev-dependencies.pallet-balances]
 default-features = false

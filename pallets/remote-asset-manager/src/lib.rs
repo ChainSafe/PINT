@@ -10,6 +10,8 @@
 
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 mod traits;
 
 #[frame_support::pallet]
@@ -66,6 +68,9 @@ pub mod pallet {
         type XcmExecutor: ExecuteXcm<Self::Call>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -84,7 +89,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::transfer())]
         pub fn transfer(_origin: OriginFor<T>, _amount: T::Balance) -> DispatchResultWithPostInfo {
             Ok(().into())
         }
@@ -114,5 +119,10 @@ pub mod pallet {
         ) -> DispatchResult {
             Ok(())
         }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn transfer() -> Weight;
     }
 }

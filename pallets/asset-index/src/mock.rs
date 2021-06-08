@@ -140,6 +140,7 @@ impl pallet_asset_index::Config for Test {
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
+    type WeightInfo = ();
 }
 
 pub struct MockRemoteAssetManager;

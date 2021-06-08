@@ -17,6 +17,7 @@ version = '3.0.0'
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+optional = true
 
 [dependencies.parachain-runtime]
 path = '../runtime'
@@ -217,6 +218,7 @@ targets = ['x86_64-unknown-linux-gnu']
 [features]
 default = []
 runtime-benchmarks = [
+  'frame-benchmarking-cli',
   'parachain-runtime/runtime-benchmarks',
   'polkadot-service/runtime-benchmarks'
 ]

@@ -93,6 +93,9 @@ pub type FeedId = u64;
 /// Value type for price feeds.
 pub type Value = u128;
 
+/// Weights of pallets
+mod weights;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -444,15 +447,17 @@ impl pallet_local_treasury::Config for Runtime {
     type PalletId = TreasuryPalletId;
     type Currency = Balances;
     type Event = Event;
+    type WeightInfo = weights::pallet_local_treasury::WeightInfo<Self>;
 }
 
 impl pallet_saft_registry::Config for Runtime {
-    // Using root as the admin origin for now
+    // Using signed as the admin origin for now
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type Event = Event;
     type Balance = Balance;
     type AssetRecorder = AssetIndex;
     type AssetId = AssetId;
+    type WeightInfo = weights::pallet_saft_registry::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -474,14 +479,15 @@ impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    // Using root as the admin origin for now
-    type ProposalSubmissionOrigin = frame_system::EnsureRoot<AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureRoot<AccountId>;
+    // Using signed as the admin origin for now
+    type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
+    type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
     type Action = Call;
     type Event = Event;
+    type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
 }
 
 impl pallet_asset_depository::Config for Runtime {
@@ -497,6 +503,7 @@ impl pallet_price_feed::Config for Runtime {
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
     type Event = Event;
+    type WeightInfo = weights::pallet_price_feed::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -510,8 +517,8 @@ parameter_types! {
     pub const OracleLimit: u32 = 10;
     // Maximum number of feeds
     pub const FeedLimit: u16 = 10;
-    // Number of rounds to keep around per feed
-    pub const PruningWindow: u32 = 3;
+    // Free for valid submission
+    pub const PaysFeeConf: pallet_chainlink_feed::SubmitterPaysFee = pallet_chainlink_feed::SubmitterPaysFee::FreeForValidSubmission;
 }
 
 impl pallet_chainlink_feed::Config for Runtime {
@@ -524,8 +531,9 @@ impl pallet_chainlink_feed::Config for Runtime {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type PruningWindow = PruningWindow;
-    type WeightInfo = ();
+    type OnAnswerHandler = ();
+    type SubmitterPaysFee = PaysFeeConf;
+    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -536,8 +544,8 @@ parameter_types! {
 }
 
 impl pallet_asset_index::Config for Runtime {
-    // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    // Using signed as the admin origin for testing now
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
     type IndexToken = Balances;
@@ -551,6 +559,7 @@ impl pallet_asset_index::Config for Runtime {
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
+    type WeightInfo = weights::pallet_asset_index::WeightInfo<Self>;
 }
 
 parameter_types! {
@@ -628,6 +637,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type Event = Event;
+    type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -819,6 +829,12 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
             add_benchmark!(params, batches, pallet_balances, Balances);
             add_benchmark!(params, batches, pallet_timestamp, Timestamp);
+            add_benchmark!(params, batches, pallet_asset_index, AssetIndex);
+            add_benchmark!(params, batches, pallet_committee, Committee);
+            add_benchmark!(params, batches, pallet_local_treasury, LocalTreasury);
+            add_benchmark!(params, batches, pallet_price_feed, PriceFeed);
+            add_benchmark!(params, batches, pallet_remote_asset_manager, RemoteAssetManager);
+            add_benchmark!(params, batches, pallet_saft_registry, SaftRegistry);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }
             Ok(batches)

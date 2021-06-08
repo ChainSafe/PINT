@@ -208,8 +208,7 @@ version = '0.0.1'
 [dependencies.pallet-chainlink-feed]
 default_features = false
 package = 'pallet-chainlink-feed'
-git = "https://github.com/mattsse/chainlink-polkadot"
-branch = "substrate-v3"
+git = "https://github.com/ChainSafe/chainlink-polkadot"
 
 # Cumulus dependencies
 [dependencies.parachain-info]
@@ -278,10 +277,15 @@ runtime-benchmarks = [
 	'frame-system-benchmarking',
 	'hex-literal',
 	'frame-system/runtime-benchmarks',
+    'pallet-asset-depository/runtime-benchmarks',
+    'pallet-asset-index/runtime-benchmarks',
+    'pallet-price-feed/runtime-benchmarks',
+    'pallet-local-treasury/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
     'pallet-committee/runtime-benchmarks',
     'pallet-xcm/runtime-benchmarks',
+    'pallet-saft-registry/runtime-benchmarks',
     'pallet-remote-asset-manager/runtime-benchmarks',
     'xcm-builder/runtime-benchmarks'
 ]
