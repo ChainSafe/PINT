@@ -1,7 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-//! Xcm support for `pallet_assets` calls
+//! Xcm support for [`pallet_assets`](https://crates.parity.io/pallet_assets/pallet/index.html) calls.
 use codec::{Decode, Encode, Output};
 use frame_support::{weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
@@ -36,9 +36,11 @@ where
             AssetsCall::Mint(params) => params.encode_with::<Config, _>(self.ctx, dest),
             AssetsCall::Burn(params) => params.encode_with::<Config, _>(self.ctx, dest),
             AssetsCall::Transfer(params) => params.encode_with::<Config, _>(self.ctx, dest),
-            AssetsCall::ForceTransfer(source, params) => {
+            AssetsCall::ForceTransfer(id, source, destination, amount) => {
+                Config::CompactAssetIdEncoder::encode_to_with(id, self.ctx, dest);
                 Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
-                params.encode_with::<Config, _>(self.ctx, dest)
+                Config::SourceEncoder::encode_to_with(destination, self.ctx, dest);
+                Config::CompactBalanceEncoder::encode_to_with(amount, self.ctx, dest);
             }
             AssetsCall::Freeze(asset, source) => {
                 Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
@@ -80,24 +82,25 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     ///
     /// The origin must be Signed and the sender must be the Issuer of the asset id.
     // #[codec(index = 3)]
-    Mint(AssetParam<AssetId, Source, Balance>),
+    Mint(AssetParams<AssetId, Source, Balance>),
     /// The [`burn`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.burn) extrinsic.
     ///
     /// Reduce the balance of who by as much as possible up to amount assets of id.
     ///
     /// Origin must be Signed and the sender should be the Manager of the asset id.
     // #[codec(index = 4)]
-    Burn(AssetParam<AssetId, Source, Balance>),
+    Burn(AssetParams<AssetId, Source, Balance>),
     /// The [`transfer`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.transfer) extrinsic.
     ///
     /// Move some assets from the sender account to another.
     // #[codec(index = 5)]
-    Transfer(AssetParam<AssetId, Source, Balance>),
+    Transfer(AssetParams<AssetId, Source, Balance>),
     /// The [`force_transfer`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.force_transfer) extrinsic.
     ///
     /// Same as `Transfer` but debit the source instead of the origin
+    /// \[id, source, dest, amount \]
     // #[codec(index = 7)]
-    ForceTransfer(Source, AssetParam<AssetId, Source, Balance>),
+    ForceTransfer(AssetId, Source, Source, Balance),
     /// The [`freeze`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.freeze) extrinsic.
     ///
     /// Disallow further unprivileged transfers from an account.
@@ -123,7 +126,7 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     /// Approve an amount of asset for transfer by a delegated third-party account.
     /// \[id, delegate, amount \]
     // #[codec(index = 19)]
-    ApproveTransfer(AssetParam<AssetId, Source, Balance>),
+    ApproveTransfer(AssetParams<AssetId, Source, Balance>),
     /// The [`cancel_approval`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.cancel_approval) extrinsic.
     ///
     /// Cancel all of some asset approved for delegated transfer by a third-party account.
@@ -134,7 +137,7 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     ///
     /// Transfer some asset balance from a previously delegated account to some third-party account.
     /// \[id, owner, destination, amount \]
-    // #[codec(index = 21)]
+    // #[codec(index = 22)]
     TransferApproved(AssetId, Source, Source, Balance),
 }
 
@@ -145,21 +148,21 @@ impl<AssetId, Source, Balance> PalletCall for AssetsCall<AssetId, Source, Balanc
             AssetsCall::Mint(_) => 3,
             AssetsCall::Burn(_) => 4,
             AssetsCall::Transfer(_) => 5,
-            AssetsCall::ForceTransfer(_, _) => 7,
+            AssetsCall::ForceTransfer(_, _, _, _) => 7,
             AssetsCall::Freeze(_, _) => 8,
             AssetsCall::Thaw(_, _) => 9,
             AssetsCall::FreezeAsset(_) => 10,
             AssetsCall::ThawAsset(_) => 11,
             AssetsCall::ApproveTransfer(_) => 19,
             AssetsCall::CancelApproval(_, _) => 20,
-            AssetsCall::TransferApproved(_, _, _, _) => 21,
+            AssetsCall::TransferApproved(_, _, _, _) => 22,
         }
     }
 }
 
 /// Represents common parameters the `AssetsCall` enum
 #[derive(Clone, PartialEq, RuntimeDebug)]
-pub struct AssetParam<AssetId, Source, Balance> {
+pub struct AssetParams<AssetId, Source, Balance> {
     /// The identifier for the asset.
     pub id: AssetId,
     /// The lookup type of the targeted account,
@@ -168,7 +171,7 @@ pub struct AssetParam<AssetId, Source, Balance> {
     pub amount: Balance,
 }
 
-impl<AssetId, Source, Balance> AssetParam<AssetId, Source, Balance> {
+impl<AssetId, Source, Balance> AssetParams<AssetId, Source, Balance> {
     /// encode the parameters with the given encoder set
     fn encode_with<Config, T>(&self, ctx: &Config::Context, dest: &mut T)
     where

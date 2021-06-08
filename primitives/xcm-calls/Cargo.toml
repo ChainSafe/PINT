@@ -56,6 +56,12 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
+[dev-dependencies.pallet-assets]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
 [dev-dependencies.sp-core]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'

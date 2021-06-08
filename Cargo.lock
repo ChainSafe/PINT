@@ -4656,6 +4656,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets"
+version = "3.0.0"
+source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
+dependencies = [
+ "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "frame-system 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "parity-scale-codec",
+ "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-std 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+]
+
+[[package]]
 name = "pallet-authority-discovery"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
@@ -5047,7 +5059,7 @@ dependencies = [
 [[package]]
 name = "pallet-offences-benchmarking"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
+source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "frame-election-provider-support",
@@ -5198,7 +5210,7 @@ dependencies = [
 [[package]]
 name = "pallet-session-benchmarking"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
+source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
  "frame-benchmarking 3.1.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
@@ -11857,6 +11869,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "pallet-assets",
  "pallet-balances",
  "pallet-proxy",
  "pallet-session",

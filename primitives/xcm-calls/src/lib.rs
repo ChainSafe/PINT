@@ -115,10 +115,13 @@ mod tests {
     use xcm::DoubleEncoded;
 
     use crate::proxy::{ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX};
-    use crate::staking::{Bond, StakingCall, StakingCallEncoder};
+    use crate::staking::{Bond, StakingCall, StakingCallEncoder, POLKADOT_PALLET_STAKING_INDEX};
     use crate::{PassthroughCompactEncoder, PassthroughEncoder};
 
     use super::*;
+    use crate::assets::{
+        AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX,
+    };
 
     /// The AccountId alias in this test module.
     pub(crate) type AccountId = u64;
@@ -189,6 +192,10 @@ mod tests {
 
             // use polkadot index 29
             Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>} = 29,
+
+            // use statemint index 50
+            Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+
         }
     );
 
@@ -400,7 +407,31 @@ mod tests {
         type Extrinsic = TestXt<Call, ()>;
     }
 
+    parameter_types! {
+        pub const AssetDeposit: u64 = 1;
+        pub const ApprovalDeposit: u64 = 1;
+        pub const StringLimit: u32 = 50;
+        pub const MetadataDepositBase: u64 = 1;
+        pub const MetadataDepositPerByte: u64 = 1;
+    }
+
     type AssetId = u64;
+
+    impl pallet_assets::Config for Test {
+        type Event = Event;
+        type Balance = Balance;
+        type AssetId = AssetId;
+        type Currency = Balances;
+        type ForceOrigin = frame_system::EnsureRoot<u64>;
+        type AssetDeposit = AssetDeposit;
+        type MetadataDepositBase = MetadataDepositBase;
+        type MetadataDepositPerByte = MetadataDepositPerByte;
+        type ApprovalDeposit = ApprovalDeposit;
+        type StringLimit = StringLimit;
+        type Freezer = ();
+        type WeightInfo = ();
+        type Extra = ();
+    }
 
     struct PalletStakingEncoder;
     impl StakingCallEncoder<AccountId, Balance, AccountId> for PalletStakingEncoder {
@@ -430,11 +461,47 @@ mod tests {
         }
     }
 
+    struct PalletAssetsEncoder;
+    impl AssetsCallEncoder<AssetId, AccountId, Balance> for PalletAssetsEncoder {
+        type CompactAssetIdEncoder = PassthroughCompactEncoder<AssetId, AssetId>;
+        type SourceEncoder = PassthroughEncoder<AccountId, AssetId>;
+        type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+    }
+
+    impl PalletCallEncoder for PalletAssetsEncoder {
+        type Context = AssetId;
+        fn can_encode(_ctx: &u64) -> bool {
+            true
+        }
+    }
+
+    type PalletAssetsCall = pallet_assets::Call<Test>;
     type PalletStakingCall = pallet_staking::Call<Test>;
     type PalletProxyCall = pallet_proxy::Call<Test>;
 
+    type XcmAssetsCall = AssetsCall<AssetId, AccountId, Balance>;
     type XcmStakingCall = StakingCall<AccountId, Balance, AccountId>;
     type XcmProxyCall = ProxyCall<AccountId, ProxyType, BlockNumber>;
+
+    macro_rules! encode_decode_call {
+        ($ty:ident, $call:ident,  $encoder:ident, $index: expr) => {
+            let xcm_pallet_call_encoded = $encoder.encode();
+            assert_eq!(xcm_pallet_call_encoded, $call.encode());
+
+            let call_decoded = $ty::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
+            assert_eq!($call, call_decoded);
+
+            let runtime_call: Call = $call.into();
+            let xcm_runtime_call_encoded = $encoder.encode_runtime_call($index).encode();
+
+            let runtime_call_encoded = runtime_call.encode();
+            assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
+
+            let runtime_call_decoded =
+                Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
+            assert_eq!(runtime_call, runtime_call_decoded);
+        };
+    }
 
     #[test]
     fn test_pallet_staking_call_codec() {
@@ -448,23 +515,15 @@ mod tests {
     #[test]
     fn can_encode_decode_bond_extra() {
         let xcm_bond_extra = XcmStakingCall::BondExtra(100);
-        let bond_extra = PalletStakingCall::bond_extra(100);
+        let call = PalletStakingCall::bond_extra(100);
         let xcm_encoder = xcm_bond_extra.encoder::<PalletStakingEncoder>(&0);
-        let xcm_pallet_call_encoded = xcm_encoder.encode();
-        let call_encoded = bond_extra.encode();
-        assert_eq!(xcm_pallet_call_encoded, call_encoded);
 
-        let bond_extra_decoded =
-            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
-        assert_eq!(bond_extra, bond_extra_decoded);
-
-        let runtime_call: Call = bond_extra.into();
-        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
-        let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
-
-        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
-        assert_eq!(runtime_call, runtime_call_decoded);
+        encode_decode_call!(
+            PalletStakingCall,
+            call,
+            xcm_encoder,
+            POLKADOT_PALLET_STAKING_INDEX
+        );
     }
 
     #[test]
@@ -477,46 +536,31 @@ mod tests {
             value,
             payee: super::staking::RewardDestination::Stash,
         });
-        let bond =
+        let call =
             PalletStakingCall::bond(controller, value, pallet_staking::RewardDestination::Stash);
 
         let xcm_encoder = xcm_bond.encoder::<PalletStakingEncoder>(&0);
-        let xcm_pallet_call_encoded = xcm_encoder.encode();
-        assert_eq!(xcm_pallet_call_encoded, bond.encode());
 
-        let bond_extra_decoded =
-            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
-        assert_eq!(bond, bond_extra_decoded);
-
-        let runtime_call: Call = bond.into();
-        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
-        let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
-
-        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
-        assert_eq!(runtime_call, runtime_call_decoded);
+        encode_decode_call!(
+            PalletStakingCall,
+            call,
+            xcm_encoder,
+            POLKADOT_PALLET_STAKING_INDEX
+        );
     }
 
     #[test]
     fn can_encode_decode_unbond() {
         let xcm_unbond = XcmStakingCall::Unbond(100);
-        let unbond = PalletStakingCall::unbond(100);
-
+        let call = PalletStakingCall::unbond(100);
         let xcm_encoder = xcm_unbond.encoder::<PalletStakingEncoder>(&0);
-        let xcm_pallet_call_encoded = xcm_encoder.encode();
-        assert_eq!(xcm_pallet_call_encoded, unbond.encode());
 
-        let bond_extra_decoded =
-            PalletStakingCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
-        assert_eq!(unbond, bond_extra_decoded);
-
-        let runtime_call: Call = unbond.into();
-        let xcm_runtime_call_encoded = xcm_encoder.encode_runtime_call(7).encode();
-        let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
-
-        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
-        assert_eq!(runtime_call, runtime_call_decoded);
+        encode_decode_call!(
+            PalletStakingCall,
+            call,
+            xcm_encoder,
+            POLKADOT_PALLET_STAKING_INDEX
+        );
     }
 
     #[test]
@@ -528,24 +572,15 @@ mod tests {
             delay: 0,
         });
 
-        let add_proxy = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
+        let call = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
         let xcm_encoder = xcm_add_proxy.encoder::<PalletProxyEncoder>(&0);
-        let xcm_pallet_call_encoded = xcm_encoder.encode();
-        assert_eq!(xcm_pallet_call_encoded, add_proxy.encode());
 
-        let add_proxy_decoded =
-            PalletProxyCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
-        assert_eq!(add_proxy, add_proxy_decoded);
-
-        let runtime_call: Call = add_proxy.into();
-        let xcm_runtime_call_encoded = xcm_encoder
-            .encode_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
-            .encode();
-        let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
-
-        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
-        assert_eq!(runtime_call, runtime_call_decoded);
+        encode_decode_call!(
+            PalletProxyCall,
+            call,
+            xcm_encoder,
+            POLKADOT_PALLET_PROXY_INDEX
+        );
     }
 
     #[test]
@@ -557,23 +592,216 @@ mod tests {
             delay: 0,
         });
 
-        let add_proxy = PalletProxyCall::remove_proxy(delegate, ProxyType::Any, 0);
+        let call = PalletProxyCall::remove_proxy(delegate, ProxyType::Any, 0);
         let xcm_encoder = xcm_remove_proxy.encoder::<PalletProxyEncoder>(&0);
-        let xcm_pallet_call_encoded = xcm_encoder.encode();
-        assert_eq!(xcm_pallet_call_encoded, add_proxy.encode());
 
-        let add_proxy_decoded =
-            PalletProxyCall::decode(&mut xcm_pallet_call_encoded.as_slice()).unwrap();
-        assert_eq!(add_proxy, add_proxy_decoded);
+        encode_decode_call!(
+            PalletProxyCall,
+            call,
+            xcm_encoder,
+            POLKADOT_PALLET_PROXY_INDEX
+        );
+    }
 
-        let runtime_call: Call = add_proxy.into();
-        let xcm_runtime_call_encoded = xcm_encoder
-            .encode_runtime_call(POLKADOT_PALLET_PROXY_INDEX)
-            .encode();
-        let runtime_call_encoded = runtime_call.encode();
-        assert_eq!(xcm_runtime_call_encoded, runtime_call_encoded);
+    #[test]
+    fn can_encode_decode_assets_mint() {
+        let id = 100;
+        let beneficiary = 1337;
+        let amount = 99;
+        let xmc_call = XcmAssetsCall::Mint(AssetParams {
+            id,
+            beneficiary,
+            amount,
+        });
 
-        let runtime_call_decoded = Call::decode(&mut xcm_runtime_call_encoded.as_slice()).unwrap();
-        assert_eq!(runtime_call, runtime_call_decoded);
+        let call = PalletAssetsCall::mint(id, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_burn() {
+        let id = 2342;
+        let beneficiary = 234632;
+        let amount = 4572934273;
+        let xmc_call = XcmAssetsCall::Burn(AssetParams {
+            id,
+            beneficiary,
+            amount,
+        });
+
+        let call = PalletAssetsCall::burn(id, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_transfer() {
+        let id = 2342;
+        let beneficiary = 234632;
+        let amount = 4572934273;
+        let xmc_call = XcmAssetsCall::Transfer(AssetParams {
+            id,
+            beneficiary,
+            amount,
+        });
+
+        let call = PalletAssetsCall::transfer(id, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_force_transfer() {
+        let id = 2342;
+        let source = 3249234342;
+        let beneficiary = 234632;
+        let amount = 4572934273;
+        let xmc_call = XcmAssetsCall::ForceTransfer(id, source, beneficiary, amount);
+
+        let call = PalletAssetsCall::force_transfer(id, source, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_freeze() {
+        let id = 2342;
+        let source = 3249234342;
+        let xmc_call = XcmAssetsCall::Freeze(id, source);
+
+        let call = PalletAssetsCall::freeze(id, source);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_thaw() {
+        let id = 2342;
+        let source = 3249234342;
+        let xmc_call = XcmAssetsCall::Thaw(id, source);
+
+        let call = PalletAssetsCall::thaw(id, source);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_freeze_asset() {
+        let id = 2342;
+        let xmc_call = XcmAssetsCall::FreezeAsset(id);
+
+        let call = PalletAssetsCall::freeze_asset(id);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_thaw_asset() {
+        let id = 2342;
+        let xmc_call = XcmAssetsCall::ThawAsset(id);
+
+        let call = PalletAssetsCall::thaw_asset(id);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_approve_transfer() {
+        let id = 2342;
+        let beneficiary = 234632;
+        let amount = 4572934273;
+        let xmc_call = XcmAssetsCall::ApproveTransfer(AssetParams {
+            id,
+            beneficiary,
+            amount,
+        });
+
+        let call = PalletAssetsCall::approve_transfer(id, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
+    }
+
+    #[test]
+    fn can_encode_decode_assets_transfer_approved() {
+        let id = 2342;
+        let source = 3249234342;
+        let beneficiary = 234632;
+        let amount = 4572934273;
+        let xmc_call = XcmAssetsCall::TransferApproved(id, source, beneficiary, amount);
+
+        let call = PalletAssetsCall::transfer_approved(id, source, beneficiary, amount);
+
+        let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
+
+        encode_decode_call!(
+            PalletAssetsCall,
+            call,
+            xcm_encoder,
+            STATEMINT_PALLET_ASSETS_INDEX
+        );
     }
 }
