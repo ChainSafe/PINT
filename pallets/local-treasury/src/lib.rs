@@ -76,7 +76,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Transfer balance from the treasury to another account. Only callable by the AdminOrigin.
-        #[pallet::weight(T::WeightInfo::withdraw())] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
             amount: BalanceFor<T>,

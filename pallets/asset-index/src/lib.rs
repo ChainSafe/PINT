@@ -164,7 +164,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::add_asset())] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_asset())]
         /// Callable by an admin to add new assets to the index and mint some IndexToken
         /// Caller balance is updated to allocate the correct amount of the IndexToken
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits

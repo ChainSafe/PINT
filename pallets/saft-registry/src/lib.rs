@@ -88,7 +88,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::add_saft())] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_saft())]
         pub fn add_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -127,7 +127,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(T::WeightInfo::report_nav())] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::report_nav())]
         /// Called to update the Net Asset Value (NAV) associated with
         /// a SAFT record in the registry
         pub fn report_nav(
