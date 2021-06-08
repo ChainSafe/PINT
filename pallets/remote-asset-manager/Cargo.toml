@@ -23,7 +23,10 @@ std = [
     'cumulus-primitives-core/std',
 ]
 # this feature is only for compilation now
-runtime-benchmarks = []
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks'
+]
 
 [dependencies]
 log = { version = "0.4.14", default-features = false }
@@ -46,6 +49,13 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
 
 [dependencies.xcm]
 default-features = false

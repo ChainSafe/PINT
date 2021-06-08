@@ -10,6 +10,8 @@
 
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 mod traits;
 
 #[frame_support::pallet]
@@ -116,6 +118,9 @@ pub mod pallet {
         type XcmSender: SendXcm;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -368,5 +373,10 @@ pub mod pallet {
         ) -> DispatchResult {
             Ok(())
         }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn transfer() -> Weight;
     }
 }

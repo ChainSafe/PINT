@@ -88,6 +88,7 @@ impl pallet_saft_registry::Config for Test {
     type Balance = Balance;
     type AssetRecorder = MockAssetRecorder;
     type AssetId = u32;
+    type WeightInfo = ();
 }
 
 // Build genesis storage according to the mock runtime.
