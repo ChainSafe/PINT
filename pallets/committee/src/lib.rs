@@ -13,6 +13,8 @@
 
 pub use pallet::*;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod mock;
 
@@ -83,6 +85,9 @@ pub mod pallet {
         type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
@@ -312,7 +317,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::propose())] // TODO: Set weights
         /// Extrinsic to propose a new action to be voted upon in the next voting period.
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
@@ -341,7 +346,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::vote())] // TODO: Set weights
         /// Extrinsic to vote on an existing proposal.
         /// This can only be called by members of the committee.
         /// Successfully cast votes will be recorded in the state and a proposal
@@ -377,7 +382,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::close())] // TODO: Set weights
         /// Extrinsic to close and execute a proposal.
         /// Proposal must have been voted on and have majority approval.
         /// Only the proposal execution origin can execute.
@@ -429,7 +434,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_constituent())] // TODO: Set weights
         /// Add new constituent to the committee
         ///
         /// NOTE:
@@ -456,6 +461,33 @@ pub mod pallet {
 
             Self::deposit_event(Event::NewConstituent(constituent));
             Ok(().into())
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn propose() -> Weight;
+        fn vote() -> Weight;
+        fn close() -> Weight;
+        fn add_constituent() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn propose() -> Weight {
+            Default::default()
+        }
+
+        fn vote() -> Weight {
+            Default::default()
+        }
+
+        fn close() -> Weight {
+            Default::default()
+        }
+
+        fn add_constituent() -> Weight {
+            Default::default()
         }
     }
 }

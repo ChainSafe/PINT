@@ -101,6 +101,7 @@ impl pallet_local_treasury::Config for Test {
     type PalletId = TestPalletId;
     type Currency = Balances;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 pub fn local_treasury_account_id() -> AccountId {

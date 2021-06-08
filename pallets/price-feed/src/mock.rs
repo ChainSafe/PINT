@@ -90,6 +90,7 @@ parameter_types! {
     pub const OracleLimit: u32 = 10;
     pub const FeedLimit: u16 = 10;
     pub const PruningWindow: u32 = 3;
+    pub const PaysFeeConf: pallet_chainlink_feed::SubmitterPaysFee = pallet_chainlink_feed::SubmitterPaysFee::FreeForValidSubmission;
 }
 
 pub(crate) type FeedId = u16;
@@ -105,8 +106,9 @@ impl pallet_chainlink_feed::Config for Test {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type PruningWindow = PruningWindow;
-    type WeightInfo = ();
+    type OnAnswerHandler = ();
+    type SubmitterPaysFee = PaysFeeConf;
+    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Test>;
 }
 
 pub(crate) type AssetId = u64;
@@ -126,6 +128,7 @@ impl pallet_price_feed::Config for Test {
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 #[derive(Debug, Clone, Default)]
@@ -208,6 +211,8 @@ impl FeedBuilder {
             description,
             restart_delay,
             oracles,
+            None,
+            None,
         )
     }
 }
