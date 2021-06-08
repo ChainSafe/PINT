@@ -571,7 +571,6 @@ mod tests {
             proxy_type: ProxyType::Staking,
             delay: 0,
         });
-
         let call = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
         let xcm_encoder = xcm_add_proxy.encoder::<PalletProxyEncoder>(&0);
 
