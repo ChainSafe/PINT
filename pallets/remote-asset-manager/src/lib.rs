@@ -10,8 +10,6 @@
 
 pub use pallet::*;
 
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
 mod traits;
 
 #[frame_support::pallet]
