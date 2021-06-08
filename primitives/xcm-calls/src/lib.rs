@@ -10,6 +10,7 @@ use frame_support::sp_std::marker::PhantomData;
 
 pub use encode_with::*;
 
+pub mod assets;
 mod encode_with;
 pub mod proxy;
 pub mod staking;
