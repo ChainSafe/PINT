@@ -3,11 +3,11 @@
 
 //! Xcm support for `pallet_assets` calls
 use codec::{Decode, Encode, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
+use frame_support::{weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use crate::{EncodeWith, PalletCallEncoder};
+use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 
 /// The index of `pallet_assets` in the statemint runtime
 pub const STATEMINT_PALLET_ASSETS_INDEX: u8 = 50u8;
@@ -15,13 +15,58 @@ pub const STATEMINT_PALLET_ASSETS_INDEX: u8 = 50u8;
 /// Provides encoder types to encode the associated types of the  `pallet_assets::Config` trait depending on the configured Context.
 pub trait AssetsCallEncoder<AssetId, Source, Balance>: PalletCallEncoder {
     /// Encodes the `<pallet_assets::Config>::AssetId` depending on the context
-    type CompactAssetIdIdEncoder: EncodeWith<AssetId, Self::Context>;
+    type CompactAssetIdEncoder: EncodeWith<AssetId, Self::Context>;
 
     /// Encodes the `<pallet_assets::Config>::Source` depending on the context
     type SourceEncoder: EncodeWith<Source, Self::Context>;
 
     /// Encodes the `<pallet_assets::Config>::Balance` depending on the context
     type CompactBalanceEncoder: EncodeWith<Balance, Self::Context>;
+}
+
+impl<'a, 'b, AssetId, Source, Balance, Config> Encode
+    for CallEncoder<'a, 'b, AssetsCall<AssetId, Source, Balance>, Config>
+where
+    Config: AssetsCallEncoder<AssetId, Source, Balance>,
+{
+    fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
+        // include the pallet identifier
+        dest.push_byte(self.call.pallet_call_index());
+        match self.call {
+            AssetsCall::Mint(params) => params.encode_with::<Config, _>(self.ctx, dest),
+            AssetsCall::Burn(params) => params.encode_with::<Config, _>(self.ctx, dest),
+            AssetsCall::Transfer(params) => params.encode_with::<Config, _>(self.ctx, dest),
+            AssetsCall::ForceTransfer(source, params) => {
+                Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
+                params.encode_with::<Config, _>(self.ctx, dest)
+            }
+            AssetsCall::Freeze(asset, source) => {
+                Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
+            }
+            AssetsCall::Thaw(asset, source) => {
+                Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
+            }
+            AssetsCall::FreezeAsset(asset) => {
+                Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
+            }
+            AssetsCall::ThawAsset(asset) => {
+                Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
+            }
+            AssetsCall::ApproveTransfer(params) => params.encode_with::<Config, _>(self.ctx, dest),
+            AssetsCall::CancelApproval(asset, source) => {
+                Config::CompactAssetIdEncoder::encode_to_with(asset, self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(source, self.ctx, dest);
+            }
+            AssetsCall::TransferApproved(id, owner, destination, amount) => {
+                Config::CompactAssetIdEncoder::encode_to_with(id, self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(owner, self.ctx, dest);
+                Config::SourceEncoder::encode_to_with(destination, self.ctx, dest);
+                Config::CompactBalanceEncoder::encode_to_with(amount, self.ctx, dest);
+            }
+        }
+    }
 }
 
 /// Represents dispatchable calls of the FRAME `pallet_assets` pallet.
@@ -93,7 +138,26 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     TransferApproved(AssetId, Source, Source, Balance),
 }
 
-/// Represents the parameters for common `AssetsCall`
+impl<AssetId, Source, Balance> PalletCall for AssetsCall<AssetId, Source, Balance> {
+    /// the indices of the corresponding calls within the `pallet_staking`
+    fn pallet_call_index(&self) -> u8 {
+        match self {
+            AssetsCall::Mint(_) => 3,
+            AssetsCall::Burn(_) => 4,
+            AssetsCall::Transfer(_) => 5,
+            AssetsCall::ForceTransfer(_, _) => 7,
+            AssetsCall::Freeze(_, _) => 8,
+            AssetsCall::Thaw(_, _) => 9,
+            AssetsCall::FreezeAsset(_) => 10,
+            AssetsCall::ThawAsset(_) => 11,
+            AssetsCall::ApproveTransfer(_) => 19,
+            AssetsCall::CancelApproval(_, _) => 20,
+            AssetsCall::TransferApproved(_, _, _, _) => 21,
+        }
+    }
+}
+
+/// Represents common parameters the `AssetsCall` enum
 #[derive(Clone, PartialEq, RuntimeDebug)]
 pub struct AssetParam<AssetId, Source, Balance> {
     /// The identifier for the asset.
@@ -102,4 +166,55 @@ pub struct AssetParam<AssetId, Source, Balance> {
     pub beneficiary: Source,
     /// The amount of assets
     pub amount: Balance,
+}
+
+impl<AssetId, Source, Balance> AssetParam<AssetId, Source, Balance> {
+    /// encode the parameters with the given encoder set
+    fn encode_with<Config, T>(&self, ctx: &Config::Context, dest: &mut T)
+    where
+        Config: AssetsCallEncoder<AssetId, Source, Balance>,
+        T: Output + ?Sized,
+    {
+        Config::CompactAssetIdEncoder::encode_to_with(&self.id, ctx, dest);
+        Config::SourceEncoder::encode_to_with(&self.beneficiary, ctx, dest);
+        Config::CompactBalanceEncoder::encode_to_with(&self.amount, ctx, dest);
+    }
+}
+
+/// The `pallet_assets` configuration for a particular chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct AssetsConfig {
+    /// The index of `pallet_index` within the parachain's runtime
+    pub pallet_index: u8,
+    /// The configured weights for `pallet_staking`
+    pub weights: AssetsWeights,
+}
+
+/// Represents an excerpt from the `pallet_asset` weights
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct AssetsWeights {
+    /// Weight for `mint` extrinsic
+    pub mint: Weight,
+    /// Weight for `burn` extrinsic
+    pub burn: Weight,
+    /// Weight for `transfer` extrinsic
+    pub transfer: Weight,
+    /// Weight for `force_transfer` extrinsic
+    pub force_transfer: Weight,
+    /// Weight for `freeze` extrinsic
+    pub freeze: Weight,
+    /// Weight for `thaw` extrinsic
+    pub thaw: Weight,
+    /// Weight for `freeze_asset` extrinsic
+    pub freeze_asset: Weight,
+    /// Weight for `thaw_asset` extrinsic
+    pub thaw_asset: Weight,
+    /// Weight for `approve_transfer` extrinsic
+    pub approve_transfer: Weight,
+    /// Weight for `cancel_approval` extrinsic
+    pub cancel_approval: Weight,
+    /// Weight for `transfer_approved` extrinsic
+    pub transfer_approved: Weight,
 }
