@@ -4556,11 +4556,11 @@ name = "pallet-assets"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate.git?branch=rococo-v1#2be8fcc4236d32786c62f6f27a98e7fe7e550807"
 dependencies = [
- "frame-support 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
- "frame-system 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "frame-support",
+ "frame-system",
  "parity-scale-codec",
- "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
- "sp-std 3.0.0 (git+https://github.com/paritytech/substrate.git?branch=rococo-v1)",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -11401,6 +11401,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "pallet-assets",
  "pallet-balances",
  "pallet-proxy",
  "pallet-session",
