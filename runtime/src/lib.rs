@@ -56,6 +56,11 @@ pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
+use xcm_calls::{
+    proxy::{ProxyCallEncoder, ProxyType},
+    staking::StakingCallEncoder,
+    PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
+};
 use xcm_executor::traits::MatchesFungible;
 
 /// An index to a block.
@@ -627,15 +632,56 @@ impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
     }
 }
 
+/// The encoder to use when transacting `pallet_proxy` calls
+pub struct PalletProxyEncoder;
+impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
+    type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+    type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
+    type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
+}
+impl PalletCallEncoder for PalletProxyEncoder {
+    type Context = AssetId;
+    fn can_encode(_ctx: &Self::Context) -> bool {
+        // TODO check in `AssetRegistry`
+        true
+    }
+}
+
+type AccountLookupSource = sp_runtime::MultiAddress<AccountId, ()>;
+
+/// The encoder to use when transacting `pallet_staking` calls
+pub struct PalletStakingEncoder;
+impl StakingCallEncoder<AccountLookupSource, Balance, AccountId> for PalletStakingEncoder {
+    type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+    type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
+    type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+}
+
+impl PalletCallEncoder for PalletStakingEncoder {
+    type Context = AssetId;
+    fn can_encode(_ctx: &Self::Context) -> bool {
+        // TODO check in `AssetRegistry`
+        true
+    }
+}
+
 impl pallet_remote_asset_manager::Config for Runtime {
     type Balance = Balance;
     type AssetId = AssetId;
     type AssetIdConvert = AssetIdConvert;
     type AccountId32Convert = AccountId32Convert;
+    // Encodes `pallet_staking` calls before transaction them to other chains
+    type PalletStakingCallEncoder = PalletStakingEncoder;
+    // Encodes `pallet_proxy` calls before transaction them to other chains
+    type PalletProxyCallEncoder = PalletProxyEncoder;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
+    type SelfParaId = parachain_info::Pallet<Runtime>;
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
+    // Using root as the admin origin for now
+    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type XcmSender = XcmRouter;
     type Event = Event;
     type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
@@ -833,7 +879,7 @@ impl_runtime_apis! {
             add_benchmark!(params, batches, pallet_committee, Committee);
             add_benchmark!(params, batches, pallet_local_treasury, LocalTreasury);
             add_benchmark!(params, batches, pallet_price_feed, PriceFeed);
-            add_benchmark!(params, batches, pallet_remote_asset_manager, RemoteAssetManager);
+            // add_benchmark!(params, batches, pallet_remote_asset_manager, RemoteAssetManager);
             add_benchmark!(params, batches, pallet_saft_registry, SaftRegistry);
 
             if batches.is_empty() { return Err("Benchmark not found for this pallet.".into()) }

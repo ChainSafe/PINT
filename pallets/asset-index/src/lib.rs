@@ -439,7 +439,6 @@ pub mod pallet {
                     Ok(())
                 },
             )?;
-
             Ok(().into())
         }
     }

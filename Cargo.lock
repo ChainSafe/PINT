@@ -5026,10 +5026,15 @@ dependencies = [
 name = "pallet-remote-asset-manager"
 version = "0.0.1"
 dependencies = [
+ "cumulus-pallet-xcm",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "log",
  "pallet-balances",
+ "pallet-proxy",
+ "pallet-staking",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -5037,6 +5042,7 @@ dependencies = [
  "sp-runtime",
  "xcm",
  "xcm-builder",
+ "xcm-calls",
  "xcm-executor",
 ]
 
@@ -5382,6 +5388,7 @@ dependencies = [
  "substrate-wasm-builder 4.0.0",
  "xcm",
  "xcm-builder",
+ "xcm-calls",
  "xcm-executor",
 ]
 
@@ -11373,6 +11380,27 @@ dependencies = [
  "sp-std",
  "xcm",
  "xcm-executor",
+]
+
+[[package]]
+name = "xcm-calls"
+version = "0.0.1"
+dependencies = [
+ "frame-election-provider-support",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "pallet-proxy",
+ "pallet-session",
+ "pallet-staking",
+ "pallet-staking-reward-curve",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-staking",
+ "xcm",
 ]
 
 [[package]]

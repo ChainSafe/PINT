@@ -15,7 +15,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-balances/std',
     'pallet-chainlink-feed/std',
 ]
 runtime-benchmarks = [

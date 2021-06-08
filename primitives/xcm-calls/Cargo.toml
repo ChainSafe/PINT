@@ -1,9 +1,9 @@
 [package]
 authors = ['ChainSafe Systems']
-description = 'FRAME pallet to bond/unbond and transfer assets on other chains.'
+description = 'FRAME pallet with XCM bindings to FRAME pallets.'
 edition = '2018'
 license = 'LGPL-3.0-only'
-name = 'pallet-remote-asset-manager'
+name = 'xcm-calls'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
@@ -15,21 +15,11 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'xcm/std',
-    'log/std',
-    'xcm-calls/std',
-    'xcm-executor/std',
-    'cumulus-pallet-xcm/std',
-    'cumulus-primitives-core/std',
 ]
 # this feature is only for compilation now
-runtime-benchmarks = [
-    'frame-benchmarking',
-    'frame-support/runtime-benchmarks'
-]
+runtime-benchmarks = []
 
 [dependencies]
-log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.101", features = ["derive"], optional = true }
 
 [dependencies.codec]
@@ -50,38 +40,6 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dependencies.frame-benchmarking]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
-optional = true
-
-[dependencies.xcm]
-default-features = false
-git = 'https://github.com/paritytech/polkadot'
-branch = 'rococo-v1'
-
-[dependencies.xcm-executor]
-default-features = false
-git = 'https://github.com/paritytech/polkadot'
-branch = 'rococo-v1'
-
-[dependencies.cumulus-pallet-xcm]
-default-features = false
-git = 'https://github.com/paritytech/cumulus'
-branch = 'rococo-v1'
-
-[dependencies.cumulus-primitives-core]
-default-features = false
-git = 'https://github.com/paritytech/cumulus'
-branch = 'rococo-v1'
-
-[dependencies.xcm-calls]
-default-features = false
-path = '../../primitives/xcm-calls'
-version = '0.0.1'
-
 [dev-dependencies.pallet-staking]
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
@@ -91,11 +49,6 @@ version = '3.0.0'
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
-
-[dev-dependencies.xcm-builder]
-default-features = false
-git = 'https://github.com/paritytech/polkadot'
-branch = 'rococo-v1'
 
 [dev-dependencies.pallet-balances]
 default-features = false
@@ -109,17 +62,40 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dev-dependencies.sp-io]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
-
 [dev-dependencies.sp-runtime]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dev-dependencies.sp-staking]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-staking-reward-curve]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-timestamp]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-session]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.frame-election-provider-support]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.xcm]
+git = 'https://github.com/paritytech/polkadot'
+branch = 'rococo-v1'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
