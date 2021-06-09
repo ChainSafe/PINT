@@ -1,12 +1,11 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::{Config, Origin};
+use crate::Config;
 use frame_support::{
     pallet_prelude::*,
     sp_std::{self, prelude::Vec},
 };
-// use frame_system::ensure_signed;
 use sp_runtime::traits::Hash;
 
 #[cfg(feature = "std")]
@@ -215,27 +214,28 @@ impl<
     }
 }
 
-/// Ensure the passing origin is committee member
-pub struct EnsureMember<AccountId, T>(sp_std::marker::PhantomData<(AccountId, T)>);
-
 impl<
-        O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone,
-        AccountId: Default,
-        T: Config + frame_system::Config<AccountId = AccountId>,
-    > EnsureOrigin<O> for EnsureMember<AccountId, T>
+        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
+            + From<CommitteeOrigin<AccountId, BlockNumber>>
+            + Clone,
+        AccountId: PartialEq + Default,
+        BlockNumber: Default,
+    > EnsureOrigin<O> for CommitteeOrigin<AccountId, BlockNumber>
 {
     type Success = AccountId;
-
     fn try_origin(o: O) -> Result<Self::Success, O> {
         let origin = o.clone().into()?;
-        match origin {
-            CommitteeOrigin::CommitteeMember(account) => Ok(account),
-            _ => Err(o),
-        }
+        Ok(match origin {
+            CommitteeOrigin::ApprovedByCommittee(i, _) => i,
+            CommitteeOrigin::CommitteeMember(i) => i,
+        })
     }
 
     #[cfg(feature = "runtime-benchmarks")]
     fn successful_origin() -> O {
-        O::from(RawOrigin::Member(Default::default()))
+        O::from(CommitteeOrigin::ApprovedByCommittee(
+            Default::default(),
+            Default::default(),
+        ))
     }
 }
