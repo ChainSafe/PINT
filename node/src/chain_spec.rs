@@ -62,6 +62,12 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
                 ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                ],
                 id,
             )
         },
@@ -100,6 +106,12 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
                     get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
                 ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
+                ],
                 id,
             )
         },
@@ -117,6 +129,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 fn pint_testnet_genesis(
     root_key: AccountId,
     endowed_accounts: Vec<AccountId>,
+    council_members: Vec<AccountId>,
     id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
     parachain_runtime::GenesisConfig {
@@ -125,6 +138,10 @@ fn pint_testnet_genesis(
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
+        },
+        pallet_committee: parachain_runtime::CommitteeConfig {
+            council_members,
+            ..Default::default()
         },
         pallet_balances: parachain_runtime::BalancesConfig {
             balances: endowed_accounts

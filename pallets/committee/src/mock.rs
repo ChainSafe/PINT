@@ -75,7 +75,7 @@ parameter_types! {
     pub const VotingPeriod: <Test as system::Config>::BlockNumber = VOTING_PERIOD;
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
-pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = 88;
+pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = PROPOSER_ACCOUNT_ID;
 pub(crate) const MIN_COUNCIL_VOTES: usize = 4;
 
 ord_parameter_types! {
@@ -125,8 +125,10 @@ where
         .build_storage::<Test>()
         .unwrap();
 
+    let mut council_members = vec![PROPOSER_ACCOUNT_ID];
+    council_members.append(&mut members.into_iter().collect());
     pallet_committee::GenesisConfig::<Test> {
-        council_members: members.into_iter().collect(),
+        council_members,
         constituent_members: Default::default(),
     }
     .assimilate_storage(&mut t)

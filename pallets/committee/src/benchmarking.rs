@@ -18,6 +18,7 @@ fn submit_proposal<T: Config>(caller: T::AccountId) -> pallet::Proposal<T> {
 benchmarks! {
     propose {
         let caller: T::AccountId = whitelisted_caller();
+        assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
         let proposal = submit_proposal::<T>(caller.clone());
     }: _(
         SystemOrigin::Signed(caller.clone()),
@@ -28,8 +29,8 @@ benchmarks! {
 
     vote {
         let caller: T::AccountId = whitelisted_caller();
-        let proposal = submit_proposal::<T>(caller.clone());
         assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
+        let proposal = submit_proposal::<T>(caller.clone());
 
         // run to voting period
         <System<T>>::set_block_number(
@@ -50,8 +51,8 @@ benchmarks! {
 
     close {
         let caller: T::AccountId = whitelisted_caller();
-        let proposal: pallet::Proposal<T> = submit_proposal::<T>(caller.clone());
         assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
+        let proposal: pallet::Proposal<T> = submit_proposal::<T>(caller.clone());
         let voters = ["a", "b", "c", "d", "e"];
 
         // run to voting period

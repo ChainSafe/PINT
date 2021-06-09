@@ -711,7 +711,7 @@ construct_runtime!(
         // PINT pallets
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
         AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
-        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>},
+        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
         RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},

@@ -323,7 +323,7 @@ pub mod pallet {
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
             T::ProposalSubmissionOrigin::ensure_origin(origin.clone())?;
-            let proposer = ensure_signed(origin)?;
+            let proposer = Self::ensure_member(origin)?;
 
             // Create a new proposal with a unique nonce
             let nonce = Self::take_and_increment_nonce()?;
@@ -341,7 +341,7 @@ pub mod pallet {
 
             Votes::<T>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
-            Self::deposit_event(Event::Proposed(proposer, nonce, proposal_hash));
+            Self::deposit_event(Event::Proposed(proposer.account_id, nonce, proposal_hash));
 
             Ok(().into())
         }
