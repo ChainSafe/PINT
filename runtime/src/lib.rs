@@ -480,13 +480,19 @@ type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     pallet_committee::EnsureApprovedByCommittee<AccountId, BlockNumber>,
 >;
 
+type EnsureMember = frame_system::EnsureOneOf<
+    AccountId,
+    frame_system::EnsureRoot<AccountId>,
+    pallet_committee::EnsureMember<AccountId, Runtime>,
+>;
+
 impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
     // Using signed as the admin origin for now
-    type ProposalSubmissionOrigin = frame_system::EnsureSigned<AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureSigned<AccountId>;
+    type ProposalSubmissionOrigin = EnsureMember;
+    type ProposalExecutionOrigin = EnsureMember;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
