@@ -130,7 +130,7 @@ fn non_member_cannot_vote() {
         let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
-            pallet::Error::<Test>::NotMember
+            BadOrigin,
         );
         assert_eq!(
             Committee::get_votes_for(&proposal.hash()),
@@ -326,12 +326,15 @@ where
 #[test]
 fn non_execution_origin_cannot_close() {
     new_test_ext(0..4).execute_with(|| {
+        let non_execution_origin = 5;
         let proposal = submit_proposal(123);
         run_to_block(START_OF_S1);
 
         vote_with_each(0..4, proposal.hash(), Vote::Aye);
+
+        run_to_block(START_OF_V1 + 1);
         assert_noop!(
-            Committee::close(Origin::signed(ASHLEY), proposal.hash()),
+            Committee::close(Origin::signed(non_execution_origin), proposal.hash()),
             BadOrigin
         );
     });

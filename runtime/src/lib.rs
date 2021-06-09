@@ -474,24 +474,20 @@ ord_parameter_types! {
      pub const MinCouncilVotes: usize = 4;
 }
 
+type EnsureMember = pallet_committee::EnsureMember<Runtime>;
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
     pallet_committee::EnsureApprovedByCommittee<Runtime>,
 >;
 
-type EnsureCommittee = frame_system::EnsureOneOf<
-    AccountId,
-    pallet_committee::EnsureApprovedByCommittee<Runtime>,
-    pallet_committee::EnsureMember<Runtime>,
->;
-
 impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    type ProposalSubmissionOrigin = EnsureCommittee;
-    type ProposalExecutionOrigin = EnsureCommittee;
+    type ProposalSubmissionOrigin = EnsureMember;
+    type ProposalExecutionOrigin = EnsureMember;
+    type ProposalVoteOrigin = EnsureMember;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;

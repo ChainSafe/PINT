@@ -76,10 +76,22 @@ pub mod pallet {
         type MinCouncilVotes: Get<usize>;
 
         /// Origin that is permitted to create proposals
-        type ProposalSubmissionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ProposalSubmissionOrigin: EnsureOrigin<
+            <Self as frame_system::Config>::Origin,
+            Success = <Self as frame_system::Config>::AccountId,
+        >;
 
         /// Origin that is permitted to execute approved proposals
-        type ProposalExecutionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ProposalExecutionOrigin: EnsureOrigin<
+            <Self as frame_system::Config>::Origin,
+            Success = <Self as frame_system::Config>::AccountId,
+        >;
+
+        /// Origin that is permitted to execute approved proposals
+        type ProposalVoteOrigin: EnsureOrigin<
+            <Self as frame_system::Config>::Origin,
+            Success = <Self as frame_system::Config>::AccountId,
+        >;
 
         /// Origin that is permitted to execute `add_constituent`
         type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
@@ -265,19 +277,6 @@ pub mod pallet {
             Votes::<T>::get(hash)
         }
 
-        /// Used to check if an origin is signed and the signer is a member of
-        /// the committee
-        pub fn ensure_member(
-            origin: OriginFor<T>,
-        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
-            let who = ensure_signed(origin)?;
-            if let Some(member_type) = Members::<T>::get(who.clone()) {
-                Ok(CommitteeMember::new(who, member_type))
-            } else {
-                Err(Error::<T>::NotMember.into())
-            }
-        }
-
         /// Returns the block at the end of the next voting period
         pub fn get_next_voting_period_end(
             block_number: &BlockNumberFor<T>,
@@ -322,8 +321,7 @@ pub mod pallet {
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
-            T::ProposalSubmissionOrigin::ensure_origin(origin.clone())?;
-            let proposer = Self::ensure_member(origin)?;
+            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin.clone())?;
 
             // Create a new proposal with a unique nonce
             let nonce = Self::take_and_increment_nonce()?;
@@ -341,7 +339,7 @@ pub mod pallet {
 
             Votes::<T>::insert(proposal_hash, VoteAggregate::new_with_end(end));
 
-            Self::deposit_event(Event::Proposed(proposer.account_id, nonce, proposal_hash));
+            Self::deposit_event(Event::Proposed(proposer, nonce, proposal_hash));
 
             Ok(().into())
         }
@@ -357,7 +355,11 @@ pub mod pallet {
             vote: Vote,
         ) -> DispatchResultWithPostInfo {
             // Only members can vote
-            let voter = Self::ensure_member(origin)?;
+            let caller = T::ProposalVoteOrigin::ensure_origin(origin)?;
+            let voter = CommitteeMember::new(
+                caller.clone(),
+                <Members<T>>::get(caller).ok_or(<Error<T>>::NotMember)?,
+            );
 
             Votes::<T>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {
@@ -390,8 +392,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            T::ProposalExecutionOrigin::ensure_origin(origin.clone())?;
-            let closer = ensure_signed(origin)?;
+            let closer = T::ProposalExecutionOrigin::ensure_origin(origin.clone())?;
 
             // ensure proposal has not already been executed
             ensure!(

@@ -4,7 +4,7 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
-use crate as pallet_committee;
+use crate::{self as pallet_committee, EnsureMember};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
@@ -95,8 +95,9 @@ impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
+    type ProposalSubmissionOrigin = EnsureMember<Self>;
+    type ProposalExecutionOrigin = EnsureMember<Self>;
+    type ProposalVoteOrigin = EnsureMember<Self>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;

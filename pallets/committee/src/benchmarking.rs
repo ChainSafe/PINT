@@ -1,36 +1,40 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
-use frame_benchmarking::{account, benchmarks, vec, whitelisted_caller, Box};
-use frame_support::{assert_noop, assert_ok, traits::Get};
-use frame_system::{Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
+use frame_benchmarking::{account, benchmarks, vec, Box};
+use frame_support::{
+    assert_noop, assert_ok,
+    traits::{EnsureOrigin, Get, UnfilteredDispatchable},
+};
+use frame_system::{
+    ensure_signed, Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin,
+};
 
-fn submit_proposal<T: Config>(caller: T::AccountId) -> pallet::Proposal<T> {
+fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pallet::Proposal<T> {
     let action: T::Action = <SystemCall<T>>::remark(vec![0; 0]).into();
     let expected_nonce = pallet::ProposalCount::<T>::get();
-    assert_ok!(<Pallet<T>>::propose(
-        SystemOrigin::Signed(caller).into(),
-        Box::new(action.clone())
+    assert_ok!(<Pallet<T>>::add_constituent(
+        SystemOrigin::Root.into(),
+        ensure_signed(origin.clone()).unwrap(),
     ));
+    let call = <Call<T>>::propose(Box::new(action.clone()));
+    assert_ok!(call.dispatch_bypass_filter(origin));
     pallet::Proposal::<T>::new(expected_nonce, action)
 }
 
 benchmarks! {
     propose {
-        let caller: T::AccountId = whitelisted_caller();
-        assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
-        let proposal = submit_proposal::<T>(caller.clone());
-    }: _(
-        SystemOrigin::Signed(caller.clone()),
-        Box::new(<SystemCall<T>>::remark(vec![0; 0]).into())
-    ) verify {
+        let origin = T::ProposalSubmissionOrigin::successful_origin();
+        let proposal = submit_proposal::<T>(origin.clone());
+        let call = <Call<T>>::propose(Box::new(<SystemCall<T>>::remark(vec![0; 0]).into()));
+    }: {
+        call.dispatch_bypass_filter(origin)?
+    } verify {
         assert!(<Pallet<T>>::get_proposal(&proposal.hash()) == Some(proposal));
     }
 
     vote {
-        let caller: T::AccountId = whitelisted_caller();
-        assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
-        let proposal = submit_proposal::<T>(caller.clone());
+        let proposal = submit_proposal::<T>(T::ProposalVoteOrigin::successful_origin());
 
         // run to voting period
         <System<T>>::set_block_number(
@@ -38,11 +42,12 @@ benchmarks! {
                 + <T as Config>::VotingPeriod::get()
                 + <T as Config>::ProposalSubmissionPeriod::get() + 1_u32.into(),
         );
-    }: _(
-        SystemOrigin::Signed(caller.clone()),
-        proposal.hash(),
-        Vote::Abstain
-    ) verify {
+
+        // construct call
+        let call = <Call<T>>::vote(proposal.hash(), Vote::Abstain);
+    }: {
+        call.dispatch_bypass_filter(T::ProposalVoteOrigin::successful_origin())?
+    } verify {
         assert_eq!(
             <Pallet<T>>::get_votes_for(&proposal.hash()).unwrap().votes.len(),
             1,
@@ -50,25 +55,21 @@ benchmarks! {
     }
 
     close {
-        let caller: T::AccountId = whitelisted_caller();
-        assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), caller.clone()));
-        let proposal: pallet::Proposal<T> = submit_proposal::<T>(caller.clone());
-        let voters = ["a", "b", "c", "d", "e"];
+        let proposal: pallet::Proposal<T> = submit_proposal::<T>(T::ProposalSubmissionOrigin::successful_origin());
 
-        // run to voting period
-        <System<T>>::set_block_number(<System<T>>::block_number() + <T as Config>::VotingPeriod::get() + <T as Config>::ProposalSubmissionPeriod::get() + 1_u32.into());
-
-        // generate members
-        for i in &voters {
-            let voter: T::AccountId = account(i, 0, 0);
-            <Members<T>>::insert(voter.clone(), MemberType::Council);
-
-            // vote aye
-            assert_ok!(<Pallet<T>>::vote(
-                SystemOrigin::Signed(voter).into(),
-                proposal.hash(),
-                Vote::Aye,
-            ));
+        // vote
+        for i in 0..5 {
+            let voter: T::AccountId = account("voter", i, 0);
+            assert_ok!(Votes::<T>::try_mutate(&proposal.hash(), |votes| {
+                if let Some(votes) = votes {
+                    votes.cast_vote(
+                        MemberVote::new(CommitteeMember::new(voter, MemberType::Council), Vote::Aye),
+                    );
+                    Ok(())
+                } else {
+                    Err(Error::<T>::NoProposalWithHash)
+                }
+            }));
         }
 
         // run out of voting period
@@ -78,12 +79,14 @@ benchmarks! {
                 + <T as Config>::ProposalSubmissionPeriod::get()
                 + 1_u32.into()
         );
-    }: _(
-        SystemOrigin::Signed(caller.clone()),
-        proposal.hash()
-    ) verify {
+
+        // construct call
+        let call = <Call<T>>::close(proposal.hash());
+    }: {
+        call.dispatch_bypass_filter(T::ProposalExecutionOrigin::successful_origin())?
+    } verify {
         assert_noop!(
-            <Pallet<T>>::close(SystemOrigin::Signed(caller.clone()).into(), proposal.hash()),
+            <Pallet<T>>::close(T::ProposalExecutionOrigin::successful_origin(), proposal.hash()),
             <Error<T>>::ProposalAlreadyExecuted
         );
     }

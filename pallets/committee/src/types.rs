@@ -5,7 +5,9 @@ use crate::{Config, Members, Origin};
 use frame_support::{
     pallet_prelude::*,
     sp_std::{self, prelude::Vec},
+    traits::EnsureOrigin,
 };
+use frame_system::RawOrigin;
 use sp_runtime::traits::Hash;
 
 #[cfg(feature = "std")]
@@ -216,14 +218,18 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 /// Ensure committee origin
 pub struct EnsureMember<T>(sp_std::marker::PhantomData<T>);
 
-impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureOrigin<O>
-    for EnsureMember<T>
+impl<
+        O: Into<Result<RawOrigin<<T as frame_system::Config>::AccountId>, O>>
+            + From<RawOrigin<<T as frame_system::Config>::AccountId>>
+            + Clone,
+        T: Config,
+    > EnsureOrigin<O> for EnsureMember<T>
 {
     type Success = <T as frame_system::Config>::AccountId;
     fn try_origin(o: O) -> Result<Self::Success, O> {
         let origin = o.clone().into()?;
         match origin {
-            CommitteeOrigin::CommitteeMember(i) => {
+            RawOrigin::Signed(i) => {
                 if <Members<T>>::contains_key(i.clone()) {
                     Ok(i)
                 } else {
@@ -236,6 +242,6 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 
     #[cfg(feature = "runtime-benchmarks")]
     fn successful_origin() -> O {
-        O::from(CommitteeOrigin::CommitteeMember(Default::default()))
+        O::from(RawOrigin::Signed(Default::default()))
     }
 }
