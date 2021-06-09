@@ -87,7 +87,7 @@ pub mod pallet {
             Success = <Self as frame_system::Config>::AccountId,
         >;
 
-        /// Origin that is permitted to execute approved proposals
+        /// Origin that is permitted to vote
         type ProposalVoteOrigin: EnsureOrigin<
             <Self as frame_system::Config>::Origin,
             Success = <Self as frame_system::Config>::AccountId,

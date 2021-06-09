@@ -215,7 +215,7 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
     }
 }
 
-/// Ensure committee origin
+/// Ensure committee member
 pub struct EnsureMember<T>(sp_std::marker::PhantomData<T>);
 
 impl<
