@@ -1,7 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::Config;
+use crate::{Config, Members, Origin};
 use frame_support::{
     pallet_prelude::*,
     sp_std::{self, prelude::Vec},
@@ -185,22 +185,21 @@ pub enum Vote {
 ///
 //  This is for the extrinsics only can be called after the
 /// approval of the committee
-pub struct EnsureApprovedByCommittee<AccountId, BlockNumber>(
-    sp_std::marker::PhantomData<(AccountId, BlockNumber)>,
-);
-impl<
-        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
-            + From<CommitteeOrigin<AccountId, BlockNumber>>
-            + Clone,
-        AccountId: PartialEq + Default,
-        BlockNumber: Default,
-    > EnsureOrigin<O> for EnsureApprovedByCommittee<AccountId, BlockNumber>
+pub struct EnsureApprovedByCommittee<T>(sp_std::marker::PhantomData<T>);
+
+impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureOrigin<O>
+    for EnsureApprovedByCommittee<T>
 {
-    type Success = AccountId;
+    type Success = <T as frame_system::Config>::AccountId;
     fn try_origin(o: O) -> Result<Self::Success, O> {
         let origin = o.clone().into()?;
         match origin {
-            CommitteeOrigin::ApprovedByCommittee(i, _) => Ok(i),
+            CommitteeOrigin::ApprovedByCommittee(i, votes) => {
+                votes
+                    .is_accepted(T::MinCouncilVotes::get())
+                    .map_err(|_| o)?;
+                Ok(i)
+            }
             _ => Err(o),
         }
     }
@@ -214,28 +213,29 @@ impl<
     }
 }
 
-impl<
-        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
-            + From<CommitteeOrigin<AccountId, BlockNumber>>
-            + Clone,
-        AccountId: PartialEq + Default,
-        BlockNumber: Default,
-    > EnsureOrigin<O> for CommitteeOrigin<AccountId, BlockNumber>
+/// Ensure committee origin
+pub struct EnsureMember<T>(sp_std::marker::PhantomData<T>);
+
+impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureOrigin<O>
+    for EnsureMember<T>
 {
-    type Success = AccountId;
+    type Success = <T as frame_system::Config>::AccountId;
     fn try_origin(o: O) -> Result<Self::Success, O> {
         let origin = o.clone().into()?;
-        Ok(match origin {
-            CommitteeOrigin::ApprovedByCommittee(i, _) => i,
-            CommitteeOrigin::CommitteeMember(i) => i,
-        })
+        match origin {
+            CommitteeOrigin::CommitteeMember(i) => {
+                if <Members<T>>::contains_key(i.clone()) {
+                    Ok(i)
+                } else {
+                    Err(o)
+                }
+            }
+            _ => Err(o),
+        }
     }
 
     #[cfg(feature = "runtime-benchmarks")]
     fn successful_origin() -> O {
-        O::from(CommitteeOrigin::ApprovedByCommittee(
-            Default::default(),
-            Default::default(),
-        ))
+        O::from(CommitteeOrigin::CommitteeMember(Default::default()))
     }
 }

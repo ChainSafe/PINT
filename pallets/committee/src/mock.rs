@@ -88,7 +88,7 @@ ord_parameter_types! {
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    crate::EnsureApprovedByCommittee<AccountId, u64>,
+    crate::EnsureApprovedByCommittee<Test>,
 >;
 
 impl pallet_committee::Config for Test {

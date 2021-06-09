@@ -477,20 +477,19 @@ ord_parameter_types! {
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    pallet_committee::EnsureApprovedByCommittee<AccountId, BlockNumber>,
+    pallet_committee::EnsureApprovedByCommittee<Runtime>,
 >;
 
 type EnsureCommittee = frame_system::EnsureOneOf<
     AccountId,
-    frame_system::EnsureSigned<AccountId>,
-    pallet_committee::Origin<Runtime>,
+    pallet_committee::EnsureApprovedByCommittee<Runtime>,
+    pallet_committee::EnsureMember<Runtime>,
 >;
 
 impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    // Using signed as the admin origin for now
     type ProposalSubmissionOrigin = EnsureCommittee;
     type ProposalExecutionOrigin = EnsureCommittee;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
