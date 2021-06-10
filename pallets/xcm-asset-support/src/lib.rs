@@ -161,11 +161,11 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
         location: &MultiLocation,
     ) -> (Option<MultiLocation>, Option<MultiLocation>) {
         let chain_location = match (location.first(), location.at(1)) {
-            (Some(Junction::Parent), Some(Junction::Parachain ( id ))) => {
-                Some((Junction::Parent, Junction::Parachain ( *id )).into())
+            (Some(Junction::Parent), Some(Junction::Parachain(id))) => {
+                Some((Junction::Parent, Junction::Parachain(*id)).into())
             }
             (Some(Junction::Parent), _) => Some(Junction::Parent.into()),
-            (Some(Junction::Parachain ( id )), _) => Some(Junction::Parachain ( *id ).into()),
+            (Some(Junction::Parachain(id)), _) => Some(Junction::Parachain(*id).into()),
             _ => None,
         };
 
@@ -174,9 +174,8 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
         let target_location = last_junction
             .into_iter()
             .filter(|_| {
-                path.iter().all(|junction| {
-                    matches!(junction, Junction::Parent | Junction::Parachain(_))
-                })
+                path.iter()
+                    .all(|junction| matches!(junction, Junction::Parent | Junction::Parachain(_)))
             })
             .map(Into::into)
             .next();
