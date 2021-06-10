@@ -4,14 +4,14 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
-use crate as pallet_committee;
+use crate::{self as pallet_committee, EnsureMember};
 #[cfg(feature = "std")]
 use frame_support::traits::GenesisBuild;
 use frame_support::{
     ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
-use frame_system as system;
+use frame_system::{self as system, EnsureSignedBy};
 
 use sp_core::H256;
 use sp_runtime::{
@@ -75,7 +75,7 @@ parameter_types! {
     pub const VotingPeriod: <Test as system::Config>::BlockNumber = VOTING_PERIOD;
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
-pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = 88;
+pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = PROPOSER_ACCOUNT_ID;
 pub(crate) const MIN_COUNCIL_VOTES: usize = 4;
 
 ord_parameter_types! {
@@ -88,15 +88,15 @@ ord_parameter_types! {
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
-    crate::EnsureApprovedByCommittee<AccountId, u64>,
+    crate::EnsureApprovedByCommittee<Test>,
 >;
 
 impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    type ProposalSubmissionOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type ProposalExecutionOrigin = frame_system::EnsureSignedBy<ExecuterAccountId, AccountId>;
+    type ProposalSubmissionOrigin = EnsureSignedBy<AdminAccountId, AccountId>;
+    type ProposalExecutionOrigin = EnsureMember<Self>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
@@ -125,8 +125,10 @@ where
         .build_storage::<Test>()
         .unwrap();
 
+    let mut council_members = vec![PROPOSER_ACCOUNT_ID];
+    council_members.append(&mut members.into_iter().collect());
     pallet_committee::GenesisConfig::<Test> {
-        council_members: members.into_iter().collect(),
+        council_members,
         constituent_members: Default::default(),
     }
     .assimilate_storage(&mut t)

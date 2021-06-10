@@ -1,11 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::Config;
+use crate::{Config, Members, Origin};
 use frame_support::{
     pallet_prelude::*,
     sp_std::{self, prelude::Vec},
+    traits::EnsureOrigin,
 };
+use frame_system::RawOrigin;
 use sp_runtime::traits::Hash;
 
 #[cfg(feature = "std")]
@@ -76,6 +78,8 @@ impl<AccountId> MemberVote<AccountId> {
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
     /// Action is executed by the committee. Contains the closer account and the members that voted Aye
     ApprovedByCommittee(AccountId, VoteAggregate<AccountId, BlockNumber>),
+    /// It has been condoned by a single member of the committee.
+    CommitteeMember(AccountId),
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
@@ -183,21 +187,23 @@ pub enum Vote {
 ///
 //  This is for the extrinsics only can be called after the
 /// approval of the committee
-pub struct EnsureApprovedByCommittee<AccountId, BlockNumber>(
-    sp_std::marker::PhantomData<(AccountId, BlockNumber)>,
-);
-impl<
-        O: Into<Result<CommitteeOrigin<AccountId, BlockNumber>, O>>
-            + From<CommitteeOrigin<AccountId, BlockNumber>>,
-        AccountId: PartialEq + Default,
-        BlockNumber: Default,
-    > EnsureOrigin<O> for EnsureApprovedByCommittee<AccountId, BlockNumber>
+pub struct EnsureApprovedByCommittee<T>(sp_std::marker::PhantomData<T>);
+
+impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureOrigin<O>
+    for EnsureApprovedByCommittee<T>
 {
-    type Success = AccountId;
+    type Success = <T as frame_system::Config>::AccountId;
     fn try_origin(o: O) -> Result<Self::Success, O> {
-        o.into().and_then(|o| match o {
-            CommitteeOrigin::ApprovedByCommittee(i, _) => Ok(i),
-        })
+        let origin = o.clone().into()?;
+        match origin {
+            CommitteeOrigin::ApprovedByCommittee(i, votes) => {
+                votes
+                    .is_accepted(T::MinCouncilVotes::get())
+                    .map_err(|_| o)?;
+                Ok(i)
+            }
+            _ => Err(o),
+        }
     }
 
     #[cfg(feature = "runtime-benchmarks")]
@@ -206,5 +212,36 @@ impl<
             Default::default(),
             Default::default(),
         ))
+    }
+}
+
+/// Ensure committee member
+pub struct EnsureMember<T>(sp_std::marker::PhantomData<T>);
+
+impl<
+        O: Into<Result<RawOrigin<<T as frame_system::Config>::AccountId>, O>>
+            + From<RawOrigin<<T as frame_system::Config>::AccountId>>
+            + Clone,
+        T: Config,
+    > EnsureOrigin<O> for EnsureMember<T>
+{
+    type Success = <T as frame_system::Config>::AccountId;
+    fn try_origin(o: O) -> Result<Self::Success, O> {
+        let origin = o.clone().into()?;
+        match origin {
+            RawOrigin::Signed(i) => {
+                if <Members<T>>::contains_key(i.clone()) {
+                    Ok(i)
+                } else {
+                    Err(o)
+                }
+            }
+            _ => Err(o),
+        }
+    }
+
+    #[cfg(feature = "runtime-benchmarks")]
+    fn successful_origin() -> O {
+        O::from(RawOrigin::Signed(Default::default()))
     }
 }
