@@ -158,6 +158,8 @@ pub mod pallet {
     pub enum Error<T> {
         /// Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
+        /// Thrown if adding an existed asset
+        AssetExisted,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
         /// Thrown if calculating the volume of units of an asset with it's price overflows.
@@ -522,6 +524,12 @@ pub mod pallet {
             units: &T::Balance,
             availability: &AssetAvailability,
         ) -> DispatchResult {
+            if T::PriceFeed::get_price(*asset_id).is_err() {
+                // init price feed if not exists
+            } else {
+                return Err(<Error<T>>::AssetExisted.into());
+            }
+
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
                     IndexAssetData::<T::Balance>::new(T::Balance::zero(), availability.clone())
