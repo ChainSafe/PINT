@@ -11,7 +11,7 @@ use frame_support::{
     ord_parameter_types, parameter_types,
     traits::{OnFinalize, OnInitialize},
 };
-use frame_system as system;
+use frame_system::{self as system, EnsureSignedBy};
 
 use sp_core::H256;
 use sp_runtime::{
@@ -95,7 +95,7 @@ impl pallet_committee::Config for Test {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    type ProposalSubmissionOrigin = EnsureMember<Self>;
+    type ProposalSubmissionOrigin = EnsureSignedBy<AdminAccountId, AccountId>;
     type ProposalExecutionOrigin = EnsureMember<Self>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;

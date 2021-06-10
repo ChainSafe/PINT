@@ -25,7 +25,10 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-use frame_system::limits::{BlockLength, BlockWeights};
+use frame_system::{
+    limits::{BlockLength, BlockWeights},
+    EnsureSigned,
+};
 
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
@@ -52,6 +55,7 @@ pub use frame_support::{
 };
 use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
+use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -474,7 +478,6 @@ ord_parameter_types! {
      pub const MinCouncilVotes: usize = 4;
 }
 
-type EnsureMember = pallet_committee::EnsureMember<Runtime>;
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
     AccountId,
     frame_system::EnsureRoot<AccountId>,
@@ -485,8 +488,8 @@ impl pallet_committee::Config for Runtime {
     type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
     type VotingPeriod = VotingPeriod;
     type MinCouncilVotes = MinCouncilVotes;
-    type ProposalSubmissionOrigin = EnsureMember;
-    type ProposalExecutionOrigin = EnsureMember;
+    type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
+    type ProposalExecutionOrigin = EnsureMember<Self>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
