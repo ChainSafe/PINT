@@ -130,7 +130,7 @@ fn non_member_cannot_vote() {
         let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
         assert_noop!(
             Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
-            BadOrigin,
+            <pallet::Error<Test>>::NotMember,
         );
         assert_eq!(
             Committee::get_votes_for(&proposal.hash()),
