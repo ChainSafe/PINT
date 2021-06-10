@@ -91,7 +91,7 @@ pub mod pallet {
             Self::Balance,
         >;
         /// Type used to identify assets
-        type AssetId: Parameter + Member + From<u32> + Copy;
+        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
         /// Handles asset depositing and withdrawing from sovereign user accounts
         type MultiAssetDepository: MultiAssetDepository<
             Self::AssetId,
