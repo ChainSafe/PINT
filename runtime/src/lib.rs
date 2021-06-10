@@ -32,15 +32,22 @@ use frame_system::{
 
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
+use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
-use xcm::v0::{Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
-use xcm_builder::{AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedWeightBounds, LocationInverter, NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents, SignedToAccountId32};
+use xcm::v0::{BodyId, Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
+use xcm::v0::{Junction::*, MultiLocation::*};
+use xcm_builder::{
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
+    FixedWeightBounds, LocationInverter, NativeAsset, ParentIsDefault, RelayChainAsNative,
+    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
+    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
+};
 use xcm_executor::{traits::Convert, Config, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
 use codec::Decode;
 pub use frame_support::{
-    construct_runtime, ord_parameter_types, parameter_types,
+    construct_runtime, match_type, ord_parameter_types, parameter_types,
     traits::{All, IsInVec, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -52,6 +59,7 @@ use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
+pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill, Perquintill};
@@ -115,13 +123,15 @@ pub mod opaque {
     pub type SessionHandlers = ();
 
     impl_opaque_keys! {
-        pub struct SessionKeys {}
+        pub struct SessionKeys {
+            pub aura: Aura,
+        }
     }
 }
 
 pub const VERSION: RuntimeVersion = RuntimeVersion {
-    spec_name: create_runtime_str!("cumulus-test-parachain"),
-    impl_name: create_runtime_str!("cumulus-test-parachain"),
+    spec_name: create_runtime_str!("pint-parachain"),
+    impl_name: create_runtime_str!("pint-parachain"),
     authoring_version: 1,
     spec_version: 1,
     impl_version: 1,
@@ -129,7 +139,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 1,
 };
 
-/// This determines the average expected block time that we are targetting.
+/// This determines the average expected block time that we are targeting.
 /// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
 /// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
 /// up by `pallet_aura` to implement `fn slot_duration()`.
@@ -144,14 +154,13 @@ pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
 
+// Unit = the base number of indivisible units for balances
+pub const UNIT: Balance = 1_000_000_000_000;
+pub const MILLIUNIT: Balance = 1_000_000_000;
+pub const MICROUNIT: Balance = 1_000_000;
+
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-
-#[derive(codec::Encode, codec::Decode)]
-pub enum XCMPMessage<XAccountId, XBalance> {
-    /// Transfer tokens to the given account from the Parachain account.
-    TransferToken(XAccountId, XBalance),
-}
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -266,7 +275,6 @@ parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
     pub const MaxLocks: u32 = 50;
-    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -279,8 +287,6 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -316,6 +322,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 }
 
 impl parachain_info::Config for Runtime {}
+
+impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
     pub const RelayLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
@@ -375,24 +383,28 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Native signed account converter; this just converts an `AccountId32` origin into a normal
     // `Origin::Signed` origin of the same 32-byte value.
     SignedAccountId32AsNative<RelayNetwork, Origin>,
+    // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
+    XcmPassthrough<Origin>,
 );
 
 parameter_types! {
-    pub UnitWeightCost: Weight = 1_000;
+    // One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
+    pub UnitWeightCost: Weight = 1_000_000;
+    // One UNIT buys 1 second of weight.
+    pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), UNIT);
 }
 
-parameter_types! {
-    // 1_000_000_000_000 => 1 unit of asset for 1 unit of Weight.
-    // TODO: Should take the actual weight price. This is just 1_000 ROC per second of weight.
-    pub const WeightPrice: (MultiLocation, u128) = (MultiLocation::X1(Junction::Parent), 1_000);
-    pub AllowUnpaidFrom: Vec<MultiLocation> = vec![ MultiLocation::X1(Junction::Parent) ];
+match_type! {
+    pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
+        X1(Parent) | X2(Parent, Plurality { id: BodyId::Unit, .. })
+    };
 }
 
 pub type Barrier = (
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
-    AllowUnpaidExecutionFrom<IsInVec<AllowUnpaidFrom>>,
-    // <- Parent gets free execution
+    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
+    // ^^^ Parent & its unit plurality gets free execution
 );
 
 pub struct XcmConfig;
@@ -409,10 +421,6 @@ impl Config for XcmConfig {
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
     type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
     type ResponseHandler = (); // Don't handle responses for now.
-}
-
-parameter_types! {
-    pub const MaxDownwardMessageWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 10;
 }
 
 pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RelayNetwork>,);
@@ -453,6 +461,10 @@ impl cumulus_pallet_dmp_queue::Config for Runtime {
     type Event = Event;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
+}
+
+impl pallet_aura::Config for Runtime {
+    type AuthorityId = AuraId;
 }
 
 parameter_types! {
@@ -594,7 +606,7 @@ impl Convert<MultiLocation, AssetId> for AssetIdConvert {
             MultiLocation::X1(Junction::Parent) => return Ok(RelayChainAssetId::get()),
             MultiLocation::X3(
                 Junction::Parent,
-                Junction::Parachain (id) ,
+                Junction::Parachain(id),
                 Junction::GeneralKey(key),
             ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
                 // decode the general key
@@ -710,6 +722,9 @@ construct_runtime!(
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
         ParachainInfo: parachain_info::{Pallet, Storage, Config},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
+
+        Aura: pallet_aura::{Pallet, Config<T>},
+        AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
         // PINT pallets
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
@@ -828,6 +843,22 @@ impl_runtime_apis! {
             encoded: Vec<u8>,
         ) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
             opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
+        }
+    }
+
+        impl sp_consensus_aura::AuraApi<Block, AuraId> for Runtime {
+        fn slot_duration() -> sp_consensus_aura::SlotDuration {
+            sp_consensus_aura::SlotDuration::from_millis(Aura::slot_duration())
+        }
+
+        fn authorities() -> Vec<AuraId> {
+            Aura::authorities()
+        }
+    }
+
+    impl cumulus_primitives_core::CollectCollationInfo<Block> for Runtime {
+        fn collect_collation_info() -> cumulus_primitives_core::CollationInfo {
+            ParachainSystem::collect_collation_info()
         }
     }
 
