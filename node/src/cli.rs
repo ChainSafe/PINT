@@ -50,19 +50,19 @@ pub struct ExportGenesisStateCommand {
     #[structopt(parse(from_os_str))]
     pub output: Option<PathBuf>,
 
-    /// Id of the parachain this state is for.
-    ///
-    /// Default: 200
-    #[structopt(long)]
-    pub parachain_id: Option<u32>,
+	/// Id of the parachain this state is for.
+	///
+	/// Default: 100
+	#[structopt(long, conflicts_with = "chain")]
+	pub parachain_id: Option<u32>,
 
     /// Write output in binary. Default is to write in hex.
     #[structopt(short, long)]
     pub raw: bool,
 
-    /// The name of the chain for that the genesis state should be exported.
-    #[structopt(long)]
-    pub chain: Option<String>,
+	/// The name of the chain for that the genesis state should be exported.
+	#[structopt(long, conflicts_with = "parachain-id")]
+	pub chain: Option<String>,
 }
 
 /// Command for exporting the genesis wasm file.
@@ -106,21 +106,15 @@ structopt::clap::AppSettings::ArgsNegateSubcommands,
 structopt::clap::AppSettings::SubcommandsNegateReqs,
 ])]
 pub struct Cli {
-    #[structopt(subcommand)]
-    pub subcommand: Option<Subcommand>,
+	#[structopt(subcommand)]
+	pub subcommand: Option<Subcommand>,
 
-    #[structopt(flatten)]
-    pub run: RunCmd,
+	#[structopt(flatten)]
+	pub run: cumulus_client_cli::RunCmd,
 
-    /// Run node as collator.
-    ///
-    /// Note that this is the same as running with `--validator`.
-    #[structopt(long, conflicts_with = "validator")]
-    pub collator: bool,
-
-    /// Relaychain arguments
-    #[structopt(raw = true)]
-    pub relaychain_args: Vec<String>,
+	/// Relaychain arguments
+	#[structopt(raw = true)]
+	pub relaychain_args: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -136,21 +130,21 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-    /// Parse the relay chain CLI parameters using the para chain `Configuration`.
-    pub fn new<'a>(
-        para_config: &sc_service::Configuration,
-        relay_chain_args: impl Iterator<Item = &'a String>,
-    ) -> Self {
-        let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
-        let chain_id = extension.map(|e| e.relay_chain.clone());
-        let base_path = para_config
-            .base_path
-            .as_ref()
-            .map(|x| x.path().join("polkadot"));
-        Self {
-            base_path,
-            chain_id,
-            base: polkadot_cli::RunCmd::from_iter(relay_chain_args),
-        }
-    }
+	/// Parse the relay chain CLI parameters using the para chain `Configuration`.
+	pub fn new<'a>(
+		para_config: &sc_service::Configuration,
+		relay_chain_args: impl Iterator<Item = &'a String>,
+	) -> Self {
+		let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
+		let chain_id = extension.map(|e| e.relay_chain.clone());
+		let base_path = para_config
+			.base_path
+			.as_ref()
+			.map(|x| x.path().join("polkadot"));
+		Self {
+			base_path,
+			chain_id,
+			base: polkadot_cli::RunCmd::from_iter(relay_chain_args),
+		}
+	}
 }

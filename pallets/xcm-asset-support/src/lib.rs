@@ -125,8 +125,8 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
     ) -> Xcm<Config::Call> {
         let mut reanchored_dest = dest.clone();
         if reserve == Junction::Parent.into() {
-            if let MultiLocation::X2(Junction::Parent, Junction::Parachain { id }) = dest {
-                reanchored_dest = Junction::Parachain { id }.into();
+            if let MultiLocation::X2(Junction::Parent, Junction::Parachain(id)) = dest {
+                reanchored_dest = Junction::Parachain(id).into();
             }
         }
 
@@ -161,11 +161,11 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
         location: &MultiLocation,
     ) -> (Option<MultiLocation>, Option<MultiLocation>) {
         let chain_location = match (location.first(), location.at(1)) {
-            (Some(Junction::Parent), Some(Junction::Parachain { id })) => {
-                Some((Junction::Parent, Junction::Parachain { id: *id }).into())
+            (Some(Junction::Parent), Some(Junction::Parachain ( id ))) => {
+                Some((Junction::Parent, Junction::Parachain ( *id )).into())
             }
             (Some(Junction::Parent), _) => Some(Junction::Parent.into()),
-            (Some(Junction::Parachain { id }), _) => Some(Junction::Parachain { id: *id }.into()),
+            (Some(Junction::Parachain ( id )), _) => Some(Junction::Parachain ( *id ).into()),
             _ => None,
         };
 
@@ -175,7 +175,7 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
             .into_iter()
             .filter(|_| {
                 path.iter().all(|junction| {
-                    matches!(junction, Junction::Parent | Junction::Parachain { id: _ })
+                    matches!(junction, Junction::Parent | Junction::Parachain(_))
                 })
             })
             .map(Into::into)
