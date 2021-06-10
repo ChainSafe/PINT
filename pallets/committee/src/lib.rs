@@ -87,12 +87,6 @@ pub mod pallet {
             Success = <Self as frame_system::Config>::AccountId,
         >;
 
-        /// Origin that is permitted to vote
-        type ProposalVoteOrigin: EnsureOrigin<
-            <Self as frame_system::Config>::Origin,
-            Success = <Self as frame_system::Config>::AccountId,
-        >;
-
         /// Origin that is permitted to execute `add_constituent`
         type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
@@ -312,6 +306,19 @@ pub mod pallet {
                 })
             })
         }
+
+        /// Used to check if an origin is signed and the signer is a member of
+        /// the committee
+        pub fn ensure_member(
+            origin: OriginFor<T>,
+        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
+            let who = ensure_signed(origin)?;
+            if let Some(member_type) = <Members<T>>::get(who.clone()) {
+                Ok(CommitteeMember::new(who, member_type))
+            } else {
+                Err(<Error<T>>::NotMember.into())
+            }
+        }
     }
 
     #[pallet::call]
@@ -355,11 +362,7 @@ pub mod pallet {
             vote: Vote,
         ) -> DispatchResultWithPostInfo {
             // Only members can vote
-            let caller = T::ProposalVoteOrigin::ensure_origin(origin)?;
-            let voter = CommitteeMember::new(
-                caller.clone(),
-                <Members<T>>::get(caller).ok_or(<Error<T>>::NotMember)?,
-            );
+            let voter = Self::ensure_member(origin)?;
 
             Votes::<T>::try_mutate(&proposal_hash, |votes| {
                 if let Some(votes) = votes {

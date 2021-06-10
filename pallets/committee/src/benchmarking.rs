@@ -34,7 +34,8 @@ benchmarks! {
     }
 
     vote {
-        let proposal = submit_proposal::<T>(T::ProposalVoteOrigin::successful_origin());
+        let origin = T::ProposalSubmissionOrigin::successful_origin();
+        let proposal = submit_proposal::<T>(origin.clone());
 
         // run to voting period
         <System<T>>::set_block_number(
@@ -46,7 +47,7 @@ benchmarks! {
         // construct call
         let call = <Call<T>>::vote(proposal.hash(), Vote::Abstain);
     }: {
-        call.dispatch_bypass_filter(T::ProposalVoteOrigin::successful_origin())?
+        call.dispatch_bypass_filter(origin)?
     } verify {
         assert_eq!(
             <Pallet<T>>::get_votes_for(&proposal.hash()).unwrap().votes.len(),

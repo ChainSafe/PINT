@@ -487,7 +487,6 @@ impl pallet_committee::Config for Runtime {
     type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = EnsureMember;
     type ProposalExecutionOrigin = EnsureMember;
-    type ProposalVoteOrigin = EnsureMember;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;

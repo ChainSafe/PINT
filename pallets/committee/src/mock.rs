@@ -97,7 +97,6 @@ impl pallet_committee::Config for Test {
     type MinCouncilVotes = MinCouncilVotes;
     type ProposalSubmissionOrigin = EnsureMember<Self>;
     type ProposalExecutionOrigin = EnsureMember<Self>;
-    type ProposalVoteOrigin = EnsureMember<Self>;
     type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
     type ProposalNonce = u32;
     type Origin = Origin;
