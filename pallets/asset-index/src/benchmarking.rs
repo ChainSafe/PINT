@@ -9,7 +9,7 @@ use xcm::v0::MultiLocation;
 
 benchmarks! {
     add_asset {
-        let asset_id = 42.into();
+        let asset_id = 42_u32.into();
         let caller: T::AccountId = whitelisted_caller();
         let million = 1_000_000u32.into();
         T::IndexToken::deposit_creating(&caller, million);
