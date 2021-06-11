@@ -178,11 +178,7 @@ pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        if quote == UNKNOWN_ASSET_ID {
-            Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
-        } else {
-            Self::get_price_pair(PINT_ASSET_ID, quote)
-        }
+        Self::get_price_pair(PINT_ASSET_ID, quote)
     }
 
     fn get_price_pair(
@@ -190,7 +186,8 @@ impl PriceFeed<AssetId> for MockPriceFeed {
         quote: AssetId,
     ) -> Result<AssetPricePair<AssetId>, DispatchError> {
         let price = match quote {
-            ASSET_A_ID => {
+            // includes unknown asset id since we don't need to mock initial price pair here
+            ASSET_A_ID | UNKNOWN_ASSET_ID => {
                 Price::checked_from_rational(600, 600 / ASSET_A_PRICE_MULTIPLIER).unwrap()
             }
             ASSET_B_ID => {
@@ -199,6 +196,11 @@ impl PriceFeed<AssetId> for MockPriceFeed {
             _ => return Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into()),
         };
         Ok(AssetPricePair { base, quote, price })
+    }
+
+    fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        // pass all unknown asset id
+        Self::get_price(UNKNOWN_ASSET_ID)
     }
 }
 
