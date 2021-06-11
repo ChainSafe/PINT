@@ -328,7 +328,7 @@ pub mod pallet {
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
-            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin.clone())?;
+            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
 
             // Create a new proposal with a unique nonce
             let nonce = Self::take_and_increment_nonce()?;
@@ -395,7 +395,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let closer = T::ProposalExecutionOrigin::ensure_origin(origin.clone())?;
+            let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
             // ensure proposal has not already been executed
             ensure!(
