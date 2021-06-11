@@ -37,26 +37,28 @@ export default class Runner implements Config {
         ws: string = "ws://0.0.0.0:9988",
         uri: string = "//Alice"
     ): Promise<void> {
+        console.log("boot e2e tests...");
         const ps = await launch("inherit");
-        ps.stdout.on("data", async (chunk: string) => {
-            console.log(`chunk: ${chunk}`);
-            if (chunk.includes(LAUNCH_COMPLETE)) {
-                console.log("boot e2e tests...");
-                const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs();
-            }
-        });
-
-        // Kill all processes when exiting.
-        process.on("exit", () => {
-            ps.send("exit");
-        });
-
-        // Handle ctrl+c to trigger `exit`.
-        process.on("SIGINT", function () {
-            ps.send("exit");
-            process.exit(2);
-        });
+        // ps.stdout.on("data", async (chunk: string) => {
+        //     console.log(`chunk: ${chunk}`);
+        //     if (chunk.includes(LAUNCH_COMPLETE)) {
+        //         const runner = await Runner.build(exs, ws, uri);
+        //         await runner.runTxs();
+        //     }
+        // });
+        //
+        // // Kill all processes when exiting.
+        // process.on("exit", async () => {
+        //     console.log("exit launch process");
+        //     ps.send("exit");
+        // });
+        //
+        // // Handle ctrl+c to trigger `exit`.
+        // process.on("SIGINT", async function () {
+        //     console.log("CC launch process");
+        //     ps.send("exit");
+        //     process.exit(2);
+        // });
     }
 
     /**

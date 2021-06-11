@@ -4,7 +4,13 @@
 import fs from "fs";
 import findUp from "find-up";
 import path from "path";
-import { fork, ChildProcess, StdioOptions, spawn } from "child_process";
+import {
+    fork,
+    ChildProcess,
+    StdioOptions,
+    spawn,
+    spawnSync,
+} from "child_process";
 
 /**
  * Launch PINT locally
@@ -15,8 +21,10 @@ import { fork, ChildProcess, StdioOptions, spawn } from "child_process";
 export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
     return fork("js/polkadot-launch", ["config.json"], {
         cwd: path.resolve(String(await findUp("Cargo.toml")), ".."),
+        killSignal: "SIGINT",
         stdio,
-    });
+    } as any);
+    return null;
 }
 
 /**
@@ -39,7 +47,7 @@ export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
  */
 export async function launch(stdio?: StdioOptions): Promise<ChildProcess> {
     const root = await findUp("Cargo.toml");
-    if (fs.existsSync(path.resolve(root, "../bin/pint"))) {
+    if (fs.existsSync(path.resolve(String(root), "../bin/pint"))) {
         return local(stdio);
     } else {
         return docker(stdio);
