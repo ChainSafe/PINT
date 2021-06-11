@@ -158,8 +158,6 @@ pub mod pallet {
     pub enum Error<T> {
         /// Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
-        /// Thrown if adding an existed asset
-        AssetExisted,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
         /// Thrown if calculating the volume of units of an asset with it's price overflows.

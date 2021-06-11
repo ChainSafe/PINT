@@ -199,7 +199,7 @@ impl PriceFeed<AssetId> for MockPriceFeed {
     }
 
     fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        // pass all unknown asset id
+        // pass all unknown asset ids
         Self::get_price(UNKNOWN_ASSET_ID)
     }
 }
