@@ -14,29 +14,29 @@ serde = { version = "1.0.101", features = ["derive"], optional = true }
 codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive']}
 
 # Substrate Dependencies
-frame-support = { git = 'https://github.com/paritytech/substrate', default-features = false, branch = 'polkadot-v0.9.3' }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false }
-frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false, optional = true }
+frame-support = { git = 'https://github.com/paritytech/substrate', default-features = false, branch = 'master' }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
+frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false, optional = true }
 
 # Polkadot Dependencies
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.3', default-features = false }
-xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.3', default-features = false }
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'master', default-features = false }
+xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'master', default-features = false }
 
 # Cumulus dependencies
-cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.3', default-features = false }
-cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.3', default-features = false }
+cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'master', default-features = false }
+cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'master', default-features = false }
 
 # PINT dependencies
 xcm-calls = {path = "../../primitives/xcm-calls", default-features = false }
 
 [dev-dependencies]
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false }
-sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.3', default-features = false }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
 
-xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.3', default-features = false }
+xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'master', default-features = false }
 
 
 [features]

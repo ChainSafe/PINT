@@ -275,6 +275,7 @@ parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
     pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -287,6 +288,8 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
 }
 
 parameter_types! {
