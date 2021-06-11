@@ -68,6 +68,7 @@ impl system::Config for Test {
 // param types for balances
 parameter_types! {
     pub const MaxLocks: u32 = 1024;
+ pub const MaxReserves: u32 = 1024;
     pub static ExistentialDeposit: Balance = 0;
 }
 
@@ -84,6 +85,8 @@ impl pallet_balances::Config for Test {
     >;
     type MaxLocks = MaxLocks;
     type WeightInfo = ();
+    type MaxReserves = MaxReserves;
+    type ReserveIdentifier = [u8; 8];
 }
 
 pub(crate) const LOCAL_TREASURE_PALLET_ID: PalletId = PalletId(*b"12345678");

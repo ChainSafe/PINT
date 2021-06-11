@@ -12049,6 +12049,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "max-encoded-len",
  "pallet-balances",
  "pallet-proxy",
  "pallet-session",

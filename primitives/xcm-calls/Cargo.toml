@@ -19,6 +19,7 @@ sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'master' }
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'master' }
 sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'master' }
 frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'master' }
+max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'master' }
 
 ## Substrate Pallet Dependencies
 pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }
