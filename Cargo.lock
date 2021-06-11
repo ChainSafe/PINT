@@ -4735,7 +4735,6 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
- "sp-std",
  "xcm",
  "xcm-executor",
 ]
@@ -5273,8 +5272,6 @@ dependencies = [
  "frame-system",
  "log",
  "pallet-balances",
- "pallet-proxy",
- "pallet-staking",
  "parity-scale-codec",
  "serde",
  "sp-core",
