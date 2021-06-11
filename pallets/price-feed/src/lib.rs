@@ -83,7 +83,7 @@ pub mod pallet {
     ///
     /// * insert: adding a new asset with no price pair been set yet
     /// * remove: an asset has its price pair, remove automatically
-    pub type InitialPricePair<T: Config> =
+    pub type InitialPricePairs<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
 
     #[pallet::genesis_config]
@@ -293,7 +293,7 @@ pub mod pallet {
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
             Ok(
                 if let Ok(pair) = Self::get_price_pair(T::SelfAssetId::get(), quote.clone()) {
-                    <InitialPricePair<T>>::remove(quote);
+                    <InitialPricePairs<T>>::remove(quote);
                     pair
                 } else {
                     let pair = AssetPricePair {
@@ -301,7 +301,7 @@ pub mod pallet {
                         quote: quote.clone(),
                         price,
                     };
-                    <InitialPricePair<T>>::insert(quote, pair.clone());
+                    <InitialPricePairs<T>>::insert(quote, pair.clone());
                     pair
                 },
             )
