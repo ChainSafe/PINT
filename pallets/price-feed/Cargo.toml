@@ -18,7 +18,7 @@ frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'mast
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false, optional = true }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
+pallet-chainlink-feed = { git = 'https://github.com/ChainSafe/chainlink-polkadot', branch = 'upgrade-substrate-master', default-features = false }
 
 [dev-dependencies]
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'master', default-features = false }

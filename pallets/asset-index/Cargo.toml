@@ -21,7 +21,7 @@ xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'master', defau
 xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'master', default-features = false }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = "https://github.com/smartcontractkit/chainlink-polkadot", branch = "master", default-features = false, optional = true }
+pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
 pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
 pallet-asset-depository = { path = "../asset-depository", default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }

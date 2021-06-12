@@ -77,7 +77,7 @@ pallet-price-feed = {path = "../pallets/price-feed", default-features = false }
 pallet-remote-asset-manager = { path = "../pallets/remote-asset-manager", default-features = false }
 
 xcm-calls = {path = "../primitives/xcm-calls", default-features = false }
-pallet-chainlink-feed = { git = "https://github.com/smartcontractkit/chainlink-polkadot", branch = "master", default-features = false }
+pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false }
 
 
 [features]
@@ -88,6 +88,7 @@ runtime-benchmarks = [
 	'frame-support/runtime-benchmarks',
 	'frame-system-benchmarking',
 	'frame-system/runtime-benchmarks',
+	'xcm-builder/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
     'pallet-asset-depository/runtime-benchmarks',
