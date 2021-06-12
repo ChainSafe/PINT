@@ -6,7 +6,7 @@ import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
-import { typesBundle } from "@pint/types";
+import { definitions } from "@pint/types";
 import { Config, Extrinsic } from "./config";
 import { launch } from "./launch";
 
@@ -34,31 +34,30 @@ export default class Runner implements Config {
      */
     static async run(
         exs: Builder,
-        ws: string = "ws://0.0.0.0:9988",
+        ws: string = "ws://127.0.0.1:9988",
         uri: string = "//Alice"
     ): Promise<void> {
-        console.log("boot e2e tests...");
-        const ps = await launch("inherit");
-        // ps.stdout.on("data", async (chunk: string) => {
-        //     console.log(`chunk: ${chunk}`);
-        //     if (chunk.includes(LAUNCH_COMPLETE)) {
-        //         const runner = await Runner.build(exs, ws, uri);
-        //         await runner.runTxs();
-        //     }
-        // });
-        //
-        // // Kill all processes when exiting.
-        // process.on("exit", async () => {
-        //     console.log("exit launch process");
-        //     ps.send("exit");
-        // });
-        //
-        // // Handle ctrl+c to trigger `exit`.
-        // process.on("SIGINT", async function () {
-        //     console.log("CC launch process");
-        //     ps.send("exit");
-        //     process.exit(2);
-        // });
+        console.log("bootstrap e2e tests...");
+        console.log("establishing ws connections... (around 2 mins)");
+        const ps = await launch("pipe");
+        ps.stdout.on("data", async (chunk: string) => {
+            if (chunk.includes(LAUNCH_COMPLETE)) {
+                console.log("COMPLETE LAUNCH!");
+                const runner = await Runner.build(exs, ws, uri);
+                await runner.runTxs();
+            }
+        });
+
+        // Kill all processes when exiting.
+        process.on("exit", async () => {
+            ps.send("exit");
+        });
+
+        // Handle ctrl+c to trigger `exit`.
+        process.on("SIGINT", async function () {
+            ps.send("exit");
+            process.exit(2);
+        });
     }
 
     /**
@@ -77,7 +76,10 @@ export default class Runner implements Config {
         const provider = new WsProvider(ws);
         const keyring = new Keyring({ type: "sr25519" });
         const pair = keyring.addFromUri(uri);
-        const api = await ApiPromise.create({ provider, typesBundle });
+        const api = await ApiPromise.create({
+            provider,
+            types: definitions.types[0].types,
+        });
 
         return new Runner({ api, pair, exs: exs(api) });
     }

@@ -4,13 +4,7 @@
 import fs from "fs";
 import findUp from "find-up";
 import path from "path";
-import {
-    fork,
-    ChildProcess,
-    StdioOptions,
-    spawn,
-    spawnSync,
-} from "child_process";
+import { fork, ChildProcess, StdioOptions, spawn } from "child_process";
 
 /**
  * Launch PINT locally
@@ -24,7 +18,6 @@ export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
         killSignal: "SIGINT",
         stdio,
     } as any);
-    return null;
 }
 
 /**
