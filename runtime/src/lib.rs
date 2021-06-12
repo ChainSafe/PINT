@@ -275,7 +275,6 @@ parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
     pub const MaxLocks: u32 = 50;
-    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -288,8 +287,6 @@ impl pallet_balances::Config for Runtime {
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
 }
 
 parameter_types! {
@@ -562,7 +559,7 @@ impl pallet_chainlink_feed::Config for Runtime {
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
     type OnAnswerHandler = ();
-    type WeightInfo = ();
+    type WeightInfo = weights::pallet_chainlink_feed::WeightInfo<Runtime>;
 }
 
 parameter_types! {
@@ -721,11 +718,15 @@ construct_runtime!(
         RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
-        ParachainInfo: parachain_info::{Pallet, Storage, Config},
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
 
+        // Parachain
+        ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>},
+        ParachainInfo: parachain_info::{Pallet, Storage, Config},
+
+        // Collator. The order of the 4 below are important and shall not change.
+        // TODO authorship, collatorselection
         Aura: pallet_aura::{Pallet, Config<T>},
         AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
