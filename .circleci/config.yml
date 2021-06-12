@@ -156,6 +156,15 @@ jobs:
           command: |
             git submodule update --init
             docker build -f docker/launch.Dockerfile -t launch .
+      - run:
+          name: Run e2e tests
+          command: |
+            curl -sL https://deb.nodesource.com/setup_15.x | bash - \
+              && apt-get -qqy --no-install-recommends install nodejs -y \
+              && cd js/e2e \
+              && npm install \
+              && npm run build \
+              && npm run run
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
