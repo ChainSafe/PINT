@@ -159,8 +159,8 @@ jobs:
       - run:
           name: Run e2e tests
           command: |
-            curl -sL https://deb.nodesource.com/setup_15.x | bash - \
-              && apt-get -qqy --no-install-recommends install nodejs -y \
+            sudo curl -sL https://deb.nodesource.com/setup_15.x | bash - \
+              && sudo apt-get -qqy --no-install-recommends install nodejs -y \
               && cd js/e2e \
               && npm install \
               && npm run build \
