@@ -142,28 +142,29 @@ fn pint_testnet_genesis(
     id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
     parachain_runtime::GenesisConfig {
-        system: parachain_runtime::SystemConfig {
+        frame_system: parachain_runtime::SystemConfig {
             code: parachain_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        balances: parachain_runtime::BalancesConfig {
+        pallet_balances: parachain_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        committee: parachain_runtime::CommitteeConfig {
+        pallet_committee: parachain_runtime::CommitteeConfig {
             council_members,
             ..Default::default()
         },
-        sudo: parachain_runtime::SudoConfig { key: root_key },
+        pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
-        aura: Default::default(),
-        aura_ext: Default::default(),
+        pallet_aura: Default::default(),
+        cumulus_pallet_aura_ext: Default::default(),
+        cumulus_pallet_parachain_system: Default::default(),
     }
 }
