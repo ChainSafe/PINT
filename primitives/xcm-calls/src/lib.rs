@@ -210,7 +210,6 @@ mod tests {
                 frame_support::weights::constants::WEIGHT_PER_SECOND * 2
             );
         pub const MaxLocks: u32 = 1024;
-        pub const MaxReserves: u32 = 50;
         pub static SessionsPerEra: sp_staking::SessionIndex = 3;
         pub static ExistentialDeposit: Balance = 1;
         pub static SlashDeferDuration: EraIndex = 0;
@@ -251,8 +250,6 @@ mod tests {
         type ExistentialDeposit = ExistentialDeposit;
         type AccountStore = System;
         type WeightInfo = ();
-        type MaxReserves = MaxReserves;
-        type ReserveIdentifier = [u8; 8];
     }
     parameter_types! {
         pub const UncleGenerations: u64 = 0;

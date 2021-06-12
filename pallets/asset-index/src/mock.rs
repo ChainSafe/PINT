@@ -93,7 +93,6 @@ impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
 // param types for balances
 parameter_types! {
     pub const MaxLocks: u32 = 1024;
- pub const MaxReserves: u32 = 1024;
     pub static ExistentialDeposit: Balance = 0;
 }
 
@@ -110,8 +109,6 @@ impl pallet_balances::Config for Test {
     >;
     type MaxLocks = MaxLocks;
     type WeightInfo = ();
-    type MaxReserves = MaxReserves;
-    type ReserveIdentifier = [u8; 8];
 }
 
 impl pallet_asset_depository::Config for Test {
