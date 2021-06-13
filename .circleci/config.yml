@@ -163,7 +163,7 @@ jobs:
             && sudo apt-get -qqy --no-install-recommends install nodejs -y \
             && cd js/e2e \
               && npm install -g yarn \
-              && yarn build \
+              && yarn \
               && yarn run
   docker-publish-latest:
     executor: test-executor
