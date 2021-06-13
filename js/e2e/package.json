@@ -21,7 +21,7 @@
     "find-up": "^5.0.0"
   },
   "scripts": {
-    "run": "ts-node index.ts",
+    "start": "ts-node index.ts",
     "build": "tsc --strict",
     "lint": "tsc --noEmit --strict && tslint --project ./tsconfig.json"
   }
