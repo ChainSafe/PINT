@@ -165,7 +165,7 @@ jobs:
               && npm install yarn -g \
               && cd js/e2e \
               && yarn \
-              && yarn run
+              && yarn start
 
   docker-publish-latest:
     executor: test-executor
