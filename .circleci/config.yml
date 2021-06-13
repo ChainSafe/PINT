@@ -161,7 +161,7 @@ jobs:
           command: |
             sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
               && source ~/.bashrc \
-              && nvm install node \
+              && nvm use v15.9.0 \
               && npm install yarn -g \
               && cd js/e2e \
               && yarn \

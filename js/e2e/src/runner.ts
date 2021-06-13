@@ -40,7 +40,7 @@ export default class Runner implements Config {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
-        ps.stdout.on("data", async (chunk: string) => {
+        (ps as any).stdout.on("data", async (chunk: string) => {
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
@@ -54,7 +54,7 @@ export default class Runner implements Config {
         });
 
         // Handle ctrl+c to trigger `exit`.
-        process.on("SIGINT", async function () {
+        process.on("SIGINT", async () => {
             ps.send("exit");
             process.exit(2);
         });
@@ -78,7 +78,7 @@ export default class Runner implements Config {
         const pair = keyring.addFromUri(uri);
         const api = await ApiPromise.create({
             provider,
-            types: definitions.types[0].types,
+            types: (definitions.types as any)[0].types,
         });
 
         return new Runner({ api, pair, exs: exs(api) });
