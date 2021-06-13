@@ -161,11 +161,12 @@ jobs:
           command: |
             sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
               && source ~/.bashrc \
-              && nvm use 15 \
+              && nvm install node \
               && npm install yarn -g \
               && cd js/e2e \
               && yarn \
               && yarn run
+
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
