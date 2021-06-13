@@ -50,12 +50,13 @@ export default class Runner implements Config {
 
         // Kill all processes when exiting.
         process.on("exit", async () => {
-            (ps as any).send("exit");
+            ps.send && ps.send("exit");
+            process.exit(2);
         });
 
         // Handle ctrl+c to trigger `exit`.
         process.on("SIGINT", async () => {
-            (ps as any).send("exit");
+            ps.send && ps.send("exit");
             process.exit(2);
         });
     }

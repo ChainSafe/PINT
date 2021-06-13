@@ -29,6 +29,7 @@ export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
 export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
     return spawn("docker", ["run", "-it", "launch"], {
         stdio,
+        killSignal: "SIGINT",
     });
 }
 
