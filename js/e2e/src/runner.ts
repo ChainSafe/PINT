@@ -75,7 +75,7 @@ export default class Runner implements Config {
      */
     static async build(
         exs: Builder,
-        ws: string = "ws://0.0.0.0:9988",
+        ws: string = "ws://127.0.0.1:9988",
         uri: string = "//Alice"
     ): Promise<Runner> {
         const provider = new WsProvider(ws);
