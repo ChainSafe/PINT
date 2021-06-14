@@ -38,6 +38,8 @@ export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
             "9966:9966",
             "-p",
             "9999:9999",
+            "--ip",
+            "0.0.0.0",
         ],
         {
             stdio,
