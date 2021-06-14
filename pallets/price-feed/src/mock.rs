@@ -94,7 +94,6 @@ parameter_types! {
 
 pub(crate) type FeedId = u16;
 pub(crate) type Value = u128;
-
 impl pallet_chainlink_feed::Config for Test {
     type Event = Event;
     type FeedId = FeedId;
@@ -106,7 +105,7 @@ impl pallet_chainlink_feed::Config for Test {
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
     type OnAnswerHandler = ();
-    type WeightInfo = ();
+    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Test>;
 }
 
 pub(crate) type AssetId = u64;

@@ -488,7 +488,7 @@ fn propose_constituent_works() {
         ));
 
         // test if proposal submitted with event
-        if let Event::Committee(crate::Event::Proposed(_, _, hash)) = last_event() {
+        if let Event::pallet_committee(crate::Event::Proposed(_, _, hash)) = last_event() {
             assert_eq!(&[hash], Committee::active_proposals().as_slice());
 
             // vote Aye on adding new constituent
