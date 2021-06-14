@@ -199,6 +199,7 @@ impl StakingWeights {
     /// The weights as defined in `pallet_staking` on polkadot
     // TODO: import pallet_staking weights directly?
     pub fn polkadot() -> Self {
+        #![allow(clippy::unnecessary_cast)]
         let weight = RocksDbWeight::get();
         Self {
             bond: (75_102_000 as Weight)

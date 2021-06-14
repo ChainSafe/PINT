@@ -1,7 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, One};
+use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, One};
 
 // Proposal submissions and voting follow set cycles e.g.
 //
