@@ -191,8 +191,8 @@ fn pint_testnet_genesis(
                 .cloned()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),          // account id
-                        acc,                  // validator id
+                        acc.clone(),                                     // account id
+                        acc,                                             // validator id
                         parachain_runtime::opaque::SessionKeys { aura }, // session keys
                     )
                 })
