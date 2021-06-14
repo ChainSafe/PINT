@@ -27,7 +27,7 @@ export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
  * @returns {Promise<ChildProcess>}
  */
 export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
-    return spawn("docker", ["run", "-it", "launch"], {
+    return spawn("docker", ["run", "launch"], {
         stdio,
     });
 }
