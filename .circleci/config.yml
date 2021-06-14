@@ -60,8 +60,7 @@ commands:
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
             --default-toolchain "$RUSTC_TOOLCHAIN" \
             -c clippy rustfmt \
-            -t wasm32-unknown-unknown \
-            --profile minimal
+            -t wasm32-unknown-unknown
       - restore_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
       - sccache_setup
