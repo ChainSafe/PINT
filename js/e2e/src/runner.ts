@@ -68,7 +68,7 @@ export default class Runner implements Config {
     /**
      * Build runner
      *
-     * @param {string} ws - "ws://0.0.0.0:9988" by default
+     * @param {string} ws - "ws://127.0.0.1:9988" by default
      * @param {string} uri - "//Alice" by default
      * @param {Extrinsic[]} exs - extrinsics
      * @returns {Promise<Runner>}
