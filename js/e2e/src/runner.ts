@@ -39,8 +39,8 @@ export default class Runner implements Config {
     ): Promise<void> {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
-        const ps = await launch("inherit");
-        (ps as any).stdout.on("data", async (chunk: string) => {
+        const ps = await launch("pipe");
+        ps.stdout.on("data", async (chunk: string) => {
             console.log(chunk);
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
@@ -48,6 +48,9 @@ export default class Runner implements Config {
                 await runner.runTxs();
             }
         });
+
+        // Log errors
+        ps.stderr.on("data", console.log);
 
         // Kill all processes when exiting.
         process.on("exit", async () => {
