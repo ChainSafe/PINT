@@ -776,9 +776,9 @@ construct_runtime!(
         ParachainInfo: parachain_info::{Pallet, Storage, Config},
 
         // Collator. The order of the 4 below are important and shall not change.
-            Authorship: pallet_authorship::{Pallet, Call, Storage},
-    CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>},
-    Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
+        Authorship: pallet_authorship::{Pallet, Call, Storage},
+        CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>},
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Aura: pallet_aura::{Pallet, Config<T>},
         AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
@@ -831,6 +831,7 @@ pub type Executive = frame_executive::Executive<
     frame_system::ChainContext<Runtime>,
     Runtime,
     AllPallets,
+    ()
 >;
 
 impl_runtime_apis! {
@@ -981,4 +982,7 @@ impl_runtime_apis! {
     }
 }
 
-cumulus_pallet_parachain_system::register_validate_block!(Runtime, Executive);
+cumulus_pallet_parachain_system::register_validate_block!(
+    Runtime,
+    cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>
+);
