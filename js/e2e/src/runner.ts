@@ -39,7 +39,7 @@ export default class Runner implements Config {
     ): Promise<void> {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
-        const ps = await launch("pipe");
+        const ps = await launch("inherit");
         (ps as any).stdout.on("data", async (chunk: string) => {
             console.log(chunk);
             if (chunk.includes(LAUNCH_COMPLETE)) {
