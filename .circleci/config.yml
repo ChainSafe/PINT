@@ -21,7 +21,7 @@ commands:
           command: |
             sudo apt-get update \
             && sudo apt-get install -y git clang curl libssl-dev \
-            && git config --global url."paritytech//".insteadOf paritytech/
+            && git config --global url."paritytech/".insteadOf paritytech//
   cargo_audit_setup:
     description: Install cargo-audit
     steps:
