@@ -4,11 +4,11 @@
 use crate::{Config, Members, Origin};
 use frame_support::{
     pallet_prelude::*,
-    sp_runtime::traits::Hash,
     sp_std::{self, prelude::Vec},
     traits::EnsureOrigin,
 };
 use frame_system::RawOrigin;
+use sp_runtime::traits::Hash;
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};

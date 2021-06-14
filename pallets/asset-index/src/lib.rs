@@ -216,7 +216,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id.clone(), amount)?;
 
             // make sure we can store the additional deposit
             holding.units = holding
@@ -227,7 +227,7 @@ pub mod pallet {
             // withdraw from the caller's sovereign account
             T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
             // update the holding
-            Holdings::<T>::insert(asset_id, holding);
+            Holdings::<T>::insert(asset_id.clone(), holding);
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
@@ -325,7 +325,7 @@ pub mod pallet {
             for (price, units) in asset_prices {
                 let asset = price.quote;
                 // try to start the unbonding process
-                let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
+                let state = if T::RemoteAssetManager::unbond(asset.clone(), units).is_ok() {
                     // the XCM call was dispatched successfully, however, this is
                     //  *NOT* synonymous with a successful completion of the unbonding process.
                     //  instead, this state implies that XCM is now being processed on a different parachain
@@ -402,7 +402,7 @@ pub mod pallet {
                                             // unbonding process already started, try to complete it
                                             if T::RemoteAssetManager::withdraw_unbonded(
                                                 caller.clone(),
-                                                asset.asset,
+                                                asset.asset.clone(),
                                                 asset.units,
                                             )
                                             .is_ok()

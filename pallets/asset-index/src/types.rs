@@ -6,15 +6,14 @@ use codec::FullCodec;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use frame_support::sp_runtime::SaturatedConversion;
-use frame_support::sp_std::{
-    self,
+use pallet_asset_depository::MultiAssetDepository;
+use sp_std::{
     cmp::{Eq, PartialEq},
     fmt::Debug,
     marker::PhantomData,
     prelude::*,
     result,
 };
-use pallet_asset_depository::MultiAssetDepository;
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
     traits::{Convert, MatchesFungible, TransactAsset},

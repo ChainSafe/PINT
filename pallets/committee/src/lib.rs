@@ -35,11 +35,12 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
-        sp_runtime::traits::{CheckedAdd, Dispatchable, One, Zero},
+        sp_runtime::traits::Dispatchable,
         sp_std::{boxed::Box, vec::Vec},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
+    use sp_runtime::traits::{CheckedAdd, One, Zero};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type HashFor<T> = <T as frame_system::Config>::Hash;
@@ -71,7 +72,7 @@ pub mod pallet {
         /// Duration (in blocks) of the voting period
         type VotingPeriod: Get<Self::BlockNumber>;
 
-        /// Minimum number of council members that must vote for a action to be passed
+        /// Minumum number of council members that must vote for a action to be passed
         type MinCouncilVotes: Get<usize>;
 
         /// Origin that is permitted to create proposals
@@ -327,7 +328,7 @@ pub mod pallet {
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
-            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
+            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin.clone())?;
 
             // Create a new proposal with a unique nonce
             let nonce = Self::take_and_increment_nonce()?;
@@ -394,7 +395,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
+            let closer = T::ProposalExecutionOrigin::ensure_origin(origin.clone())?;
 
             // ensure proposal has not already been executed
             ensure!(

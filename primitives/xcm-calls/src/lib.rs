@@ -94,13 +94,12 @@ mod tests {
 
     use codec::{Decode, Encode};
     use frame_election_provider_support::onchain;
+    use frame_support::sp_runtime::traits::BlakeTwo256;
+    use frame_support::traits::OnUnbalanced;
+    use frame_support::traits::{Imbalance, InstanceFilter};
     use frame_support::{
         parameter_types,
-        sp_runtime::traits::BlakeTwo256,
-        traits::{
-            Currency, FindAuthor, Imbalance, InstanceFilter, MaxEncodedLen, OnUnbalanced,
-            OneSessionHandler,
-        },
+        traits::{Currency, FindAuthor, OneSessionHandler},
         weights::constants::RocksDbWeight,
     };
     use pallet_staking as staking;
@@ -355,7 +354,7 @@ mod tests {
     }
 
     /// The type used to represent the kinds of proxying allowed.
-    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen)]
+    #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug)]
     pub enum ProxyType {
         Any = 0,
         NonTransfer = 1,

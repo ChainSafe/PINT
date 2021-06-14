@@ -1,9 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-//! Substrate Parachain Node Template CLI
-
-#![warn(missing_docs)]
+#![warn(unused_extern_crates)]
 
 mod chain_spec;
 #[macro_use]

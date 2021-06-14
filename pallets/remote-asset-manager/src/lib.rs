@@ -167,7 +167,6 @@ pub mod pallet {
     >;
 
     #[pallet::genesis_config]
-    #[allow(clippy::type_complexity)]
     pub struct GenesisConfig<T: Config> {
         /// key-value pairs for the `PalletStakingConfig` storage map
         pub staking_configs: Vec<(T::AssetId, StakingConfig<T::AccountId, T::Balance>)>,

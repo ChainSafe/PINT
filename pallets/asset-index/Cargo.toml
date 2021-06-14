@@ -8,36 +8,10 @@ readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
-[dependencies]
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
-
-# Substrate Dependencies
-frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false, optional = true }
-
-# Polkadot Dependencies
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4', default-features = false }
-xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4', default-features = false }
-
-# PINT dependencies
-pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
-pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
-pallet-asset-depository = { path = "../asset-depository", default-features = false }
-pallet-price-feed = { path = "../price-feed", default-features = false }
-
-[dev-dependencies]
-serde = { version = "1.0.101" }
-
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-
 [features]
 default = ['std']
 std = [
+    'sp-std/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
@@ -55,6 +29,93 @@ runtime-benchmarks = [
     'pallet-price-feed/runtime-benchmarks',
     'pallet-chainlink-feed/runtime-benchmarks',
 ]
+
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
+[dependencies.sp-std]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dependencies.frame-support]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dependencies.frame-system]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate'
+branch = 'rococo-v1'
+optional = true
+
+[dependencies.pallet-chainlink-feed]
+default_features = false
+package = 'pallet-chainlink-feed'
+git = "https://github.com/ChainSafe/chainlink-polkadot"
+optional = true
+
+[dependencies.xcm]
+git = "https://github.com/paritytech/polkadot"
+branch = 'rococo-v1'
+default-features = false
+
+[dependencies.xcm-executor]
+default-features = false
+git = 'https://github.com/paritytech/polkadot'
+branch = 'rococo-v1'
+
+[dependencies.pallet-remote-asset-manager]
+default-features = false
+path = '../remote-asset-manager'
+version = '0.0.1'
+
+[dependencies.pallet-asset-depository]
+default-features = false
+path = '../asset-depository'
+version = '0.0.1'
+
+[dependencies.pallet-price-feed]
+default-features = false
+path = '../price-feed'
+version = '0.0.1'
+
+[dev-dependencies]
+serde = { version = "1.0.101" }
+
+[dev-dependencies.pallet-balances]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.sp-core]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.sp-io]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.sp-runtime]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
