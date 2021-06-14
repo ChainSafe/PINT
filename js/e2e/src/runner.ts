@@ -34,14 +34,14 @@ export default class Runner implements Config {
      */
     static async run(
         exs: Builder,
-        ws: string = "ws://127.0.0.1:9988",
+        ws: string = "ws://0.0.0.0:9988",
         uri: string = "//Alice"
     ): Promise<void> {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
-        ps.stdout.on("data", async (chunk: string) => {
-            console.log(chunk);
+        ps.stdout.on("data", async (chunk: Buffer) => {
+            console.log(chunk.toString());
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
