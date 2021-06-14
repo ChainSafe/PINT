@@ -4963,6 +4963,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-collator-selection"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "max-encoded-len",
+ "pallet-aura",
+ "pallet-authorship",
+ "pallet-balances",
+ "pallet-session",
+ "pallet-timestamp",
+ "parity-scale-codec",
+ "serde",
+ "sp-consensus-aura",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+ "sp-tracing",
+]
+
+[[package]]
 name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech//substrate?rev=1d04678e20555e623c974ee1127bc8a45abcf3d6#1d04678e20555e623c974ee1127bc8a45abcf3d6"
@@ -5680,20 +5705,24 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex",
  "hex-literal 0.3.1",
  "log",
  "pallet-asset-depository",
  "pallet-asset-index",
  "pallet-aura",
+ "pallet-authorship",
  "pallet-balances",
  "pallet-chainlink-feed",
+ "pallet-collator-selection",
  "pallet-committee",
  "pallet-local-treasury",
  "pallet-price-feed",
  "pallet-randomness-collective-flip",
  "pallet-remote-asset-manager",
  "pallet-saft-registry",
+ "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
