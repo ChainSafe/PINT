@@ -41,6 +41,7 @@ export default class Runner implements Config {
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
         (ps as any).stdout.on("data", async (chunk: string) => {
+            console.log(chunk);
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
