@@ -34,7 +34,7 @@ export default class Runner implements Config {
      */
     static async run(
         exs: Builder,
-        ws: string = "ws://0.0.0.0:9988",
+        ws: string = "ws://127.0.0.1:9988",
         uri: string = "//Alice"
     ): Promise<void> {
         console.log("bootstrap e2e tests...");
