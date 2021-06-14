@@ -6,6 +6,13 @@ import findUp from "find-up";
 import path from "path";
 import { fork, ChildProcess, StdioOptions, spawn } from "child_process";
 
+export async function tail(file: string): Promise<ChildProcess> {
+    return spawn("tail", ["-f", file], {
+        cwd: path.resolve(String(await findUp("Cargo.toml")), ".."),
+        stdio: "inherit",
+    });
+}
+
 /**
  * Launch PINT locally
  *

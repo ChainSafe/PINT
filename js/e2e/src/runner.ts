@@ -8,7 +8,7 @@ import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import { definitions } from "@pint/types";
 import { Config, Extrinsic } from "./config";
-import { launch } from "./launch";
+import { launch, tail } from "./launch";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
@@ -44,6 +44,10 @@ export default class Runner implements Config {
             console.log(chunk.toString());
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
+                // just for debug now
+                await tail("9988.log");
+
+                // runner
                 const runner = await Runner.build(exs, ws, uri);
                 await runner.runTxs();
             }
