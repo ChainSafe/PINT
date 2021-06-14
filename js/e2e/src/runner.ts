@@ -50,7 +50,7 @@ export default class Runner implements Config {
         });
 
         // Log errors
-        ps.stderr.on("data", (chunk: string) => console.log(chunk));
+        ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
 
         // Kill all processes when exiting.
         process.on("exit", async () => {
