@@ -16,7 +16,7 @@ RUN apt-get update -y \
     && apt-get -qqy --no-install-recommends install nodejs -y \
     && rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb \
     && rm -f /var/cache/apt/*.bin \
-    && git clone https://github.com/paritytech/polkadot-launch.git \
+    && git clone https://github.com/paritytech/polkadot-launch.git --depth=1 \
     && cd polkadot-launch \
     && npm install \
     && npm run build
