@@ -14,7 +14,7 @@ const ASSET_A: u32 = 0;
 fn non_admin_cannot_call_any_extrinsics() {
     new_test_ext().execute_with(|| {
         assert_noop!(
-            SaftRegistry::add_saft(Origin::signed(ASHLEY), ASSET_A, 0, 0),
+            SaftRegistry::add_saft(Origin::signed(ASHLEY), Default::default(), ASSET_A, 0, 0),
             BadOrigin
         );
         assert_noop!(
@@ -34,6 +34,7 @@ fn admin_can_add_and_remove_saft() {
         // add
         assert_ok!(SaftRegistry::add_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            Default::default(),
             ASSET_A,
             100,
             20
@@ -58,6 +59,7 @@ fn admin_can_add_then_update_saft() {
         // add
         assert_ok!(SaftRegistry::add_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            Default::default(),
             ASSET_A,
             100,
             20
@@ -87,6 +89,7 @@ fn admin_cannot_update_or_remove_invalid_index() {
         // add
         assert_ok!(SaftRegistry::add_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            Default::default(),
             ASSET_A,
             100,
             20

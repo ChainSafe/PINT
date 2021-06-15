@@ -83,8 +83,7 @@ pub struct MockAssetRecorder;
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
     fn add_asset(
-        _name: Vec<u8>,
-        _symbol: Vec<u8>,
+        _: pallet_asset_index::types::AssetMetadata,
         _: &AssetId,
         _: &Balance,
         _: &AssetAvailability,

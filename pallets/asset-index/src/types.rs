@@ -33,25 +33,36 @@ pub enum AssetAvailability {
     Saft,
 }
 
+/// Metadata for an asset
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetMetadata {
+    pub name: Vec<u8>,
+    pub symbol: Vec<u8>,
+    pub decimals: u8,
+}
+
+impl Default for AssetMetadata {
+    fn default() -> Self {
+        AssetMetadata {
+            decimals: 8,
+            name: Vec::new(),
+            symbol: Vec::new(),
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// A representation of some number of assets that are managed by the index
 pub struct IndexAssetData<Balance> {
-    pub name: Vec<u8>,
-    pub symbol: Vec<u8>,
+    pub metadata: AssetMetadata,
     pub units: Balance,
     pub availability: AssetAvailability,
 }
 
 impl<Balance> IndexAssetData<Balance> {
-    pub fn new(
-        name: Vec<u8>,
-        symbol: Vec<u8>,
-        units: Balance,
-        availability: AssetAvailability,
-    ) -> Self {
+    pub fn new(metadata: AssetMetadata, units: Balance, availability: AssetAvailability) -> Self {
         Self {
-            name,
-            symbol,
+            metadata,
             units,
             availability,
         }

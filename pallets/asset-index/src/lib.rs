@@ -18,7 +18,7 @@ mod tests;
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
 pub mod traits;
-mod types;
+pub mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
@@ -49,7 +49,8 @@ pub mod pallet {
     pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{
-        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
+        AssetAvailability, AssetMetadata, AssetWithdrawal, IndexAssetData, PendingRedemption,
+        RedemptionState,
     };
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -183,8 +184,7 @@ pub mod pallet {
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
         pub fn add_asset(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            symbol: Vec<u8>,
+            metadata: AssetMetadata,
             asset_id: T::AssetId,
             units: T::Balance,
             availability: AssetAvailability,
@@ -200,8 +200,7 @@ pub mod pallet {
             )?;
 
             <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
-                name,
-                symbol,
+                metadata,
                 &asset_id,
                 &units,
                 &availability,
@@ -529,8 +528,7 @@ pub mod pallet {
         /// Creates IndexAssetData if entry with given assetID does not exist.
         /// Otherwise adds the units to the existing holding
         fn add_asset(
-            name: Vec<u8>,
-            symbol: Vec<u8>,
+            metadata: AssetMetadata,
             asset_id: &T::AssetId,
             units: &T::Balance,
             availability: &AssetAvailability,
@@ -538,8 +536,7 @@ pub mod pallet {
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
                     IndexAssetData::<T::Balance>::new(
-                        name,
-                        symbol,
+                        metadata,
                         T::Balance::zero(),
                         availability.clone(),
                     )
@@ -559,12 +556,8 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
-        fn asset_name(asset: &T::AssetId) -> Option<Vec<u8>> {
-            Holdings::<T>::get(asset).and_then(|holding| Some(holding.name))
-        }
-
-        fn asset_symbol(asset: &T::AssetId) -> Option<Vec<u8>> {
-            Holdings::<T>::get(asset).and_then(|holding| Some(holding.symbol))
+        fn asset_metadata(asset: &T::AssetId) -> Option<AssetMetadata> {
+            Holdings::<T>::get(asset).and_then(|holding| Some(holding.metadata))
         }
 
         fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {

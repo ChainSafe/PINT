@@ -22,7 +22,10 @@ pub mod pallet {
         sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*,
     };
     use frame_system::pallet_prelude::*;
-    use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
+    use pallet_asset_index::{
+        traits::{AssetAvailability, AssetRecorder},
+        types::AssetMetadata,
+    };
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -91,8 +94,7 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::add_saft())]
         pub fn add_saft(
             origin: OriginFor<T>,
-            name: Vec<u8>,
-            symbol: Vec<u8>,
+            metadata: AssetMetadata,
             asset_id: T::AssetId,
             nav: T::Balance,
             units: T::Balance,
@@ -101,8 +103,7 @@ pub mod pallet {
 
             ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
             <T as Config>::AssetRecorder::add_asset(
-                name,
-                symbol,
+                metadata,
                 &asset_id,
                 &units,
                 &AssetAvailability::Saft,
