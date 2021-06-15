@@ -19,8 +19,16 @@ const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // Kill subprocesses
 function killAll(ps: ChildProcess) {
-    ps.send && ps.send("exit");
-    ps.kill("SIGINT");
+    try {
+        ps.send && ps.send("exit");
+        ps.kill("SIGINT");
+    } catch (e) {
+        if (e.code !== "EPERM") {
+            process.stdout.write(e);
+            process.exit(2);
+        }
+    }
+
     process.exit(0);
 }
 
