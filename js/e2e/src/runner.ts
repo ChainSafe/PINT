@@ -41,7 +41,7 @@ export default class Runner implements Config {
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
         ps.stdout.on("data", async (chunk: Buffer) => {
-            console.log(chunk.toString());
+            process.stdout.write(chunk.toString());
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
@@ -55,13 +55,12 @@ export default class Runner implements Config {
         // Kill all processes when exiting.
         process.on("exit", async () => {
             ps.send && ps.send("exit");
-            process.exit(2);
         });
 
         // Handle ctrl+c to trigger `exit`.
         process.on("SIGINT", async () => {
             ps.send && ps.send("exit");
-            process.exit(2);
+            process.exit(0);
         });
     }
 
