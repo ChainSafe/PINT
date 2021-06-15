@@ -18,8 +18,7 @@
         "wsPort": 9966,
         "port": 30666
       }
-    ],
-    "flags": ["--listen-addr", "0.0.0.0"]
+    ]
   },
   "parachains": [
     {
@@ -30,11 +29,10 @@
       "nodes": [
         {
           "wsPort": 9988,
-          "port": 31200,
           "flags": [
             "-lruntime=debug",
             "--listen-addr",
-            "0.0.0.0",
+            "/ip4/0.0.0.0/tcp/31200",
             "--",
             "--execution=wasm"
           ]
@@ -49,11 +47,10 @@
       "nodes": [
         {
           "wsPort": 9999,
-          "port": 31300,
           "flags": [
             "-lruntime=debug",
             "--listen-addr",
-            "0.0.0.0",
+            "/ip4/0.0.0.0/tcp/31300",
             "--",
             "--execution=wasm"
           ]
