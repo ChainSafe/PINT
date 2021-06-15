@@ -29,10 +29,10 @@
       "nodes": [
         {
           "wsPort": 9988,
+          "port": 31200,
           "flags": [
             "-lruntime=debug",
-            "--listen-addr",
-            "/ip4/0.0.0.0/tcp/31200",
+            "--ws-external",
             "--",
             "--execution=wasm"
           ]
@@ -47,10 +47,10 @@
       "nodes": [
         {
           "wsPort": 9999,
+          "port": 31300,
           "flags": [
             "-lruntime=debug",
-            "--listen-addr",
-            "/ip4/0.0.0.0/tcp/31300",
+            "--ws-external",
             "--",
             "--execution=wasm"
           ]
