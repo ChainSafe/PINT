@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 pub use crate::types::AssetAvailability;
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
+use frame_support::{
+    dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned, sp_std::vec::Vec,
+};
 use xcm::v0::MultiLocation;
 
 pub trait AssetRecorder<AssetId, Balance> {
@@ -12,14 +13,25 @@ pub trait AssetRecorder<AssetId, Balance> {
     /// The provided NAV parameter is the Net Asset Value of the total units provided
     /// given in units of some stable asset. In the case of an AssetId that already exists the
     /// newly provided NAV will be used to re-value the existing units and compute a total NAV
-    fn add_asset(id: &AssetId, units: &Balance, availability: &AssetAvailability)
-        -> DispatchResult;
+    fn add_asset(
+        name: Vec<u8>,
+        symbol: Vec<u8>,
+        id: &AssetId,
+        units: &Balance,
+        availability: &AssetAvailability,
+    ) -> DispatchResult;
 
     fn remove_asset(id: &AssetId) -> DispatchResult;
 }
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
+    // Asset name
+    fn asset_name(asset: &AssetId) -> Option<Vec<u8>>;
+
+    // Asset symbol
+    fn asset_symbol(asset: &AssetId) -> Option<Vec<u8>>;
+
     /// Determines the relative location of the consensus system where the given asset is native from the point of view of the current system
     fn native_asset_location(asset: &AssetId) -> Option<MultiLocation>;
 

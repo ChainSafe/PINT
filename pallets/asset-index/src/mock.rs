@@ -82,7 +82,13 @@ ord_parameter_types! {
 pub struct MockAssetRecorder;
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
-    fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
+    fn add_asset(
+        _name: Vec<u8>,
+        _symbol: Vec<u8>,
+        _: &AssetId,
+        _: &Balance,
+        _: &AssetAvailability,
+    ) -> Result<(), DispatchError> {
         Ok(())
     }
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {

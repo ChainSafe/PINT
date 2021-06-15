@@ -22,6 +22,8 @@ fn non_admin_cannot_call_get_asset() {
         assert_noop!(
             AssetIndex::add_asset(
                 Origin::signed(ASHLEY),
+                b"asset".to_vec(),
+                b"asset".to_vec(),
                 ASSET_A_ID,
                 100,
                 AssetAvailability::Liquid(MultiLocation::Null),
@@ -39,6 +41,8 @@ fn admin_can_add_asset() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -47,6 +51,8 @@ fn admin_can_add_asset() {
         assert_eq!(
             pallet::Holdings::<Test>::get(ASSET_A_ID),
             Some(IndexAssetData::new(
+                b"asset".to_vec(),
+                b"asset".to_vec(),
                 100,
                 AssetAvailability::Liquid(MultiLocation::Null)
             ))
@@ -64,6 +70,8 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -71,6 +79,8 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
         ));
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -79,6 +89,8 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
         assert_eq!(
             pallet::Holdings::<Test>::get(ASSET_A_ID),
             Some(IndexAssetData::new(
+                b"asset".to_vec(),
+                b"asset".to_vec(),
                 200,
                 AssetAvailability::Liquid(MultiLocation::Null)
             ))
@@ -97,6 +109,8 @@ fn deposit_only_works_for_added_liquid_assets() {
         );
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Saft,
@@ -115,6 +129,8 @@ fn deposit_works_with_user_balance() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -150,6 +166,8 @@ fn deposit_fails_for_unknown_assets() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -168,6 +186,8 @@ fn deposit_fails_for_when_price_feed_unavailable() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             UNKNOWN_ASSET_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -186,6 +206,8 @@ fn deposit_fails_on_overflowing() {
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             100,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -215,6 +237,8 @@ fn can_calculates_nav() {
 
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             a_units,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -223,6 +247,8 @@ fn can_calculates_nav() {
 
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_B_ID,
             b_units,
             AssetAvailability::Saft,
@@ -275,6 +301,8 @@ fn can_withdraw() {
         // create liquid assets
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_A_ID,
             a_units,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -282,6 +310,8 @@ fn can_withdraw() {
         ));
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             ASSET_B_ID,
             b_units,
             AssetAvailability::Liquid(MultiLocation::Null),
@@ -355,6 +385,8 @@ fn can_withdraw() {
         // all SAFT holdings are ignored during withdrawal and don't have any effect on the payout
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
+            b"asset".to_vec(),
+            b"asset".to_vec(),
             99,
             1_000,
             AssetAvailability::Saft,

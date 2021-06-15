@@ -183,6 +183,8 @@ pub mod pallet {
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
         pub fn add_asset(
             origin: OriginFor<T>,
+            name: Vec<u8>,
+            symbol: Vec<u8>,
             asset_id: T::AssetId,
             units: T::Balance,
             availability: AssetAvailability,
@@ -191,6 +193,8 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
             <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
+                name,
+                symbol,
                 &asset_id,
                 &units,
                 &availability,
@@ -518,13 +522,20 @@ pub mod pallet {
         /// Creates IndexAssetData if entry with given assetID does not exist.
         /// Otherwise adds the units to the existing holding
         fn add_asset(
+            name: Vec<u8>,
+            symbol: Vec<u8>,
             asset_id: &T::AssetId,
             units: &T::Balance,
             availability: &AssetAvailability,
         ) -> DispatchResult {
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
-                    IndexAssetData::<T::Balance>::new(T::Balance::zero(), availability.clone())
+                    IndexAssetData::<T::Balance>::new(
+                        name,
+                        symbol,
+                        T::Balance::zero(),
+                        availability.clone(),
+                    )
                 });
                 index_asset_data.units = index_asset_data
                     .units
@@ -541,6 +552,14 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
+        fn asset_name(asset: &T::AssetId) -> Option<Vec<u8>> {
+            Holdings::<T>::get(asset).and_then(|holding| Some(holding.name))
+        }
+
+        fn asset_symbol(asset: &T::AssetId) -> Option<Vec<u8>> {
+            Holdings::<T>::get(asset).and_then(|holding| Some(holding.symbol))
+        }
+
         fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
             Holdings::<T>::get(asset).and_then(|holding| {
                 if let AssetAvailability::Liquid(location) = holding.availability {

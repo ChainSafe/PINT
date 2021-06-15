@@ -91,6 +91,8 @@ pub mod pallet {
         #[pallet::weight(T::WeightInfo::add_saft())]
         pub fn add_saft(
             origin: OriginFor<T>,
+            name: Vec<u8>,
+            symbol: Vec<u8>,
             asset_id: T::AssetId,
             nav: T::Balance,
             units: T::Balance,
@@ -98,7 +100,13 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin)?;
 
             ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
-            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::Saft)?;
+            <T as Config>::AssetRecorder::add_asset(
+                name,
+                symbol,
+                &asset_id,
+                &units,
+                &AssetAvailability::Saft,
+            )?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
