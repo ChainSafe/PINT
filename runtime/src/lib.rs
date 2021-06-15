@@ -549,7 +549,9 @@ parameter_types! {
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
+}
 
+impl pallet_asset_index::Config for Runtime {
     // Using signed as the admin origin for testing now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
