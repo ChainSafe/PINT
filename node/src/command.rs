@@ -30,11 +30,12 @@ fn load_spec(
     para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "pint-dev" => Box::new(chain_spec::pint_development_config(para_id)),
         "pint-local" => Box::new(chain_spec::pint_local_config(para_id)),
-        path => Box::new(chain_spec::ChainSpec::from_json_file(
-            std::path::PathBuf::from(path),
-        )?),
+        "pint-dev" => Box::new(chain_spec::pint_development_config(para_id)),
+        path => Box::new(
+            chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))
+                .unwrap_or(chain_spec::pint_development_config(para_id)),
+        ),
     })
 }
 
@@ -257,6 +258,18 @@ pub fn run() -> Result<()> {
             }
 
             Ok(())
+        }
+        #[cfg(feature = "runtime-benchmarks")]
+        Some(Subcommand::Benchmark(params)) => {
+            if cfg!(feature = "runtime-benchmarks") {
+                let runner = cli.create_runner(params)?;
+
+                runner.sync_run(|config| params.run::<Block, crate::service::Executor>(config))
+            } else {
+                Err("Benchmarking wasn't enabled when building the node. \
+                     You can enable it with `--features runtime-benchmarks`."
+                    .into())
+            }
         }
         None => {
             let runner = cli.create_runner(&*cli.run)?;

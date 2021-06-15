@@ -19,6 +19,7 @@ std = [
 ]
 # this feature is only for compilation now
 runtime-benchmarks = [
+    'frame-benchmarking',
     'xcm-builder/runtime-benchmarks',
 ]
 
@@ -39,6 +40,13 @@ default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
 
 [dependencies.xcm]
 default-features = false

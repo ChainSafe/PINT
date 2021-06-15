@@ -11,14 +11,26 @@ version = '0.0.1'
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
     'xcm/std',
+    'log/std',
+    'xcm-calls/std',
     'xcm-executor/std',
+    'cumulus-pallet-xcm/std',
+    'cumulus-primitives-core/std',
 ]
 # this feature is only for compilation now
-runtime-benchmarks = []
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks'
+]
+
+[dependencies]
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.101", features = ["derive"], optional = true }
 
 [dependencies.codec]
 default-features = false
@@ -38,6 +50,13 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+optional = true
+
 [dependencies.xcm]
 default-features = false
 git = 'https://github.com/paritytech/polkadot'
@@ -48,8 +67,30 @@ default-features = false
 git = 'https://github.com/paritytech/polkadot'
 branch = 'rococo-v1'
 
-[dev-dependencies]
-serde = { version = "1.0.101" }
+[dependencies.cumulus-pallet-xcm]
+default-features = false
+git = 'https://github.com/paritytech/cumulus'
+branch = 'rococo-v1'
+
+[dependencies.cumulus-primitives-core]
+default-features = false
+git = 'https://github.com/paritytech/cumulus'
+branch = 'rococo-v1'
+
+[dependencies.xcm-calls]
+default-features = false
+path = '../../primitives/xcm-calls'
+version = '0.0.1'
+
+[dev-dependencies.pallet-staking]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-proxy]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
 
 [dev-dependencies.xcm-builder]
 default-features = false

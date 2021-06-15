@@ -140,6 +140,7 @@ impl pallet_asset_index::Config for Test {
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
+    type WeightInfo = ();
 }
 
 pub struct MockRemoteAssetManager;
@@ -159,6 +160,9 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
     }
 
     fn unbond(_: AssetId, _: Balance) -> DispatchResult {
+        Ok(())
+    }
+    fn withdraw_unbonded(_who: AccountId, _asset: AssetId, _amount: Balance) -> DispatchResult {
         Ok(())
     }
 }

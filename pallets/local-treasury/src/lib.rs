@@ -8,6 +8,8 @@ pub use pallet::*;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 
@@ -38,6 +40,9 @@ pub mod pallet {
         /// The pallet to use as the base currency for this treasury
         type Currency: Currency<Self::AccountId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -71,7 +76,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Transfer balance from the treasury to another account. Only callable by the AdminOrigin.
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
             amount: BalanceFor<T>,
@@ -84,6 +89,18 @@ pub mod pallet {
             Self::deposit_event(Event::Withdrawl(recipient, amount));
 
             Ok(().into())
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn withdraw() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn withdraw() -> Weight {
+            Default::default()
         }
     }
 }

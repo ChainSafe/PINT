@@ -10,6 +10,8 @@ mod mock;
 #[cfg(test)]
 pub use mock::FeedBuilder;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 
@@ -60,6 +62,9 @@ pub mod pallet {
         type Oracle: FeedOracle<Self>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
@@ -266,6 +271,23 @@ pub mod pallet {
                 .ok_or(Error::<T>::ExceededAccuracy)?;
 
             Ok(AssetPricePair { base, quote, price })
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn track_asset_price_feed() -> Weight;
+        fn untrack_asset_price_feed() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn track_asset_price_feed() -> Weight {
+            Default::default()
+        }
+
+        fn untrack_asset_price_feed() -> Weight {
+            Default::default()
         }
     }
 }

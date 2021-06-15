@@ -1,9 +1,9 @@
 [package]
 authors = ['ChainSafe Systems']
-description = 'FRAME pallet to implement PINT SAFT registry.'
+description = 'FRAME pallet with XCM bindings to FRAME pallets.'
 edition = '2018'
 license = 'LGPL-3.0-only'
-name = 'pallet-saft-registry'
+name = 'xcm-calls'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
@@ -11,20 +11,16 @@ version = '0.0.1'
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-asset-index/std'
 ]
-runtime-benchmarks = [
-    'frame-benchmarking',
-    'frame-support/runtime-benchmarks',
-    'pallet-asset-index/runtime-benchmarks',
-]
+# this feature is only for compilation now
+runtime-benchmarks = []
 
-[dependencies.pallet-asset-index]
-default-features = false
-path = "../asset-index"
+[dependencies]
+serde = { version = "1.0.101", features = ["derive"], optional = true }
 
 [dependencies.codec]
 default-features = false
@@ -44,15 +40,15 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dependencies.frame-benchmarking]
-default-features = false
+[dev-dependencies.pallet-staking]
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
-optional = true
 
-[dev-dependencies]
-serde = { version = "1.0.101" }
+[dev-dependencies.pallet-proxy]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
 
 [dev-dependencies.pallet-balances]
 default-features = false
@@ -66,17 +62,40 @@ git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
 
-[dev-dependencies.sp-io]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
-
 [dev-dependencies.sp-runtime]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 branch = 'rococo-v1'
 version = '3.0.0'
+
+[dev-dependencies.sp-staking]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-staking-reward-curve]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-timestamp]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.pallet-session]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.frame-election-provider-support]
+git = 'https://github.com/paritytech/substrate.git'
+branch = 'rococo-v1'
+version = '3.0.0'
+
+[dev-dependencies.xcm]
+git = 'https://github.com/paritytech/polkadot'
+branch = 'rococo-v1'
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
