@@ -1,6 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 pub mod pallet_asset_index;
+pub mod pallet_chainlink_feed;
 pub mod pallet_committee;
 pub mod pallet_local_treasury;
 pub mod pallet_price_feed;
