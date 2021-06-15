@@ -18,7 +18,10 @@ commands:
     steps:
       - run:
           name: Download Substrate Dependencies
-          command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
+          command: |
+            sudo apt-get update \
+            && sudo apt-get install -y git clang curl libssl-dev \
+            && git config --global url."https://github.com/paritytech/".insteadOf https://github.com/paritytech//
   cargo_audit_setup:
     description: Install cargo-audit
     steps:
@@ -60,8 +63,7 @@ commands:
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
             --default-toolchain "$RUSTC_TOOLCHAIN" \
             -c clippy rustfmt \
-            -t wasm32-unknown-unknown \
-            --profile minimal
+            -t wasm32-unknown-unknown
       - restore_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
       - sccache_setup
