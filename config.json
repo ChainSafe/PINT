@@ -32,7 +32,7 @@
           "port": 31200,
           "flags": [
             "-lruntime=debug",
-            "--ws-external",
+            "--unsafe-ws-external",
             "--",
             "--execution=wasm"
           ]
@@ -48,12 +48,7 @@
         {
           "wsPort": 9999,
           "port": 31300,
-          "flags": [
-            "-lruntime=debug",
-            "--ws-external",
-            "--",
-            "--execution=wasm"
-          ]
+          "flags": ["-lruntime=debug", "--", "--execution=wasm"]
         }
       ]
     }
