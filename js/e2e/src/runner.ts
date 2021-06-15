@@ -9,12 +9,20 @@ import { KeyringPair } from "@polkadot/keyring/types";
 import { definitions } from "@pint/types";
 import { Config, Extrinsic } from "./config";
 import { launch } from "./launch";
+import { ChildProcess } from "child_process";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
 
 // Message of launching complete
 const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
+
+// Kill subprocesses
+function killAll(ps: ChildProcess) {
+    ps.send && ps.send("exit");
+    ps.kill("SIGINT");
+    process.exit(0);
+}
 
 /**
  * E2E runner
@@ -45,7 +53,7 @@ export default class Runner implements Config {
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs();
+                await runner.runTxs(ps);
             }
         });
 
@@ -53,15 +61,10 @@ export default class Runner implements Config {
         ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
 
         // Kill all processes when exiting.
-        process.on("exit", async () => {
-            ps.send && ps.send("exit");
-        });
+        process.on("exit", () => killAll(ps));
 
         // Handle ctrl+c to trigger `exit`.
-        process.on("SIGINT", async () => {
-            ps.send && ps.send("exit");
-            process.exit(0);
-        });
+        process.on("SIGINT", () => killAll(ps));
     }
 
     /**
@@ -99,7 +102,7 @@ export default class Runner implements Config {
      *
      * @returns void
      */
-    public async runTxs(): Promise<void> {
+    public async runTxs(ps: ChildProcess): Promise<void> {
         this.exs.forEach(async (ex: Extrinsic) => {
             console.log(`run extrinsic ${ex.pallet}.${ex.call}...`);
             console.log(`\t arguments: ${JSON.stringify(ex.args)}`);
@@ -119,6 +122,7 @@ export default class Runner implements Config {
 
         // exit
         console.log("COMPLETE TESTS!");
+        ps.send && ps.send("exit");
         process.exit(0);
     }
 
