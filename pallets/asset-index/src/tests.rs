@@ -181,7 +181,7 @@ fn deposit_fails_for_unknown_assets() {
 }
 
 #[test]
-fn deposit_fails_for_when_price_feed_unavailable() {
+fn deposit_ok_for_when_price_feed_unavailable() {
     let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
     new_test_ext(initial_balances).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
@@ -193,10 +193,12 @@ fn deposit_fails_for_when_price_feed_unavailable() {
             AssetAvailability::Liquid(MultiLocation::Null),
             5
         ));
-        assert_noop!(
-            AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 1_000),
-            pallet::Error::<Test>::UnsupportedAsset
-        );
+        assert_ok!(AssetDepository::deposit(&UNKNOWN_ASSET_ID, &ASHLEY, 1_000));
+        assert_ok!(AssetIndex::deposit(
+            Origin::signed(ASHLEY),
+            UNKNOWN_ASSET_ID,
+            1
+        ),);
     })
 }
 
@@ -213,16 +215,11 @@ fn deposit_fails_on_overflowing() {
             AssetAvailability::Liquid(MultiLocation::Null),
             5
         ));
-        assert_ok!(AssetDepository::deposit(&ASSET_A_ID, &ASHLEY, Balance::MAX));
+
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, Balance::MAX),
             pallet::Error::<Test>::AssetVolumeOverflow
         );
-        assert_ok!(AssetIndex::deposit(
-            Origin::signed(ASHLEY),
-            ASSET_A_ID,
-            1_000
-        ));
     })
 }
 

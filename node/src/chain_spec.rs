@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use cumulus_primitives_core::ParaId;
-use parachain_runtime::{AccountId, Signature};
+use parachain_runtime::{AccountId, AuraId, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -57,10 +57,20 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
             pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 vec![
+                    get_from_seed::<AuraId>("Alice"),
+                    get_from_seed::<AuraId>("Bob"),
+                ],
+                vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
                 ],
                 id,
             )
@@ -87,6 +97,10 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
             pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
                 vec![
+                    get_from_seed::<AuraId>("Alice"),
+                    get_from_seed::<AuraId>("Bob"),
+                ],
+                vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
                     get_account_id_from_seed::<sr25519::Public>("Charlie"),
@@ -99,6 +113,12 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
                     get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
                 ],
                 id,
             )
@@ -116,7 +136,9 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 
 fn pint_testnet_genesis(
     root_key: AccountId,
+    _initial_authorities: Vec<AuraId>,
     endowed_accounts: Vec<AccountId>,
+    council_members: Vec<AccountId>,
     id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
     parachain_runtime::GenesisConfig {
@@ -133,7 +155,16 @@ fn pint_testnet_genesis(
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
+        pallet_committee: parachain_runtime::CommitteeConfig {
+            council_members,
+            ..Default::default()
+        },
         pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
+        // no need to pass anything to aura, in fact it will panic if we do. Session will take care
+        // of this.
+        pallet_aura: Default::default(),
+        cumulus_pallet_aura_ext: Default::default(),
+        cumulus_pallet_parachain_system: Default::default(),
     }
 }

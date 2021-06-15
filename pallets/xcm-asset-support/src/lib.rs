@@ -38,14 +38,14 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
 
         let (dest, recipient) = Self::split_multi_location(&dest);
 
-        let dest = dest.ok_or_else(|| Error::InvalidDestination)?;
+        let dest = dest.ok_or(Error::InvalidDestination)?;
         let self_location = Config::SelfLocation::get();
         frame_support::ensure!(dest != self_location, Error::NoCrossChainTransfer);
 
-        let recipient = recipient.ok_or_else(|| Error::InvalidDestination)?;
+        let recipient = recipient.ok_or(Error::InvalidDestination)?;
 
         // the native location of the asset type
-        let reserve = Self::asset_reserve(&asset).ok_or_else(|| Error::InvalidDestination)?;
+        let reserve = Self::asset_reserve(&asset).ok_or(Error::InvalidDestination)?;
 
         let xcm = if reserve == self_location {
             Self::transfer_reserve_asset_locally(asset, dest, recipient)
@@ -125,8 +125,8 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
     ) -> Xcm<Config::Call> {
         let mut reanchored_dest = dest.clone();
         if reserve == Junction::Parent.into() {
-            if let MultiLocation::X2(Junction::Parent, Junction::Parachain { id }) = dest {
-                reanchored_dest = Junction::Parachain { id }.into();
+            if let MultiLocation::X2(Junction::Parent, Junction::Parachain(id)) = dest {
+                reanchored_dest = Junction::Parachain(id).into();
             }
         }
 
@@ -161,11 +161,11 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
         location: &MultiLocation,
     ) -> (Option<MultiLocation>, Option<MultiLocation>) {
         let chain_location = match (location.first(), location.at(1)) {
-            (Some(Junction::Parent), Some(Junction::Parachain { id })) => {
-                Some((Junction::Parent, Junction::Parachain { id: *id }).into())
+            (Some(Junction::Parent), Some(Junction::Parachain(id))) => {
+                Some((Junction::Parent, Junction::Parachain(*id)).into())
             }
             (Some(Junction::Parent), _) => Some(Junction::Parent.into()),
-            (Some(Junction::Parachain { id }), _) => Some(Junction::Parachain { id: *id }.into()),
+            (Some(Junction::Parachain(id)), _) => Some(Junction::Parachain(*id).into()),
             _ => None,
         };
 
@@ -174,9 +174,8 @@ impl<Config: config::Config> XcmAssetExecutor<Config> {
         let target_location = last_junction
             .into_iter()
             .filter(|_| {
-                path.iter().all(|junction| {
-                    matches!(junction, Junction::Parent | Junction::Parachain { id: _ })
-                })
+                path.iter()
+                    .all(|junction| matches!(junction, Junction::Parent | Junction::Parachain(_)))
             })
             .map(Into::into)
             .next();
@@ -193,7 +192,7 @@ impl<Config: config::Config> XcmAssetHandler<Config::AccountId, Config::Amount, 
         asset_id: Config::AssetId,
         amount: Config::Amount,
     ) -> frame_support::sp_std::result::Result<Outcome, Error> {
-        let dest: MultiLocation = Config::AssetIdConvert::convert(asset_id.clone())
+        let dest: MultiLocation = Config::AssetIdConvert::convert(asset_id)
             .map_err(|_| Error::NotCrossChainTransferableAsset)?;
 
         let asset = MultiAsset::ConcreteFungible {
