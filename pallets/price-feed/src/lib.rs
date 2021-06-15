@@ -82,7 +82,6 @@ pub mod pallet {
     /// This storage stores the initial price pair for quote assets based on `SelfAssetId`
     ///
     /// * insert: adding a new asset with no price pair been set yet
-    /// * remove: an asset has its price pair, remove automatically
     pub type InitialPricePairs<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
 
@@ -283,19 +282,15 @@ pub mod pallet {
             Ok(AssetPricePair { base, quote, price })
         }
 
-        /// Ensure quote asset has price pair based on `Self::AssetId`
+        /// Ensure quote asset has an initial price pair
         ///
         /// * Set initial price pair if feed not exists
-        /// * Remove initial price pair if feed exists
         fn ensure_price(
             quote: T::AssetId,
             price: Price,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
             Ok(
-                if let Ok(pair) = Self::get_price_pair(T::SelfAssetId::get(), quote.clone()) {
-                    <InitialPricePairs<T>>::remove(quote);
-                    pair
-                } else {
+                if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_none() {
                     let pair = AssetPricePair {
                         base: T::SelfAssetId::get(),
                         quote: quote.clone(),
