@@ -18,7 +18,8 @@
         "wsPort": 9966,
         "port": 30666
       }
-    ]
+    ],
+    "flags": ["--listen-addr", "0.0.0.0"]
   },
   "parachains": [
     {
@@ -26,34 +27,41 @@
       "chain": "pint-dev",
       "id": "1",
       "balance": "1000000000000000000000",
-      "nodes": [{
-        "wsPort": 9988,
-        "port": 31200,
-        "flags": [
-          "-lruntime=debug",
-          "--",
-          "--execution=wasm"
-        ]
-      }]
+      "nodes": [
+        {
+          "wsPort": 9988,
+          "port": 31200,
+          "flags": [
+            "-lruntime=debug",
+            "--listen-addr",
+            "0.0.0.0",
+            "--",
+            "--execution=wasm"
+          ]
+        }
+      ]
     },
     {
       "bin": "./bin/statemint",
       "chain": "statemint-dev",
       "id": "300",
       "balance": "1000000000000000000000",
-      "nodes": [{
-        "wsPort": 9999,
-        "port": 31300,
-        "flags": [
-          "-lruntime=debug",
-        "--",
-        "--execution=wasm"
-        ]
-      }]
+      "nodes": [
+        {
+          "wsPort": 9999,
+          "port": 31300,
+          "flags": [
+            "-lruntime=debug",
+            "--listen-addr",
+            "0.0.0.0",
+            "--",
+            "--execution=wasm"
+          ]
+        }
+      ]
     }
   ],
-  "simpleParachains": [
-  ],
+  "simpleParachains": [],
   "hrmpChannels": [
     {
       "sender": 1,
