@@ -28,10 +28,10 @@ export async function local(stdio?: StdioOptions): Promise<ChildProcess> {
  */
 export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
     return spawn(
-        "docker",
+        "sudo",
         [
+            "docker",
             "run",
-            "launch",
             "-p",
             "9988:9988",
             "-p",
@@ -40,6 +40,7 @@ export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
             "9999:9999",
             "--ip",
             "0.0.0.0",
+            "launch",
         ],
         {
             stdio,

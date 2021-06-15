@@ -20,7 +20,5 @@ RUN apt-get update -y \
     && cd polkadot-launch \
     && npm install \
     && npm run build
-EXPOSE 9966
 EXPOSE 9988
-EXPOSE 9999
 ENTRYPOINT [ "node", "polkadot-launch/dist/index.js", "config.json" ]
