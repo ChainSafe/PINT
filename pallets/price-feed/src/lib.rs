@@ -289,17 +289,17 @@ pub mod pallet {
             quote: T::AssetId,
             price: Price,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            Ok(
-                if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_none() {
-                    let pair = AssetPricePair {
-                        base: T::SelfAssetId::get(),
-                        quote: quote.clone(),
-                        price,
-                    };
-                    <InitialPricePairs<T>>::insert(quote, pair.clone());
-                    pair
-                },
-            )
+            let pair = AssetPricePair {
+                base: T::SelfAssetId::get(),
+                quote: quote.clone(),
+                price,
+            };
+
+            if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_err() {
+                <InitialPricePairs<T>>::insert(quote, pair.clone());
+            }
+
+            Ok(pair)
         }
     }
 
