@@ -18,7 +18,8 @@
     "@pint/types": "^1.0.0",
     "@polkadot/api": "^4.11.2",
     "@polkadot/keyring": "^6.5.1",
-    "find-up": "^5.0.0"
+    "find-up": "^5.0.0",
+    "polkadot-launch": "https://github.com/paritytech/polkadot-launch.git"
   },
   "scripts": {
     "start": "ts-node index.ts",
