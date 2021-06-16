@@ -15,7 +15,6 @@ benchmarks! {
         T::IndexToken::deposit_creating(&caller, million);
     }: _(
         RawOrigin::Signed(caller.clone()),
-        Default::default(),
         asset_id,
         million,
         AssetAvailability::Liquid(MultiLocation::Null),
@@ -24,7 +23,6 @@ benchmarks! {
         assert_eq!(
             <Holdings<T>>::get(asset_id),
             Some(IndexAssetData::new(
-                Default::default(),
                 million,
                 AssetAvailability::Liquid(MultiLocation::Null)
             ))

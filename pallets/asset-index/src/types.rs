@@ -34,35 +34,23 @@ pub enum AssetAvailability {
 }
 
 /// Metadata for an asset
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct AssetMetadata {
-    pub name: Vec<u8>,
-    pub symbol: Vec<u8>,
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct AssetMetadata<BoundedString> {
+    pub name: BoundedString,
+    pub symbol: BoundedString,
     pub decimals: u8,
-}
-
-impl Default for AssetMetadata {
-    fn default() -> Self {
-        AssetMetadata {
-            decimals: 8,
-            name: Vec::new(),
-            symbol: Vec::new(),
-        }
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// A representation of some number of assets that are managed by the index
 pub struct IndexAssetData<Balance> {
-    pub metadata: AssetMetadata,
     pub units: Balance,
     pub availability: AssetAvailability,
 }
 
 impl<Balance> IndexAssetData<Balance> {
-    pub fn new(metadata: AssetMetadata, units: Balance, availability: AssetAvailability) -> Self {
+    pub fn new(units: Balance, availability: AssetAvailability) -> Self {
         Self {
-            metadata,
             units,
             availability,
         }

@@ -82,12 +82,7 @@ ord_parameter_types! {
 pub struct MockAssetRecorder;
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
-    fn add_asset(
-        _: pallet_asset_index::types::AssetMetadata,
-        _: &AssetId,
-        _: &Balance,
-        _: &AssetAvailability,
-    ) -> Result<(), DispatchError> {
+    fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
         Ok(())
     }
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {
@@ -144,6 +139,7 @@ impl pallet_asset_index::Config for Test {
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
+    type StringLimit = ();
     type WithdrawalFee = ();
     type WeightInfo = ();
 }

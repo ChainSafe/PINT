@@ -9,7 +9,6 @@ benchmarks! {
     add_saft {
     }: _(
         <Origin<T>>::Root,
-        Default::default(),
         0_u32.into(),
         100_u32.into(),
         20_u32.into()
@@ -39,7 +38,6 @@ benchmarks! {
     report_nav {
         assert_ok!(<Pallet<T>>::add_saft(
             <Origin<T>>::Root.into(),
-            Default::default(),
             0.into(),
             100_u32.into(),
             20_u32.into(),

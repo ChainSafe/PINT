@@ -11,21 +11,14 @@ pub trait AssetRecorder<AssetId, Balance> {
     /// The provided NAV parameter is the Net Asset Value of the total units provided
     /// given in units of some stable asset. In the case of an AssetId that already exists the
     /// newly provided NAV will be used to re-value the existing units and compute a total NAV
-    fn add_asset(
-        metadata: AssetMetadata,
-        id: &AssetId,
-        units: &Balance,
-        availability: &AssetAvailability,
-    ) -> DispatchResult;
+    fn add_asset(id: &AssetId, units: &Balance, availability: &AssetAvailability)
+        -> DispatchResult;
 
     fn remove_asset(id: &AssetId) -> DispatchResult;
 }
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
-    // Asset metadata
-    fn asset_metadata(asset: &AssetId) -> Option<AssetMetadata>;
-
     /// Determines the relative location of the consensus system where the given asset is native from the point of view of the current system
     fn native_asset_location(asset: &AssetId) -> Option<MultiLocation>;
 

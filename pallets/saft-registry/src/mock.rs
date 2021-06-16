@@ -7,10 +7,7 @@
 use crate as pallet_saft_registry;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
-use pallet_asset_index::{
-    traits::{AssetAvailability, AssetRecorder},
-    types::AssetMetadata,
-};
+use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
 use sp_core::H256;
 use sp_runtime::{
@@ -77,12 +74,7 @@ ord_parameter_types! {
 pub struct MockAssetRecorder();
 
 impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
-    fn add_asset(
-        _: AssetMetadata,
-        _: &AssetId,
-        _: &Balance,
-        _: &AssetAvailability,
-    ) -> Result<(), DispatchError> {
+    fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
         Ok(())
     }
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {

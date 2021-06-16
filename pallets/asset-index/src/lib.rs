@@ -108,6 +108,9 @@ pub mod pallet {
         type TreasuryPalletId: Get<PalletId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
+        /// The maximum length of a name or symbol stored on-chain.
+        type StringLimit: Get<u32>;
+
         /// The weight for this pallet's extrinsics.
         type WeightInfo: WeightInfo;
     }
@@ -129,6 +132,18 @@ pub mod pallet {
         T::AccountId,
         Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
         OptionQuery,
+    >;
+
+    #[pallet::storage]
+    /// Metadata of an asset ( for reversed usage now ).
+    pub(super) type Metadata<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AssetId,
+        AssetMetadata<BoundedVec<u8, T::StringLimit>>,
+        ValueQuery,
+        GetDefault,
+        ConstU32<300_000>,
     >;
 
     #[pallet::event]
@@ -184,7 +199,6 @@ pub mod pallet {
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
         pub fn add_asset(
             origin: OriginFor<T>,
-            metadata: AssetMetadata,
             asset_id: T::AssetId,
             units: T::Balance,
             availability: AssetAvailability,
@@ -200,7 +214,6 @@ pub mod pallet {
             )?;
 
             <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
-                metadata,
                 &asset_id,
                 &units,
                 &availability,
@@ -528,18 +541,13 @@ pub mod pallet {
         /// Creates IndexAssetData if entry with given assetID does not exist.
         /// Otherwise adds the units to the existing holding
         fn add_asset(
-            metadata: AssetMetadata,
             asset_id: &T::AssetId,
             units: &T::Balance,
             availability: &AssetAvailability,
         ) -> DispatchResult {
             Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
                 let index_asset_data = value.get_or_insert_with(|| {
-                    IndexAssetData::<T::Balance>::new(
-                        metadata,
-                        T::Balance::zero(),
-                        availability.clone(),
-                    )
+                    IndexAssetData::<T::Balance>::new(T::Balance::zero(), availability.clone())
                 });
                 index_asset_data.units = index_asset_data
                     .units
@@ -556,10 +564,6 @@ pub mod pallet {
     }
 
     impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
-        fn asset_metadata(asset: &T::AssetId) -> Option<AssetMetadata> {
-            Holdings::<T>::get(asset).and_then(|holding| Some(holding.metadata))
-        }
-
         fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
             Holdings::<T>::get(asset).and_then(|holding| {
                 if let AssetAvailability::Liquid(location) = holding.availability {
