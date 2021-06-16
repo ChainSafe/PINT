@@ -76,6 +76,15 @@ pub mod pallet {
     pub type AssetFeeds<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AssetId, FeedIdFor<T>, OptionQuery>;
 
+    #[pallet::storage]
+    /// (AssetId) -> AssetPricePair
+    ///
+    /// This storage stores the initial price pair for quote assets based on `SelfAssetId`
+    ///
+    /// * insert: adding a new asset with no price pair been set yet
+    pub type InitialPricePairs<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
+
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config>
     where
@@ -271,6 +280,26 @@ pub mod pallet {
                 .ok_or(Error::<T>::ExceededAccuracy)?;
 
             Ok(AssetPricePair { base, quote, price })
+        }
+
+        /// Ensure quote asset has an initial price pair
+        ///
+        /// * Set initial price pair if feed not exists
+        fn ensure_price(
+            quote: T::AssetId,
+            price: Price,
+        ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+            let pair = AssetPricePair {
+                base: T::SelfAssetId::get(),
+                quote: quote.clone(),
+                price,
+            };
+
+            if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_err() {
+                <InitialPricePairs<T>>::insert(quote, pair.clone());
+            }
+
+            Ok(pair)
         }
     }
 

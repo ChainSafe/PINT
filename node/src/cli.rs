@@ -62,7 +62,7 @@ pub struct ExportGenesisStateCommand {
     pub raw: bool,
 
     /// The name of the chain for that the genesis state should be exported.
-    #[structopt(long)]
+    #[structopt(long, conflicts_with = "parachain-id")]
     pub chain: Option<String>,
 }
 

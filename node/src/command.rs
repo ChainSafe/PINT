@@ -28,10 +28,9 @@ fn load_spec(
     Ok(match id {
         "pint-local" => Box::new(chain_spec::pint_local_config(para_id)),
         "pint-dev" => Box::new(chain_spec::pint_development_config(para_id)),
-        path => Box::new(
-            chain_spec::ChainSpec::from_json_file(std::path::PathBuf::from(path))
-                .unwrap_or(chain_spec::pint_development_config(para_id)),
-        ),
+        path => Box::new(chain_spec::ChainSpec::from_json_file(
+            std::path::PathBuf::from(path),
+        )?),
     })
 }
 

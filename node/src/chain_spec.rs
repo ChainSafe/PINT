@@ -69,6 +69,10 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
                     get_collator_keys_from_seed("Alice"),
                 )],
                 vec![
+                    get_from_seed::<AuraId>("Alice"),
+                    get_from_seed::<AuraId>("Bob"),
+                ],
+                vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
@@ -114,6 +118,10 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
                         get_account_id_from_seed::<sr25519::Public>("Bob"),
                         get_collator_keys_from_seed("Bob"),
                     ),
+                ],
+                vec![
+                    get_from_seed::<AuraId>("Alice"),
+                    get_from_seed::<AuraId>("Bob"),
                 ],
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),

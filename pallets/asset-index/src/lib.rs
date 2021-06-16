@@ -42,7 +42,7 @@ pub mod pallet {
     use xcm::opaque::v0::MultiLocation;
 
     use pallet_asset_depository::MultiAssetDepository;
-    use pallet_price_feed::{AssetPricePair, PriceFeed};
+    use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
 
     use crate::traits::WithdrawalFee;
@@ -190,6 +190,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+
+            // Store intial price pair if not exists
+            T::PriceFeed::ensure_price(
+                asset_id,
+                Price::from_inner(value.saturating_mul(units).into()),
+            )?;
+
             <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
                 &asset_id,
                 &units,
