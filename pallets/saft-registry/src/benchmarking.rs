@@ -36,7 +36,12 @@ benchmarks! {
     // }
 
     report_nav {
-        assert_ok!(<Pallet<T>>::add_saft(<Origin<T>>::Root.into(), 0.into(), 100_u32.into(), 20_u32.into()));
+        assert_ok!(<Pallet<T>>::add_saft(
+            <Origin<T>>::Root.into(),
+            0.into(),
+            100_u32.into(),
+            20_u32.into(),
+        ));
     }: _(
         <Origin<T>>::Root,
         0.into(),

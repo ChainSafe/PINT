@@ -123,6 +123,7 @@ parameter_types! {
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub StringLimit: u32 = 4;
 }
 
 impl pallet_asset_index::Config for Test {
@@ -139,6 +140,7 @@ impl pallet_asset_index::Config for Test {
     type MultiAssetDepository = AssetDepository;
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
+    type StringLimit = StringLimit;
     type WithdrawalFee = ();
     type WeightInfo = ();
 }

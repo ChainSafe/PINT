@@ -9,7 +9,7 @@ use xcm::v0::MultiLocation;
 
 benchmarks! {
     add_asset {
-        let asset_id = 42.into();
+        let asset_id = 42_u32.into();
         let caller: T::AccountId = whitelisted_caller();
         let million = 1_000_000u32.into();
         T::IndexToken::deposit_creating(&caller, million);
@@ -27,5 +27,23 @@ benchmarks! {
                 AssetAvailability::Liquid(MultiLocation::Null)
             ))
         );
+    }
+
+    set_metadata {
+        let asset_id = 0_u32.into();
+        let name = b"pint".to_vec();
+        let symbol = b"pint".to_vec();
+        let decimals = 8_u8;
+    }: _(
+        RawOrigin::Signed(whitelisted_caller()),
+        asset_id,
+        name.clone(),
+        symbol.clone(),
+        decimals
+    ) verify {
+        let metadata = <Metadata<T>>::get(asset_id);
+        assert_eq!(metadata.name.as_slice(), name.as_slice());
+        assert_eq!(metadata.symbol.as_slice(), symbol.as_slice());
+        assert_eq!(metadata.decimals, decimals);
     }
 }

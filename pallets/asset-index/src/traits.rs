@@ -1,9 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-pub use crate::types::AssetAvailability;
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
+pub use crate::types::{AssetAvailability, AssetMetadata};
+use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned};
 use xcm::v0::MultiLocation;
 
 pub trait AssetRecorder<AssetId, Balance> {

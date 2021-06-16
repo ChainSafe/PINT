@@ -33,6 +33,14 @@ pub enum AssetAvailability {
     Saft,
 }
 
+/// Metadata for an asset
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct AssetMetadata<BoundedString> {
+    pub name: BoundedString,
+    pub symbol: BoundedString,
+    pub decimals: u8,
+}
+
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// A representation of some number of assets that are managed by the index
 pub struct IndexAssetData<Balance> {

@@ -617,6 +617,7 @@ parameter_types! {
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
+    pub PalletIndexStringLimit: u32 = 50;
 }
 
 impl pallet_asset_index::Config for Runtime {
@@ -635,6 +636,7 @@ impl pallet_asset_index::Config for Runtime {
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
+    type StringLimit = PalletIndexStringLimit;
     type WeightInfo = weights::pallet_asset_index::WeightInfo<Self>;
 }
 

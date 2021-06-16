@@ -88,6 +88,66 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
 }
 
 #[test]
+fn non_admin_cannot_set_metadata() {
+    new_test_ext(vec![]).execute_with(|| {
+        assert_noop!(
+            AssetIndex::set_metadata(
+                Origin::signed(ASHLEY),
+                ASSET_A_ID,
+                b"dot".to_vec(),
+                b"dot".to_vec(),
+                8,
+            ),
+            BadOrigin
+        );
+    });
+}
+
+#[test]
+fn admin_can_set_metadata() {
+    new_test_ext(vec![]).execute_with(|| {
+        assert_ok!(AssetIndex::set_metadata(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            b"dot".to_vec(),
+            b"dot".to_vec(),
+            8,
+        ));
+    });
+}
+
+#[test]
+fn admin_can_update_metadata() {
+    new_test_ext(vec![]).execute_with(|| {
+        assert_ok!(AssetIndex::set_metadata(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            b"dot".to_vec(),
+            b"dot".to_vec(),
+            8,
+        ));
+
+        assert_eq!(
+            <pallet::Metadata<Test>>::get(ASSET_A_ID).name,
+            b"dot".to_vec()
+        );
+
+        assert_ok!(AssetIndex::set_metadata(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            b"pint".to_vec(),
+            b"pint".to_vec(),
+            8,
+        ));
+
+        assert_eq!(
+            <pallet::Metadata<Test>>::get(ASSET_A_ID).name,
+            b"pint".to_vec()
+        );
+    });
+}
+
+#[test]
 fn deposit_only_works_for_added_liquid_assets() {
     let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
     new_test_ext(initial_balances).execute_with(|| {
@@ -148,6 +208,13 @@ fn deposit_works_with_user_balance() {
 fn deposit_fails_for_unknown_assets() {
     let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
     new_test_ext(initial_balances).execute_with(|| {
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A_ID,
+            100,
+            AssetAvailability::Liquid(MultiLocation::Null),
+            5
+        ));
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 1_000),
             pallet::Error::<Test>::UnsupportedAsset
