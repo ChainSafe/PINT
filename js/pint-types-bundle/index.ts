@@ -1,4 +1,7 @@
-import {OverrideBundleDefinition, OverrideBundleType,} from "@polkadot/types/types";
+import {
+    OverrideBundleDefinition,
+    OverrideBundleType,
+} from "@polkadot/types/types";
 
 export const definitions = {
     types: [
@@ -13,14 +16,20 @@ export const definitions = {
                 Balance: "u128",
                 BalanceFor: "Balance",
                 FeedId: "u64",
-                HashFor: "Hash"
+                HashFor: "Hash",
+                AssetAvailability: {
+                    _enum: {
+                        Liquid: "MultiLocation",
+                        Saft: null,
+                    },
+                },
             },
-        }
+        },
     ],
 } as OverrideBundleDefinition;
 
 export const typesBundle = {
     spec: {
-        pint: definitions
+        pint: definitions,
     },
 } as OverrideBundleType;
