@@ -168,12 +168,18 @@ pub mod pallet {
             AccountIdFor<T>,
             Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
         ),
+        /// New metadata has been set for an asset. \[asset_id, name, symbol, decimals\]
+        MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
     }
 
     #[pallet::error]
     pub enum Error<T> {
         /// Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
+        /// The given asset ID is unknown.
+        UnknownAsset,
+        /// Invalid metadata given.
+        BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
         /// Thrown if calculating the volume of units of an asset with it's price overflows.
@@ -223,15 +229,49 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(1000)]
+        /// Force the metadata for an asset to some value.
+        ///
+        /// Origin must be ForceOrigin.
+        ///
+        /// Any deposit is left alone.
+        ///
+        /// - `id`: The identifier of the asset to update.
+        /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
+        /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+        /// - `decimals`: The number of decimals this asset uses to represent one unit.
+        ///
+        /// Emits `MetadataSet`.
+        ///
+        /// Weight: `O(N + S)` where N and S are the length of the name and symbol respectively.
+        #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn set_metadata(
             origin: OriginFor<T>,
-            asset_id: T::AssetId,
-            metadata: AssetMetadata<BoundedVec<u8, T::StringLimit>>,
-        ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin.clone())?;
-            <Metadata<T>>::insert(&asset_id, metadata);
-            Ok(().into())
+            #[pallet::compact] id: T::AssetId,
+            name: Vec<u8>,
+            symbol: Vec<u8>,
+            decimals: u8,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let bounded_name: BoundedVec<u8, T::StringLimit> = name
+                .clone()
+                .try_into()
+                .map_err(|_| <Error<T>>::BadMetadata)?;
+            let bounded_symbol: BoundedVec<u8, T::StringLimit> = symbol
+                .clone()
+                .try_into()
+                .map_err(|_| <Error<T>>::BadMetadata)?;
+
+            <Metadata<T>>::try_mutate_exists(id, |metadata| {
+                *metadata = Some(AssetMetadata {
+                    name: bounded_name,
+                    symbol: bounded_symbol,
+                    decimals,
+                });
+
+                Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
+                Ok(())
+            })
         }
 
         /// Initiate a transfer from the user's sovereign account into the index.
@@ -595,6 +635,7 @@ pub mod pallet {
     /// Trait for the asset-index pallet extrinsic weights.
     pub trait WeightInfo {
         fn add_asset() -> Weight;
+        // fn set_metadata() -> Weight;
     }
 
     /// For backwards compatibility and tests
@@ -602,5 +643,9 @@ pub mod pallet {
         fn add_asset() -> Weight {
             Default::default()
         }
+
+        // fn set_metadata() -> Weight {
+        //     Default::default()
+        // }
     }
 }

@@ -28,4 +28,22 @@ benchmarks! {
             ))
         );
     }
+
+    set_metadata {
+        let asset_id = 0_u32.into();
+        let name = b"pint".to_vec();
+        let symbol = b"pint".to_vec();
+        let decimals = 8_u8;
+    }: _(
+        RawOrigin::Root,
+        asset_id,
+        name.clone(),
+        symbol.clone(),
+        decimals
+    ) verify {
+        let metadata = <Metadata<T>>::get(asset_id);
+        assert_eq!(metadata.name.as_slice(), name.as_slice());
+        assert_eq!(metadata.symbol.as_slice(), symbol.as_slice());
+        assert_eq!(metadata.decimals, decimals);
+    }
 }
