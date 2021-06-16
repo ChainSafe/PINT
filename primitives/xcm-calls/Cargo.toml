@@ -22,9 +22,10 @@ frame-election-provider-support = { git = 'https://github.com/paritytech/substra
 max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
 
 ## Substrate Pallet Dependencies
-pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
+pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
+pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4'}
 pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }
 pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4' }

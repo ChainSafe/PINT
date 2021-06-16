@@ -35,7 +35,7 @@ benchmarks! {
         let symbol = b"pint".to_vec();
         let decimals = 8_u8;
     }: _(
-        RawOrigin::Root,
+        RawOrigin::Signed(whitelisted_caller()),
         asset_id,
         name.clone(),
         symbol.clone(),

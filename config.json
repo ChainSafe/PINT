@@ -22,34 +22,38 @@
   },
   "parachains": [
     {
-      "bin": "./target/target/pint",
+      "bin": "./bin/pint",
       "chain": "pint-dev",
       "id": "1",
-      "wsPort": 9988,
-      "port": 31200,
       "balance": "1000000000000000000000",
-      "flags": [
-        "-lruntime=debug",
-        "--",
-        "--execution=wasm"
+      "nodes": [
+        {
+          "wsPort": 9988,
+          "port": 31200,
+          "flags": [
+            "-lruntime=debug",
+            "--unsafe-ws-external",
+            "--",
+            "--execution=wasm"
+          ]
+        }
       ]
     },
     {
       "bin": "./bin/statemint",
       "chain": "statemint-dev",
       "id": "300",
-      "wsPort": 9999,
-      "port": 31300,
       "balance": "1000000000000000000000",
-      "flags": [
-        "-lruntime=debug",
-        "--",
-        "--execution=wasm"
+      "nodes": [
+        {
+          "wsPort": 9999,
+          "port": 31300,
+          "flags": ["-lruntime=debug", "--", "--execution=wasm"]
+        }
       ]
     }
   ],
-  "simpleParachains": [
-  ],
+  "simpleParachains": [],
   "hrmpChannels": [
     {
       "sender": 1,

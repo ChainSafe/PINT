@@ -2394,7 +2394,7 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4814,6 +4814,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-assets"
+version = "3.0.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "max-encoded-len",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-aura"
 version = "3.0.0"
 source = "git+https://github.com/paritytech//substrate?rev=1d04678e20555e623c974ee1127bc8a45abcf3d6#1d04678e20555e623c974ee1127bc8a45abcf3d6"
@@ -4963,6 +4977,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-collator-selection"
+version = "3.0.0"
+source = "git+https://github.com/paritytech//cumulus?rev=08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae#08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "pallet-authorship",
+ "pallet-session",
+ "parity-scale-codec",
+ "serde",
+ "sp-runtime",
+ "sp-staking",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-collective"
 version = "3.0.0"
 source = "git+https://github.com/paritytech//substrate?rev=1d04678e20555e623c974ee1127bc8a45abcf3d6#1d04678e20555e623c974ee1127bc8a45abcf3d6"
@@ -5049,7 +5081,7 @@ dependencies = [
 [[package]]
 name = "pallet-gilt"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5477,7 +5509,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking-reward-fn"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "log",
  "sp-arithmetic",
@@ -5680,20 +5712,24 @@ dependencies = [
  "frame-system",
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
  "hex",
  "hex-literal 0.3.1",
  "log",
  "pallet-asset-depository",
  "pallet-asset-index",
  "pallet-aura",
+ "pallet-authorship",
  "pallet-balances",
  "pallet-chainlink-feed",
+ "pallet-collator-selection",
  "pallet-committee",
  "pallet-local-treasury",
  "pallet-price-feed",
  "pallet-randomness-collective-flip",
  "pallet-remote-asset-manager",
  "pallet-saft-registry",
+ "pallet-session",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
@@ -8380,7 +8416,7 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "sc-client-api",
  "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4)",
@@ -9532,7 +9568,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -11920,6 +11956,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "max-encoded-len",
+ "pallet-assets",
  "pallet-balances",
  "pallet-proxy",
  "pallet-session",
