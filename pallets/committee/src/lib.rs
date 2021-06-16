@@ -35,12 +35,11 @@ pub mod pallet {
     use frame_support::{
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
-        sp_runtime::traits::Dispatchable,
+        sp_runtime::traits::{CheckedAdd, Dispatchable, One, Zero},
         sp_std::{boxed::Box, vec::Vec},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;
-    use sp_runtime::traits::{CheckedAdd, One, Zero};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type HashFor<T> = <T as frame_system::Config>::Hash;
@@ -72,14 +71,20 @@ pub mod pallet {
         /// Duration (in blocks) of the voting period
         type VotingPeriod: Get<Self::BlockNumber>;
 
-        /// Minumum number of council members that must vote for a action to be passed
+        /// Minimum number of council members that must vote for a action to be passed
         type MinCouncilVotes: Get<usize>;
 
         /// Origin that is permitted to create proposals
-        type ProposalSubmissionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ProposalSubmissionOrigin: EnsureOrigin<
+            <Self as frame_system::Config>::Origin,
+            Success = <Self as frame_system::Config>::AccountId,
+        >;
 
         /// Origin that is permitted to execute approved proposals
-        type ProposalExecutionOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
+        type ProposalExecutionOrigin: EnsureOrigin<
+            <Self as frame_system::Config>::Origin,
+            Success = <Self as frame_system::Config>::AccountId,
+        >;
 
         /// Origin that is permitted to execute `add_constituent`
         type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
@@ -265,19 +270,6 @@ pub mod pallet {
             Votes::<T>::get(hash)
         }
 
-        /// Used to check if an origin is signed and the signer is a member of
-        /// the committee
-        pub fn ensure_member(
-            origin: OriginFor<T>,
-        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
-            let who = ensure_signed(origin)?;
-            if let Some(member_type) = Members::<T>::get(who.clone()) {
-                Ok(CommitteeMember::new(who, member_type))
-            } else {
-                Err(Error::<T>::NotMember.into())
-            }
-        }
-
         /// Returns the block at the end of the next voting period
         pub fn get_next_voting_period_end(
             block_number: &BlockNumberFor<T>,
@@ -313,6 +305,19 @@ pub mod pallet {
                 })
             })
         }
+
+        /// Used to check if an origin is signed and the signer is a member of
+        /// the committee
+        pub fn ensure_member(
+            origin: OriginFor<T>,
+        ) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
+            let who = ensure_signed(origin)?;
+            if let Some(member_type) = <Members<T>>::get(who.clone()) {
+                Ok(CommitteeMember::new(who, member_type))
+            } else {
+                Err(<Error<T>>::NotMember.into())
+            }
+        }
     }
 
     #[pallet::call]
@@ -322,8 +327,7 @@ pub mod pallet {
         /// The provided action will be turned into a proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
-            let proposer = ensure_signed(origin.clone())?;
-            T::ProposalSubmissionOrigin::ensure_origin(origin)?;
+            let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
 
             // Create a new proposal with a unique nonce
             let nonce = Self::take_and_increment_nonce()?;
@@ -390,8 +394,7 @@ pub mod pallet {
             origin: OriginFor<T>,
             proposal_hash: HashFor<T>,
         ) -> DispatchResultWithPostInfo {
-            let closer = ensure_signed(origin.clone())?;
-            T::ProposalExecutionOrigin::ensure_origin(origin)?;
+            let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
             // ensure proposal has not already been executed
             ensure!(

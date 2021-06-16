@@ -18,7 +18,10 @@ commands:
     steps:
       - run:
           name: Download Substrate Dependencies
-          command: sudo apt-get update && sudo apt-get install -y git clang curl libssl-dev
+          command: |
+            sudo apt-get update \
+            && sudo apt-get install -y git clang curl libssl-dev \
+            && git config --global url."https://github.com/paritytech/".insteadOf https://github.com/paritytech//
   cargo_audit_setup:
     description: Install cargo-audit
     steps:
@@ -60,8 +63,7 @@ commands:
             curl https://sh.rustup.rs -sSf | sh -s -- -y \
             --default-toolchain "$RUSTC_TOOLCHAIN" \
             -c clippy rustfmt \
-            -t wasm32-unknown-unknown \
-            --profile minimal
+            -t wasm32-unknown-unknown
       - restore_cache:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}-{{ arch }}
       - sccache_setup
@@ -126,14 +128,14 @@ jobs:
       - run:
           name: Check for known security issues in dependencies
           command: cargo audit
-  docker-build:
+  docker-build-release:
     executor: test-executor
     description: Build Docker Image
     steps:
       - checkout
       - run:
           name: Build docker image
-          command: BUILDKIT_PROGRESS=plain DOCKER_BUILDKIT=1 docker build -t $IMAGE_NAME:latest .
+          command: BUILDKIT_PROGRESS=plain DOCKER_BUILDKIT=1 docker build -f docker/release.Dockerfile -t $IMAGE_NAME:latest .
       - run:
           name: Archive Docker image
           command: docker save -o image.tar $IMAGE_NAME
@@ -141,6 +143,33 @@ jobs:
           root: .
           paths:
             - ./image.tar
+  docker-run-e2e:
+    executor: test-executor
+    description: Build and run e2e tests
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Load Archived Docker Image
+          command: docker load -i /tmp/workspace/image.tar
+      - checkout
+      - run:
+          name: Build PINT launch Image
+          command: |
+            git submodule update --init
+            docker build -f docker/launch.Dockerfile -t launch .
+      - run:
+          name: Run e2e tests
+          command: |
+            sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
+              && source ~/.bashrc \
+              && nvm install v15.9.0 \
+              && nvm use v15.9.0 \
+              && npm install yarn -g \
+              && cd js/e2e \
+              && yarn \
+              && yarn start
+
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
@@ -183,10 +212,13 @@ workflows:
       - security
   docker:
     jobs:
-      - docker-build
+      - docker-build-release
+      - docker-run-e2e:
+          requires:
+            - docker-build-release
       - docker-publish-latest:
           requires:
-            - docker-build
+            - docker-build-release
           filters:
             branches:
               only: main
