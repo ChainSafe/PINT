@@ -635,7 +635,7 @@ pub mod pallet {
     /// Trait for the asset-index pallet extrinsic weights.
     pub trait WeightInfo {
         fn add_asset() -> Weight;
-        // fn set_metadata() -> Weight;
+        fn set_metadata() -> Weight;
     }
 
     /// For backwards compatibility and tests
@@ -644,8 +644,8 @@ pub mod pallet {
             Default::default()
         }
 
-        // fn set_metadata() -> Weight {
-        //     Default::default()
-        // }
+        fn set_metadata() -> Weight {
+            Default::default()
+        }
     }
 }
