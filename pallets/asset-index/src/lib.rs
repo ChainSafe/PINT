@@ -223,6 +223,17 @@ pub mod pallet {
             Ok(().into())
         }
 
+        #[pallet::weight(1000)]
+        pub fn set_metadata(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            metadata: AssetMetadata<BoundedVec<u8, T::StringLimit>>,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            <Metadata<T>>::insert(&asset_id, metadata);
+            Ok(().into())
+        }
+
         /// Initiate a transfer from the user's sovereign account into the index.
         ///
         /// This will withdraw the given amount from the user's sovereign account and mints PINT
