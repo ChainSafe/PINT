@@ -617,7 +617,7 @@ parameter_types! {
     pub MinimumRedemption: u32 = 0;
     pub WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
-    pub PalletIndexStringLimit: u32 = 8;
+    pub PalletIndexStringLimit: u32 = 50;
 }
 
 impl pallet_asset_index::Config for Runtime {
