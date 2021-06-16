@@ -509,11 +509,11 @@ parameter_types! {
 impl pallet_collator_selection::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
-    type ValidatorSet = Session;
     type UpdateOrigin = EnsureApprovedByCommittee;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
     type MaxInvulnerables = MaxInvulnerables;
+    type KickThreshold = Period;
     type WeightInfo = ();
 }
 

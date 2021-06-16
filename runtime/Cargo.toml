@@ -55,6 +55,7 @@ pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', 
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
 
 # Cumulus Dependencies
+pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.4', default-features = false }
 cumulus-pallet-aura-ext = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.4', default-features = false }
 cumulus-pallet-parachain-system = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.4', default-features = false }
 cumulus-pallet-dmp-queue = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.4', default-features = false }
@@ -73,7 +74,6 @@ pallet-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release
 
 # PINT dependencies
 pallet-asset-depository = {path = '../pallets/asset-depository', default-features = false }
-pallet-collator-selection = {path = '../pallets/collator-selection', default-features = false }
 pallet-committee = {path = '../pallets/committee', default-features = false }
 pallet-local-treasury = {path = '../pallets/local-treasury', default-features = false }
 pallet-asset-index = {path = '../pallets/asset-index', default-features = false }
@@ -98,6 +98,7 @@ runtime-benchmarks = [
 	'frame-system-benchmarking',
 	'frame-system/runtime-benchmarks',
 	'xcm-builder/runtime-benchmarks',
+	'pallet-collator-selection/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
     'pallet-asset-depository/runtime-benchmarks',

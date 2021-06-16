@@ -2394,7 +2394,7 @@ dependencies = [
 [[package]]
 name = "frame-system-benchmarking"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4964,27 +4964,20 @@ dependencies = [
 
 [[package]]
 name = "pallet-collator-selection"
-version = "0.0.1"
+version = "3.0.0"
+source = "git+https://github.com/paritytech//cumulus?rev=08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae#08b7bcfe21b2ce2a26dcdaa664bf8c016f7c93ae"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
- "max-encoded-len",
- "pallet-aura",
  "pallet-authorship",
- "pallet-balances",
  "pallet-session",
- "pallet-timestamp",
  "parity-scale-codec",
  "serde",
- "sp-consensus-aura",
- "sp-core",
- "sp-io",
  "sp-runtime",
  "sp-staking",
  "sp-std",
- "sp-tracing",
 ]
 
 [[package]]
@@ -5074,7 +5067,7 @@ dependencies = [
 [[package]]
 name = "pallet-gilt"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -5502,7 +5495,7 @@ dependencies = [
 [[package]]
 name = "pallet-staking-reward-fn"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "log",
  "sp-arithmetic",
@@ -8420,7 +8413,7 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "sc-client-api",
  "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4)",
@@ -9573,7 +9566,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#ea5d3570673d125dfe0b7da33b345c3c13195380"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.4#1d04678e20555e623c974ee1127bc8a45abcf3d6"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -11109,7 +11102,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 
