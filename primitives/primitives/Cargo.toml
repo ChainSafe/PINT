@@ -1,0 +1,32 @@
+[package]
+authors = ['ChainSafe Systems']
+description = 'Primitive types and traits for PINT.'
+edition = '2018'
+license = 'LGPL-3.0-only'
+name = 'primitives'
+readme = 'README.md'
+repository = 'https://github.com/ChainSafe/PINT/'
+version = '0.0.1'
+
+[dependencies]
+serde = { version = "1.0.101", features = ["derive"], optional = true }
+codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
+
+# Polkadot Dependencies
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4' }
+
+[features]
+default = ['std']
+std = [
+    'serde',
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+]
+# this feature is only for compilation now
+runtime-benchmarks = []
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
