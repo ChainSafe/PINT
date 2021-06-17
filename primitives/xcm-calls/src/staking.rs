@@ -185,7 +185,7 @@ pub struct StakingBondState<Source, Balance> {
     /// The amount currently unbonded but not withrawn
     pub unbonded: Balance,
 
-    /// Number of dispatched `unbond` calls since the last `unbond_withdraw`
+    /// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
     pub unlocked_chunks: u32,
 }
 
@@ -199,6 +199,8 @@ pub struct StakingWeights {
     pub bond_extra: Weight,
     /// Weight for `unbond` extrinsic
     pub unbond: Weight,
+    /// Weight for `withdraw_unbonded` extrinsic
+    pub withdraw_unbonded: Weight,
 }
 
 impl StakingWeights {
@@ -215,6 +217,9 @@ impl StakingWeights {
                 .saturating_add(weight.reads(3 as Weight))
                 .saturating_add(weight.writes(2 as Weight)),
             unbond: (52_115_000 as Weight)
+                .saturating_add(weight.reads(4 as Weight))
+                .saturating_add(weight.writes(3 as Weight)),
+            withdraw_unbonded: (52_115_000 as Weight)
                 .saturating_add(weight.reads(4 as Weight))
                 .saturating_add(weight.writes(3 as Weight)),
         }
