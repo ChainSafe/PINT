@@ -27,7 +27,7 @@ interface TxResult {
 const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // Kill subprocesses
-function killAll(ps: ChildProcess) {
+function killAll(ps: ChildProcess, exitCode: number) {
     try {
         ps.send && ps.send("exit");
         ps.kill("SIGINT");
@@ -36,9 +36,9 @@ function killAll(ps: ChildProcess) {
             process.stdout.write(e);
             process.exit(2);
         }
-    }
 
-    process.exit(0);
+        process.exit(exitCode);
+    }
 }
 
 /**
@@ -97,10 +97,10 @@ export default class Runner implements Config {
         ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
 
         // Kill all processes when exiting.
-        process.on("exit", () => killAll(ps));
+        process.on("exit", () => killAll(ps, 2));
 
         // Handle ctrl+c to trigger `exit`.
-        process.on("SIGINT", () => killAll(ps));
+        process.on("SIGINT", () => killAll(ps, 0));
     }
 
     /**
