@@ -147,7 +147,12 @@ pub mod pallet {
             })
         }
 
-        fn transfer(asset_id: &T::AssetId, sender: &AccountIdFor<T>, recipient: &AccountIdFor<T>, amount: T::Balance) -> DispatchResult {
+        fn transfer(
+            asset_id: &T::AssetId,
+            sender: &AccountIdFor<T>,
+            recipient: &AccountIdFor<T>,
+            amount: T::Balance,
+        ) -> DispatchResult {
             if amount.is_zero() {
                 return Ok(());
             }
