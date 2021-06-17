@@ -11,6 +11,7 @@ export const definitions = {
             types: {
                 Address: "MultiAddress",
                 LookupSource: "MultiAddress",
+                Action: "Call",
                 AssetId: "u32",
                 AccountIdFor: "AccountId",
                 AccountBalance: {
@@ -40,6 +41,21 @@ export const definitions = {
                         Council: null,
                         Constituent: null,
                     },
+                },
+                MemberVote: {
+                    member: "CommitteeMember",
+                    vote: "Vote",
+                },
+                Vote: {
+                    _enum: {
+                        Aye: null,
+                        Nay: null,
+                        Abstain: null,
+                    },
+                },
+                VoteAggregate: {
+                    votes: "Vec<MemberVote>",
+                    end: "BlockNumber",
                 },
             },
         },
