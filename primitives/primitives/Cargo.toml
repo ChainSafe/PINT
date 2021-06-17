@@ -24,6 +24,7 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'xcm/std',
 ]
 # this feature is only for compilation now
 runtime-benchmarks = []
