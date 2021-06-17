@@ -17,6 +17,7 @@ codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = 
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false, optional = true }
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
 
 # Polkadot Dependencies
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4', default-features = false }
@@ -45,12 +46,15 @@ default = ['std']
 std = [
     'serde',
     'codec/std',
+    'log/std',
     'frame-support/std',
     'frame-system/std',
+    'pallet-staking/std',
     'xcm/std',
-    'log/std',
+
     'xcm-calls/std',
     'primitives/std',
+
     'xcm-executor/std',
     'cumulus-pallet-xcm/std',
     'cumulus-primitives-core/std',
