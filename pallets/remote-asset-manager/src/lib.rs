@@ -203,6 +203,8 @@ pub mod pallet {
         SentBondExtra(T::AssetId, T::Balance),
         /// Successfully sent a cross chain message to bond extra. \[asset, amount, block number\]
         SentUnbond(T::AssetId, T::Balance, T::BlockNumber),
+        /// Successfully sent a cross chain message to withdraw unbonded funds. \[asset, amount \]
+        SentWithdrawUnbonded(T::AssetId, T::Balance),
         /// Successfully sent a cross chain message to add a proxy. \[asset, delegate, proxy type\]
         SentAddProxy(T::AssetId, AccountIdFor<T>, ProxyType),
         /// Successfully sent a cross chain message to remove a proxy. \[asset, delegate, proxy type\]
@@ -225,6 +227,8 @@ pub mod pallet {
         FailedToSendBondExtraXcm,
         /// Thrown when sending an Xcm `pallet_staking::unbond` failed
         FailedToSendUnbondXcm,
+        /// Thrown when sending an Xcm `pallet_staking::withdraw_unbonded` failed
+        FailedToSendWithdrawUnbondedXcm,
         /// Thrown when sending an Xcm `pallet_proxy::add_proxy` failed
         FailedToSendAddProxyXcm,
         /// Thrown when sending an Xcm `pallet_proxy::remove_proxy` failed
@@ -239,6 +243,8 @@ pub mod pallet {
         NoControllerPermission,
         /// Thrown if the no more `unbond` chunks can be scheduled
         NoMoreUnbondingChunks,
+        /// Thrown if no funds are currently unbonded
+        NothingToWithdraw,
         /// Balance would fall below the minimum requirements for bond
         InsufficientBond,
     }
@@ -260,6 +266,9 @@ pub mod pallet {
             value: T::Balance,
             payee: RewardDestination<AccountIdFor<T>>,
         ) -> DispatchResultWithPostInfo {
+            if value.is_zero() {
+                return Ok(().into());
+            }
             let _ = ensure_signed(origin.clone())?;
             T::AdminOrigin::ensure_origin(origin)?;
 
@@ -375,7 +384,11 @@ pub mod pallet {
 
     impl<T: Config> Pallet<T> {
         /// Sends an XCM [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) call
-        fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+        pub fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            if amount.is_zero() {
+                return Ok(());
+            }
+
             let dest =
                 T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             // ensures that the call is encodable for the destination
@@ -410,13 +423,17 @@ pub mod pallet {
             PalletStakingBondState::<T>::insert(&asset, state);
 
             Self::deposit_event(Event::SentBondExtra(asset, amount));
-            Ok(().into())
+            Ok(())
         }
 
         /// Sends an XCM [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) call
         ///
         /// An `unbond` call must be signed by the controller account.
-        fn do_send_unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+        pub fn do_send_unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            if amount.is_zero() {
+                return Ok(());
+            }
+
             let dest =
                 T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             // ensures that the call is encodable for the destination
@@ -477,14 +494,58 @@ pub mod pallet {
                 amount,
                 frame_system::Pallet::<T>::block_number(),
             ));
-            Ok(().into())
+            Ok(())
         }
 
         /// Sends an XCM [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) call
         ///
         /// Remove any unlocked chunks from the `unlocking` queue.
         /// An `withdraw_unbonded` call must be signed by the controller account.
-        fn do_send_withdraw_unbonded(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+        pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
+            let dest =
+                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            // ensures that the call is encodable for the destination
+            ensure!(
+                T::PalletProxyCallEncoder::can_encode(&asset),
+                Error::<T>::NotEncodableForLocation
+            );
+            let config =
+                PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
+
+            let mut state =
+                PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
+
+            ensure!(state.unlocked_chunks > 0, Error::<T>::NothingToWithdraw);
+
+            ensure!(
+                <T as frame_system::Config>::Lookup::lookup(state.controller.clone())?
+                    == T::SelfParaId::get().into_account(),
+                Error::<T>::NoControllerPermission
+            );
+
+            let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
+            let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: config.weights.withdraw_unbonded,
+                call: encoder
+                    .encode_runtime_call(config.pallet_index)
+                    .encode()
+                    .into(),
+            };
+
+            let result = T::XcmSender::send_xcm(dest, xcm);
+            log::info!(target: "pint_xcm", "sent pallet_staking::withdraw_unbonded xcm: {:?} ",result);
+            ensure!(result.is_ok(), Error::<T>::FailedToSendWithdrawUnbondedXcm);
+
+            // adjust the balances and keep track of new chunk
+            let unbonded = state.unbonded;
+            state.unbonded = Zero::zero();
+            state.unlocked_chunks = Zero::zero();
+            PalletStakingBondState::<T>::insert(&asset, state);
+
+            Self::deposit_event(Event::SentWithdrawUnbonded(asset, unbonded));
             Ok(())
         }
     }
