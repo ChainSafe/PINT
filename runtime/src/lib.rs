@@ -55,7 +55,7 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
-use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
+use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
