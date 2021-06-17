@@ -15,7 +15,7 @@ frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'pol
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.4', default-features = false }
 
 # Polkadot Dependencies
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4' }
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.4', default-features = false  }
 
 [features]
 default = ['std']
