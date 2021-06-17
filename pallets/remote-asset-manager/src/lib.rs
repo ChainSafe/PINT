@@ -551,7 +551,7 @@ pub mod pallet {
     }
 
     impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
-        fn reserve_withdraw_and_deposit(
+        fn transfer_asset(
             _who: AccountIdFor<T>,
             _asset: T::AssetId,
             _amount: T::Balance,
