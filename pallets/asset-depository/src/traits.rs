@@ -17,6 +17,14 @@ pub trait MultiAssetDepository<AssetId, AccountId, Balance> {
     /// Add `amount` to the balance of `who` under `asset_id`.
     fn deposit(asset_id: &AssetId, who: &AccountId, amount: Balance) -> DispatchResult;
 
+    /// transfer the given amount from `sender`'s into `recipient`'s account for `asset_id`.
+    fn transfer(
+        asset_id: &AssetId,
+        sender: &AccountId,
+        recipient: &AccountId,
+        amount: Balance,
+    ) -> DispatchResult;
+
     /// Remove `amount` from the balance of `who` under `asset_id`.
     fn withdraw(asset_id: &AssetId, who: &AccountId, amount: Balance) -> DispatchResult;
 }

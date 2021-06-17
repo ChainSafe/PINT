@@ -81,28 +81,28 @@ where
 ///
 /// *NOTE*: `Balance` is expected to encode with `HasCompact`
 pub enum StakingCall<Source, Balance, AccountId> {
-    /// The [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) extrinsic.
+    /// The [`bond`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.bond) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the stash account.
     // #[codec(index = 0)]
     Bond(Bond<Source, Balance, AccountId>),
 
-    /// The [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) extrinsic.
+    /// The [`bond_extra`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.bond_extra) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the stash, not the controller.
     // #[codec(index = 1)]
     BondExtra(Balance),
-    /// The [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) extrinsic.
+    /// The [`unbond`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.unbond) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
     // #[codec(index = 2)]
     Unbond(Balance),
-    /// The [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) extrinsic.
+    /// The [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.withdraw_unbonded) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
     // #[codec(index = 3)]
     WithdrawUnbonded(u32),
-    /// The [`nominate`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.nominate) extrinsic.
+    /// The [`nominate`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.nominate) extrinsic.
     ///
     /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
     // #[codec(index = 5)]
@@ -122,7 +122,7 @@ impl<Source, Balance, AccountId> PalletCall for StakingCall<Source, Balance, Acc
     }
 }
 
-/// The [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) extrinsic.
+/// The [`bond_extra`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.bond_extra) extrinsic.
 ///
 /// The dispatch origin for this call must be _Signed_ by the stash account.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug)]
@@ -179,8 +179,14 @@ pub struct StakingBondState<Source, Balance> {
     /// The controller
     pub controller: Source,
 
-    /// The amount bonded
+    /// The amount currently bonded
     pub bonded: Balance,
+
+    /// The amount currently unbonded but not withrawn
+    pub unbonded: Balance,
+
+    /// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
+    pub unlocked_chunks: u32,
 }
 
 /// Represents an excerpt from the `pallet_staking` weights
@@ -193,6 +199,8 @@ pub struct StakingWeights {
     pub bond_extra: Weight,
     /// Weight for `unbond` extrinsic
     pub unbond: Weight,
+    /// Weight for `withdraw_unbonded` extrinsic
+    pub withdraw_unbonded: Weight,
 }
 
 impl StakingWeights {
@@ -209,6 +217,9 @@ impl StakingWeights {
                 .saturating_add(weight.reads(3 as Weight))
                 .saturating_add(weight.writes(2 as Weight)),
             unbond: (52_115_000 as Weight)
+                .saturating_add(weight.reads(4 as Weight))
+                .saturating_add(weight.writes(3 as Weight)),
+            withdraw_unbonded: (52_115_000 as Weight)
                 .saturating_add(weight.reads(4 as Weight))
                 .saturating_add(weight.writes(3 as Weight)),
         }

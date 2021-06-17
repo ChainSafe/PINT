@@ -149,12 +149,8 @@ pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
     for MockRemoteAssetManager
 {
-    fn reserve_withdraw_and_deposit(
-        _who: AccountId,
-        _asset: AssetId,
-        _amount: Balance,
-    ) -> DispatchResult {
-        Ok(())
+    fn reserve_withdraw_and_deposit(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+        todo!()
     }
 
     fn bond(_: AssetId, _: Balance) -> DispatchResult {
@@ -162,9 +158,6 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
     }
 
     fn unbond(_: AssetId, _: Balance) -> DispatchResult {
-        Ok(())
-    }
-    fn withdraw_unbonded(_who: AccountId, _asset: AssetId, _amount: Balance) -> DispatchResult {
         Ok(())
     }
 }

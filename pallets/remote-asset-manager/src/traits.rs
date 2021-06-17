@@ -21,7 +21,4 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 
     /// Dispatch XCM to unbond assets
     fn unbond(asset: AssetId, amount: Balance) -> DispatchResult;
-
-    /// Ensures that the unbonding process succeeded
-    fn withdraw_unbonded(caller: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
 }
