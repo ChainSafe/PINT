@@ -36,9 +36,9 @@ function killAll(ps: ChildProcess, exitCode: number) {
             process.stdout.write(e);
             process.exit(2);
         }
-
-        process.exit(exitCode);
     }
+
+    process.exit(exitCode);
 }
 
 /**
@@ -97,7 +97,10 @@ export default class Runner implements Config {
         ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
 
         // Kill all processes when exiting.
-        process.on("exit", () => killAll(ps, 2));
+        process.on("exit", () => {
+            console.log("-> exit polkadot-launch...");
+            killAll(ps, 2);
+        });
 
         // Handle ctrl+c to trigger `exit`.
         process.on("SIGINT", () => killAll(ps, 0));
