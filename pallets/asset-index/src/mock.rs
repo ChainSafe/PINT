@@ -160,7 +160,6 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
     fn unbond(_: AssetId, _: Balance) -> DispatchResult {
         Ok(())
     }
-
 }
 
 pub const PINT_ASSET_ID: AssetId = 0u32;
