@@ -45,13 +45,14 @@ pub mod pallet {
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
 
+    pub use crate::traits::AssetRecorder;
     use crate::traits::WithdrawalFee;
-    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetWithdrawal, IndexAssetData, PendingRedemption,
         RedemptionState,
     };
+    use primitives::traits::MultiAssetRegistry;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 

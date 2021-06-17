@@ -1,7 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::traits::MultiAssetRegistry;
 use codec::FullCodec;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
@@ -15,6 +14,7 @@ use frame_support::sp_std::{
     result,
 };
 use pallet_asset_depository::MultiAssetDepository;
+use primitives::traits::MultiAssetRegistry;
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
     traits::{Convert, MatchesFungible, TransactAsset},
