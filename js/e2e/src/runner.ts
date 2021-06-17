@@ -17,6 +17,12 @@ import { SubmittableExtrinsic } from "@polkadot/api/types";
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
 
+// runTx Result
+interface TxResult {
+    unsub: Promise<() => void>;
+    blockHash: string;
+}
+
 // Message of launching complete
 const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
@@ -137,13 +143,18 @@ export default class Runner implements Config {
      */
     public async runTxs(ps?: ChildProcess): Promise<void> {
         for (const ex of this.exs) {
-            console.log(`run extrinsic ${ex.pallet}.${ex.call}...`);
-            console.log(`\t arguments: ${JSON.stringify(ex.args)}`);
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+            console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
 
             if (ex.block) await this.waitBlock(ex.block);
             const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
-            const hash = await this.finalized(tx);
-            console.log(`\t block hash: ${hash}`);
+            const res = (await this.timeout(
+                this.runTx(tx),
+                ex.timeout
+            )) as TxResult;
+
+            (await res.unsub)();
+            console.log(`\t | block hash: ${res.blockHash}`);
         }
 
         // exit
@@ -194,50 +205,65 @@ export default class Runner implements Config {
      * @param {ISubmittableResult} sr
      * @returns {Promise<T>}
      */
-    private async finalized(
-        se: SubmittableExtrinsic<"promise", ISubmittableResult>
-    ): Promise<string> {
-        return new Promise((resolve, reject) =>
-            se.signAndSend(this.pair, {}, (sr: ISubmittableResult) => {
-                const status = sr.status;
-                const events = sr.events;
+    private async runTx(
+        se: SubmittableExtrinsic<"promise", ISubmittableResult>,
+        finalized = false
+    ): Promise<TxResult> {
+        return new Promise((resolve, reject) => {
+            const unsub = se.signAndSend(
+                this.pair,
+                {},
+                (sr: ISubmittableResult) => {
+                    const status = sr.status;
+                    const events = sr.events;
 
-                console.log(`\t status: ${status.type}`);
+                    console.log(`\t | - status: ${status.type}`);
 
-                if (status.isInBlock) {
-                    if (events) {
-                        events.forEach((value: EventRecord): void => {
-                            if (value.event.method.indexOf("Failed") > -1) {
-                                reject(
-                                    value.phase.toString() +
-                                        `: ${value.event.section}.${value.event.method}` +
-                                        value.event.data.toString() +
-                                        " failed"
-                                );
-                            }
+                    if (status.isInBlock) {
+                        if (!finalized)
+                            resolve({
+                                unsub,
+                                blockHash: status.asInBlock.toHex().toString(),
+                            });
 
-                            if (
-                                (value.event.data[0] as DispatchError).isModule
-                            ) {
-                                reject(
-                                    this.api.registry.findMetaError(
-                                        (value.event
-                                            .data[0] as DispatchError).asModule.toU8a()
-                                    )
-                                );
-                            }
+                        if (events) {
+                            events.forEach((value: EventRecord): void => {
+                                if (value.event.method.indexOf("Failed") > -1) {
+                                    reject(
+                                        value.phase.toString() +
+                                            `: ${value.event.section}.${value.event.method}` +
+                                            value.event.data.toString() +
+                                            " failed"
+                                    );
+                                }
+
+                                if (
+                                    (value.event.data[0] as DispatchError)
+                                        .isModule
+                                ) {
+                                    reject(
+                                        this.api.registry.findMetaError(
+                                            (value.event
+                                                .data[0] as DispatchError).asModule.toU8a()
+                                        )
+                                    );
+                                }
+                            });
+                        }
+                    } else if (status.isInvalid) {
+                        reject("Invalid Extrinsic");
+                    } else if (status.isRetracted) {
+                        reject("Extrinsic Retracted");
+                    } else if (status.isUsurped) {
+                        reject("Extrinsic Usupred");
+                    } else if (status.isFinalized) {
+                        resolve({
+                            unsub,
+                            blockHash: status.asFinalized.toHex().toString(),
                         });
                     }
-                } else if (status.isInvalid) {
-                    reject("Invalid Extrinsic");
-                } else if (status.isRetracted) {
-                    reject("Extrinsic Retracted");
-                } else if (status.isUsurped) {
-                    reject("Extrinsic Usupred");
-                } else if (status.isFinalized) {
-                    resolve(status.asFinalized.toHex().toString());
                 }
-            })
-        );
+            );
+        });
     }
 }
