@@ -179,8 +179,14 @@ pub struct StakingBondState<Source, Balance> {
     /// The controller
     pub controller: Source,
 
-    /// The amount bonded
+    /// The amount currently bonded
     pub bonded: Balance,
+
+    /// The amount currently unbonded but not withrawn
+    pub unbonded: Balance,
+
+    /// Number of dispatched `unbond` calls since the last `unbond_withdraw`
+    pub unlocked_chunks: u32,
 }
 
 /// Represents an excerpt from the `pallet_staking` weights
