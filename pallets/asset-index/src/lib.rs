@@ -299,8 +299,13 @@ pub mod pallet {
                 .checked_add(&amount)
                 .ok_or(Error::<T>::AssetUnitsOverflow)?;
 
-            // withdraw from the caller's sovereign account
-            T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
+            // transfer from the caller's sovereign account into the treasury's account
+            T::MultiAssetDepository::transfer(
+                &asset_id,
+                &caller,
+                &Self::treasury_account(),
+                amount,
+            )?;
             // update the holding
             Holdings::<T>::insert(asset_id, holding);
 
@@ -474,18 +479,18 @@ pub mod pallet {
                                             all_withdrawn = false;
                                         }
                                         RedemptionState::Unbonding => {
-                                            // unbonding process already started, try to complete it
-                                            if T::RemoteAssetManager::withdraw_unbonded(
-                                                caller.clone(),
-                                                asset.asset,
+                                            // redemption period over and funds are unbonded;
+                                            // ready to be moved in the user's sovereign account
+                                            if T::MultiAssetDepository::transfer(
+                                                &asset.asset,
+                                                &Self::treasury_account(),
+                                                &caller,
                                                 asset.units,
                                             )
                                             .is_ok()
                                             {
-                                                // TODO put the units in the user's sovereign account or transfer?
+                                                // assets are now transferred into the user's sovereign account
                                                 asset.state = RedemptionState::Transferred;
-                                            } else {
-                                                all_withdrawn = false;
                                             }
                                         }
                                         RedemptionState::Transferred => {}
@@ -519,6 +524,11 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// The account of the treausry that keeps track of all the assets contributed to the index
+        pub fn treasury_account() -> AccountIdFor<T> {
+            T::TreasuryPalletId::get().into_account()
+        }
+
         /// The amount of index tokens held by the given user
         pub fn index_token_balance(account: &T::AccountId) -> T::Balance {
             T::IndexToken::total_balance(account)

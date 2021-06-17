@@ -147,6 +147,14 @@ pub mod pallet {
             })
         }
 
+        fn transfer(asset_id: &T::AssetId, sender: &AccountIdFor<T>, recipient: &AccountIdFor<T>, amount: T::Balance) -> DispatchResult {
+            if amount.is_zero() {
+                return Ok(());
+            }
+            Self::withdraw(asset_id, sender, amount)?;
+            Self::deposit(asset_id, recipient, amount)
+        }
+
         /// Withdraw the `amount` of the given asset from the available balance of the given account `who`.
         fn withdraw(
             asset_id: &T::AssetId,

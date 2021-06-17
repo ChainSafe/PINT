@@ -21,9 +21,9 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{
-            traits::Zero,
-            traits::{AtLeast32BitUnsigned, Convert, StaticLookup},
+        sp_runtime::traits::Saturating,
+        sp_runtime::traits::{
+            AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero,
         },
         sp_std::prelude::*,
         traits::Get,
@@ -36,7 +36,6 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use frame_support::sp_runtime::traits::Saturating;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
         staking::{
@@ -133,7 +132,6 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     /// The config of `pallet_staking` in the runtime of the parachain.
-    // TODO: Location as key?
     #[pallet::storage]
     pub type PalletStakingConfig<T: Config> = StorageMap<
         _,
@@ -154,7 +152,6 @@ pub mod pallet {
     >;
 
     /// The config of `pallet_proxy` in the runtime of the parachain.
-    // TODO: Location as key?
     #[pallet::storage]
     pub type PalletProxyConfig<T: Config> =
         StorageMap<_, Twox64Concat, <T as Config>::AssetId, ProxyConfig, OptionQuery>;
@@ -200,14 +197,16 @@ pub mod pallet {
     #[pallet::event]
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Successfully sent a cross chain message to bond. \[destination, controller, amount\]
-        SentBond(MultiLocation, LookupSourceFor<T>, T::Balance),
-        /// Successfully sent a cross chain message to bond extra. \[destination, amount\]
-        SentBondExtra(MultiLocation, T::Balance),
-        /// Successfully sent a cross chain message to add a proxy. \[destination, delegate, proxy type\]
-        SentAddProxy(MultiLocation, AccountIdFor<T>, ProxyType),
-        /// Successfully sent a cross chain message to remove a proxy. \[destination, delegate, proxy type\]
-        SentRemoveProxy(MultiLocation, AccountIdFor<T>, ProxyType),
+        /// Successfully sent a cross chain message to bond. \[asset, controller, amount\]
+        SentBond(T::AssetId, LookupSourceFor<T>, T::Balance),
+        /// Successfully sent a cross chain message to bond extra. \[asset, amount\]
+        SentBondExtra(T::AssetId, T::Balance),
+        /// Successfully sent a cross chain message to bond extra. \[asset, amount, block number\]
+        SentUnbond(T::AssetId, T::Balance, T::BlockNumber),
+        /// Successfully sent a cross chain message to add a proxy. \[asset, delegate, proxy type\]
+        SentAddProxy(T::AssetId, AccountIdFor<T>, ProxyType),
+        /// Successfully sent a cross chain message to remove a proxy. \[asset, delegate, proxy type\]
+        SentRemoveProxy(T::AssetId, AccountIdFor<T>, ProxyType),
     }
 
     #[pallet::error]
@@ -224,6 +223,8 @@ pub mod pallet {
         FailedToSendBondXcm,
         /// Thrown when sending an Xcm `pallet_staking::bond_extra` failed
         FailedToSendBondExtraXcm,
+        /// Thrown when sending an Xcm `pallet_staking::unbond` failed
+        FailedToSendUnbondXcm,
         /// Thrown when sending an Xcm `pallet_proxy::add_proxy` failed
         FailedToSendAddProxyXcm,
         /// Thrown when sending an Xcm `pallet_proxy::remove_proxy` failed
@@ -234,6 +235,12 @@ pub mod pallet {
         NotBonded,
         /// Thrown when no location was found for the given asset.
         UnknownAsset,
+        /// Thrown if the PINT parachain account is not allowed to executed pallet staking extrinsics that require controller origin
+        NoControllerPermission,
+        /// Thrown if the no more `unbond` chunks can be scheduled
+        NoMoreUnbondingChunks,
+        /// Balance would fall below the minimum requirements for bond
+        InsufficientBond,
     }
 
     #[pallet::hooks]
@@ -260,7 +267,7 @@ pub mod pallet {
                 T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             log::info!(target: "pint_xcm", "Attempting bond on: {:?} with controller {:?}", dest, controller, );
 
-            // ensures that the call is encodeable for the destination
+            // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletStakingCallEncoder::can_encode(&asset),
                 Error::<T>::NotEncodableForLocation
@@ -289,7 +296,7 @@ pub mod pallet {
                     .into(),
             };
 
-            let result = T::XcmSender::send_xcm(dest.clone(), xcm);
+            let result = T::XcmSender::send_xcm(dest, xcm);
             log::info!(target: "pint_xcm", "sent pallet_staking::bond xcm: {:?} ",result);
             ensure!(result.is_ok(), Error::<T>::FailedToSendBondXcm);
 
@@ -297,10 +304,12 @@ pub mod pallet {
             let state = StakingBondState {
                 controller: controller.clone(),
                 bonded: value,
+                unbonded: Zero::zero(),
+                unlocked_chunks: Zero::zero(),
             };
-            PalletStakingBondState::<T>::insert(asset, state);
+            PalletStakingBondState::<T>::insert(&asset, state);
 
-            Self::deposit_event(Event::SentBond(dest, controller, value));
+            Self::deposit_event(Event::SentBond(asset, controller, value));
             Ok(().into())
         }
 
@@ -323,7 +332,7 @@ pub mod pallet {
                 T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
-            // ensures that the call is encodeable for the destination
+            // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
                 Error::<T>::NotEncodableForLocation
@@ -351,15 +360,15 @@ pub mod pallet {
                     .into(),
             };
 
-            let result = T::XcmSender::send_xcm(dest.clone(), xcm);
+            let result = T::XcmSender::send_xcm(dest, xcm);
             log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
             ensure!(result.is_ok(), Error::<T>::FailedToSendAddProxyXcm);
 
             // update the proxy for this delegate
             proxies.add(proxy_type);
-            Proxies::<T>::insert(asset, delegate.clone(), proxies);
+            Proxies::<T>::insert(&asset, delegate.clone(), proxies);
 
-            Self::deposit_event(Event::SentAddProxy(dest, delegate, proxy_type));
+            Self::deposit_event(Event::SentAddProxy(asset, delegate, proxy_type));
             Ok(().into())
         }
     }
@@ -369,7 +378,7 @@ pub mod pallet {
         fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
             let dest =
                 T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
-            // ensures that the call is encodeable for the destination
+            // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
                 Error::<T>::NotEncodableForLocation
@@ -393,15 +402,90 @@ pub mod pallet {
                     .into(),
             };
 
-            let result = T::XcmSender::send_xcm(dest.clone(), xcm);
+            let result = T::XcmSender::send_xcm(dest, xcm);
             log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
             ensure!(result.is_ok(), Error::<T>::FailedToSendBondExtraXcm);
 
             state.bonded = state.bonded.saturating_add(amount);
-            PalletStakingBondState::<T>::insert(asset, state);
+            PalletStakingBondState::<T>::insert(&asset, state);
 
-            Self::deposit_event(Event::SentBondExtra(dest, amount));
+            Self::deposit_event(Event::SentBondExtra(asset, amount));
             Ok(().into())
+        }
+
+        /// Sends an XCM [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) call
+        ///
+        /// An `unbond` call must be signed by the controller account.
+        fn do_send_unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            let dest =
+                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            // ensures that the call is encodable for the destination
+            ensure!(
+                T::PalletProxyCallEncoder::can_encode(&asset),
+                Error::<T>::NotEncodableForLocation
+            );
+            let config =
+                PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
+
+            let mut state =
+                PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
+
+            // ensure that we have enough balance bonded to unbond
+            ensure!(
+                amount < state.bonded.saturating_sub(config.minimum_balance),
+                Error::<T>::InsufficientBond
+            );
+
+            // Can't schedule unbond before withdrawing the unlocked funds first
+            ensure!(
+                (state.unlocked_chunks as usize) < pallet_staking::MAX_UNLOCKING_CHUNKS,
+                Error::<T>::NoMoreUnbondingChunks
+            );
+
+            // ensure that the PINT parachain account is the controller, because unbond requires controller origin
+            ensure!(
+                <T as frame_system::Config>::Lookup::lookup(state.controller.clone())?
+                    == T::SelfParaId::get().into_account(),
+                Error::<T>::NoControllerPermission
+            );
+
+            let call = PalletStakingCall::<T>::Unbond(amount);
+            let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: config.weights.unbond,
+                call: encoder
+                    .encode_runtime_call(config.pallet_index)
+                    .encode()
+                    .into(),
+            };
+
+            let result = T::XcmSender::send_xcm(dest, xcm);
+            log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
+            ensure!(result.is_ok(), Error::<T>::FailedToSendUnbondXcm);
+
+            // adjust the balances and keep track of new chunk
+            state.bonded = state.bonded.saturating_sub(amount);
+            state.unbonded = state.unbonded.saturating_add(amount);
+            state.unlocked_chunks = state.unlocked_chunks.saturating_add(1);
+
+            PalletStakingBondState::<T>::insert(&asset, state);
+
+            Self::deposit_event(Event::SentUnbond(
+                asset,
+                amount,
+                frame_system::Pallet::<T>::block_number(),
+            ));
+            Ok(().into())
+        }
+
+        /// Sends an XCM [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) call
+        ///
+        /// Remove any unlocked chunks from the `unlocking` queue.
+        /// An `withdraw_unbonded` call must be signed by the controller account.
+        fn do_send_withdraw_unbonded(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            Ok(())
         }
     }
 
@@ -418,16 +502,8 @@ pub mod pallet {
             Self::do_send_bond_extra(asset, amount)
         }
 
-        fn unbond(_asset: T::AssetId, _amount: T::Balance) -> DispatchResult {
-            Ok(())
-        }
-
-        fn withdraw_unbonded(
-            _who: AccountIdFor<T>,
-            _asset: T::AssetId,
-            _amount: T::Balance,
-        ) -> DispatchResult {
-            Ok(())
+        fn unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            Self::do_send_unbond(asset, amount)
         }
     }
 
