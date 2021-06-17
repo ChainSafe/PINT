@@ -25,6 +25,7 @@ pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot
 pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
 pallet-asset-depository = { path = "../asset-depository", default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }
+primitives = { path = "../../primitives/primitives", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -44,6 +45,7 @@ std = [
     'pallet-remote-asset-manager/std',
     'pallet-asset-depository/std',
     'pallet-price-feed/std',
+    'primitives/std',
     'xcm/std',
     'xcm-executor/std',
 ]

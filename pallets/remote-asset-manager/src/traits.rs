@@ -16,10 +16,10 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
         amount: Balance,
     ) -> DispatchResult;
 
-    /// Dispatch XCM to bound assets
+    /// Dispatch XCM to bond assets
     fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
 
-    /// Dispatch XCM to unbound assets
+    /// Dispatch XCM to unbond assets
     fn unbond(asset: AssetId, amount: Balance) -> DispatchResult;
 
     /// Ensures that the unbonding process succeeded

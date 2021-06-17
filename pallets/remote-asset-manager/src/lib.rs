@@ -16,23 +16,26 @@ mod traits;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    pub use crate::traits::*;
     use cumulus_primitives_core::ParaId;
-    use frame_support::sp_runtime::traits::Zero;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::{AtLeast32BitUnsigned, Convert, StaticLookup},
+        sp_runtime::{
+            traits::Zero,
+            traits::{AtLeast32BitUnsigned, Convert, StaticLookup},
+        },
         sp_std::prelude::*,
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
+    use primitives::traits::MultiAssetRegistry;
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    pub use crate::traits::*;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
         staking::{
@@ -116,6 +119,9 @@ pub mod pallet {
         type XcmSender: SendXcm;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// Asset registry with all the locations
+        type AssetRegistry: MultiAssetRegistry<Self::AssetId>;
 
         /// The weight for this pallet's extrinsics.
         type WeightInfo: WeightInfo;

@@ -55,10 +55,11 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
-use pallet_asset_index::{MultiAssetAdapter, MultiAssetRegistry};
+use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
+use primitives::traits::MultiAssetRegistry;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -756,6 +757,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type XcmSender = XcmRouter;
     type Event = Event;
+    type AssetRegistry = AssetIndex;
     type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
