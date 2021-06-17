@@ -6,6 +6,7 @@ import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
+import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
 import { Config, Extrinsic } from "./config";
 import { launch } from "./launch";
@@ -93,7 +94,10 @@ export default class Runner implements Config {
         const pair = keyring.addFromUri(uri);
         const api = await ApiPromise.create({
             provider,
-            types: (definitions.types as any)[0].types,
+            types: Object.assign(
+                ChainlinkTypes,
+                (definitions.types as any)[0].types
+            ),
         });
 
         return new Runner({ api, pair, exs: exs(api) });
