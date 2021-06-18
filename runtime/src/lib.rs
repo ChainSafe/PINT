@@ -55,6 +55,7 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
+use orml_currencies::BasicCurrencyAdapter;
 use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
@@ -87,6 +88,9 @@ pub type AccountIndex = u32;
 
 /// Balance of an account.
 pub type Balance = u128;
+
+/// Signed version of Balance
+pub type Amount = i128;
 
 /// Index of a transaction in the chain.
 pub type Index = u32;
@@ -520,6 +524,7 @@ impl pallet_collator_selection::Config for Runtime {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
 impl pallet_local_treasury::Config for Runtime {
@@ -645,6 +650,31 @@ parameter_types! {
     pub const RelayChainAssetId: AssetId = 0;
     pub const PINTAssetId: AssetId = 1;
     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+}
+
+// --- ORML configurations
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+}
+
+impl orml_tokens::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = AssetId;
+    type ExistentialDeposits = ExistentialDeposits;
+    type OnDust = orml_tokens::TransferDust<Runtime, PintTreasuryAccount>;
+    type WeightInfo = ();
+}
+
+impl orml_currencies::Config for Runtime {
+    type Event = Event;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+    type GetNativeCurrencyId = PINTAssetId;
+    type WeightInfo = ();
 }
 
 pub struct AssetIdConvert;
@@ -785,6 +815,10 @@ construct_runtime!(
         Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
         Aura: pallet_aura::{Pallet, Config<T>},
         AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+
+        // ORML related pallets
+        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+        Currencies: orml_currencies::{Pallet, Call, Event<T>},
 
         // PINT pallets
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
