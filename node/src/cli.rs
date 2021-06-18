@@ -62,6 +62,7 @@ pub struct ExportGenesisStateCommand {
     pub raw: bool,
 
     /// The name of the chain for that the genesis state should be exported.
+    #[structopt(parse(from_os_str))]
     pub chain: Option<String>,
 }
 
