@@ -29,7 +29,7 @@ const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
     try {
-        ps.send && ps.send("exit");
+        ps.send && !ps.killed && ps.send("exit");
         ps.kill("SIGINT");
     } catch (e) {
         if (e.code !== "EPERM") {
@@ -99,7 +99,7 @@ export default class Runner implements Config {
         // Kill all processes when exiting.
         process.on("exit", () => {
             console.log("-> exit polkadot-launch...");
-            killAll(ps, 2);
+            killAll(ps, process.exitCode);
         });
 
         // Handle ctrl+c to trigger `exit`.
@@ -162,7 +162,6 @@ export default class Runner implements Config {
 
         // exit
         console.log("COMPLETE TESTS!");
-        ps && ps.send && ps.send("exit");
         process.exit(0);
     }
 
