@@ -6,8 +6,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::sp_runtime::app_crypto::sp_core;
+use frame_support::sp_runtime::traits::{IdentifyAccount, Verify};
 use frame_support::sp_runtime::{generic, MultiSignature};
-use frame_support::sp_runtime::traits::{Verify, IdentifyAccount};
 
 pub mod traits;
 
@@ -20,7 +20,6 @@ pub type Signature = MultiSignature;
 /// Some way of identifying an account on the chain. We intentionally make it equivalent
 /// to the public key of our transaction signing scheme.
 pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
 
 /// The type for looking up accounts. We don't expect more than 4 billion of them, but you
 /// never know...
