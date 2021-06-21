@@ -11,17 +11,25 @@ import { definitions } from "@pint/types";
 import { Config, Extrinsic } from "./config";
 import { launch } from "./launch";
 import { ChildProcess } from "child_process";
+import { cryptoWaitReady } from "@polkadot/util-crypto";
+import { SubmittableExtrinsic } from "@polkadot/api/types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
+
+// runTx Result
+interface TxResult {
+    unsub: Promise<() => void>;
+    blockHash: string;
+}
 
 // Message of launching complete
 const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // Kill subprocesses
-function killAll(ps: ChildProcess) {
+function killAll(ps: ChildProcess, exitCode: number) {
     try {
-        ps.send && ps.send("exit");
+        ps.send && !ps.killed && ps.send("exit");
         ps.kill("SIGINT");
     } catch (e) {
         if (e.code !== "EPERM") {
@@ -30,7 +38,7 @@ function killAll(ps: ChildProcess) {
         }
     }
 
-    process.exit(0);
+    process.exit(exitCode);
 }
 
 /**
@@ -40,6 +48,25 @@ export default class Runner implements Config {
     public api: ApiPromise;
     public pair: KeyringPair;
     public exs: Extrinsic[];
+
+    /**
+     * run E2E tests without launch
+     *
+     * @param {Builder} exs - Extrinsic builder
+     * @param {string} ws - "ws://0.0.0.0:9988" by default
+     * @param {string} uri - "//Alice" by default
+     * @returns {Promise<Runner>}
+     */
+    static async run_without_launch(
+        exs: Builder,
+        ws: string = "ws://127.0.0.1:9988",
+        uri: string = "//Alice"
+    ): Promise<void> {
+        console.log("bootstrap e2e tests...");
+        await cryptoWaitReady();
+        const runner = await Runner.build(exs, ws, uri);
+        await runner.runTxs();
+    }
 
     /**
      * run E2E tests
@@ -70,10 +97,13 @@ export default class Runner implements Config {
         ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
 
         // Kill all processes when exiting.
-        process.on("exit", () => killAll(ps));
+        process.on("exit", () => {
+            console.log("-> exit polkadot-launch...");
+            killAll(ps, process.exitCode);
+        });
 
         // Handle ctrl+c to trigger `exit`.
-        process.on("SIGINT", () => killAll(ps));
+        process.on("SIGINT", () => killAll(ps, 0));
     }
 
     /**
@@ -114,27 +144,24 @@ export default class Runner implements Config {
      *
      * @returns void
      */
-    public async runTxs(ps: ChildProcess): Promise<void> {
-        this.exs.forEach(async (ex: Extrinsic) => {
-            console.log(`run extrinsic ${ex.pallet}.${ex.call}...`);
-            console.log(`\t arguments: ${JSON.stringify(ex.args)}`);
+    public async runTxs(ps?: ChildProcess): Promise<void> {
+        for (const ex of this.exs) {
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+            console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
 
             if (ex.block) await this.waitBlock(ex.block);
-            await this.timeout(
-                this.api.tx[ex.pallet]
-                    [ex.call](...ex.args)
-                    .signAndSend(this.pair, (res) => {
-                        this.checkError(res);
-                    }),
+            const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
+            const res = (await this.timeout(
+                this.runTx(tx),
                 ex.timeout
-            ).catch((e) => {
-                throw e;
-            });
-        });
+            )) as TxResult;
+
+            (await res.unsub)();
+            console.log(`\t | block hash: ${res.blockHash}`);
+        }
 
         // exit
         console.log("COMPLETE TESTS!");
-        ps.send && ps.send("exit");
         process.exit(0);
     }
 
@@ -180,45 +207,65 @@ export default class Runner implements Config {
      * @param {ISubmittableResult} sr
      * @returns {Promise<T>}
      */
-    private async checkError(sr: ISubmittableResult): Promise<string> {
+    private async runTx(
+        se: SubmittableExtrinsic<"promise", ISubmittableResult>,
+        finalized = false
+    ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
-            const status = sr.status;
-            const events = sr.events;
+            const unsub = se.signAndSend(
+                this.pair,
+                {},
+                (sr: ISubmittableResult) => {
+                    const status = sr.status;
+                    const events = sr.events;
 
-            const blockHash = status.asInBlock.toHex().toString();
-            if (status.isInBlock) {
-                resolve(blockHash);
+                    console.log(`\t | - status: ${status.type}`);
 
-                if (events) {
-                    events.forEach((value: EventRecord): void => {
-                        if (value.event.method.indexOf("Failed") > -1) {
-                            reject(
-                                value.phase.toString() +
-                                    `: ${value.event.section}.${value.event.method}` +
-                                    value.event.data.toString() +
-                                    " failed"
-                            );
+                    if (status.isInBlock) {
+                        if (!finalized)
+                            resolve({
+                                unsub,
+                                blockHash: status.asInBlock.toHex().toString(),
+                            });
+
+                        if (events) {
+                            events.forEach((value: EventRecord): void => {
+                                if (value.event.method.indexOf("Failed") > -1) {
+                                    reject(
+                                        value.phase.toString() +
+                                            `: ${value.event.section}.${value.event.method}` +
+                                            value.event.data.toString() +
+                                            " failed"
+                                    );
+                                }
+
+                                if (
+                                    (value.event.data[0] as DispatchError)
+                                        .isModule
+                                ) {
+                                    reject(
+                                        this.api.registry.findMetaError(
+                                            (value.event
+                                                .data[0] as DispatchError).asModule.toU8a()
+                                        )
+                                    );
+                                }
+                            });
                         }
-
-                        if ((value.event.data[0] as DispatchError).isModule) {
-                            reject(
-                                this.api.registry.findMetaError(
-                                    (value.event
-                                        .data[0] as DispatchError).asModule.toU8a()
-                                )
-                            );
-                        }
-                    });
+                    } else if (status.isInvalid) {
+                        reject("Invalid Extrinsic");
+                    } else if (status.isRetracted) {
+                        reject("Extrinsic Retracted");
+                    } else if (status.isUsurped) {
+                        reject("Extrinsic Usupred");
+                    } else if (status.isFinalized) {
+                        resolve({
+                            unsub,
+                            blockHash: status.asFinalized.toHex().toString(),
+                        });
+                    }
                 }
-            } else if (status.isInvalid) {
-                reject("Invalid Extrinsic");
-            } else if (status.isRetracted) {
-                reject("Extrinsic Retracted");
-            } else if (status.isUsurped) {
-                reject("Extrinsic Usupred");
-            } else if (status.isFinalized) {
-                resolve(`Finalized block hash: ${blockHash}`);
-            }
+            );
         });
     }
 }

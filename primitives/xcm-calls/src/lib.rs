@@ -257,6 +257,8 @@ mod tests {
         type DustRemoval = ();
         type ExistentialDeposit = ExistentialDeposit;
         type AccountStore = System;
+        type MaxReserves = ();
+        type ReserveIdentifier = [u8; 8];
         type WeightInfo = ();
     }
     parameter_types! {
@@ -350,6 +352,7 @@ mod tests {
         type NextNewSession = Session;
         type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
         type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
+        type GenesisElectionProvider = Self::ElectionProvider;
         type WeightInfo = ();
     }
 
