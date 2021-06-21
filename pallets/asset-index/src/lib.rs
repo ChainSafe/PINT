@@ -39,9 +39,9 @@ pub mod pallet {
         PalletId,
     };
     use frame_system::pallet_prelude::*;
+    use orml_traits::{MultiCurrency, MultiCurrencyExtended};
     use xcm::opaque::v0::MultiLocation;
 
-    use pallet_asset_depository::MultiAssetDepository;
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
     use pallet_remote_asset_manager::RemoteAssetManager;
 
@@ -53,6 +53,7 @@ pub mod pallet {
         RedemptionState,
     };
     use primitives::traits::MultiAssetRegistry;
+    use primitives::Amount;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -94,12 +95,15 @@ pub mod pallet {
         >;
         /// Type used to identify assets
         type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
-        /// Handles asset depositing and withdrawing from sovereign user accounts
-        type MultiAssetDepository: MultiAssetDepository<
-            Self::AssetId,
-            AccountIdFor<Self>,
-            Self::Balance,
+
+        /// Currency type for deposit/withdraw assets to/from the user's sovereign account
+        type Currency: MultiCurrencyExtended<
+            Self::AccountId,
+            CurrencyId = Self::AssetId,
+            Balance = Self::Balance,
+            Amount = Amount,
         >;
+
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
         /// The type that calculates the withdrawal fee
@@ -300,12 +304,7 @@ pub mod pallet {
                 .ok_or(Error::<T>::AssetUnitsOverflow)?;
 
             // transfer from the caller's sovereign account into the treasury's account
-            T::MultiAssetDepository::transfer(
-                &asset_id,
-                &caller,
-                &Self::treasury_account(),
-                amount,
-            )?;
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
             // update the holding
             Holdings::<T>::insert(asset_id, holding);
 
@@ -481,8 +480,8 @@ pub mod pallet {
                                         RedemptionState::Unbonding => {
                                             // redemption period over and funds are unbonded;
                                             // ready to be moved in the user's sovereign account
-                                            if T::MultiAssetDepository::transfer(
-                                                &asset.asset,
+                                            if T::Currency::transfer(
+                                                asset.asset,
                                                 &Self::treasury_account(),
                                                 &caller,
                                                 asset.units,

@@ -13,7 +13,7 @@ use frame_support::sp_std::{
     prelude::*,
     result,
 };
-use pallet_asset_depository::MultiAssetDepository;
+use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
@@ -120,7 +120,7 @@ impl From<Error> for XcmError {
 #[allow(clippy::type_complexity)]
 pub struct MultiAssetAdapter<
     Balance: AtLeast32BitUnsigned,
-    MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
+    MultiAssets: MultiCurrency<AccountId, CurrencyId = AssetId, Balance = Balance>,
     AssetRegistry: MultiAssetRegistry<AssetId>,
     Matcher: MatchesFungible<Balance>,
     AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
@@ -141,7 +141,7 @@ pub struct MultiAssetAdapter<
 );
 impl<
         Balance: AtLeast32BitUnsigned,
-        MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
+        MultiAssets: MultiCurrency<AccountId, CurrencyId = AssetId, Balance = Balance>,
         AssetRegistry: MultiAssetRegistry<AssetId>,
         Matcher: MatchesFungible<Balance>,
         AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
@@ -167,7 +167,7 @@ impl<
             Matcher::matches_fungible(asset),
         ) {
             // known asset
-            (Ok(who), Ok(asset_id), Some(amount)) => MultiAssets::deposit(&asset_id, &who, amount)
+            (Ok(who), Ok(asset_id), Some(amount)) => MultiAssets::deposit(asset_id, &who, amount)
                 .map_err(|e| XcmError::FailedToTransactAsset(e.into())),
             // unknown asset
             _ => Err(XcmError::FailedToTransactAsset("Unknown Asset")),
@@ -185,7 +185,7 @@ impl<
         let amount: Balance = Matcher::matches_fungible(&asset)
             .ok_or_else(|| XcmError::from(Error::FailedToMatchFungible))?
             .saturated_into();
-        MultiAssets::withdraw(&asset_id, &who, amount)
+        MultiAssets::withdraw(asset_id, &who, amount)
             .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
         Ok(asset.clone().into())
     }
