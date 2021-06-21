@@ -16,6 +16,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
+    traits::{AccountIdConversion, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult, MultiSignature,
 };
@@ -56,6 +57,8 @@ pub use frame_support::{
     PalletId, StorageValue,
 };
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+
 use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
@@ -280,8 +283,8 @@ parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
     // For weight estimation, we assume that the most locks on an individual account will be 50.
-	// This number may need to be adjusted in the future if this assumption no longer holds true.
-	pub const MaxLocks: u32 = 50;
+    // This number may need to be adjusted in the future if this assumption no longer holds true.
+    pub const MaxLocks: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {

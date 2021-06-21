@@ -4862,20 +4862,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-xcm-support"
-version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#f6c3489d039ffc5a9ac90aeb1cd8e429945eab7e"
-dependencies = [
- "frame-support",
- "orml-traits",
- "parity-scale-codec",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-executor",
-]
-
-[[package]]
 name = "owning_ref"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5830,7 +5816,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "orml-xcm-support",
  "pallet-asset-depository",
  "pallet-asset-index",
  "pallet-aura",
