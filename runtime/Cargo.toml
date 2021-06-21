@@ -80,7 +80,6 @@ orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 # PINT dependencies
-pallet-asset-depository = {path = '../pallets/asset-depository', default-features = false }
 pallet-committee = {path = '../pallets/committee', default-features = false }
 pallet-local-treasury = {path = '../pallets/local-treasury', default-features = false }
 pallet-asset-index = {path = '../pallets/asset-index', default-features = false }
@@ -110,7 +109,6 @@ runtime-benchmarks = [
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
 	
-    'pallet-asset-depository/runtime-benchmarks',
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
@@ -170,7 +168,6 @@ std = [
 	'xcm-builder/std',
 	'xcm-executor/std',
 
-	'pallet-asset-depository/std',
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',
