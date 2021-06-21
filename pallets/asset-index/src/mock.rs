@@ -219,14 +219,16 @@ pub struct ExtBuilder {
     balances: Vec<(AccountId, AssetId, Balance)>,
 }
 
+pub(crate) const ASHLEY: AccountId = 0;
+
 // Returns default values for genesis config
 impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (0, ASSET_A_ID, 1000_000_000_000_000u128),
+                (ASHLEY, ASSET_A_ID, 1000_000_000_000_000u128),
                 (1, ASSET_A_ID, 1000_000_000_000_000u128),
-                (0, ASSET_B_ID, 1000_000_000_000_000u128),
+                (ASHLEY, ASSET_B_ID, 1000_000_000_000_000u128),
                 (1, ASSET_B_ID, 1000_000_000_000_000u128),
             ],
         }
@@ -236,8 +238,8 @@ impl Default for ExtBuilder {
 impl ExtBuilder {
     // builds genesis config
 
-    pub fn with_accounts(mut self, accounts: Vec<(AccountId, AssetId, Balance)>) -> Self {
-        self.balances = accounts;
+    pub fn with_balances(mut self, balances: Vec<(AccountId, AssetId, Balance)>) -> Self {
+        self.balances = balances;
         self
     }
 

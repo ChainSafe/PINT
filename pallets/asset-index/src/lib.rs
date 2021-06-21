@@ -229,7 +229,11 @@ pub mod pallet {
                 &units,
                 &availability,
             )?;
-            T::IndexToken::deposit_into_existing(&caller, value)?;
+            // increase the total issuance
+            let issued = T::IndexToken::issue(value);
+            // add minted PINT to user's balance
+            T::IndexToken::resolve_creating(&caller, issued);
+
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
         }
