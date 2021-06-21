@@ -279,7 +279,9 @@ impl pallet_timestamp::Config for Runtime {
 parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
-    pub const MaxLocks: u32 = 50;
+    // For weight estimation, we assume that the most locks on an individual account will be 50.
+	// This number may need to be adjusted in the future if this assumption no longer holds true.
+	pub const MaxLocks: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -667,6 +669,7 @@ impl orml_tokens::Config for Runtime {
     type ExistentialDeposits = ExistentialDeposits;
     type OnDust = orml_tokens::TransferDust<Runtime, PintTreasuryAccount>;
     type WeightInfo = ();
+    type MaxLocks = MaxLocks;
 }
 
 impl orml_currencies::Config for Runtime {
