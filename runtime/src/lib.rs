@@ -13,12 +13,12 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
+    ApplyExtrinsicResult,
 };
 
 use sp_std::prelude::*;
@@ -325,8 +325,8 @@ pub type LocationToAccountId = (
 pub type LocalAssetTransactor = MultiAssetAdapter<
     // Use this balance type
     Balance,
-    // Use this depository for asset balances
-    AssetDepository,
+    // Use this multicurrency for asset balances
+    Currencies,
     // Use this for a registry of supported asset
     AssetIndex,
     // Use this to convert from fungible to balance type
@@ -545,12 +545,6 @@ impl pallet_committee::Config for Runtime {
     type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
 }
 
-impl pallet_asset_depository::Config for Runtime {
-    type Event = Event;
-    type AssetId = AssetId;
-    type Balance = Balance;
-}
-
 impl pallet_price_feed::Config for Runtime {
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
@@ -608,7 +602,7 @@ impl pallet_asset_index::Config for Runtime {
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
     type RemoteAssetManager = RemoteAssetManager;
-    type MultiAssetDepository = AssetDepository;
+    type Currency = Currencies;
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
@@ -792,7 +786,6 @@ construct_runtime!(
 
         // PINT pallets
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
         Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},

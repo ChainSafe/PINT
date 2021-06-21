@@ -4871,20 +4871,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-asset-depository"
-version = "0.0.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
-]
-
-[[package]]
 name = "pallet-asset-index"
 version = "0.0.1"
 dependencies = [
@@ -5817,7 +5803,6 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
- "pallet-asset-depository",
  "pallet-asset-index",
  "pallet-aura",
  "pallet-authorship",
