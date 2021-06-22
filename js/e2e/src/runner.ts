@@ -169,7 +169,13 @@ export default class Runner implements Config {
      * @param {ex} Extrinsic
      */
     public async runTx(ex: Extrinsic, finalized = false): Promise<void> {
-        console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+        if (finalized) {
+            console.log(
+                `----> run required extrinsic ${ex.pallet}.${ex.call}...`
+            );
+        } else {
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+        }
         console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
 
         if (ex.block) await this.waitBlock(ex.block);
