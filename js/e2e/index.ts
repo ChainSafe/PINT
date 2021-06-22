@@ -44,6 +44,16 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "addSaft",
             args: [42, 168, 42],
         },
+        {
+            pallet: "saftRegistry",
+            call: "reportNav",
+            args: [42, 0, 168],
+        },
+        {
+            pallet: "saftRegistry",
+            call: "removeSaft",
+            args: [42, 0],
+        },
     ];
 };
 
