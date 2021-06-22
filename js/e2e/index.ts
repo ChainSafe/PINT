@@ -3,20 +3,32 @@
  */
 import { Runner, Extrinsic } from "./src";
 import { ApiPromise } from "@polkadot/api";
+import { Keyring } from "@polkadot/keyring";
 
 // Tests
-const TESTS = (api: ApiPromise): Extrinsic[] => [
-    {
-        pallet: "assetIndex",
-        call: "addAsset",
-        args: [
-            42,
-            1000000,
-            api.createType("AssetAvailability" as any),
-            1000000,
-        ],
-    },
-];
+const TESTS = (api: ApiPromise): Extrinsic[] => {
+    const keyring = new Keyring({ type: "sr25519" });
+    const bob = keyring.addFromUri("//Bob");
+
+    return [
+        {
+            pallet: "assetIndex",
+            call: "addAsset",
+            args: [
+                42,
+                1000000,
+                api.createType("AssetAvailability" as any),
+                1000000,
+            ],
+        },
+        /* committee */
+        {
+            pallet: "localTreasury",
+            call: "withdraw",
+            args: [42, bob.address],
+        },
+    ];
+};
 
 // main
 (async () => {
