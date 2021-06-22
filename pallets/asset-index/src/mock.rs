@@ -108,6 +108,8 @@ impl pallet_balances::Config for Test {
         pallet_balances::AccountData<Balance>,
     >;
     type MaxLocks = MaxLocks;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
