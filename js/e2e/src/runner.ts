@@ -13,6 +13,7 @@ import { launch } from "./launch";
 import { ChildProcess } from "child_process";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
+import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
@@ -125,7 +126,10 @@ export default class Runner implements Config {
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
-                ChainlinkTypes,
+                {
+                    ...ChainlinkTypes,
+                    ...OrmlTypes,
+                },
                 (definitions.types as any)[0].types
             ),
         });
@@ -146,8 +150,10 @@ export default class Runner implements Config {
      */
     public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
-            for (const requiredEx of ex.required) {
-                await this.runTx(requiredEx, true);
+            if (ex.required) {
+                for (const requiredEx of ex.required) {
+                    await this.runTx(requiredEx, true);
+                }
             }
             await this.runTx(ex);
         }

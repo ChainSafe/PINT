@@ -14,7 +14,7 @@ export interface Extrinsic {
     block?: number;
     timeout?: number;
     /// Required finalized calls before this call
-    required: Extrinsic[];
+    required?: Extrinsic[];
 }
 
 /**
