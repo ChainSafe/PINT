@@ -127,7 +127,7 @@ pub mod pallet {
 
     #[pallet::storage]
     /// (AssetId) -> AssetAvailability
-    pub type Holdings<T: Config> =
+    pub type Assets<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
     #[pallet::storage]
@@ -302,9 +302,8 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
-            let _ = Holdings::<T>::get(&asset_id)
-                .filter(|availability| matches!(availability, AssetAvailability::Liquid(_)))
-                .ok_or(Error::<T>::UnsupportedAsset)?;
+            // only liquid assets can be deposited
+            Self::ensure_liquid_asset(&asset_id)?;
 
             let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
 
@@ -355,7 +354,7 @@ pub mod pallet {
             // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
             let mut liquid_assets_vol = T::Balance::zero();
             let mut asset_prices = Vec::new();
-            for asset in Holdings::<T>::iter()
+            for asset in Assets::<T>::iter()
                 .filter(|(_, availability)| availability.is_liquid())
                 .map(|(k, _)| k)
             {
@@ -553,13 +552,13 @@ pub mod pallet {
 
         /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total pint`
         pub fn total_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(Holdings::<T>::iter().map(|(k, _)| k))
+            Self::calculate_nav(Assets::<T>::iter().map(|(k, _)| k))
         }
 
         /// Calculates the NAV of all liquid assets the Index token: `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(
-                Holdings::<T>::iter()
+                Assets::<T>::iter()
                     .filter(|(_, holding)| holding.is_liquid())
                     .map(|(k, _)| k),
             )
@@ -568,7 +567,7 @@ pub mod pallet {
         /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) / total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(
-                Holdings::<T>::iter()
+                Assets::<T>::iter()
                     .filter(|(_, holding)| holding.is_saft())
                     .map(|(k, _)| k),
             )
@@ -618,10 +617,18 @@ pub mod pallet {
         /// Calculates the NAV of a single asset
         pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
             ensure!(
-                Holdings::<T>::contains_key(&asset),
+                Assets::<T>::contains_key(&asset),
                 Error::<T>::UnsupportedAsset
             );
             Self::calculate_pint_equivalent(asset, Self::index_total_asset_balance(asset))
+        }
+
+        /// Ensures the given asset id is a liquid asset
+        fn ensure_liquid_asset(asset_id: &T::AssetId) -> DispatchResult {
+            Assets::<T>::get(asset_id)
+                .filter(|availability| matches!(availability, AssetAvailability::Liquid(_)))
+                .ok_or(Error::<T>::UnsupportedAsset)?;
+            Ok(())
         }
     }
 
@@ -637,7 +644,7 @@ pub mod pallet {
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 
             // register the asset
-            Holdings::<T>::insert(asset_id, availability);
+            Assets::<T>::insert(asset_id, availability);
             Ok(())
         }
 
@@ -648,7 +655,7 @@ pub mod pallet {
 
     impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
         fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
-            Holdings::<T>::get(asset).and_then(|availability| {
+            Assets::<T>::get(asset).and_then(|availability| {
                 if let AssetAvailability::Liquid(location) = availability {
                     Some(location)
                 } else {
@@ -658,7 +665,7 @@ pub mod pallet {
         }
 
         fn is_liquid_asset(asset: &T::AssetId) -> bool {
-            Holdings::<T>::get(asset)
+            Assets::<T>::get(asset)
                 .map(|availability| availability.is_liquid())
                 .unwrap_or_default()
         }

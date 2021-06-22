@@ -23,7 +23,7 @@ benchmarks! {
         million
     ) verify {
         assert_eq!(
-            <Holdings<T>>::get(asset_id),
+            <Assets<T>>::get(asset_id),
             Some(
 
                 AssetAvailability::Liquid(MultiLocation::Null)

@@ -40,7 +40,7 @@ fn non_admin_cannot_call_get_asset() {
             ),
             BadOrigin
         );
-        assert_eq!(pallet::Holdings::<Test>::contains_key(ASSET_A_ID), false)
+        assert_eq!(pallet::Assets::<Test>::contains_key(ASSET_A_ID), false)
     });
 }
 
@@ -55,7 +55,7 @@ fn admin_can_add_asset() {
             5
         ));
         assert_eq!(
-            pallet::Holdings::<Test>::get(ASSET_A_ID),
+            pallet::Assets::<Test>::get(ASSET_A_ID),
             Some(AssetAvailability::Liquid(MultiLocation::Null))
         );
         assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
@@ -85,7 +85,7 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
             5
         ));
         assert_eq!(
-            pallet::Holdings::<Test>::get(ASSET_A_ID),
+            pallet::Assets::<Test>::get(ASSET_A_ID),
             Some(AssetAvailability::Liquid(MultiLocation::Null))
         );
         assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 200);
