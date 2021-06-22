@@ -74,8 +74,12 @@ xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'releas
 xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.5', default-features = false }
 pallet-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.5', default-features = false }
 
+# ORML Dependencies
+orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+
 # PINT dependencies
-pallet-asset-depository = {path = '../pallets/asset-depository', default-features = false }
 pallet-committee = {path = '../pallets/committee', default-features = false }
 pallet-local-treasury = {path = '../pallets/local-treasury', default-features = false }
 pallet-asset-index = {path = '../pallets/asset-index', default-features = false }
@@ -104,7 +108,7 @@ runtime-benchmarks = [
 	'pallet-collator-selection/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
-    'pallet-asset-depository/runtime-benchmarks',
+	
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
@@ -115,6 +119,8 @@ runtime-benchmarks = [
     'pallet-saft-registry/runtime-benchmarks',
     'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
+
+	'orml-tokens/runtime-benchmarks'
 ]
 std = [
 	'codec/std',
@@ -138,6 +144,7 @@ std = [
 	'sp-block-builder/std',
 	'sp-transaction-pool/std',
 	'sp-inherents/std',
+	'pallet-aura/std',
 	'pallet-authorship/std',
 	'pallet-balances/std',
 	'pallet-collective/std',
@@ -160,8 +167,7 @@ std = [
 	'xcm/std',
 	'xcm-builder/std',
 	'xcm-executor/std',
-	'pallet-aura/std',
-	'pallet-asset-depository/std',
+
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',
@@ -170,5 +176,9 @@ std = [
 	'pallet-remote-asset-manager/std',
 	'pallet-saft-registry/std',
 	'pallet-chainlink-feed/std',
-	'xcm-calls/std'
+	'xcm-calls/std',
+
+	'orml-currencies/std',
+	'orml-tokens/std',
+	'orml-traits/std',
 ]

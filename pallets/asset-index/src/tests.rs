@@ -6,19 +6,30 @@ use crate::mock::*;
 use crate::types::{AssetWithdrawal, RedemptionState};
 use frame_support::sp_runtime::FixedU128;
 use frame_support::{assert_noop, assert_ok};
+use orml_traits::MultiCurrency;
 use pallet::types::{AssetAvailability, IndexAssetData};
-use pallet_asset_depository::MultiAssetDepository;
 use pallet_price_feed::PriceFeed;
 use sp_runtime::traits::BadOrigin;
 use sp_runtime::FixedPointNumber;
 use xcm::v0::MultiLocation;
 
-const ASHLEY: AccountId = 0;
+pub fn new_test_ext() -> sp_io::TestExternalities {
+    let mut ext = ExtBuilder::default().build();
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub fn new_test_ext_with_balance(
+    balances: Vec<(AccountId, AssetId, Balance)>,
+) -> sp_io::TestExternalities {
+    let mut ext = ExtBuilder::default().with_balances(balances).build();
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
 
 #[test]
 fn non_admin_cannot_call_get_asset() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ASHLEY, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         assert_noop!(
             AssetIndex::add_asset(
                 Origin::signed(ASHLEY),
@@ -35,8 +46,7 @@ fn non_admin_cannot_call_get_asset() {
 
 #[test]
 fn admin_can_add_asset() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -60,8 +70,7 @@ fn admin_can_add_asset() {
 
 #[test]
 fn admin_can_add_asset_twice_and_units_accumulate() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -89,7 +98,7 @@ fn admin_can_add_asset_twice_and_units_accumulate() {
 
 #[test]
 fn non_admin_cannot_set_metadata() {
-    new_test_ext(vec![]).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_noop!(
             AssetIndex::set_metadata(
                 Origin::signed(ASHLEY),
@@ -105,7 +114,7 @@ fn non_admin_cannot_set_metadata() {
 
 #[test]
 fn admin_can_set_metadata() {
-    new_test_ext(vec![]).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::set_metadata(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -118,7 +127,7 @@ fn admin_can_set_metadata() {
 
 #[test]
 fn admin_can_update_metadata() {
-    new_test_ext(vec![]).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::set_metadata(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -149,8 +158,7 @@ fn admin_can_update_metadata() {
 
 #[test]
 fn deposit_only_works_for_added_liquid_assets() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
             pallet::Error::<Test>::UnsupportedAsset
@@ -171,8 +179,7 @@ fn deposit_only_works_for_added_liquid_assets() {
 
 #[test]
 fn deposit_works_with_user_balance() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -182,17 +189,16 @@ fn deposit_works_with_user_balance() {
         ));
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
-            pallet_asset_depository::Error::<Test>::NotEnoughBalance
+            orml_tokens::Error::<Test>::BalanceTooLow
         );
-
         // deposit some funds in the account
-        assert_ok!(AssetDepository::deposit(&ASSET_A_ID, &ASHLEY, 1_000));
+        assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 1_000));
         assert_ok!(AssetIndex::deposit(
             Origin::signed(ASHLEY),
             ASSET_A_ID,
             1_000
         ));
-        assert_eq!(AssetDepository::total_balance(&ASSET_A_ID, &ASHLEY), 0);
+        assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
 
         let expected_balance = MockPriceFeed::get_price(ASSET_A_ID)
             .unwrap()
@@ -206,8 +212,7 @@ fn deposit_works_with_user_balance() {
 
 #[test]
 fn deposit_fails_for_unknown_assets() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -224,8 +229,7 @@ fn deposit_fails_for_unknown_assets() {
 
 #[test]
 fn deposit_ok_for_when_price_feed_unavailable() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             UNKNOWN_ASSET_ID,
@@ -233,7 +237,7 @@ fn deposit_ok_for_when_price_feed_unavailable() {
             AssetAvailability::Liquid(MultiLocation::Null),
             5
         ));
-        assert_ok!(AssetDepository::deposit(&UNKNOWN_ASSET_ID, &ASHLEY, 1_000));
+        assert_ok!(Currency::deposit(UNKNOWN_ASSET_ID, &ASHLEY, 1_000));
         assert_ok!(AssetIndex::deposit(
             Origin::signed(ASHLEY),
             UNKNOWN_ASSET_ID,
@@ -244,8 +248,7 @@ fn deposit_ok_for_when_price_feed_unavailable() {
 
 #[test]
 fn deposit_fails_on_overflowing() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A_ID,
@@ -263,8 +266,7 @@ fn deposit_fails_on_overflowing() {
 
 #[test]
 fn can_calculates_nav() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         let a_units = 100;
         let b_units = 3000;
         let liquid_units = 5;
@@ -300,7 +302,7 @@ fn can_calculates_nav() {
         let liquid_nav = AssetIndex::liquid_nav().unwrap();
         assert_eq!(liquid_nav, a_units * ASSET_A_PRICE_MULTIPLIER / total_pint);
 
-        assert_ok!(AssetDepository::deposit(&ASSET_A_ID, &ASHLEY, 100_000));
+        assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 100_000));
         assert_ok!(AssetIndex::deposit(
             Origin::signed(ASHLEY),
             ASSET_A_ID,
@@ -322,8 +324,7 @@ fn can_calculates_nav() {
 
 #[test]
 fn can_withdraw() {
-    let initial_balances: Vec<(AccountId, Balance)> = vec![(ADMIN_ACCOUNT_ID, 0)];
-    new_test_ext(initial_balances).execute_with(|| {
+    new_test_ext_with_balance(vec![]).execute_with(|| {
         let a_units = 100;
         let b_units = 3000;
         let a_tokens = 500;
@@ -346,8 +347,8 @@ fn can_withdraw() {
         ));
 
         // deposit some funds into the index from an user account
-        assert_ok!(AssetDepository::deposit(&ASSET_A_ID, &ASHLEY, 1_000));
-        assert_ok!(AssetDepository::deposit(&ASSET_B_ID, &ASHLEY, 2_000));
+        assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 1_000));
+        assert_ok!(Currency::deposit(ASSET_B_ID, &ASHLEY, 2_000));
         assert_ok!(AssetIndex::deposit(
             Origin::signed(ASHLEY),
             ASSET_A_ID,
