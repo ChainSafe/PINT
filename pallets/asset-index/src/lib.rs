@@ -52,6 +52,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
     use primitives::traits::MultiAssetRegistry;
+    use primitives::Amount;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
