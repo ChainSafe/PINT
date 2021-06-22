@@ -1,10 +1,12 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use super::*;
-use crate::types::{AssetAvailability, IndexAssetData};
+use crate::types::AssetAvailability;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::traits::Currency;
+use frame_support::sp_runtime::traits::AccountIdConversion;
+use frame_support::traits::{Currency, Get};
 use frame_system::RawOrigin;
+use orml_traits::MultiCurrency;
 use xcm::v0::MultiLocation;
 
 benchmarks! {
@@ -22,11 +24,17 @@ benchmarks! {
     ) verify {
         assert_eq!(
             <Holdings<T>>::get(asset_id),
-            Some(IndexAssetData::new(
-                million,
+            Some(
+
                 AssetAvailability::Liquid(MultiLocation::Null)
-            ))
+            )
         );
+       assert_eq!(
+            T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account())
+            ,
+            million
+        );
+
     }
 
     set_metadata {
