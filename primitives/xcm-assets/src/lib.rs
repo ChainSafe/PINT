@@ -8,15 +8,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use crate::traits::{Error, XcmAssetHandler};
-use frame_support::sp_runtime::sp_std::marker::PhantomData;
-use frame_support::sp_runtime::traits::Convert;
-use frame_support::traits::Get;
+use frame_support::{
+    sp_runtime::{sp_std::marker::PhantomData, traits::Convert},
+    sp_std::prelude::*,
+    traits::Get,
+};
 use xcm::opaque::v0::{MultiLocation, Outcome};
 use xcm::v0::{ExecuteXcm, Junction, MultiAsset, NetworkId, Order, Xcm};
 use xcm_executor::traits::Convert as XcmConvert;
 
 pub mod config;
 pub mod traits;
+pub use config::Config;
 
 /// The type responsible for executing cross chain transfers
 pub struct XcmAssetExecutor<Config>(PhantomData<Config>);

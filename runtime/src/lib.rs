@@ -13,7 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
+use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Identity};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, Zero},
@@ -43,7 +43,7 @@ use xcm_builder::{
     SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
     SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
 };
-use xcm_executor::{traits::Convert, Config, XcmExecutor};
+use xcm_executor::{traits::Convert, XcmExecutor};
 
 // A few exports that help ease life for downstream crates.
 use codec::Decode;
@@ -383,7 +383,7 @@ pub type Barrier = (
 );
 
 pub struct XcmConfig;
-impl Config for XcmConfig {
+impl xcm_executor::Config for XcmConfig {
     type Call = Call;
     type XcmSender = XcmRouter;
     // How to withdraw and deposit an asset.
@@ -396,6 +396,21 @@ impl Config for XcmConfig {
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
     type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
     type ResponseHandler = (); // Don't handle responses for now.
+}
+
+pub struct XcmAssetConfig;
+impl xcm_assets::Config for XcmAssetConfig {
+    type Call = Call;
+    type AssetId = AssetId;
+    type AssetIdConvert = AssetIdConvert;
+    type SelfAssetId = PINTAssetId;
+    type AccountId = AccountId;
+    type Amount = Balance;
+    type AmountU128Convert = Identity;
+    type SelfLocation = SelfLocation;
+    type AccountId32Convert = AccountId32Convert;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type WeightLimit = UnitWeightCost;
 }
 
 pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RelayNetwork>,);
@@ -748,6 +763,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type RelayChainAssetId = RelayChainAssetId;
     type XcmExecutor = XcmExecutor<XcmConfig>;
+    type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type XcmSender = XcmRouter;

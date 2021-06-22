@@ -36,6 +36,7 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
+    use xcm_assets::XcmAssetHandler;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
         staking::{
@@ -111,6 +112,9 @@ pub mod pallet {
 
         /// Executor for cross chain messages.
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
+
+        /// The type that handles all the cross chain asset transfers
+        type XcmAssets: XcmAssetHandler<Self::AccountId, Self::Balance, Self::AssetId>;
 
         /// Origin that is allowed to send cross chain messages on behalf of the PINT chain
         type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -247,6 +251,8 @@ pub mod pallet {
         NothingToWithdraw,
         /// Balance would fall below the minimum requirements for bond
         InsufficientBond,
+        /// Error occurred during XCM
+        XcmError,
     }
 
     #[pallet::hooks]
@@ -551,12 +557,17 @@ pub mod pallet {
     }
 
     impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
-        fn reserve_withdraw_and_deposit(
-            _who: AccountIdFor<T>,
-            _asset: T::AssetId,
-            _amount: T::Balance,
+        fn transfer_asset(
+            who: AccountIdFor<T>,
+            asset: T::AssetId,
+            amount: T::Balance,
         ) -> DispatchResult {
-            todo!()
+            let outcome = T::XcmAssets::execute_xcm_transfer(who, asset, amount)
+                .map_err(|_| Error::<T>::XcmError)?;
+            outcome
+                .ensure_complete()
+                .map_err(|_| Error::<T>::XcmError)?;
+            Ok(())
         }
 
         fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
