@@ -71,10 +71,15 @@ ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
 }
 
-pub struct MockAssetRecorder();
+pub struct MockAssetRecorder;
 
-impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
-    fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
+impl<AssetId, Balance> AssetRecorder<AccountId, AssetId, Balance> for MockAssetRecorder {
+    fn add_asset(
+        _: &AccountId,
+        _: AssetId,
+        _: Balance,
+        _: AssetAvailability,
+    ) -> Result<(), DispatchError> {
         Ok(())
     }
     fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {

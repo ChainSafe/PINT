@@ -28,7 +28,7 @@ pub mod pallet {
     pub trait Config: frame_system::Config {
         // Origin that is allowed to manage the SAFTs
         type AdminOrigin: EnsureOrigin<Self::Origin>;
-        type AssetRecorder: AssetRecorder<Self::AssetId, Self::Balance>;
+        type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
         type Balance: Parameter + AtLeast32BitUnsigned;
         type AssetId: Parameter + From<u32>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -95,10 +95,16 @@ pub mod pallet {
             nav: T::Balance,
             units: T::Balance,
         ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
 
             ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
-            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::Saft)?;
+            <T as Config>::AssetRecorder::add_asset(
+                &caller,
+                asset_id.clone(),
+                units,
+                AssetAvailability::Saft,
+            )?;
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
 
             Ok(().into())
