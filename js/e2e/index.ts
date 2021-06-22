@@ -23,6 +23,12 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
         },
         /* committee */
         {
+            pallet: "committee",
+            call: "propose",
+            args: [],
+        },
+        /* local_treasury */
+        {
             pallet: "localTreasury",
             call: "withdraw",
             args: [42, bob.address],

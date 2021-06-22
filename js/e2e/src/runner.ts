@@ -89,7 +89,7 @@ export default class Runner implements Config {
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs(ps);
+                await runner.runTxs();
             }
         });
 
@@ -144,25 +144,37 @@ export default class Runner implements Config {
      *
      * @returns void
      */
-    public async runTxs(ps?: ChildProcess): Promise<void> {
+    public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
-
-            if (ex.block) await this.waitBlock(ex.block);
-            const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
-            const res = (await this.timeout(
-                this.runTx(tx),
-                ex.timeout
-            )) as TxResult;
-
-            (await res.unsub)();
-            console.log(`\t | block hash: ${res.blockHash}`);
+            for (const requiredEx of ex.required) {
+                await this.runTx(requiredEx, true);
+            }
+            await this.runTx(ex);
         }
 
         // exit
         console.log("COMPLETE TESTS!");
         process.exit(0);
+    }
+
+    /**
+     * Run Extrinsic
+     *
+     * @param {ex} Extrinsic
+     */
+    public async runTx(ex: Extrinsic, finalized = false): Promise<void> {
+        console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+        console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
+
+        if (ex.block) await this.waitBlock(ex.block);
+        const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
+        const res = (await this.timeout(
+            this.sendTx(tx, finalized),
+            ex.timeout
+        )) as TxResult;
+
+        (await res.unsub)();
+        console.log(`\t | block hash: ${res.blockHash}`);
     }
 
     /**
@@ -207,7 +219,7 @@ export default class Runner implements Config {
      * @param {ISubmittableResult} sr
      * @returns {Promise<T>}
      */
-    private async runTx(
+    private async sendTx(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
         finalized = false
     ): Promise<TxResult> {

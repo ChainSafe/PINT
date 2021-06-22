@@ -13,6 +13,8 @@ export interface Extrinsic {
     args: any[];
     block?: number;
     timeout?: number;
+    /// Required finalized calls before this call
+    required: Extrinsic[];
 }
 
 /**
