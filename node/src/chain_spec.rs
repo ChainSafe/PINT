@@ -198,6 +198,7 @@ fn pint_testnet_genesis(
                 })
                 .collect(),
         },
+        tokens: parachain_runtime::TokensConfig::default(),
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
         aura: Default::default(),
