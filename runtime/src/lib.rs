@@ -13,11 +13,12 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify};
+use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
+    traits::{AccountIdConversion, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult, MultiSignature,
+    ApplyExtrinsicResult,
 };
 
 use sp_std::prelude::*;
@@ -55,11 +56,15 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+
 use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 use primitives::traits::MultiAssetRegistry;
+pub use primitives::*;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -70,41 +75,6 @@ use xcm_calls::{
     PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 };
 use xcm_executor::traits::MatchesFungible;
-
-/// An index to a block.
-pub type BlockNumber = u32;
-
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
-
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
-pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
-
-/// Index of a transaction in the chain.
-pub type Index = u32;
-
-/// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
-
-/// Identifier for an asset.
-pub type AssetId = u32;
-
-/// Identifier for price feeds.
-pub type FeedId = u64;
-
-/// Value type for price feeds.
-pub type Value = u128;
 
 /// Weights of pallets
 mod weights;
@@ -275,6 +245,8 @@ impl pallet_timestamp::Config for Runtime {
 parameter_types! {
     /// Same as Polkadot Relay Chain.
     pub const ExistentialDeposit: Balance = 500;
+    // For weight estimation, we assume that the most locks on an individual account will be 50.
+    // This number may need to be adjusted in the future if this assumption no longer holds true.
     pub const MaxLocks: u32 = 50;
 }
 
@@ -287,6 +259,8 @@ impl pallet_balances::Config for Runtime {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -351,8 +325,8 @@ pub type LocationToAccountId = (
 pub type LocalAssetTransactor = MultiAssetAdapter<
     // Use this balance type
     Balance,
-    // Use this depository for asset balances
-    AssetDepository,
+    // Use this multicurrency for asset balances
+    Currencies,
     // Use this for a registry of supported asset
     AssetIndex,
     // Use this to convert from fungible to balance type
@@ -520,6 +494,7 @@ impl pallet_collator_selection::Config for Runtime {
 
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
 impl pallet_local_treasury::Config for Runtime {
@@ -568,12 +543,6 @@ impl pallet_committee::Config for Runtime {
     type Action = Call;
     type Event = Event;
     type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
-}
-
-impl pallet_asset_depository::Config for Runtime {
-    type Event = Event;
-    type AssetId = AssetId;
-    type Balance = Balance;
 }
 
 impl pallet_price_feed::Config for Runtime {
@@ -633,7 +602,7 @@ impl pallet_asset_index::Config for Runtime {
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
     type RemoteAssetManager = RemoteAssetManager;
-    type MultiAssetDepository = AssetDepository;
+    type Currency = Currencies;
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type WithdrawalFee = ();
@@ -645,6 +614,32 @@ parameter_types! {
     pub const RelayChainAssetId: AssetId = 0;
     pub const PINTAssetId: AssetId = 1;
     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+}
+
+// --- ORML configurations
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+}
+
+impl orml_tokens::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = AssetId;
+    type ExistentialDeposits = ExistentialDeposits;
+    type OnDust = orml_tokens::TransferDust<Runtime, PintTreasuryAccount>;
+    type WeightInfo = ();
+    type MaxLocks = MaxLocks;
+}
+
+impl orml_currencies::Config for Runtime {
+    type Event = Event;
+    type MultiCurrency = Tokens;
+    type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+    type GetNativeCurrencyId = PINTAssetId;
+    type WeightInfo = ();
 }
 
 pub struct AssetIdConvert;
@@ -769,7 +764,6 @@ construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
         Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
@@ -786,9 +780,12 @@ construct_runtime!(
         Aura: pallet_aura::{Pallet, Config<T>},
         AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
 
+        // ORML related pallets
+        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
+        Currencies: orml_currencies::{Pallet, Call, Event<T>},
+
         // PINT pallets
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
         Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
@@ -986,7 +983,31 @@ impl_runtime_apis! {
     }
 }
 
+struct CheckInherents;
+
+impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
+    fn check_inherents(
+        block: &Block,
+        relay_state_proof: &cumulus_pallet_parachain_system::RelayChainStateProof,
+    ) -> sp_inherents::CheckInherentsResult {
+        let relay_chain_slot = relay_state_proof
+            .read_slot()
+            .expect("Could not read the relay chain slot from the proof");
+
+        let inherent_data =
+            cumulus_primitives_timestamp::InherentDataProvider::from_relay_chain_slot_and_duration(
+                relay_chain_slot,
+                sp_std::time::Duration::from_secs(6),
+            )
+            .create_inherent_data()
+            .expect("Could not create the timestamp inherent data");
+
+        inherent_data.check_extrinsics(&block)
+    }
+}
+
 cumulus_pallet_parachain_system::register_validate_block!(
-    Runtime,
-    cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>
+    Runtime = Runtime,
+    BlockExecutor = cumulus_pallet_aura_ext::BlockExecutor::<Runtime, Executive>,
+    CheckInherents = CheckInherents,
 );

@@ -157,26 +157,26 @@ fn pint_testnet_genesis(
     id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
     parachain_runtime::GenesisConfig {
-        frame_system: parachain_runtime::SystemConfig {
+        system: parachain_runtime::SystemConfig {
             code: parachain_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        pallet_balances: parachain_runtime::BalancesConfig {
+        balances: parachain_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        pallet_committee: parachain_runtime::CommitteeConfig {
+        committee: parachain_runtime::CommitteeConfig {
             council_members,
             ..Default::default()
         },
-        pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+        sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
-        pallet_collator_selection: parachain_runtime::CollatorSelectionConfig {
+        collator_selection: parachain_runtime::CollatorSelectionConfig {
             invulnerables: initial_authorities
                 .iter()
                 .cloned()
@@ -185,7 +185,7 @@ fn pint_testnet_genesis(
             candidacy_bond: Zero::zero(),
             ..Default::default()
         },
-        pallet_session: parachain_runtime::SessionConfig {
+        session: parachain_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .cloned()
@@ -198,10 +198,11 @@ fn pint_testnet_genesis(
                 })
                 .collect(),
         },
+        tokens: parachain_runtime::TokensConfig::default(),
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
-        pallet_aura: Default::default(),
-        cumulus_pallet_aura_ext: Default::default(),
-        cumulus_pallet_parachain_system: Default::default(),
+        aura: Default::default(),
+        aura_ext: Default::default(),
+        parachain_system: Default::default(),
     }
 }
