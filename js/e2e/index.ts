@@ -38,6 +38,12 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "untrackAssetPriceFeed",
             args: [42],
         },
+        /* saft-registry */
+        {
+            pallet: "saftRegistry",
+            call: "addSaft",
+            args: [42, 168, 42],
+        },
     ];
 };
 
