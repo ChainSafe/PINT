@@ -5469,6 +5469,7 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "xcm",
+ "xcm-assets",
  "xcm-builder",
  "xcm-calls",
  "xcm-executor",
@@ -5749,24 +5750,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-xcm-asset-support"
-version = "0.0.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "xcm",
- "xcm-builder",
- "xcm-executor",
-]
-
-[[package]]
 name = "parachain-info"
 version = "0.1.0"
 source = "git+https://github.com/paritytech//cumulus?rev=05ab7a377d2c3b73566c0c3bd41b003486d6913b#05ab7a377d2c3b73566c0c3bd41b003486d6913b"
@@ -5841,6 +5824,7 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder 4.0.0",
  "xcm",
+ "xcm-assets",
  "xcm-builder",
  "xcm-calls",
  "xcm-executor",
@@ -12172,6 +12156,24 @@ dependencies = [
  "derivative",
  "impl-trait-for-tuples",
  "parity-scale-codec",
+]
+
+[[package]]
+name = "xcm-assets"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]
