@@ -27,6 +27,17 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "withdraw",
             args: [42, bob.address],
         },
+        /* price-feed */
+        {
+            pallet: "priceFeed",
+            call: "trackAssetPriceFeed",
+            args: [42, 0],
+        },
+        {
+            pallet: "priceFeed",
+            call: "untrackAssetPriceFeed",
+            args: [42],
+        },
     ];
 };
 
