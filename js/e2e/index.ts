@@ -25,7 +25,14 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
         {
             pallet: "committee",
             call: "propose",
-            args: [],
+            args: [
+                api.tx.assetIndex.addAsset(
+                    42,
+                    1000000,
+                    api.createType("AssetAvailability" as any),
+                    1000000
+                ),
+            ],
         },
         /* local_treasury */
         {
