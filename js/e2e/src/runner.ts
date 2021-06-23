@@ -218,10 +218,9 @@ export default class Runner implements Config {
         finalized = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
-            const unsub = se.signAndSend(
-                this.pair,
-                {},
-                (sr: ISubmittableResult) => {
+            const unsub = this.api.tx.sudo
+                .sudo(se)
+                .signAndSend(this.pair, {}, (sr: ISubmittableResult) => {
                     const status = sr.status;
                     const events = sr.events;
 
@@ -270,8 +269,7 @@ export default class Runner implements Config {
                             blockHash: status.asFinalized.toHex().toString(),
                         });
                     }
-                }
-            );
+                });
         });
     }
 }

@@ -21,12 +21,15 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
                 1000000,
             ],
             verify: async () => {
-                if (((await api.query.assetIndex.holdings(42)) as any).isNone) {
-                    throw "The expected asset has not been inserted into storage";
-                }
+                // console.log(
+                //     ((await api.query.assetIndex.holdings(42)) as any).isNone
+                // );
+                // if (((await api.query.assetIndex.holdings(42)) as any).isNone) {
+                //     throw "The expected asset has not been inserted into storage";
+                // }
             },
         },
-        /* committee */
+        /* local-treasury */
         {
             pallet: "localTreasury",
             call: "withdraw",
@@ -54,11 +57,15 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "reportNav",
             args: [42, 0, 168],
         },
-        {
-            pallet: "saftRegistry",
-            call: "removeSaft",
-            args: [42, 0],
-        },
+        // TODO:
+        //
+        // - https://github.com/ChainSafe/PINT/pull/73
+        //
+        // {
+        //     pallet: "saftRegistry",
+        //     call: "removeSaft",
+        //     args: [42, 0],
+        // },
     ];
 };
 
