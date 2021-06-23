@@ -185,7 +185,7 @@ export default class Runner implements Config {
 
         // exit
         console.log("COMPLETE TESTS!");
-        // process.exit(0);
+        process.exit(0);
     }
 
     /**

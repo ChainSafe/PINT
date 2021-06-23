@@ -34,6 +34,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "committee",
             call: "propose",
             args: [api.tx.committee.addConstituent(config.ziggyAddress)],
+            verify: async () => {
+                const proposals = await api.query.committee.activeProposals();
+                assert((proposals as any).length > 0);
+            },
         },
         {
             pallet: "committee",
@@ -66,18 +70,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 },
             ],
         },
+        {
+            pallet: "committee",
+            call: "addConstiruent",
+            args: [config.ziggyAddress],
+        },
         /* local_treasury */
         {
             pallet: "localTreasury",
             call: "withdraw",
             args: [100000000, config.charlieAddress],
             verify: async () => {
-                console.log(
-                    config.bobBalance -
-                        (
-                            await api.derive.balances.all(config.charlieAddress)
-                        ).freeBalance.toBigInt()
-                );
+                // TODO:
+                //
+                // The result of this call is wierd, no value transfered
             },
         },
         /* price-feed */
