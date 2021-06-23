@@ -89,7 +89,7 @@ export default class Runner implements Config {
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs(ps);
+                await runner.runTxs();
             }
         });
 
@@ -144,7 +144,7 @@ export default class Runner implements Config {
      *
      * @returns void
      */
-    public async runTxs(ps?: ChildProcess): Promise<void> {
+    public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
             console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
@@ -152,9 +152,15 @@ export default class Runner implements Config {
             if (ex.block) await this.waitBlock(ex.block);
             const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
             const res = (await this.timeout(
-                this.runTx(tx),
+                this.runTx(tx, true),
                 ex.timeout
             )) as TxResult;
+
+            // execute verify script
+            if (ex.verify)
+                await ex.verify().catch((err) => {
+                    throw err;
+                });
 
             (await res.unsub)();
             console.log(`\t | block hash: ${res.blockHash}`);

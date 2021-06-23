@@ -13,6 +13,7 @@ export interface Extrinsic {
     args: any[];
     block?: number;
     timeout?: number;
+    verify?: () => Promise<void>;
 }
 
 /**

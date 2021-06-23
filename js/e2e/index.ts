@@ -20,6 +20,11 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
                 api.createType("AssetAvailability" as any),
                 1000000,
             ],
+            verify: async () => {
+                if (((await api.query.assetIndex.holdings(42)) as any).isNone) {
+                    throw "The expected asset has not been inserted into storage";
+                }
+            },
         },
         /* committee */
         {
