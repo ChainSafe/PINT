@@ -16,6 +16,8 @@ export interface Extrinsic {
     block?: number;
     timeout?: number;
     verify?: () => Promise<void>;
+    /// Required finalized calls or functions before this extrinsic
+    required?: (Extrinsic | (() => Promise<Extrinsic>))[];
 }
 
 /**
@@ -34,4 +36,5 @@ export interface ExtrinsicConfig {
     bobAddress: string;
     bobBalance: bigint;
     charlieAddress: string;
+    ziggyAddress: string;
 }

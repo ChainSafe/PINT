@@ -13,6 +13,7 @@ import { launch } from "./launch";
 import { ChildProcess } from "child_process";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
+import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise, config: ExtrinsicConfig) => Extrinsic[];
@@ -124,10 +125,14 @@ export default class Runner implements Config {
         const pair = keyring.addFromUri(uri);
         const bob = keyring.addFromUri("//Bob");
         const charlie = keyring.addFromUri("//Charlie");
+        const ziggy = keyring.addFromUri("//Ziggy");
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
-                ChainlinkTypes,
+                {
+                    ...ChainlinkTypes,
+                    ...OrmlTypes,
+                },
                 (definitions.types as any)[0].types
             ),
         });
@@ -138,12 +143,18 @@ export default class Runner implements Config {
         ).freeBalance.toBigInt();
         const bobAddress = bob.address;
         const charlieAddress = charlie.address;
+        const ziggyAddress = ziggy.address;
 
         // new Runner
         return new Runner({
             api,
             pair,
-            exs: exs(api, { bobAddress, bobBalance, charlieAddress }),
+            exs: exs(api, {
+                bobAddress,
+                bobBalance,
+                charlieAddress,
+                ziggyAddress,
+            }),
         });
     }
 
@@ -160,36 +171,61 @@ export default class Runner implements Config {
      */
     public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
-
-            if (ex.block) await this.waitBlock(ex.block);
-
-            // construct tx
-            let tx = this.api.tx[ex.pallet][ex.call](...ex.args);
-            if (!ex.signed) {
-                tx = this.api.tx.sudo.sudo(tx);
+            if (ex.required) {
+                for (const required of ex.required) {
+                    if (typeof required === "function") {
+                        await required();
+                    } else {
+                        await this.runTx(required, true);
+                    }
+                }
             }
-
-            // get res
-            const res = (await this.timeout(
-                this.runTx(tx, true),
-                ex.timeout
-            )) as TxResult;
-
-            // execute verify script
-            if (ex.verify)
-                await ex.verify().catch((err) => {
-                    throw err;
-                });
-
-            (await res.unsub)();
-            console.log(`\t | block hash: ${res.blockHash}`);
+            await this.runTx(ex);
         }
 
         // exit
         console.log("COMPLETE TESTS!");
         // process.exit(0);
+    }
+
+    /**
+     * Run Extrinsic
+     *
+     * @param {ex} Extrinsic
+     */
+    public async runTx(ex: Extrinsic, finalized = false): Promise<void> {
+        if (finalized) {
+            console.log(
+                `----> run required extrinsic ${ex.pallet}.${ex.call}...`
+            );
+        } else {
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+        }
+        console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
+
+        if (ex.block) await this.waitBlock(ex.block);
+
+        // flush arguments
+        const args: any[] = [];
+        for (const arg of ex.args) {
+            if (typeof arg === "function") {
+                args.push(await arg());
+            } else {
+                args.push(arg);
+            }
+        }
+
+        // construct tx
+        const tx = this.api.tx[ex.pallet][ex.call](...args);
+
+        // set timeout
+        const res = (await this.timeout(
+            this.sendTx(tx, finalized),
+            ex.timeout
+        )) as TxResult;
+
+        (await res.unsub)();
+        console.log(`\t | block hash: ${res.blockHash}`);
     }
 
     /**
@@ -234,7 +270,7 @@ export default class Runner implements Config {
      * @param {ISubmittableResult} sr
      * @returns {Promise<T>}
      */
-    private async runTx(
+    private async sendTx(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
         finalized = false
     ): Promise<TxResult> {
