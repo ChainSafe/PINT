@@ -1,0 +1,29 @@
+{
+  "name": "@pint/e2e",
+  "version": "1.0.0",
+  "description": "E2E tests for PINT",
+  "main": "index.js",
+  "repository": "https://github.com/ChainSafe/PINT",
+  "author": "ChainSafe",
+  "license": "GNU-v3",
+  "private": true,
+  "devDependencies": {
+    "@polkadot/types": "^4.11.2",
+    "@types/node": "^15.3.1",
+    "ts-node": "^10.0.0",
+    "tslint": "^6.1.3",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "@pint/types": "^1.0.0",
+    "@polkadot/api": "^4.11.2",
+    "@polkadot/keyring": "^6.5.1",
+    "@polkadot/util-crypto": "^6.5.1",
+    "find-up": "^5.0.0"
+  },
+  "scripts": {
+    "start": "ts-node index.ts",
+    "build": "tsc --strict",
+    "lint": "tsc --noEmit --strict && tslint --project ./tsconfig.json"
+  }
+}

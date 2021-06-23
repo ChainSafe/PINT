@@ -1,2 +1,4 @@
+/.cargo/config.toml
 /target
 /Dockerfile
+/launch/bin

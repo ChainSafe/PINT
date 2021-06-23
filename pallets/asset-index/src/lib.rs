@@ -15,19 +15,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 pub mod traits;
-mod types;
+pub mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant)]
 pub mod pallet {
-    use crate::traits::WithdrawalFee;
-    pub use crate::traits::{AssetRecorder, MultiAssetRegistry};
-    pub use crate::types::MultiAssetAdapter;
-    use crate::types::{
-        AssetAvailability, AssetWithdrawal, IndexAssetData, PendingRedemption, RedemptionState,
-    };
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -43,10 +39,21 @@ pub mod pallet {
         PalletId,
     };
     use frame_system::pallet_prelude::*;
-    use pallet_asset_depository::MultiAssetDepository;
-    use pallet_price_feed::{AssetPricePair, PriceFeed};
-    use pallet_remote_asset_manager::RemoteAssetManager;
+    use orml_traits::{MultiCurrency, MultiCurrencyExtended};
     use xcm::opaque::v0::MultiLocation;
+
+    use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+    use pallet_remote_asset_manager::RemoteAssetManager;
+
+    pub use crate::traits::AssetRecorder;
+    use crate::traits::WithdrawalFee;
+    pub use crate::types::MultiAssetAdapter;
+    use crate::types::{
+        AssetAvailability, AssetMetadata, AssetWithdrawal, IndexAssetData, PendingRedemption,
+        RedemptionState,
+    };
+    use primitives::traits::MultiAssetRegistry;
+    use primitives::Amount;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -87,13 +94,16 @@ pub mod pallet {
             Self::Balance,
         >;
         /// Type used to identify assets
-        type AssetId: Parameter + Member;
-        /// Handles asset depositing and withdrawing from sovereign user accounts
-        type MultiAssetDepository: MultiAssetDepository<
-            Self::AssetId,
-            AccountIdFor<Self>,
-            Self::Balance,
+        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
+
+        /// Currency type for deposit/withdraw assets to/from the user's sovereign account
+        type Currency: MultiCurrencyExtended<
+            Self::AccountId,
+            CurrencyId = Self::AssetId,
+            Balance = Self::Balance,
+            Amount = Amount,
         >;
+
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
         /// The type that calculates the withdrawal fee
@@ -102,10 +112,16 @@ pub mod pallet {
         #[pallet::constant]
         type TreasuryPalletId: Get<PalletId>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+        /// The maximum length of a name or symbol stored on-chain.
+        type StringLimit: Get<u32>;
+
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
+    #[pallet::generate_store(pub (super) trait Store)]
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
@@ -123,9 +139,21 @@ pub mod pallet {
         OptionQuery,
     >;
 
+    #[pallet::storage]
+    /// Metadata of an asset ( for reversed usage now ).
+    pub(super) type Metadata<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AssetId,
+        AssetMetadata<BoundedVec<u8, T::StringLimit>>,
+        ValueQuery,
+        GetDefault,
+        ConstU32<300_000>,
+    >;
+
     #[pallet::event]
-    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor<T> = "AccountId", T::Balance = "Balance")]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
+    #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor < T > = "AccountId", T::Balance = "Balance")]
+    #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
@@ -146,12 +174,27 @@ pub mod pallet {
         /// Started the withdrawal process
         /// \[Account, PINTAmount\]
         WithdrawalInitiated(AccountIdFor<T>, T::Balance),
+        /// Completed a single asset withdrawal
+        /// \[Account, AssetId, AssetUnits\]
+        Withdrawn(AccountIdFor<T>, T::AssetId, T::Balance),
+        /// Completed a pending asset withdrawal
+        /// \[Account, Assets\]
+        WithdrawalCompleted(
+            AccountIdFor<T>,
+            Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
+        ),
+        /// New metadata has been set for an asset. \[asset_id, name, symbol, decimals\]
+        MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
     }
 
     #[pallet::error]
     pub enum Error<T> {
         /// Thrown if adding units to an asset holding causes its numerical type to overflow
         AssetUnitsOverflow,
+        /// The given asset ID is unknown.
+        UnknownAsset,
+        /// Invalid metadata given.
+        BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
         /// Thrown if calculating the volume of units of an asset with it's price overflows.
@@ -164,8 +207,8 @@ pub mod pallet {
         NAVOverflow,
         /// Thrown when trying to remove liquid assets without recipient
         NoRecipient,
-        /// Thrown when the total issuance does not enough to be burned
-        EmptyIssuance,
+        /// Thrown when to withdrawals are available to complete
+        NoPendingWithdrawals,
     }
 
     #[pallet::hooks]
@@ -173,7 +216,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_asset())]
         /// Callable by an admin to add new assets to the index and mint some IndexToken
         /// Caller balance is updated to allocate the correct amount of the IndexToken
         /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
@@ -186,12 +229,23 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+
+            // Store intial price pair if not exists
+            T::PriceFeed::ensure_price(
+                asset_id,
+                Price::from_inner(value.saturating_mul(units).into()),
+            )?;
+
             <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
                 &asset_id,
                 &units,
                 &availability,
             )?;
-            T::IndexToken::deposit_into_existing(&caller, value)?;
+            // increase the total issuance
+            let issued = T::IndexToken::issue(value);
+            // add minted PINT to user's balance
+            T::IndexToken::resolve_creating(&caller, issued);
+
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
         }
@@ -246,6 +300,51 @@ pub mod pallet {
             Ok(().into())
         }
 
+        /// Force the metadata for an asset to some value.
+        ///
+        /// Origin must be ForceOrigin.
+        ///
+        /// Any deposit is left alone.
+        ///
+        /// - `id`: The identifier of the asset to update.
+        /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
+        /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
+        /// - `decimals`: The number of decimals this asset uses to represent one unit.
+        ///
+        /// Emits `MetadataSet`.
+        ///
+        /// Weight: `O(N + S)` where N and S are the length of the name and symbol respectively.
+        #[pallet::weight(T::WeightInfo::add_asset())]
+        pub fn set_metadata(
+            origin: OriginFor<T>,
+            #[pallet::compact] id: T::AssetId,
+            name: Vec<u8>,
+            symbol: Vec<u8>,
+            decimals: u8,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let bounded_name: BoundedVec<u8, T::StringLimit> = name
+                .clone()
+                .try_into()
+                .map_err(|_| <Error<T>>::BadMetadata)?;
+            let bounded_symbol: BoundedVec<u8, T::StringLimit> = symbol
+                .clone()
+                .try_into()
+                .map_err(|_| <Error<T>>::BadMetadata)?;
+
+            <Metadata<T>>::try_mutate_exists(id, |metadata| {
+                *metadata = Some(AssetMetadata {
+                    name: bounded_name,
+                    symbol: bounded_symbol,
+                    decimals,
+                });
+
+                Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
+                Ok(())
+            })
+        }
+
         /// Initiate a transfer from the user's sovereign account into the index.
         ///
         /// This will withdraw the given amount from the user's sovereign account and mints PINT
@@ -262,7 +361,7 @@ pub mod pallet {
                 .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
                 .ok_or(Error::<T>::UnsupportedAsset)?;
 
-            let pint_amount = Self::calculate_pint_equivalent(asset_id.clone(), amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
 
             // make sure we can store the additional deposit
             holding.units = holding
@@ -270,10 +369,10 @@ pub mod pallet {
                 .checked_add(&amount)
                 .ok_or(Error::<T>::AssetUnitsOverflow)?;
 
-            // withdraw from the caller's sovereign account
-            T::MultiAssetDepository::withdraw(&asset_id, &caller, amount)?;
+            // transfer from the caller's sovereign account into the treasury's account
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
             // update the holding
-            Holdings::<T>::insert(asset_id.clone(), holding);
+            Holdings::<T>::insert(asset_id, holding);
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
@@ -371,7 +470,7 @@ pub mod pallet {
             for (price, units) in asset_prices {
                 let asset = price.quote;
                 // try to start the unbonding process
-                let state = if T::RemoteAssetManager::unbond(asset.clone(), units).is_ok() {
+                let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
                     // the XCM call was dispatched successfully, however, this is
                     //  *NOT* synonymous with a successful completion of the unbonding process.
                     //  instead, this state implies that XCM is now being processed on a different parachain
@@ -407,7 +506,6 @@ pub mod pallet {
                     assets,
                 })
             });
-
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
@@ -415,14 +513,87 @@ pub mod pallet {
         /// Completes the unbonding process on other parachains and
         /// transfers the redeemed assets into the sovereign account of the owner.
         ///
-        /// All pending withdrawals need to have completed their lockup period
+        /// Only pending withdrawals that have completed their lockup period will be withdrawn.
         #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn complete_withdraw(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-            todo!()
+        pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+            let caller = ensure_signed(origin)?;
+
+            let current_block = frame_system::Pallet::<T>::block_number();
+            let period = T::WithdrawalPeriod::get();
+
+            PendingWithdrawals::<T>::try_mutate_exists(
+                &caller,
+                |maybe_pending| -> DispatchResult {
+                    let pending = maybe_pending
+                        .take()
+                        .ok_or(<Error<T>>::NoPendingWithdrawals)?;
+
+                    // try to redeem each redemption, but only close it if all assets could be redeemed
+                    let still_pending: Vec<_> = pending
+                        .into_iter()
+                        .filter_map(|mut redemption| {
+                            // only try to close if the lockup period is over
+                            if redemption.initiated + period > current_block {
+                                // whether all assets reached state `Transferred`
+                                let mut all_withdrawn = true;
+                                for asset in &mut redemption.assets {
+                                    match asset.state {
+                                        RedemptionState::Initiated => {
+                                            // unbonding processes failed
+                                            // TODO retry or handle this separately?
+                                            all_withdrawn = false;
+                                        }
+                                        RedemptionState::Unbonding => {
+                                            // redemption period over and funds are unbonded;
+                                            // ready to be moved in the user's sovereign account
+                                            if T::Currency::transfer(
+                                                asset.asset,
+                                                &Self::treasury_account(),
+                                                &caller,
+                                                asset.units,
+                                            )
+                                            .is_ok()
+                                            {
+                                                // assets are now transferred into the user's sovereign account
+                                                asset.state = RedemptionState::Transferred;
+                                            }
+                                        }
+                                        RedemptionState::Transferred => {}
+                                    }
+                                }
+
+                                if all_withdrawn {
+                                    // all redemptions completed, remove from storage
+                                    Self::deposit_event(Event::WithdrawalCompleted(
+                                        caller.clone(),
+                                        redemption.assets,
+                                    ));
+                                    None
+                                } else {
+                                    Some(redemption)
+                                }
+                            } else {
+                                Some(redemption)
+                            }
+                        })
+                        .collect();
+
+                    if !still_pending.is_empty() {
+                        *maybe_pending = Some(still_pending);
+                    }
+                    Ok(())
+                },
+            )?;
+            Ok(().into())
         }
     }
 
     impl<T: Config> Pallet<T> {
+        /// The account of the treausry that keeps track of all the assets contributed to the index
+        pub fn treasury_account() -> AccountIdFor<T> {
+            T::TreasuryPalletId::get().into_account()
+        }
+
         /// The amount of index tokens held by the given user
         pub fn index_token_balance(account: &T::AccountId) -> T::Balance {
             T::IndexToken::total_balance(account)
@@ -578,6 +749,23 @@ pub mod pallet {
             Holdings::<T>::get(asset)
                 .map(|holding| holding.is_liquid())
                 .unwrap_or_default()
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn add_asset() -> Weight;
+        fn set_metadata() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn add_asset() -> Weight {
+            Default::default()
+        }
+
+        fn set_metadata() -> Weight {
+            Default::default()
         }
     }
 }

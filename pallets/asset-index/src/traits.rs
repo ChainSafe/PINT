@@ -1,10 +1,9 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-pub use crate::types::AssetAvailability;
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
-use xcm::v0::MultiLocation;
+pub use crate::types::{AssetAvailability, AssetMetadata};
+use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned};
+use xcm::opaque::v0::MultiLocation;
 
 pub trait AssetRecorder<AssetId, Balance> {
     /// Add an asset to the recorder. If an asset with the given AssetId already exists
@@ -20,15 +19,6 @@ pub trait AssetRecorder<AssetId, Balance> {
         units: &Balance,
         recipient: Option<MultiLocation>,
     ) -> DispatchResult;
-}
-
-/// Type that provides the mapping between `AssetId` and `MultiLocation`.
-pub trait MultiAssetRegistry<AssetId> {
-    /// Determines the relative location of the consensus system where the given asset is native from the point of view of the current system
-    fn native_asset_location(asset: &AssetId) -> Option<MultiLocation>;
-
-    /// Whether the given identifier is currently supported as a liquid asset
-    fn is_liquid_asset(asset: &AssetId) -> bool;
 }
 
 /// Type that calculations any fees to be deducted for every withdrawal.

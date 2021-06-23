@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use cumulus_primitives_core::ParaId;
-use parachain_runtime::{AccountId, Signature};
+use parachain_runtime::{AccountId, AuraId, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify};
+use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
@@ -17,6 +17,13 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
     TPublic::Pair::from_string(&format!("//{}", seed), None)
         .expect("static values are valid; qed")
         .public()
+}
+
+/// Generate collator keys from seed.
+///
+/// This function's return type must always match the session keys of the chain in tuple format.
+pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
+    get_from_seed::<AuraId>(seed)
 }
 
 /// The extensions for the [`ChainSpec`].
@@ -56,11 +63,22 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
         move || {
             pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // initial collators.
+                vec![(
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_collator_keys_from_seed("Alice"),
+                )],
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Bob//stash"),
+                ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
                 ],
                 id,
             )
@@ -86,6 +104,17 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
         move || {
             pint_testnet_genesis(
                 get_account_id_from_seed::<sr25519::Public>("Alice"),
+                // initial collators.
+                vec![
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Alice"),
+                        get_collator_keys_from_seed("Alice"),
+                    ),
+                    (
+                        get_account_id_from_seed::<sr25519::Public>("Bob"),
+                        get_collator_keys_from_seed("Bob"),
+                    ),
+                ],
                 vec![
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -99,6 +128,12 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
                     get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
                     get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+                ],
+                vec![
+                    get_account_id_from_seed::<sr25519::Public>("Alice"),
+                    get_account_id_from_seed::<sr25519::Public>("Bob"),
+                    get_account_id_from_seed::<sr25519::Public>("Charlie"),
+                    get_account_id_from_seed::<sr25519::Public>("Dave"),
                 ],
                 id,
             )
@@ -116,24 +151,58 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 
 fn pint_testnet_genesis(
     root_key: AccountId,
+    initial_authorities: Vec<(AccountId, AuraId)>,
     endowed_accounts: Vec<AccountId>,
+    council_members: Vec<AccountId>,
     id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
     parachain_runtime::GenesisConfig {
-        frame_system: parachain_runtime::SystemConfig {
+        system: parachain_runtime::SystemConfig {
             code: parachain_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        pallet_balances: parachain_runtime::BalancesConfig {
+        balances: parachain_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+        committee: parachain_runtime::CommitteeConfig {
+            council_members,
+            ..Default::default()
+        },
+        sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
+        collator_selection: parachain_runtime::CollatorSelectionConfig {
+            invulnerables: initial_authorities
+                .iter()
+                .cloned()
+                .map(|(acc, _)| acc)
+                .collect(),
+            candidacy_bond: Zero::zero(),
+            ..Default::default()
+        },
+        session: parachain_runtime::SessionConfig {
+            keys: initial_authorities
+                .iter()
+                .cloned()
+                .map(|(acc, aura)| {
+                    (
+                        acc.clone(),                                     // account id
+                        acc,                                             // validator id
+                        parachain_runtime::opaque::SessionKeys { aura }, // session keys
+                    )
+                })
+                .collect(),
+        },
+        tokens: parachain_runtime::TokensConfig::default(),
+        // no need to pass anything to aura, in fact it will panic if we do. Session will take care
+        // of this.
+        aura: Default::default(),
+        aura_ext: Default::default(),
+        parachain_system: Default::default(),
     }
 }

@@ -8,93 +8,59 @@ readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
-[features]
-default = ['std']
-std = [
-    'sp-std/std',
-    'codec/std',
-    'frame-support/std',
-    'frame-system/std',
-    'pallet-remote-asset-manager/std',
-    'pallet-asset-depository/std',
-    'pallet-price-feed/std',
-    'xcm/std',
-    'xcm-executor/std',
-]
-[dependencies.codec]
-default-features = false
-features = ['derive']
-package = 'parity-scale-codec'
-version = '2.0.0'
+[dependencies]
+codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
 
-[dependencies.sp-std]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+# Substrate Dependencies
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false, optional = true }
 
-[dependencies.frame-support]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+# Polkadot Dependencies
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.5', default-features = false }
+xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.5', default-features = false }
 
-[dependencies.frame-system]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+# PINT dependencies
+pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
+pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
+pallet-price-feed = { path = "../price-feed", default-features = false }
+primitives = { path = "../../primitives/primitives", default-features = false }
 
-[dependencies.xcm]
-git = "https://github.com/paritytech/polkadot"
-branch = 'rococo-v1'
-default-features = false
-
-[dependencies.xcm-executor]
-default-features = false
-git = 'https://github.com/paritytech/polkadot'
-branch = 'rococo-v1'
-
-[dependencies.pallet-remote-asset-manager]
-default-features = false
-path = '../remote-asset-manager'
-version = '0.0.1'
-
-[dependencies.pallet-asset-depository]
-default-features = false
-path = '../asset-depository'
-version = '0.0.1'
-
-[dependencies.pallet-price-feed]
-default-features = false
-path = '../price-feed'
-version = '0.0.1'
+# ORML Dependencies
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
 
-[dev-dependencies.pallet-balances]
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
 
-[dev-dependencies.sp-core]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
 
-[dev-dependencies.sp-io]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
-[dev-dependencies.sp-runtime]
-default-features = false
-git = 'https://github.com/paritytech/substrate.git'
-branch = 'rococo-v1'
-version = '3.0.0'
+[features]
+default = ['std']
+std = [
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+    'pallet-remote-asset-manager/std',
+    'pallet-price-feed/std',
+    'primitives/std',
+    'xcm/std',
+    'xcm-executor/std',
+
+    'orml-traits/std',
+]
+runtime-benchmarks = [
+    'frame-benchmarking',
+    'frame-support/runtime-benchmarks',
+    'pallet-remote-asset-manager/runtime-benchmarks',
+    'pallet-price-feed/runtime-benchmarks',
+    'pallet-chainlink-feed/runtime-benchmarks',
+]
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']

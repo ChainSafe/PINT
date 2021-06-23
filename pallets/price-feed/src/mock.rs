@@ -78,6 +78,8 @@ impl pallet_balances::Config for Test {
     type DustRemoval = ();
     type ExistentialDeposit = ExistentialDeposit;
     type AccountStore = System;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
@@ -94,7 +96,6 @@ parameter_types! {
 
 pub(crate) type FeedId = u16;
 pub(crate) type Value = u128;
-
 impl pallet_chainlink_feed::Config for Test {
     type Event = Event;
     type FeedId = FeedId;
@@ -105,8 +106,8 @@ impl pallet_chainlink_feed::Config for Test {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type PruningWindow = PruningWindow;
-    type WeightInfo = ();
+    type OnAnswerHandler = ();
+    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Test>;
 }
 
 pub(crate) type AssetId = u64;
@@ -126,6 +127,7 @@ impl pallet_price_feed::Config for Test {
     type AssetId = AssetId;
     type Oracle = ChainlinkFeed;
     type Event = Event;
+    type WeightInfo = ();
 }
 
 #[derive(Debug, Clone, Default)]
@@ -208,6 +210,8 @@ impl FeedBuilder {
             description,
             restart_delay,
             oracles,
+            None,
+            None,
         )
     }
 }

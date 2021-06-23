@@ -1,19 +1,20 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::traits::MultiAssetRegistry;
 use codec::FullCodec;
 use frame_support::pallet_prelude::*;
 use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 use frame_support::sp_runtime::SaturatedConversion;
-use pallet_asset_depository::MultiAssetDepository;
-use sp_std::{
+use frame_support::sp_std::{
+    self,
     cmp::{Eq, PartialEq},
     fmt::Debug,
     marker::PhantomData,
     prelude::*,
     result,
 };
+use orml_traits::MultiCurrency;
+use primitives::traits::MultiAssetRegistry;
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
     traits::{Convert, MatchesFungible, TransactAsset},
@@ -30,6 +31,14 @@ use xcm_executor::{
 pub enum AssetAvailability {
     Liquid(MultiLocation),
     Saft,
+}
+
+/// Metadata for an asset
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+pub struct AssetMetadata<BoundedString> {
+    pub name: BoundedString,
+    pub symbol: BoundedString,
+    pub decimals: u8,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -111,7 +120,7 @@ impl From<Error> for XcmError {
 #[allow(clippy::type_complexity)]
 pub struct MultiAssetAdapter<
     Balance: AtLeast32BitUnsigned,
-    MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
+    MultiAssets: MultiCurrency<AccountId, CurrencyId = AssetId, Balance = Balance>,
     AssetRegistry: MultiAssetRegistry<AssetId>,
     Matcher: MatchesFungible<Balance>,
     AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
@@ -132,7 +141,7 @@ pub struct MultiAssetAdapter<
 );
 impl<
         Balance: AtLeast32BitUnsigned,
-        MultiAssets: MultiAssetDepository<AssetId, AccountId, Balance>,
+        MultiAssets: MultiCurrency<AccountId, CurrencyId = AssetId, Balance = Balance>,
         AssetRegistry: MultiAssetRegistry<AssetId>,
         Matcher: MatchesFungible<Balance>,
         AccountId: sp_std::fmt::Debug + sp_std::clone::Clone,
@@ -158,7 +167,7 @@ impl<
             Matcher::matches_fungible(asset),
         ) {
             // known asset
-            (Ok(who), Ok(asset_id), Some(amount)) => MultiAssets::deposit(&asset_id, &who, amount)
+            (Ok(who), Ok(asset_id), Some(amount)) => MultiAssets::deposit(asset_id, &who, amount)
                 .map_err(|e| XcmError::FailedToTransactAsset(e.into())),
             // unknown asset
             _ => Err(XcmError::FailedToTransactAsset("Unknown Asset")),
@@ -176,7 +185,7 @@ impl<
         let amount: Balance = Matcher::matches_fungible(&asset)
             .ok_or_else(|| XcmError::from(Error::FailedToMatchFungible))?
             .saturated_into();
-        MultiAssets::withdraw(&asset_id, &who, amount)
+        MultiAssets::withdraw(asset_id, &who, amount)
             .map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
         Ok(asset.clone().into())
     }

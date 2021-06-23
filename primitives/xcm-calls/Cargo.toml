@@ -1,0 +1,48 @@
+[package]
+authors = ['ChainSafe Systems']
+description = 'FRAME pallet with XCM bindings to FRAME pallets.'
+edition = '2018'
+license = 'LGPL-3.0-only'
+name = 'xcm-calls'
+readme = 'README.md'
+repository = 'https://github.com/ChainSafe/PINT/'
+version = '0.0.1'
+
+[dependencies]
+serde = { version = "1.0.101", features = ["derive"], optional = true }
+codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
+
+[dev-dependencies]
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+
+## Substrate Pallet Dependencies
+pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5'}
+pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
+
+# Polkadot Dependencies
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.5' }
+
+[features]
+default = ['std']
+std = [
+    'serde',
+    'codec/std',
+    'frame-support/std',
+    'frame-system/std',
+]
+# this feature is only for compilation now
+runtime-benchmarks = []
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']

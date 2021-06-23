@@ -8,6 +8,8 @@ pub use pallet::*;
 #[cfg(test)]
 mod mock;
 
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;
 #[cfg(test)]
 mod tests;
 
@@ -29,8 +31,10 @@ pub mod pallet {
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         type AssetRecorder: AssetRecorder<Self::AssetId, Self::Balance>;
         type Balance: Parameter + AtLeast32BitUnsigned;
-        type AssetId: Parameter;
+        type AssetId: Parameter + From<u32>;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        /// The weight for this pallet's extrinsics.
+        type WeightInfo: WeightInfo;
     }
 
     #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -85,7 +89,7 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::add_saft())]
         pub fn add_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -126,7 +130,7 @@ pub mod pallet {
             Ok(().into())
         }
 
-        #[pallet::weight(10_000)] // TODO: Set weights
+        #[pallet::weight(T::WeightInfo::report_nav())]
         /// Called to update the Net Asset Value (NAV) associated with
         /// a SAFT record in the registry
         pub fn report_nav(
@@ -151,6 +155,28 @@ pub mod pallet {
                 }
             })?;
             Ok(().into())
+        }
+    }
+
+    /// Trait for the asset-index pallet extrinsic weights.
+    pub trait WeightInfo {
+        fn add_saft() -> Weight;
+        // TODO: (incompleted)
+        //
+        // https://github.com/ChainSafe/PINT/pull/73
+        //
+        // fn remove_saft() -> Weight;
+        fn report_nav() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn add_saft() -> Weight {
+            Default::default()
+        }
+
+        fn report_nav() -> Weight {
+            Default::default()
         }
     }
 }

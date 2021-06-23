@@ -5,18 +5,20 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_asset_index;
-use frame_support::{
-    dispatch::DispatchResult, ord_parameter_types, parameter_types, sp_runtime::FixedPointNumber,
-    traits::StorageMapShim, PalletId,
-};
+use frame_support::dispatch::DispatchResult;
+use frame_support::sp_runtime::FixedPointNumber;
+use frame_support::traits::GenesisBuild;
+use frame_support::traits::StorageMapShim;
+use frame_support::{ord_parameter_types, parameter_types, PalletId};
 use frame_system as system;
+use orml_traits::parameter_type_with_key;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup, Zero},
     DispatchError,
 };
 
@@ -33,9 +35,9 @@ frame_support::construct_runtime!(
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-        AssetDepository: pallet_asset_depository::{Pallet, Call, Storage, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Currency: orml_tokens::{Pallet, Event<T>},
     }
 );
 
@@ -45,8 +47,10 @@ parameter_types! {
 }
 
 pub(crate) type Balance = u128;
+pub(crate) type Amount = i128;
 pub(crate) type AccountId = u64;
 pub(crate) type AssetId = u32;
+pub(crate) type BlockNumber = u64;
 
 impl system::Config for Test {
     type BaseCallFilter = ();
@@ -56,7 +60,7 @@ impl system::Config for Test {
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
-    type BlockNumber = u64;
+    type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = BlakeTwo256;
     type AccountId = AccountId;
@@ -114,13 +118,26 @@ impl pallet_balances::Config for Test {
         pallet_balances::AccountData<Balance>,
     >;
     type MaxLocks = MaxLocks;
+    type MaxReserves = ();
+    type ReserveIdentifier = [u8; 8];
     type WeightInfo = ();
 }
 
-impl pallet_asset_depository::Config for Test {
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+}
+
+impl orml_tokens::Config for Test {
     type Event = Event;
-    type AssetId = AssetId;
     type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = AssetId;
+    type WeightInfo = ();
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = MaxLocks;
+    type OnDust = ();
 }
 
 parameter_types! {
@@ -129,6 +146,7 @@ parameter_types! {
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub StringLimit: u32 = 4;
 }
 
 impl pallet_asset_index::Config for Test {
@@ -142,22 +160,20 @@ impl pallet_asset_index::Config for Test {
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
     type RemoteAssetManager = MockRemoteAssetManager;
-    type MultiAssetDepository = AssetDepository;
+    type Currency = Currency;
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
+    type StringLimit = StringLimit;
     type WithdrawalFee = ();
+    type WeightInfo = ();
 }
 
 pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
     for MockRemoteAssetManager
 {
-    fn reserve_withdraw_and_deposit(
-        _who: AccountId,
-        _asset: AssetId,
-        _amount: Balance,
-    ) -> DispatchResult {
-        Ok(())
+    fn reserve_withdraw_and_deposit(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+        todo!()
     }
 
     fn bond(_: AssetId, _: Balance) -> DispatchResult {
@@ -180,11 +196,7 @@ pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-        if quote == UNKNOWN_ASSET_ID {
-            Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
-        } else {
-            Self::get_price_pair(PINT_ASSET_ID, quote)
-        }
+        Self::get_price_pair(PINT_ASSET_ID, quote)
     }
 
     fn get_price_pair(
@@ -192,7 +204,8 @@ impl PriceFeed<AssetId> for MockPriceFeed {
         quote: AssetId,
     ) -> Result<AssetPricePair<AssetId>, DispatchError> {
         let price = match quote {
-            ASSET_A_ID => {
+            // includes unknown asset id since we don't need to mock initial price pair here
+            ASSET_A_ID | UNKNOWN_ASSET_ID => {
                 Price::checked_from_rational(600, 600 / ASSET_A_PRICE_MULTIPLIER).unwrap()
             }
             ASSET_B_ID => {
@@ -202,18 +215,52 @@ impl PriceFeed<AssetId> for MockPriceFeed {
         };
         Ok(AssetPricePair { base, quote, price })
     }
+
+    fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
+        // pass all unknown asset ids
+        Self::get_price(UNKNOWN_ASSET_ID)
+    }
 }
 
-// Build genesis storage according to the mock runtime.
-pub fn new_test_ext(balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Test>()
-        .unwrap();
-    pallet_balances::GenesisConfig::<Test> {
-        // Assign initial balances to accounts
-        balances,
+pub struct ExtBuilder {
+    balances: Vec<(AccountId, AssetId, Balance)>,
+}
+
+pub(crate) const ASHLEY: AccountId = 0;
+
+// Returns default values for genesis config
+impl Default for ExtBuilder {
+    fn default() -> Self {
+        Self {
+            balances: vec![
+                (ASHLEY, ASSET_A_ID, 1000_000_000_000_000u128),
+                (1, ASSET_A_ID, 1000_000_000_000_000u128),
+                (ASHLEY, ASSET_B_ID, 1000_000_000_000_000u128),
+                (1, ASSET_B_ID, 1000_000_000_000_000u128),
+            ],
+        }
     }
-    .assimilate_storage(&mut t)
-    .unwrap();
-    t.into()
+}
+
+impl ExtBuilder {
+    // builds genesis config
+
+    pub fn with_balances(mut self, balances: Vec<(AccountId, AssetId, Balance)>) -> Self {
+        self.balances = balances;
+        self
+    }
+
+    pub fn build(self) -> sp_io::TestExternalities {
+        let mut t = frame_system::GenesisConfig::default()
+            .build_storage::<Test>()
+            .unwrap();
+
+        orml_tokens::GenesisConfig::<Test> {
+            balances: self.balances,
+        }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+        t.into()
+    }
 }
