@@ -8,6 +8,8 @@ import { KeyringPair } from "@polkadot/keyring/types";
  * Extrinsic definition
  */
 export interface Extrinsic {
+    // use signed origin
+    signed?: boolean;
     pallet: string;
     call: string;
     args: any[];

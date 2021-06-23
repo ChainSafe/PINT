@@ -150,7 +150,14 @@ export default class Runner implements Config {
             console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
 
             if (ex.block) await this.waitBlock(ex.block);
-            const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
+
+            // construct tx
+            let tx = this.api.tx[ex.pallet][ex.call](...ex.args);
+            if (!ex.signed) {
+                tx = this.api.tx.sudo.sudo(tx);
+            }
+
+            // get res
             const res = (await this.timeout(
                 this.runTx(tx, true),
                 ex.timeout
@@ -218,9 +225,10 @@ export default class Runner implements Config {
         finalized = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
-            const unsub = this.api.tx.sudo
-                .sudo(se)
-                .signAndSend(this.pair, {}, (sr: ISubmittableResult) => {
+            const unsub = se.signAndSend(
+                this.pair,
+                {},
+                (sr: ISubmittableResult) => {
                     const status = sr.status;
                     const events = sr.events;
 
@@ -269,7 +277,8 @@ export default class Runner implements Config {
                             blockHash: status.asFinalized.toHex().toString(),
                         });
                     }
-                });
+                }
+            );
         });
     }
 }

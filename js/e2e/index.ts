@@ -21,9 +21,9 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
                 1000000,
             ],
             verify: async () => {
-                // console.log(
-                //     ((await api.query.assetIndex.holdings(42)) as any).isNone
-                // );
+                console.log(
+                    ((await api.query.assetIndex.holdings(42)) as any).isNone
+                );
                 // if (((await api.query.assetIndex.holdings(42)) as any).isNone) {
                 //     throw "The expected asset has not been inserted into storage";
                 // }
@@ -50,12 +50,12 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
         {
             pallet: "saftRegistry",
             call: "addSaft",
-            args: [42, 168, 42],
+            args: [43, 168, 42],
         },
         {
             pallet: "saftRegistry",
             call: "reportNav",
-            args: [42, 0, 168],
+            args: [43, 0, 168],
         },
         // TODO:
         //
