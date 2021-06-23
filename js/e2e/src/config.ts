@@ -26,3 +26,12 @@ export interface Config {
     pair: KeyringPair;
     exs: Extrinsic[];
 }
+
+/**
+ * The config of extrinsics
+ */
+export interface ExtrinsicConfig {
+    bobAddress: string;
+    bobBalance: bigint;
+    charlieAddress: string;
+}

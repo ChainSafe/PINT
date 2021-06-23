@@ -2,7 +2,7 @@
  * E2E tests for PINT
  */
 import Runner from "./runner";
-import { Config, Extrinsic } from "./config";
+import { Config, Extrinsic, ExtrinsicConfig } from "./config";
 import * as Launch from "./launch";
 
-export { Config, Runner, Launch, Extrinsic };
+export { Config, Runner, Launch, Extrinsic, ExtrinsicConfig };

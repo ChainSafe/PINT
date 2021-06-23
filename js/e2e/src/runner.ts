@@ -8,14 +8,14 @@ import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
-import { Config, Extrinsic } from "./config";
+import { Config, Extrinsic, ExtrinsicConfig } from "./config";
 import { launch } from "./launch";
 import { ChildProcess } from "child_process";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
 
 // Extrinsics builder
-type Builder = (api: ApiPromise) => Extrinsic[];
+type Builder = (api: ApiPromise, config: ExtrinsicConfig) => Extrinsic[];
 
 // runTx Result
 interface TxResult {
@@ -122,6 +122,8 @@ export default class Runner implements Config {
         const provider = new WsProvider(ws);
         const keyring = new Keyring({ type: "sr25519" });
         const pair = keyring.addFromUri(uri);
+        const bob = keyring.addFromUri("//Bob");
+        const charlie = keyring.addFromUri("//Charlie");
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
@@ -130,7 +132,19 @@ export default class Runner implements Config {
             ),
         });
 
-        return new Runner({ api, pair, exs: exs(api) });
+        // build extrinsic config
+        const bobBalance = (
+            await api.derive.balances.all(bob.address)
+        ).freeBalance.toBigInt();
+        const bobAddress = bob.address;
+        const charlieAddress = charlie.address;
+
+        // new Runner
+        return new Runner({
+            api,
+            pair,
+            exs: exs(api, { bobAddress, bobBalance, charlieAddress }),
+        });
     }
 
     constructor(config: Config) {
@@ -175,7 +189,7 @@ export default class Runner implements Config {
 
         // exit
         console.log("COMPLETE TESTS!");
-        process.exit(0);
+        // process.exit(0);
     }
 
     /**

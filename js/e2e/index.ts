@@ -1,68 +1,45 @@
 /**
  * E2E tests for PINT
  */
-import { Runner, Extrinsic } from "./src";
+import { Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
-import { Keyring } from "@polkadot/keyring";
 import { assert } from "console";
 
 // Tests
-const TESTS = (api: ApiPromise): Extrinsic[] => {
-    const keyring = new Keyring({ type: "sr25519" });
-    const bob = keyring.addFromUri("//Bob");
-
+const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     return [
-        {
-            signed: true,
-            pallet: "assetIndex",
-            call: "addAsset",
-            args: [
-                42,
-                1000000,
-                api.createType("AssetAvailability" as any),
-                1000000,
-            ],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.holdings(42)) as any).isSome
-                );
-            },
-        },
+        /* asset-index */
+        // {
+        //     signed: true,
+        //     pallet: "assetIndex",
+        //     call: "addAsset",
+        //     args: [
+        //         42,
+        //         1000000,
+        //         api.createType("AssetAvailability" as any),
+        //         1000000,
+        //     ],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.holdings(42)) as any).isSome
+        //         );
+        //     },
+        // },
         /* local-treasury */
         {
             pallet: "localTreasury",
             call: "withdraw",
-            args: [42, bob.address],
-        },
-        /* price-feed */
-        {
-            pallet: "priceFeed",
-            call: "trackAssetPriceFeed",
-            args: [42, 0],
-        },
-        {
-            pallet: "priceFeed",
-            call: "untrackAssetPriceFeed",
-            args: [42],
-        },
-        /* saft-registry */
-        {
-            pallet: "saftRegistry",
-            call: "addSaft",
-            args: [43, 168, 42],
+            args: [100000000, config.charlieAddress],
             verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.holdings(43)) as any).isSome
+                console.log(
+                    config.bobBalance -
+                        (
+                            await api.derive.balances.all(config.charlieAddress)
+                        ).freeBalance.toBigInt()
                 );
             },
         },
-        {
-            pallet: "saftRegistry",
-            call: "reportNav",
-            args: [43, 0, 168],
-        },
-        // TODO:
-        //
+
         // - https://github.com/ChainSafe/PINT/pull/73
         //
         // {
