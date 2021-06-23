@@ -40,7 +40,6 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "vote",
             args: [
                 async () => {
-                    // waiting to vote period
                     const currentBlock: any = await api.query.system.number();
                     while (
                         (await api.query.system.number()) >
@@ -57,7 +56,6 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             call: "close",
             args: [
                 async () => {
-                    // waiting to vote period
                     const currentBlock: any = await api.query.system.number();
                     while (
                         (await api.query.system.number()) >
