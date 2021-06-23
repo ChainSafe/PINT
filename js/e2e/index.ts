@@ -9,8 +9,16 @@ import { Keyring } from "@polkadot/keyring";
 const TESTS = (api: ApiPromise): Extrinsic[] => {
     const keyring = new Keyring({ type: "sr25519" });
     const bob = keyring.addFromUri("//Bob");
+    const ziggy = keyring.addFromUri("//Ziggy");
 
     return [
+        /* balance */
+        {
+            pallet: "balances",
+            call: "transfer",
+            args: [ziggy.address, 1000000],
+        },
+        /* asset-index */
         {
             pallet: "assetIndex",
             call: "addAsset",
@@ -25,13 +33,39 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
         {
             pallet: "committee",
             call: "propose",
+            args: [api.tx.committee.addConstituent(ziggy.address)],
+        },
+        {
+            pallet: "committee",
+            call: "vote",
             args: [
-                api.tx.assetIndex.addAsset(
-                    42,
-                    1000000,
-                    api.createType("AssetAvailability" as any),
-                    1000000
-                ),
+                async () => {
+                    // waiting to vote period
+                    const currentBlock: any = await api.query.system.number();
+                    while (
+                        (await api.query.system.number()) >
+                        currentBlock + 15
+                    ) {
+                        return ((await api.query.committee.activeProposals()) as any)[0];
+                    }
+                },
+                api.createType("Vote" as any),
+            ],
+        },
+        {
+            pallet: "committee",
+            call: "close",
+            args: [
+                async () => {
+                    // waiting to vote period
+                    const currentBlock: any = await api.query.system.number();
+                    while (
+                        (await api.query.system.number()) >
+                        currentBlock + 10
+                    ) {
+                        return ((await api.query.committee.activeProposals()) as any)[0];
+                    }
+                },
             ],
         },
         /* local_treasury */

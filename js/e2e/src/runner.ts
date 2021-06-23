@@ -151,8 +151,12 @@ export default class Runner implements Config {
     public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
             if (ex.required) {
-                for (const requiredEx of ex.required) {
-                    await this.runTx(requiredEx, true);
+                for (const required of ex.required) {
+                    if (typeof required === "function") {
+                        await required();
+                    } else {
+                        await this.runTx(required, true);
+                    }
                 }
             }
             await this.runTx(ex);
@@ -179,7 +183,21 @@ export default class Runner implements Config {
         console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
 
         if (ex.block) await this.waitBlock(ex.block);
-        const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
+
+        // flush arguments
+        const args: any[] = [];
+        for (const arg of ex.args) {
+            if (typeof arg === "function") {
+                args.push(await arg());
+            } else {
+                args.push(arg);
+            }
+        }
+
+        // construct tx
+        const tx = this.api.tx[ex.pallet][ex.call](...args);
+
+        // set timeout
         const res = (await this.timeout(
             this.sendTx(tx, finalized),
             ex.timeout
