@@ -4,6 +4,7 @@
 import { Runner, Extrinsic } from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
+import { assert } from "console";
 
 // Tests
 const TESTS = (api: ApiPromise): Extrinsic[] => {
@@ -12,6 +13,7 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
 
     return [
         {
+            signed: true,
             pallet: "assetIndex",
             call: "addAsset",
             args: [
@@ -21,12 +23,9 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
                 1000000,
             ],
             verify: async () => {
-                console.log(
-                    ((await api.query.assetIndex.holdings(42)) as any).isNone
+                assert(
+                    ((await api.query.assetIndex.holdings(42)) as any).isSome
                 );
-                // if (((await api.query.assetIndex.holdings(42)) as any).isNone) {
-                //     throw "The expected asset has not been inserted into storage";
-                // }
             },
         },
         /* local-treasury */
@@ -51,6 +50,11 @@ const TESTS = (api: ApiPromise): Extrinsic[] => {
             pallet: "saftRegistry",
             call: "addSaft",
             args: [43, 168, 42],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.holdings(43)) as any).isSome
+                );
+            },
         },
         {
             pallet: "saftRegistry",
