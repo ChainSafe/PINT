@@ -13,6 +13,7 @@ import { launch } from "./launch";
 import { ChildProcess } from "child_process";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
+import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise) => Extrinsic[];
@@ -89,7 +90,7 @@ export default class Runner implements Config {
             if (chunk.includes(LAUNCH_COMPLETE)) {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs(ps);
+                await runner.runTxs();
             }
         });
 
@@ -125,7 +126,10 @@ export default class Runner implements Config {
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
-                ChainlinkTypes,
+                {
+                    ...ChainlinkTypes,
+                    ...OrmlTypes,
+                },
                 (definitions.types as any)[0].types
             ),
         });
@@ -144,25 +148,63 @@ export default class Runner implements Config {
      *
      * @returns void
      */
-    public async runTxs(ps?: ChildProcess): Promise<void> {
+    public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
-
-            if (ex.block) await this.waitBlock(ex.block);
-            const tx = this.api.tx[ex.pallet][ex.call](...ex.args);
-            const res = (await this.timeout(
-                this.runTx(tx),
-                ex.timeout
-            )) as TxResult;
-
-            (await res.unsub)();
-            console.log(`\t | block hash: ${res.blockHash}`);
+            if (ex.required) {
+                for (const required of ex.required) {
+                    if (typeof required === "function") {
+                        await required();
+                    } else {
+                        await this.runTx(required, true);
+                    }
+                }
+            }
+            await this.runTx(ex);
         }
 
         // exit
         console.log("COMPLETE TESTS!");
         process.exit(0);
+    }
+
+    /**
+     * Run Extrinsic
+     *
+     * @param {ex} Extrinsic
+     */
+    public async runTx(ex: Extrinsic, finalized = false): Promise<void> {
+        if (finalized) {
+            console.log(
+                `----> run required extrinsic ${ex.pallet}.${ex.call}...`
+            );
+        } else {
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
+        }
+        console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
+
+        if (ex.block) await this.waitBlock(ex.block);
+
+        // flush arguments
+        const args: any[] = [];
+        for (const arg of ex.args) {
+            if (typeof arg === "function") {
+                args.push(await arg());
+            } else {
+                args.push(arg);
+            }
+        }
+
+        // construct tx
+        const tx = this.api.tx[ex.pallet][ex.call](...args);
+
+        // set timeout
+        const res = (await this.timeout(
+            this.sendTx(tx, finalized),
+            ex.timeout
+        )) as TxResult;
+
+        (await res.unsub)();
+        console.log(`\t | block hash: ${res.blockHash}`);
     }
 
     /**
@@ -207,7 +249,7 @@ export default class Runner implements Config {
      * @param {ISubmittableResult} sr
      * @returns {Promise<T>}
      */
-    private async runTx(
+    private async sendTx(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
         finalized = false
     ): Promise<TxResult> {
