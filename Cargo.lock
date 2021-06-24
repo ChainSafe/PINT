@@ -5481,6 +5481,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-tokens",
+ "orml-traits",
  "pallet-asset-index",
  "pallet-balances",
  "parity-scale-codec",
@@ -5745,24 +5747,6 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
- "xcm-executor",
-]
-
-[[package]]
-name = "pallet-xcm-asset-support"
-version = "0.0.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "xcm",
- "xcm-builder",
  "xcm-executor",
 ]
 
@@ -12172,6 +12156,24 @@ dependencies = [
  "derivative",
  "impl-trait-for-tuples",
  "parity-scale-codec",
+]
+
+[[package]]
+name = "xcm-asset-support"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "xcm",
+ "xcm-builder",
+ "xcm-executor",
 ]
 
 [[package]]

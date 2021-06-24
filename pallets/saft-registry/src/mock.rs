@@ -7,12 +7,13 @@
 use crate as pallet_saft_registry;
 use frame_support::{ord_parameter_types, parameter_types};
 use frame_system as system;
+use orml_traits::parameter_type_with_key;
 use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup},
+    traits::{BlakeTwo256, IdentityLookup, Zero},
     DispatchError,
 };
 
@@ -28,16 +29,20 @@ frame_support::construct_runtime!(
     {
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
+        Currency: orml_tokens::{Pallet, Event<T>},
     }
 );
 
 parameter_types! {
     pub const BlockHashCount: u64 = 250;
     pub const SS58Prefix: u8 = 42;
+    pub const MaxLocks: u32 = 1024;
 }
 
 pub(crate) type Balance = u64;
+pub(crate) type Amount = i64;
 pub(crate) type AccountId = u64;
+pub(crate) type AssetId = u32;
 
 impl system::Config for Test {
     type BaseCallFilter = ();
@@ -65,7 +70,23 @@ impl system::Config for Test {
     type OnSetCode = ();
 }
 
-pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
+parameter_type_with_key! {
+    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+}
+
+impl orml_tokens::Config for Test {
+    type Event = Event;
+    type Balance = Balance;
+    type Amount = Amount;
+    type CurrencyId = AssetId;
+    type WeightInfo = ();
+    type ExistentialDeposits = ExistentialDeposits;
+    type MaxLocks = MaxLocks;
+    type OnDust = ();
+}
+pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 1337;
 
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
@@ -77,6 +98,7 @@ impl<AssetId, Balance> AssetRecorder<AccountId, AssetId, Balance> for MockAssetR
     fn add_asset(
         _: &AccountId,
         _: AssetId,
+        _: Balance,
         _: Balance,
         _: AssetAvailability,
     ) -> Result<(), DispatchError> {
@@ -92,7 +114,8 @@ impl pallet_saft_registry::Config for Test {
     type Event = Event;
     type Balance = Balance;
     type AssetRecorder = MockAssetRecorder;
-    type AssetId = u32;
+    type AssetId = AssetId;
+    type Currency = Currency;
     type WeightInfo = ();
 }
 

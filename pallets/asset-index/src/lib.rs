@@ -52,7 +52,6 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
     use primitives::traits::MultiAssetRegistry;
-    use primitives::Amount;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -206,13 +205,13 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        #[pallet::weight(T::WeightInfo::add_asset())]
         /// Callable by the governance committee to add new assets to the index and mint
-        /// some IndexToken.
+        /// the given amount IndexToken.
         /// The amount of PINT minted and awarded to the LP is specified as part of the
         /// associated proposal
-        /// Caller's balance is updated to allocate the correct amount of the IndexToken
-        /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits.
+        /// Caller's balance is updated to allocate the correct amount of the IndexToken.
+        ///If the asset does not exist yet, it will get created.
+        #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn add_asset(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -234,13 +233,9 @@ pub mod pallet {
                 &caller,
                 asset_id,
                 units,
+                value,
                 availability,
             )?;
-
-            // increase the total issuance
-            let issued = T::IndexToken::issue(value);
-            // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, issued);
 
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
@@ -639,6 +634,7 @@ pub mod pallet {
             caller: &T::AccountId,
             asset_id: T::AssetId,
             units: T::Balance,
+            nav: T::Balance,
             availability: AssetAvailability,
         ) -> DispatchResult {
             // transfer the given units of asset from the caller into the treasury account
@@ -646,6 +642,11 @@ pub mod pallet {
 
             // register the asset
             Assets::<T>::insert(asset_id, availability);
+
+            // increase the total issuance
+            let issued = T::IndexToken::issue(nav);
+            // add minted PINT to user's balance
+            T::IndexToken::resolve_creating(&caller, issued);
             Ok(())
         }
 

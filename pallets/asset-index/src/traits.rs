@@ -7,11 +7,12 @@ use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUn
 pub trait AssetRecorder<AccountId, AssetId, Balance> {
     /// Add an asset into the index.
     /// If an asset with the given AssetId does not already exist, it will be registered.
-    /// This moves the given units from the caller's balance into the index's.
+    /// This moves the given units from the caller's balance into the index's and issues PINT accordingly.
     fn add_asset(
         caller: &AccountId,
         id: AssetId,
         units: Balance,
+        nav: Balance,
         availability: AssetAvailability,
     ) -> DispatchResult;
 

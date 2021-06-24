@@ -19,6 +19,8 @@ frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch =
 # PINT dependencies
 pallet-asset-index = {path = "../asset-index", default-features = false }
 
+# ORML Dependencies
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -29,6 +31,8 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5', default-features = false }
 
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
@@ -38,7 +42,10 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-asset-index/std'
+
+    'pallet-asset-index/std',
+
+    'orml-traits/std',
 ]
 runtime-benchmarks = [
     'frame-benchmarking',
