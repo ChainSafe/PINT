@@ -9,7 +9,7 @@ import { KeyringPair } from "@polkadot/keyring/types";
  */
 export interface Extrinsic {
     // use signed origin
-    signed?: boolean;
+    signed?: KeyringPair;
     pallet: string;
     call: string;
     args: any[];
@@ -33,8 +33,9 @@ export interface Config {
  * The config of extrinsics
  */
 export interface ExtrinsicConfig {
-    bobAddress: string;
-    bobBalance: bigint;
-    charlieAddress: string;
-    ziggyAddress: string;
+    alice: KeyringPair;
+    bob: KeyringPair;
+    charlie: KeyringPair;
+    dave: KeyringPair;
+    ziggy: KeyringPair;
 }

@@ -65,7 +65,7 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + CheckedAdd;
 
-        /// Duration (in blocks) of te proposal submission period
+        /// Duration (in blocks) of the proposal submission period
         type ProposalSubmissionPeriod: Get<Self::BlockNumber>;
 
         /// Duration (in blocks) of the voting period

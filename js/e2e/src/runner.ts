@@ -51,6 +51,19 @@ export default class Runner implements Config {
     public exs: Extrinsic[];
 
     /**
+     * Wait for n blocks
+     *
+     * The current gap of producing a block is 4s,
+     * we use 5s here.
+     *
+     * @param {number} block
+     * @returns {Promise<void>}
+     */
+    static async waitBlock(block: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, block * 12000));
+    }
+
+    /**
      * run E2E tests without launch
      *
      * @param {Builder} exs - Extrinsic builder
@@ -122,10 +135,16 @@ export default class Runner implements Config {
     ): Promise<Runner> {
         const provider = new WsProvider(ws);
         const keyring = new Keyring({ type: "sr25519" });
+
+        // pairs
         const pair = keyring.addFromUri(uri);
+        const alice = keyring.addFromUri("//Alice");
         const bob = keyring.addFromUri("//Bob");
         const charlie = keyring.addFromUri("//Charlie");
+        const dave = keyring.addFromUri("//Dave");
         const ziggy = keyring.addFromUri("//Ziggy");
+
+        // create api
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
@@ -137,23 +156,16 @@ export default class Runner implements Config {
             ),
         });
 
-        // build extrinsic config
-        const bobBalance = (
-            await api.derive.balances.all(bob.address)
-        ).freeBalance.toBigInt();
-        const bobAddress = bob.address;
-        const charlieAddress = charlie.address;
-        const ziggyAddress = ziggy.address;
-
         // new Runner
         return new Runner({
             api,
             pair,
             exs: exs(api, {
-                bobAddress,
-                bobBalance,
-                charlieAddress,
-                ziggyAddress,
+                alice,
+                bob,
+                charlie,
+                dave,
+                ziggy,
             }),
         });
     }
@@ -201,9 +213,6 @@ export default class Runner implements Config {
         } else {
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
         }
-        console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
-
-        if (ex.block) await this.waitBlock(ex.block);
 
         // flush arguments
         const args: any[] = [];
@@ -214,31 +223,30 @@ export default class Runner implements Config {
                 args.push(arg);
             }
         }
+        console.log(`\t | arguments: ${JSON.stringify(args)}`);
+
+        if (ex.block) await Runner.waitBlock(ex.block);
 
         // construct tx
-        const tx = this.api.tx[ex.pallet][ex.call](...args);
+        let tx = this.api.tx[ex.pallet][ex.call](...args);
+        if (!ex.signed) {
+            tx = this.api.tx.sudo.sudo(tx);
+        }
 
-        // set timeout
+        // get res
         const res = (await this.timeout(
-            this.sendTx(tx, finalized),
+            this.sendTx(tx, ex.signed, true),
             ex.timeout
         )) as TxResult;
 
+        // execute verify script
+        if (ex.verify)
+            await ex.verify().catch((err) => {
+                throw err;
+            });
+
         (await res.unsub)();
         console.log(`\t | block hash: ${res.blockHash}`);
-    }
-
-    /**
-     * Wait for n blocks
-     *
-     * The current gap of producing a block is 4s,
-     * we use 5s here.
-     *
-     * @param {number} block
-     * @returns {Promise<void>}
-     */
-    private async waitBlock(block: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, block * 5000));
     }
 
     /**
@@ -272,11 +280,12 @@ export default class Runner implements Config {
      */
     private async sendTx(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
+        signed = this.pair,
         finalized = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             const unsub = se.signAndSend(
-                this.pair,
+                signed,
                 {},
                 (sr: ISubmittableResult) => {
                     const status = sr.status;
