@@ -55,10 +55,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         const currentBlock: any = await api.query.system.number();
                         while (
                             (await api.query.system.number()) <
-                            currentBlock + 15
+                            currentBlock + 14
                         ) {
                             console.log("\t | waiting for voting peirod...");
-                            await Runner.waitBlock(16);
+                            await Runner.waitBlock(15);
                         }
 
                         const hash = ((await api.query.committee.activeProposals()) as any)[0];
@@ -80,15 +80,21 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "committee",
             call: "close",
             args: [
-                async () => {
-                    const currentBlock: any = await api.query.system.number();
-                    while (
-                        (await api.query.system.number()) >
-                        currentBlock + 11
-                    ) {
-                        return ((await api.query.committee.activeProposals()) as any)[0];
-                    }
-                },
+                async () =>
+                    new Promise(async (resolve) => {
+                        const currentBlock: any = await api.query.system.number();
+                        while (
+                            (await api.query.system.number()) >
+                            currentBlock + 5
+                        ) {
+                            console.log(
+                                "\t | waiting for the end of voting peirod..."
+                            );
+                        }
+                        resolve(
+                            ((await api.query.committee.activeProposals()) as any)[0]
+                        );
+                    }),
             ],
             required: [
                 {
@@ -134,7 +140,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "committee",
             call: "addConstituent",
             args: [config.ziggy.address],
-            verify: async () => {},
+            verify: async () => {
+                assert(
+                    ((await api.query.committee.members(
+                        config.ziggy.address
+                    )) as any).isSome,
+                    "Add constituent failed"
+                );
+            },
         },
         /* local_treasury */
         {
@@ -167,14 +180,30 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [43, 168, 42],
             verify: async () => {
                 assert(
-                    ((await api.query.assetIndex.holdings(43)) as any).isSome
+                    ((await api.query.assetIndex.holdings(43)) as any).isSome,
+                    "Add saft failed"
                 );
             },
         },
         {
             pallet: "saftRegistry",
             call: "reportNav",
-            args: [43, 0, 168],
+            args: [43, 0, 336],
+            verify: async () => {
+                const saft = ((await api.query.saftRegistry.activeSAFTs(
+                    43
+                )) as any).toJSON();
+                assert(
+                    ((await api.query.saftRegistry.activeSAFTs(
+                        43
+                    )) as any)[0].toJSON() ===
+                        {
+                            nav: 336,
+                            units: 42,
+                        },
+                    "Report nav failed"
+                );
+            },
         },
         // TODO:
         //
