@@ -30,6 +30,18 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@open-web3/orml-type-definitions@0.9.3":
+  version "0.9.3"
+  resolved "https://registry.nlark.com/@open-web3/orml-type-definitions/download/@open-web3/orml-type-definitions-0.9.3.tgz#6bf2ff02c108fa0b4416798f27449f14b16f420f"
+  integrity sha1-a/L/AsEI+gtEFnmPJ0SfFLFvQg8=
+
+"@open-web3/orml-types@^0.9.3":
+  version "0.9.3"
+  resolved "https://registry.nlark.com/@open-web3/orml-types/download/@open-web3/orml-types-0.9.3.tgz#6da0e20cb44e86d7a51202aa8ab82d1742a86a44"
+  integrity sha1-baDiDLROhtelEgKqirgtF0KoakQ=
+  dependencies:
+    "@open-web3/orml-type-definitions" "0.9.3"
+
 "@polkadot/api-derive@4.11.2":
   version "4.11.2"
   resolved "https://registry.nlark.com/@polkadot/api-derive/download/@polkadot/api-derive-4.11.2.tgz#e462a30e82319c83e91369ebb9a952c16bfc50db"

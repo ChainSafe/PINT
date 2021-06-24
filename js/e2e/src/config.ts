@@ -13,6 +13,8 @@ export interface Extrinsic {
     args: any[];
     block?: number;
     timeout?: number;
+    /// Required finalized calls or functions before this extrinsic
+    required?: (Extrinsic | (() => Promise<Extrinsic>))[];
 }
 
 /**

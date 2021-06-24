@@ -87,8 +87,9 @@ pallet-saft-registry = {path = '../pallets/saft-registry', default-features = fa
 pallet-price-feed = {path = '../pallets/price-feed', default-features = false }
 pallet-remote-asset-manager = { path = '../pallets/remote-asset-manager', default-features = false }
 primitives = { path = '../primitives/primitives', default-features = false }
-
 xcm-calls = {path = '../primitives/xcm-calls', default-features = false }
+xcm-assets = { path = "../primitives/xcm-assets", default-features = false }
+
 pallet-chainlink-feed = { git = 'https://github.com/ChainSafe/chainlink-polkadot', branch = 'upgrade-substrate-master', default-features = false }
 
 [dev-dependencies]
@@ -177,6 +178,7 @@ std = [
 	'pallet-saft-registry/std',
 	'pallet-chainlink-feed/std',
 	'xcm-calls/std',
+	'xcm-assets/std',
 
 	'orml-currencies/std',
 	'orml-tokens/std',
