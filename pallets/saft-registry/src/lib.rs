@@ -19,19 +19,26 @@ mod tests;
 pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
-        sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*,
+        sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*, transactional,
     };
     use frame_system::pallet_prelude::*;
+    use orml_traits::MultiCurrency;
     use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
         // Origin that is allowed to manage the SAFTs
         type AdminOrigin: EnsureOrigin<Self::Origin>;
-        type AssetRecorder: AssetRecorder<Self::AssetId, Self::Balance>;
-        type Balance: Parameter + AtLeast32BitUnsigned;
-        type AssetId: Parameter + From<u32>;
+        type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
+        type Balance: Parameter + AtLeast32BitUnsigned + Default + Copy;
+        type AssetId: Parameter + From<u32> + Copy;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        /// Currency type for add/remove SAFT to/from the user's sovereign account
+        type Currency: MultiCurrency<
+            Self::AccountId,
+            CurrencyId = Self::AssetId,
+            Balance = Self::Balance,
+        >;
         /// The weight for this pallet's extrinsics.
         type WeightInfo: WeightInfo;
     }
@@ -53,7 +60,9 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    /// Store a mapping (AssetId) -> Vec<SaftRecord> for all active SAFTs
+    /// Store a mapping (AssetId) -> NAV for all active SAFTs
+    ///
+    /// NAV for the assets being secured by the SAFT at time of submission
     pub type ActiveSAFTs<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -88,18 +97,39 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Callable by the governance committee to add new SAFT to the index and mint the given amount of IndexToken.
+        /// The amount of PINT minted and awarded to the LP is specified as part of the
+        /// associated proposal
+        /// If the asset does not exist yet, it will get created.
         #[pallet::weight(T::WeightInfo::add_saft())]
+        #[transactional]
         pub fn add_saft(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             nav: T::Balance,
             units: T::Balance,
         ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
 
-            ActiveSAFTs::<T>::append(asset_id.clone(), SAFTRecord::new(nav, units.clone()));
-            <T as Config>::AssetRecorder::add_asset(&asset_id, &units, &AssetAvailability::Saft)?;
-            Self::deposit_event(Event::<T>::SAFTAdded(asset_id, 0));
+            // mint SAFT first that get transferred into the index in the next step
+            T::Currency::deposit(asset_id, &caller, units)?;
+
+            <T as Config>::AssetRecorder::add_asset(
+                &caller,
+                asset_id,
+                units,
+                nav.clone(),
+                AssetAvailability::Saft,
+            )?;
+
+            let index = ActiveSAFTs::<T>::mutate(asset_id, |records| {
+                let index = records.len() as u32;
+                records.push(SAFTRecord::new(nav, units));
+                index
+            });
+
+            Self::deposit_event(Event::<T>::SAFTAdded(asset_id, index));
 
             Ok(().into())
         }
@@ -111,7 +141,9 @@ pub mod pallet {
             index: u32,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
+
             let index_usize: usize = index as usize;
+
             ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())

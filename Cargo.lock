@@ -5482,6 +5482,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "orml-tokens",
+ "orml-traits",
  "pallet-asset-index",
  "pallet-balances",
  "parity-scale-codec",
@@ -12159,7 +12161,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xcm-assets"
+name = "xcm-asset-support"
 version = "0.0.1"
 dependencies = [
  "frame-benchmarking",

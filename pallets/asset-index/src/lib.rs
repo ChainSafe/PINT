@@ -39,7 +39,7 @@ pub mod pallet {
         PalletId,
     };
     use frame_system::pallet_prelude::*;
-    use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+    use orml_traits::{MultiCurrency, MultiReservableCurrency};
     use xcm::opaque::v0::MultiLocation;
 
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
@@ -49,11 +49,9 @@ pub mod pallet {
     use crate::traits::WithdrawalFee;
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{
-        AssetAvailability, AssetMetadata, AssetWithdrawal, IndexAssetData, PendingRedemption,
-        RedemptionState,
+        AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
     use primitives::traits::MultiAssetRegistry;
-    use primitives::Amount;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -97,23 +95,26 @@ pub mod pallet {
         type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
 
         /// Currency type for deposit/withdraw assets to/from the user's sovereign account
-        type Currency: MultiCurrencyExtended<
+        type Currency: MultiReservableCurrency<
             Self::AccountId,
             CurrencyId = Self::AssetId,
             Balance = Self::Balance,
-            Amount = Amount,
         >;
 
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
+
         /// The type that calculates the withdrawal fee
         type WithdrawalFee: WithdrawalFee<Self::Balance>;
+
         /// The treasury's pallet id, used for deriving its sovereign account ID.
         #[pallet::constant]
         type TreasuryPalletId: Get<PalletId>;
+
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
         /// The maximum length of a name or symbol stored on-chain.
+        #[pallet::constant]
         type StringLimit: Get<u32>;
 
         /// The weight for this pallet's extrinsics.
@@ -125,9 +126,9 @@ pub mod pallet {
     pub struct Pallet<T>(_);
 
     #[pallet::storage]
-    /// (AssetId) -> IndexAssetData
-    pub type Holdings<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AssetId, IndexAssetData<T::Balance>, OptionQuery>;
+    /// (AssetId) -> AssetAvailability
+    pub type Assets<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
     #[pallet::storage]
     ///  (AccountId) -> Vec<PendingRedemption>
@@ -204,10 +205,13 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
+        /// Callable by the governance committee to add new assets to the index and mint
+        /// the given amount IndexToken.
+        /// The amount of PINT minted and awarded to the LP is specified as part of the
+        /// associated proposal
+        /// Caller's balance is updated to allocate the correct amount of the IndexToken.
+        ///If the asset does not exist yet, it will get created.
         #[pallet::weight(T::WeightInfo::add_asset())]
-        /// Callable by an admin to add new assets to the index and mint some IndexToken
-        /// Caller balance is updated to allocate the correct amount of the IndexToken
-        /// Creates IndexAssetData if it doesn’t exist, otherwise adds to list of deposits
         pub fn add_asset(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
@@ -218,21 +222,20 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
 
-            // Store intial price pair if not exists
+            // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
                 Price::from_inner(value.saturating_mul(units).into()),
             )?;
 
-            <Self as AssetRecorder<T::AssetId, T::Balance>>::add_asset(
-                &asset_id,
-                &units,
-                &availability,
+            // transfer the caller's fund into the treasury account
+            <Self as AssetRecorder<T::AccountId, T::AssetId, T::Balance>>::add_asset(
+                &caller,
+                asset_id,
+                units,
+                value,
+                availability,
             )?;
-            // increase the total issuance
-            let issued = T::IndexToken::issue(value);
-            // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, issued);
 
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
@@ -295,22 +298,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
-            let mut holding = Holdings::<T>::get(&asset_id)
-                .filter(|holding| matches!(holding.availability, AssetAvailability::Liquid(_)))
-                .ok_or(Error::<T>::UnsupportedAsset)?;
+            // only liquid assets can be deposited
+            Self::ensure_liquid_asset(&asset_id)?;
 
             let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
 
-            // make sure we can store the additional deposit
-            holding.units = holding
-                .units
-                .checked_add(&amount)
-                .ok_or(Error::<T>::AssetUnitsOverflow)?;
-
             // transfer from the caller's sovereign account into the treasury's account
             T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
-            // update the holding
-            Holdings::<T>::insert(asset_id, holding);
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
@@ -356,10 +350,12 @@ pub mod pallet {
             // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
             let mut liquid_assets_vol = T::Balance::zero();
             let mut asset_prices = Vec::new();
-            for (asset, holding) in Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid())
+            for asset in Assets::<T>::iter()
+                .filter(|(_, availability)| availability.is_liquid())
+                .map(|(k, _)| k)
             {
                 let price = T::PriceFeed::get_price(asset)?;
-                let vol = Self::calculate_volume(holding.units, &price)?;
+                let vol = Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
                 liquid_assets_vol = liquid_assets_vol
                     .checked_add(&vol)
                     .ok_or(Error::<T>::NAVOverflow)?;
@@ -419,15 +415,9 @@ pub mod pallet {
                     RedemptionState::Initiated
                 };
 
-                // update the holding balance
-                Holdings::<T>::mutate_exists(&asset, |maybe_asset_data| {
-                    if let Some(mut data) = maybe_asset_data.take() {
-                        data.units = data.units.saturating_sub(units);
-                        if !data.units.is_zero() {
-                            *maybe_asset_data = Some(data);
-                        }
-                    }
-                });
+                // transfer the funds from the index to the user's but reserve it
+                T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
+                T::Currency::reserve(asset, &caller, units)?;
 
                 assets.push(AssetWithdrawal {
                     asset,
@@ -483,16 +473,15 @@ pub mod pallet {
                                         }
                                         RedemptionState::Unbonding => {
                                             // redemption period over and funds are unbonded;
-                                            // ready to be moved in the user's sovereign account
-                                            if T::Currency::transfer(
+                                            // move to free balance
+                                            asset.units = T::Currency::unreserve(
                                                 asset.asset,
-                                                &Self::treasury_account(),
                                                 &caller,
                                                 asset.units,
-                                            )
-                                            .is_ok()
-                                            {
-                                                // assets are now transferred into the user's sovereign account
+                                            );
+
+                                            if asset.units.is_zero() {
+                                                // assets are now transferred completely into the user's sovereign account
                                                 asset.state = RedemptionState::Transferred;
                                             }
                                         }
@@ -542,33 +531,59 @@ pub mod pallet {
             T::IndexToken::total_issuance()
         }
 
+        // The free balance of the given account for the given asset.
+        pub fn free_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
+            T::Currency::free_balance(asset, account)
+        }
+
+        // The combined balance of the given account fo the given asset.
+        pub fn total_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
+            T::Currency::total_balance(asset, account)
+        }
+
+        // The combined balance of the treasury account fo the given asset.
+        pub fn index_total_asset_balance(asset: T::AssetId) -> T::Balance {
+            T::Currency::total_balance(asset, &Self::treasury_account())
+        }
+
         /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total pint`
         pub fn total_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(Holdings::<T>::iter())
+            Self::calculate_nav(Assets::<T>::iter().map(|(k, _)| k))
         }
 
         /// Calculates the NAV of all liquid assets the Index token: `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_liquid()))
+            Self::calculate_nav(
+                Assets::<T>::iter()
+                    .filter(|(_, holding)| holding.is_liquid())
+                    .map(|(k, _)| k),
+            )
         }
 
         /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) / total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(Holdings::<T>::iter().filter(|(_, holding)| holding.is_saft()))
+            Self::calculate_nav(
+                Assets::<T>::iter()
+                    .filter(|(_, holding)| holding.is_saft())
+                    .map(|(k, _)| k),
+            )
         }
 
         /// Calculates the total NAV of all holdings
         fn calculate_nav(
-            iter: impl Iterator<Item = (T::AssetId, IndexAssetData<T::Balance>)>,
+            iter: impl Iterator<Item = T::AssetId>,
         ) -> Result<T::Balance, DispatchError> {
             let total_issuance = T::IndexToken::total_issuance();
             if total_issuance.is_zero() {
                 return Ok(T::Balance::zero());
             }
             let mut nav = T::Balance::zero();
-            for (asset, holding) in iter {
+            for asset in iter {
                 nav = nav
-                    .checked_add(&Self::calculate_pint_equivalent(asset, holding.units)?)
+                    .checked_add(&Self::calculate_pint_equivalent(
+                        asset,
+                        Self::index_total_asset_balance(asset),
+                    )?)
                     .ok_or(Error::<T>::NAVOverflow)?;
             }
             Ok(nav
@@ -597,29 +612,41 @@ pub mod pallet {
 
         /// Calculates the NAV of a single asset
         pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
-            let holding = Holdings::<T>::get(&asset).ok_or(Error::<T>::UnsupportedAsset)?;
-            Self::calculate_pint_equivalent(asset, holding.units)
+            ensure!(
+                Assets::<T>::contains_key(&asset),
+                Error::<T>::UnsupportedAsset
+            );
+            Self::calculate_pint_equivalent(asset, Self::index_total_asset_balance(asset))
+        }
+
+        /// Ensures the given asset id is a liquid asset
+        fn ensure_liquid_asset(asset_id: &T::AssetId) -> DispatchResult {
+            Assets::<T>::get(asset_id)
+                .filter(|availability| matches!(availability, AssetAvailability::Liquid(_)))
+                .ok_or(Error::<T>::UnsupportedAsset)?;
+            Ok(())
         }
     }
 
-    impl<T: Config> AssetRecorder<T::AssetId, T::Balance> for Pallet<T> {
-        /// Creates IndexAssetData if entry with given assetID does not exist.
-        /// Otherwise adds the units to the existing holding
+    impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
+        /// Creates an entry in the assets map and contributes the given amount of asset to the treasury.
         fn add_asset(
-            asset_id: &T::AssetId,
-            units: &T::Balance,
-            availability: &AssetAvailability,
+            caller: &T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+            availability: AssetAvailability,
         ) -> DispatchResult {
-            Holdings::<T>::try_mutate(asset_id, |value| -> Result<_, Error<T>> {
-                let index_asset_data = value.get_or_insert_with(|| {
-                    IndexAssetData::<T::Balance>::new(T::Balance::zero(), availability.clone())
-                });
-                index_asset_data.units = index_asset_data
-                    .units
-                    .checked_add(units)
-                    .ok_or(Error::AssetUnitsOverflow)?;
-                Ok(())
-            })?;
+            // transfer the given units of asset from the caller into the treasury account
+            T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
+
+            // register the asset
+            Assets::<T>::insert(asset_id, availability);
+
+            // increase the total issuance
+            let issued = T::IndexToken::issue(nav);
+            // add minted PINT to user's balance
+            T::IndexToken::resolve_creating(&caller, issued);
             Ok(())
         }
 
@@ -630,8 +657,8 @@ pub mod pallet {
 
     impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
         fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
-            Holdings::<T>::get(asset).and_then(|holding| {
-                if let AssetAvailability::Liquid(location) = holding.availability {
+            Assets::<T>::get(asset).and_then(|availability| {
+                if let AssetAvailability::Liquid(location) = availability {
                     Some(location)
                 } else {
                     None
@@ -640,8 +667,8 @@ pub mod pallet {
         }
 
         fn is_liquid_asset(asset: &T::AssetId) -> bool {
-            Holdings::<T>::get(asset)
-                .map(|holding| holding.is_liquid())
+            Assets::<T>::get(asset)
+                .map(|availability| availability.is_liquid())
                 .unwrap_or_default()
         }
     }
