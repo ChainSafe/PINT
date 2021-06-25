@@ -533,7 +533,7 @@ impl pallet_saft_registry::Config for Runtime {
 
 parameter_types! {
     pub const ProposalSubmissionPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 5;
+    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
 }
 
 ord_parameter_types! {
