@@ -24,24 +24,24 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 },
             ],
         },
-        // /* asset-index */
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "addAsset",
-        //     args: [
-        //         42,
-        //         1000000,
-        //         api.createType("AssetAvailability" as any),
-        //         1000000,
-        //     ],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.holdings(42)) as any).isSome,
-        //             "assetIndex.addAsset failed"
-        //         );
-        //     },
-        // },
+        /* asset-index */
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "addAsset",
+            args: [
+                42,
+                1000000,
+                api.createType("AssetAvailability" as any),
+                1000000,
+            ],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.holdings(42)) as any).isSome,
+                    "assetIndex.addAsset failed"
+                );
+            },
+        },
         /* committee */
         {
             signed: config.alice,
@@ -205,13 +205,19 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 const saft = ((await api.query.saftRegistry.activeSAFTs(
                     43
                 )) as any).toJSON();
+                const expect = {
+                    nav: 336,
+                    units: 42,
+                };
                 assert(
-                    saft ===
-                        {
+                    JSON.stringify(saft[0]) ==
+                        JSON.stringify({
                             nav: 336,
                             units: 42,
-                        },
-                    "Report nav failed"
+                        }),
+                    `Report nav failed, expect: ${JSON.stringify(
+                        expect
+                    )}, result: ${JSON.stringify(saft[0])}`
                 );
             },
         },
