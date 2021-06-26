@@ -136,7 +136,7 @@
     "@polkadot/types" "4.15.1"
     "@polkadot/util" "^6.9.1"
 
-"@polkadot/types@4.15.1", "@polkadot/types@^4.15.1", "@polkadot/types@^4.15.2":
+"@polkadot/types@4.15.1", "@polkadot/types@^4.15.1", "@polkadot/types@^4.15.1":
   version "4.15.1"
   resolved "https://registry.nlark.com/@polkadot/types/download/@polkadot/types-4.15.1.tgz#03f32fd4ce81d69c43368d3e476c0421cedb8607"
   integrity sha1-A/Mv1M6B1pxDNo0+R2wEIc7bhgc=

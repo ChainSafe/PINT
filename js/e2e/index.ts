@@ -175,16 +175,55 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
+        /* chainlink-feed*/
+        {
+            signed: config.alice,
+            pallet: "chainlinkFeed",
+            call: "createFeed",
+            args: [
+                100000000000,
+                0,
+                [100000000000, 100000000000],
+                1,
+                9,
+                "test_feed",
+                0,
+                [[config.alice.address, config.bob.address]],
+                null,
+                null,
+            ],
+            verify: async () => {
+                assert(
+                    (await api.query.chainlinkFeed.feeds.entries()).length ===
+                        1,
+                    "Create feed failed"
+                );
+            },
+        },
         /* price-feed */
         {
             pallet: "priceFeed",
             call: "trackAssetPriceFeed",
             args: [42, 0],
+            verify: async () => {
+                assert(
+                    Number(
+                        (await api.query.priceFeed.assetFeeds(42)).toHuman()
+                    ) === 0,
+                    "Create feed failed"
+                );
+            },
         },
         {
             pallet: "priceFeed",
             call: "untrackAssetPriceFeed",
             args: [42],
+            verify: async () => {
+                assert(
+                    ((await api.query.priceFeed.assetFeeds(42)) as any).isNone,
+                    "Create feed failed"
+                );
+            },
         },
         /* saft-registry */
         {

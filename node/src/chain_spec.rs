@@ -173,8 +173,12 @@ fn pint_testnet_genesis(
                 .collect(),
         },
         committee: parachain_runtime::CommitteeConfig {
-            council_members,
+            council_members: council_members.clone(),
             ..Default::default()
+        },
+        chainlink_feed: parachain_runtime::ChainlinkFeedConfig {
+            pallet_admin: Some(root_key.clone()),
+            feed_creators: council_members,
         },
         sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },

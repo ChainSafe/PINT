@@ -807,7 +807,7 @@ construct_runtime!(
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
         RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
-        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>},
+        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
