@@ -204,7 +204,16 @@ fn pint_testnet_genesis(
                 })
                 .collect(),
         },
-        tokens: parachain_runtime::TokensConfig::default(),
+        tokens: parachain_runtime::TokensConfig {
+            // TODO:
+            //
+            // this config is only for tests for now
+            balances: endowed_accounts
+                .iter()
+                .cloned()
+                .map(|k| (k, 42, 1 << 60))
+                .collect(),
+        },
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
         aura: Default::default(),
