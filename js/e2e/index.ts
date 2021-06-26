@@ -47,7 +47,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "committee",
             call: "propose",
-            args: [api.tx.balances.transfer(config.ziggy.address, 1000000)],
+            args: [api.tx.balances.transfer(config.bob.address, 1000000)],
             verify: async () => {
                 const proposals = await api.query.committee.activeProposals();
                 assert(
@@ -165,13 +165,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             pallet: "localTreasury",
             call: "withdraw",
-            args: [100000000, config.charlie.address],
+            args: [500000000000, config.ziggy.address],
             verify: async () => {
-                // TODO:
-                //
-                // The result of this call is weird, no value transfered,
-                // needs to check the currency config of pallet
-                // local_treasury
+                assert(
+                    (
+                        await api.derive.balances.all(config.ziggy.address)
+                    ).freeBalance.toNumber() === 500000000000,
+                    "localTreasury.withdraw failed"
+                );
             },
         },
         /* price-feed */
@@ -221,15 +222,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // TODO:
-        //
-        // requires https://github.com/ChainSafe/PINT/pull/73
-        //
-        // {
-        //     pallet: "saftRegistry",
-        //     call: "removeSaft",
-        //     args: [42, 0],
-        // },
     ];
 };
 

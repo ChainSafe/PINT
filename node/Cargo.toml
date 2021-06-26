@@ -36,6 +36,7 @@ jsonrpc-core = '15.1.0'
 parachain-runtime = { path = '../runtime' }
 
 # Substrate Dependencies
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
 frame-benchmarking-cli = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.5' }
 

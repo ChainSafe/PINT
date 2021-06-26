@@ -6237,6 +6237,7 @@ dependencies = [
  "derive_more 0.15.0",
  "frame-benchmarking",
  "frame-benchmarking-cli",
+ "frame-support",
  "futures 0.3.15",
  "hex-literal 0.2.1",
  "jsonrpc-core",

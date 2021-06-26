@@ -508,7 +508,7 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
     pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
