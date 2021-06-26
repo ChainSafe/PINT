@@ -5,14 +5,15 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_asset_index;
-use frame_support::dispatch::DispatchResult;
-use frame_support::sp_runtime::FixedPointNumber;
-use frame_support::traits::GenesisBuild;
-use frame_support::traits::StorageMapShim;
-use frame_support::{ord_parameter_types, parameter_types, PalletId};
+use frame_support::{
+    dispatch::DispatchResult,
+    ord_parameter_types, parameter_types,
+    sp_runtime::FixedPointNumber,
+    traits::{GenesisBuild, StorageMapShim},
+    PalletId,
+};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_remote_asset_manager::RemoteAssetManager;
 use sp_core::H256;
@@ -80,17 +81,6 @@ pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
 
 ord_parameter_types! {
     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
-}
-
-pub struct MockAssetRecorder;
-
-impl<AssetId, Balance> AssetRecorder<AssetId, Balance> for MockAssetRecorder {
-    fn add_asset(_: &AssetId, _: &Balance, _: &AssetAvailability) -> Result<(), DispatchError> {
-        Ok(())
-    }
-    fn remove_asset(_: &AssetId) -> Result<(), DispatchError> {
-        Ok(())
-    }
 }
 
 // param types for balances
@@ -165,7 +155,7 @@ pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
     for MockRemoteAssetManager
 {
-    fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) -> DispatchResult {
+    fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
         Ok(())
     }
 
@@ -181,6 +171,7 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 pub const PINT_ASSET_ID: AssetId = 0u32;
 pub const ASSET_A_ID: AssetId = 1u32;
 pub const ASSET_B_ID: AssetId = 2u32;
+pub const SAFT_ASSET_ID: AssetId = 99u32;
 pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
 
 pub const ASSET_A_PRICE_MULTIPLIER: Balance = 2;
@@ -226,10 +217,9 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ASHLEY, ASSET_A_ID, 1000_000_000_000_000u128),
-                (1, ASSET_A_ID, 1000_000_000_000_000u128),
-                (ASHLEY, ASSET_B_ID, 1000_000_000_000_000u128),
-                (1, ASSET_B_ID, 1000_000_000_000_000u128),
+                (ADMIN_ACCOUNT_ID, ASSET_A_ID, 1000_000_000_000_000u128),
+                (ADMIN_ACCOUNT_ID, ASSET_B_ID, 1000_000_000_000_000u128),
+                (ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1000_000_000_000_000u128),
             ],
         }
     }

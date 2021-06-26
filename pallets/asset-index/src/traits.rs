@@ -4,14 +4,17 @@
 pub use crate::types::{AssetAvailability, AssetMetadata};
 use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned};
 
-pub trait AssetRecorder<AssetId, Balance> {
-    /// Add an asset to the recorder. If an asset with the given AssetId already exists
-    /// then the added asset units will be combined.
-    /// The provided NAV parameter is the Net Asset Value of the total units provided
-    /// given in units of some stable asset. In the case of an AssetId that already exists the
-    /// newly provided NAV will be used to re-value the existing units and compute a total NAV
-    fn add_asset(id: &AssetId, units: &Balance, availability: &AssetAvailability)
-        -> DispatchResult;
+pub trait AssetRecorder<AccountId, AssetId, Balance> {
+    /// Add an asset into the index.
+    /// If an asset with the given AssetId does not already exist, it will be registered.
+    /// This moves the given units from the caller's balance into the index's and issues PINT accordingly.
+    fn add_asset(
+        caller: &AccountId,
+        id: AssetId,
+        units: Balance,
+        nav: Balance,
+        availability: AssetAvailability,
+    ) -> DispatchResult;
 
     fn remove_asset(id: &AssetId) -> DispatchResult;
 }

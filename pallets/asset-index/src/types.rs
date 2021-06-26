@@ -33,38 +33,24 @@ pub enum AssetAvailability {
     Saft,
 }
 
+impl AssetAvailability {
+    /// Whether this asset data represents a liquid asset
+    pub fn is_liquid(&self) -> bool {
+        matches!(self, AssetAvailability::Liquid(_))
+    }
+
+    /// Whether this asset data represents a SAFT
+    pub fn is_saft(&self) -> bool {
+        matches!(self, AssetAvailability::Saft)
+    }
+}
+
 /// Metadata for an asset
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct AssetMetadata<BoundedString> {
     pub name: BoundedString,
     pub symbol: BoundedString,
     pub decimals: u8,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-/// A representation of some number of assets that are managed by the index
-pub struct IndexAssetData<Balance> {
-    pub units: Balance,
-    pub availability: AssetAvailability,
-}
-
-impl<Balance> IndexAssetData<Balance> {
-    pub fn new(units: Balance, availability: AssetAvailability) -> Self {
-        Self {
-            units,
-            availability,
-        }
-    }
-
-    /// Whether this asset data represents a liquid asset
-    pub fn is_liquid(&self) -> bool {
-        matches!(self.availability, AssetAvailability::Liquid(_))
-    }
-
-    /// Whether this asset data represents a SAFT
-    pub fn is_saft(&self) -> bool {
-        matches!(self.availability, AssetAvailability::Saft)
-    }
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
