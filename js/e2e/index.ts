@@ -232,7 +232,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [43, 168, 42],
             verify: async () => {
                 assert(
-                    ((await api.query.assetIndex.holdings(43)) as any).isSome,
+                    ((await api.query.assetIndex.assets(43)) as any).isSome,
                     "Add saft failed"
                 );
             },
