@@ -24,24 +24,24 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 },
             ],
         },
-        /* asset-index */
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "addAsset",
-            args: [
-                42,
-                1000000,
-                api.createType("AssetAvailability" as any),
-                1000000,
-            ],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.holdings(42)) as any).isSome,
-                    "assetIndex.addAsset failed"
-                );
-            },
-        },
+        // /* asset-index */
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "addAsset",
+        //     args: [
+        //         42,
+        //         1000000,
+        //         api.createType("AssetAvailability" as any),
+        //         1000000,
+        //     ],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.holdings(42)) as any).isSome,
+        //             "assetIndex.addAsset failed"
+        //         );
+        //     },
+        // },
         /* committee */
         {
             signed: config.alice,

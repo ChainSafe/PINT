@@ -12164,7 +12164,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xcm-asset-support"
+name = "xcm-assets"
 version = "0.0.1"
 dependencies = [
  "frame-benchmarking",
