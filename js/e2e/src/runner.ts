@@ -8,7 +8,7 @@ import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
-import { Config, Extrinsic } from "./config";
+import { Config, Extrinsic, ExtrinsicConfig } from "./config";
 import { launch } from "./launch";
 import { ChildProcess } from "child_process";
 import { cryptoWaitReady } from "@polkadot/util-crypto";
@@ -16,7 +16,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types";
 import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
-type Builder = (api: ApiPromise) => Extrinsic[];
+type Builder = (api: ApiPromise, config: ExtrinsicConfig) => Extrinsic[];
 
 // runTx Result
 interface TxResult {
@@ -49,6 +49,19 @@ export default class Runner implements Config {
     public api: ApiPromise;
     public pair: KeyringPair;
     public exs: Extrinsic[];
+
+    /**
+     * Wait for n blocks
+     *
+     * The current gap of producing a block is 4s,
+     * we use 5s here.
+     *
+     * @param {number} block
+     * @returns {Promise<void>}
+     */
+    static async waitBlock(block: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, block * 12000));
+    }
 
     /**
      * run E2E tests without launch
@@ -122,7 +135,16 @@ export default class Runner implements Config {
     ): Promise<Runner> {
         const provider = new WsProvider(ws);
         const keyring = new Keyring({ type: "sr25519" });
+
+        // pairs
         const pair = keyring.addFromUri(uri);
+        const alice = keyring.addFromUri("//Alice");
+        const bob = keyring.addFromUri("//Bob");
+        const charlie = keyring.addFromUri("//Charlie");
+        const dave = keyring.addFromUri("//Dave");
+        const ziggy = keyring.addFromUri("//Ziggy");
+
+        // create api
         const api = await ApiPromise.create({
             provider,
             types: Object.assign(
@@ -134,7 +156,18 @@ export default class Runner implements Config {
             ),
         });
 
-        return new Runner({ api, pair, exs: exs(api) });
+        // new Runner
+        return new Runner({
+            api,
+            pair,
+            exs: exs(api, {
+                alice,
+                bob,
+                charlie,
+                dave,
+                ziggy,
+            }),
+        });
     }
 
     constructor(config: Config) {
@@ -150,15 +183,25 @@ export default class Runner implements Config {
      */
     public async runTxs(): Promise<void> {
         for (const ex of this.exs) {
+            if (typeof ex.shared === "function") {
+                ex.shared = await ex.shared();
+            }
+
             if (ex.required) {
                 for (const required of ex.required) {
+                    let requiredEx: Extrinsic = required as Extrinsic;
                     if (typeof required === "function") {
-                        await required();
-                    } else {
-                        await this.runTx(required, true);
+                        requiredEx = await required(ex.shared);
                     }
+
+                    console.log(
+                        `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
+                    );
+                    await this.runTx(requiredEx);
                 }
             }
+
+            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
             await this.runTx(ex);
         }
 
@@ -172,52 +215,55 @@ export default class Runner implements Config {
      *
      * @param {ex} Extrinsic
      */
-    public async runTx(ex: Extrinsic, finalized = false): Promise<void> {
-        if (finalized) {
-            console.log(
-                `----> run required extrinsic ${ex.pallet}.${ex.call}...`
-            );
-        } else {
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-        }
-        console.log(`\t | arguments: ${JSON.stringify(ex.args)}`);
-
-        if (ex.block) await this.waitBlock(ex.block);
-
+    public async runTx(ex: Extrinsic): Promise<void> {
         // flush arguments
         const args: any[] = [];
         for (const arg of ex.args) {
             if (typeof arg === "function") {
-                args.push(await arg());
+                args.push(await arg(ex.shared));
             } else {
                 args.push(arg);
             }
         }
+        console.log(`\t | arguments: ${JSON.stringify(args)}`);
+
+        if (ex.block) await Runner.waitBlock(ex.block);
 
         // construct tx
-        const tx = this.api.tx[ex.pallet][ex.call](...args);
+        let tx = this.api.tx[ex.pallet][ex.call](...args);
+        if (!ex.signed) {
+            tx = this.api.tx.sudo.sudo(tx);
+        }
 
-        // set timeout
+        // get res
         const res = (await this.timeout(
-            this.sendTx(tx, finalized),
+            this.sendTx(tx, ex.signed, ex.inBlock),
             ex.timeout
         )) as TxResult;
 
+        // run post calls
+        if (ex.post) {
+            for (const post of ex.post) {
+                let postEx: Extrinsic = post as Extrinsic;
+                if (typeof post === "function") {
+                    postEx = await post(ex.shared);
+                }
+
+                console.log(
+                    `----> run post extrinsic ${postEx.pallet}.${postEx.call}...`
+                );
+                await this.runTx(postEx);
+            }
+        }
+
+        // execute verify script
+        if (ex.verify)
+            await ex.verify(ex.shared).catch((err) => {
+                throw err;
+            });
+
         (await res.unsub)();
         console.log(`\t | block hash: ${res.blockHash}`);
-    }
-
-    /**
-     * Wait for n blocks
-     *
-     * The current gap of producing a block is 4s,
-     * we use 5s here.
-     *
-     * @param {number} block
-     * @returns {Promise<void>}
-     */
-    private async waitBlock(block: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, block * 5000));
     }
 
     /**
@@ -251,11 +297,12 @@ export default class Runner implements Config {
      */
     private async sendTx(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
-        finalized = false
+        signed = this.pair,
+        inBlock = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             const unsub = se.signAndSend(
-                this.pair,
+                signed,
                 {},
                 (sr: ISubmittableResult) => {
                     const status = sr.status;
@@ -264,7 +311,7 @@ export default class Runner implements Config {
                     console.log(`\t | - status: ${status.type}`);
 
                     if (status.isInBlock) {
-                        if (!finalized)
+                        if (inBlock)
                             resolve({
                                 unsub,
                                 blockHash: status.asInBlock.toHex().toString(),

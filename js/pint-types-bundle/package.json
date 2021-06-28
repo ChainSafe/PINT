@@ -21,8 +21,8 @@
   "author": "ChainSafe Systems",
   "license": "GPL-3.0-only",
   "dependencies": {
-    "@polkadot/keyring": "^6.3.1",
-    "@polkadot/types": "^4.7.2"
+    "@polkadot/keyring": "^6.9.1",
+    "@polkadot/types": "^4.15.1"
   },
   "devDependencies": {
     "typescript": "^4.2.4"

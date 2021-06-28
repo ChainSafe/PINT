@@ -508,7 +508,7 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 parameter_types! {
-    pub const TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
     pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 }
 
@@ -523,7 +523,7 @@ impl pallet_local_treasury::Config for Runtime {
 
 impl pallet_saft_registry::Config for Runtime {
     // Using signed as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type Balance = Balance;
     type AssetRecorder = AssetIndex;
@@ -534,7 +534,7 @@ impl pallet_saft_registry::Config for Runtime {
 
 parameter_types! {
     pub const ProposalSubmissionPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 5;
+    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
 }
 
 ord_parameter_types! {
@@ -808,7 +808,7 @@ construct_runtime!(
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
         RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
-        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>},
+        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
 
         // XCM helpers
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},

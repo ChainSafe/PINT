@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use cumulus_primitives_core::ParaId;
+use frame_support::PalletId;
 use parachain_runtime::{AccountId, AuraId, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{IdentifyAccount, Verify, Zero};
+use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify, Zero};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
@@ -69,6 +70,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
                     get_collator_keys_from_seed("Alice"),
                 )],
                 vec![
+                    PalletId(*b"Treasury").into_account(),
                     get_account_id_from_seed::<sr25519::Public>("Alice"),
                     get_account_id_from_seed::<sr25519::Public>("Bob"),
                     get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
@@ -171,8 +173,12 @@ fn pint_testnet_genesis(
                 .collect(),
         },
         committee: parachain_runtime::CommitteeConfig {
-            council_members,
+            council_members: council_members.clone(),
             ..Default::default()
+        },
+        chainlink_feed: parachain_runtime::ChainlinkFeedConfig {
+            pallet_admin: Some(root_key.clone()),
+            feed_creators: council_members,
         },
         sudo: parachain_runtime::SudoConfig { key: root_key },
         parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
@@ -198,7 +204,24 @@ fn pint_testnet_genesis(
                 })
                 .collect(),
         },
-        tokens: parachain_runtime::TokensConfig::default(),
+        tokens: parachain_runtime::TokensConfig {
+            // TODO:
+            //
+            // this config is only for tests for now
+            balances: vec![
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, 42, 1 << 60))
+                    .collect::<Vec<_>>(),
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, 43, 1 << 60))
+                    .collect::<Vec<_>>(),
+            ]
+            .concat(),
+        },
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
         aura: Default::default(),
