@@ -36,7 +36,7 @@ export const definitions = {
                     member_type: "MemberType",
                 },
                 CurrencyId: "AssetId",
-                CurrencyIdOf: "AssetId",
+                CurrencyIdOf: "CurrencyId",
                 FeedId: "u64",
                 FeedIdFor: "FeedId",
                 HashFor: "Hash",

@@ -5,6 +5,11 @@ import { Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { assert } from "console";
 
+const ASSET_ID_A: number = 42;
+const ASSET_ID_B: number = 43;
+const BALANCE_THOUSAND: number = 100000000000;
+const VOTING_PERIOD: number = 10;
+
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     return [
         /* balance */
@@ -13,14 +18,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             inBlock: true,
             pallet: "balances",
             call: "transfer",
-            args: [config.charlie.address, 10000000000000],
+            args: [config.charlie.address, BALANCE_THOUSAND],
             post: [
                 {
                     signed: config.alice,
                     inBlock: true,
                     pallet: "balances",
                     call: "transfer",
-                    args: [config.dave.address, 10000000000000],
+                    args: [config.dave.address, BALANCE_THOUSAND],
                 },
             ],
         },
@@ -30,14 +35,15 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "assetIndex",
             call: "addAsset",
             args: [
-                42,
+                ASSET_ID_A,
                 1000000,
                 api.createType("AssetAvailability" as any),
                 1000000,
             ],
             verify: async () => {
                 assert(
-                    ((await api.query.assetIndex.assets(42)) as any).isSome,
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isSome,
                     "assetIndex.addAsset failed"
                 );
             },
@@ -81,8 +87,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         ).toJSON() as any).end as number;
 
                         await Runner.waitBlock(
-                            end - currentBlock > 10
-                                ? end - currentBlock - 10
+                            end - currentBlock > VOTING_PERIOD
+                                ? end - currentBlock - VOTING_PERIOD
                                 : 0
                         );
                         console.log(
@@ -204,11 +210,13 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             pallet: "priceFeed",
             call: "trackAssetPriceFeed",
-            args: [42, 0],
+            args: [ASSET_ID_A, 0],
             verify: async () => {
                 assert(
                     Number(
-                        (await api.query.priceFeed.assetFeeds(42)).toHuman()
+                        (
+                            await api.query.priceFeed.assetFeeds(ASSET_ID_A)
+                        ).toHuman()
                     ) === 0,
                     "Create feed failed"
                 );
@@ -217,10 +225,11 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             pallet: "priceFeed",
             call: "untrackAssetPriceFeed",
-            args: [42],
+            args: [ASSET_ID_A],
             verify: async () => {
                 assert(
-                    ((await api.query.priceFeed.assetFeeds(42)) as any).isNone,
+                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+                        .isNone,
                     "Create feed failed"
                 );
             },
@@ -229,10 +238,11 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             pallet: "saftRegistry",
             call: "addSaft",
-            args: [43, 168, 42],
+            args: [ASSET_ID_B, 168, 42],
             verify: async () => {
                 assert(
-                    ((await api.query.assetIndex.assets(43)) as any).isSome,
+                    ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
+                        .isSome,
                     "Add saft failed"
                 );
             },
@@ -240,10 +250,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             pallet: "saftRegistry",
             call: "reportNav",
-            args: [43, 0, 336],
+            args: [ASSET_ID_B, 0, 336],
             verify: async () => {
                 const saft = ((await api.query.saftRegistry.activeSAFTs(
-                    43
+                    ASSET_ID_B
                 )) as any).toJSON();
                 const expect = {
                     nav: 336,
