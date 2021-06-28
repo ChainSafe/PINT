@@ -218,8 +218,9 @@ fn pint_testnet_genesis(
                     .iter()
                     .cloned()
                     .map(|k| (k, 43, 1 << 60))
-                    .collect::<Vec<_>>()
-            ].concat(),
+                    .collect::<Vec<_>>(),
+            ]
+            .concat(),
         },
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.

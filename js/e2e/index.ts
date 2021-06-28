@@ -14,14 +14,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         /* balance */
         {
             signed: config.alice,
-            inBlock: true,
             pallet: "balances",
             call: "transfer",
             args: [config.charlie.address, BALANCE_THOUSAND],
             post: [
                 {
                     signed: config.alice,
-                    inBlock: true,
                     pallet: "balances",
                     call: "transfer",
                     args: [config.dave.address, BALANCE_THOUSAND],
