@@ -1,9 +1,8 @@
 /**
  * E2E tests for PINT
  */
-import { Runner, Extrinsic, ExtrinsicConfig } from "./src";
+import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
-import { assert } from "console";
 
 const ASSET_ID_A: number = 42;
 const ASSET_ID_B: number = 43;
@@ -236,6 +235,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* saft-registry */
         {
+            signed: config.alice,
             pallet: "saftRegistry",
             call: "addSaft",
             args: [ASSET_ID_B, 168, 42],
@@ -248,6 +248,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            signed: config.alice,
             pallet: "saftRegistry",
             call: "reportNav",
             args: [ASSET_ID_B, 0, 336],

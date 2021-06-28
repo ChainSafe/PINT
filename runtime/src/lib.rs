@@ -523,7 +523,7 @@ impl pallet_local_treasury::Config for Runtime {
 
 impl pallet_saft_registry::Config for Runtime {
     // Using signed as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type Balance = Balance;
     type AssetRecorder = AssetIndex;

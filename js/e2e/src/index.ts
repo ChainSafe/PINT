@@ -6,3 +6,4 @@ import { Config, Extrinsic, ExtrinsicConfig } from "./config";
 import * as Launch from "./launch";
 
 export { Config, Runner, Launch, Extrinsic, ExtrinsicConfig };
+export { assert } from "./util";
