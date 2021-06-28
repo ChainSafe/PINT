@@ -209,9 +209,17 @@ fn pint_testnet_genesis(
             //
             // this config is only for tests for now
             balances: vec![
-                (endowed_accounts[0].clone(), 42, 1 << 60),
-                (endowed_accounts[0].clone(), 43, 1 << 60),
-            ],
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, 42, 1 << 60))
+                    .collect::<Vec<_>>(),
+                endowed_accounts
+                    .iter()
+                    .cloned()
+                    .map(|k| (k, 43, 1 << 60))
+                    .collect::<Vec<_>>()
+            ].concat(),
         },
         // no need to pass anything to aura, in fact it will panic if we do. Session will take care
         // of this.
