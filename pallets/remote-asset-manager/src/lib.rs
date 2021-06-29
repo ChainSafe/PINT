@@ -315,6 +315,10 @@ pub mod pallet {
 
             let config =
                 PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
+
+            // ensures enough balance is available to bond
+            Self::ensure_stash(asset.clone(), value)?;
+
             let call = PalletStakingCall::<T>::Bond(Bond {
                 controller: controller.clone(),
                 value,
@@ -409,6 +413,17 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// Ensures that the given amount can be removed from PINT's sovereign account
+        /// without falling below the configured `MinimumRemoteStashBalance`
+        pub fn ensure_stash(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            let min_stash = T::MinimumRemoteStashBalance::get(&asset);
+            ensure!(
+                Self::stash_balance(asset).saturating_sub(amount) > min_stash,
+                Error::<T>::InusufficientStash
+            );
+            Ok(())
+        }
+
         /// The assumed balance of the PINT's parachain sovereign account on the asset's
         /// native chain that is not bonded
         pub fn stash_balance(asset: T::AssetId) -> T::Balance {
@@ -437,6 +452,9 @@ pub mod pallet {
 
             let mut state =
                 PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
+
+            // ensures enough balance is available to bond extra
+            Self::ensure_stash(asset.clone(), amount)?;
 
             let call = PalletStakingCall::<T>::BondExtra(amount);
             let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
@@ -588,6 +606,9 @@ pub mod pallet {
             asset: T::AssetId,
             amount: T::Balance,
         ) -> DispatchResult {
+            // ensures the min stash is still available after the transfer
+            Self::ensure_stash(asset.clone(), amount)?;
+
             let outcome = T::XcmAssets::execute_xcm_transfer(who, asset, amount)
                 .map_err(|_| Error::<T>::XcmError)?;
             outcome
