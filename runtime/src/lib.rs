@@ -642,7 +642,8 @@ parameter_type_with_key! {
 // The minimum amount of assets that should remain unbonded.
 parameter_type_with_key! {
     pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
-        Zero::zero()
+        // Same as relaychain existential deposit
+        ExistentialDeposit::get()
     };
 }
 

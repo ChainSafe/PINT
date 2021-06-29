@@ -112,10 +112,16 @@ pub mod pallet {
         type RelayChainAssetId: Get<Self::AssetId>;
 
         /// The minimum amount that should be held in stash (must remain unbonded)
-        /// Withdrawals are only authorized if the updated stash balance does exceeds this
+        /// Withdrawals are only authorized if the updated stash balance does exceeds this.
+        ///
+        /// This must be at least the `ExistentialDeposit` as configured on the asset's
+        /// native chain (e.g. DOT/Polkadot)
         type MinimumRemoteStashBalance: GetByKey<Self::AssetId, Self::Balance>;
 
         /// Currency type for deposit/withdraw xcm assets
+        ///
+        /// NOTE: it is assumed that the total issuance/total balance of an asset
+        /// reflects the total balance of the PINT parachain account on the asset's native chain
         type Assets: MultiCurrency<
             Self::AccountId,
             CurrencyId = Self::AssetId,
