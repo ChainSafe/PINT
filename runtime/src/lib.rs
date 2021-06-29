@@ -639,6 +639,13 @@ parameter_type_with_key! {
     };
 }
 
+// The minimum amount of assets that should remain unbonded.
+parameter_type_with_key! {
+    pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+}
+
 impl orml_tokens::Config for Runtime {
     type Event = Event;
     type Balance = Balance;
@@ -763,6 +770,8 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;
     type RelayChainAssetId = RelayChainAssetId;
+    type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
+    type Assets = Currencies;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
     // Using root as the admin origin for now

@@ -36,6 +36,7 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
+    use orml_traits::{GetByKey, MultiCurrency};
     use xcm_assets::XcmAssetHandler;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
@@ -109,6 +110,17 @@ pub mod pallet {
         /// Identifier for the relay chain's specific asset
         #[pallet::constant]
         type RelayChainAssetId: Get<Self::AssetId>;
+
+        /// The minimum amount that should be held in stash (must remain unbonded)
+        /// Withdrawals are only authorized if the updated stash balance does exceeds this
+        type MinimumRemoteStashBalance: GetByKey<Self::AssetId, Self::Balance>;
+
+        /// Currency type for deposit/withdraw xcm assets
+        type Assets: MultiCurrency<
+            Self::AccountId,
+            CurrencyId = Self::AssetId,
+            Balance = Self::Balance,
+        >;
 
         /// Executor for cross chain messages.
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
