@@ -77,6 +77,8 @@ pallet-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release
 # ORML Dependencies
 orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 # PINT dependencies
@@ -182,5 +184,7 @@ std = [
 
 	'orml-currencies/std',
 	'orml-tokens/std',
+	'orml-xtokens/std',
+	'orml-xcm-support/std',
 	'orml-traits/std',
 ]

@@ -18,7 +18,7 @@ use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
-    ApplyExtrinsicResult,
+    ApplyExtrinsicResult, DispatchResult,
 };
 
 use sp_std::prelude::*;
@@ -33,6 +33,7 @@ use frame_system::{
 
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
+use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{BodyId, Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
@@ -634,7 +635,7 @@ parameter_types! {
 
 // --- ORML configurations
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
+    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
         Zero::zero()
     };
 }
@@ -658,12 +659,29 @@ impl orml_currencies::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl orml_xtokens::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type CurrencyId = AssetId;
+    type CurrencyIdConvert = AssetIdConvert;
+    type AccountIdToMultiLocation = AccountId32Convert;
+    type SelfLocation = SelfLocation;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+}
+
 pub struct AssetIdConvert;
 impl Convert<AssetId, MultiLocation> for AssetIdConvert {
     fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
         AssetIndex::native_asset_location(&asset).ok_or(asset)
     }
 }
+impl sp_runtime::traits::Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+    fn convert(asset: AssetId) -> Option<MultiLocation> {
+        AssetIndex::native_asset_location(&asset)
+    }
+}
+
 impl Convert<MultiLocation, AssetId> for AssetIdConvert {
     fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
         match &location {
@@ -714,6 +732,16 @@ pub struct AccountId32Convert;
 impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
+    }
+}
+
+impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
+    fn convert(account_id: AccountId) -> MultiLocation {
+        Junction::AccountId32 {
+            id: Self::convert(account_id),
+            network: NetworkId::Any,
+        }
+        .into()
     }
 }
 
@@ -810,11 +838,13 @@ construct_runtime!(
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
         ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
 
-        // XCM helpers
+        // XCM
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
         PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin}
+        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
+
+        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>}
     }
 );
 

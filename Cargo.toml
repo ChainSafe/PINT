@@ -187,7 +187,15 @@ cumulus-primitives-timestamp  = { git = "https://github.com/paritytech//cumulus"
 cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech//cumulus", rev = "05ab7a377d2c3b73566c0c3bd41b003486d6913b" }
 
 [patch."https://github.com/paritytech/grandpa-bridge-gadget"]
-    pallet-beefy = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
+pallet-beefy = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
 beefy-primitives = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
 beefy-gadget = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
 beefy-gadget-rpc = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
+
+
+[patch."https://github.com/open-web3-stack/open-runtime-module-library"]
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "5505324" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "5505324" }
+orml-xtokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "5505324" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "5505324" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "5505324" }
