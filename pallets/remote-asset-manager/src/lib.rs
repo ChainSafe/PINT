@@ -269,6 +269,8 @@ pub mod pallet {
         NothingToWithdraw,
         /// Balance would fall below the minimum requirements for bond
         InsufficientBond,
+        /// Thrown if the balance of the PINT parachain account would fall below the `MinimumRemoteStashBalance`
+        InusufficientStash,
         /// Error occurred during XCM
         XcmError,
     }
@@ -407,6 +409,15 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
+        /// The assumed balance of the PINT's parachain sovereign account on the asset's
+        /// native chain that is not bonded
+        pub fn stash_balance(asset: T::AssetId) -> T::Balance {
+            let contributed = PalletStakingBondState::<T>::get(&asset)
+                .map(|state| state.total_balance())
+                .unwrap_or_else(Zero::zero);
+            T::Assets::total_issuance(asset).saturating_sub(contributed)
+        }
+
         /// Sends an XCM [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) call
         pub fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
             if amount.is_zero() {
@@ -443,7 +454,7 @@ pub mod pallet {
             log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
             ensure!(result.is_ok(), Error::<T>::FailedToSendBondExtraXcm);
 
-            state.bonded = state.bonded.saturating_add(amount);
+            state.add_bond(amount);
             PalletStakingBondState::<T>::insert(&asset, state);
 
             Self::deposit_event(Event::SentBondExtra(asset, amount));
@@ -507,12 +518,9 @@ pub mod pallet {
             ensure!(result.is_ok(), Error::<T>::FailedToSendUnbondXcm);
 
             // adjust the balances and keep track of new chunk
-            state.bonded = state.bonded.saturating_sub(amount);
-            state.unbonded = state.unbonded.saturating_add(amount);
-            state.unlocked_chunks = state.unlocked_chunks.saturating_add(1);
+            state.unbond(amount);
 
             PalletStakingBondState::<T>::insert(&asset, state);
-
             Self::deposit_event(Event::SentUnbond(
                 asset,
                 amount,

@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::PalletCallEncoder;
 use crate::{CallEncoder, EncodeWith, PalletCall};
+use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 
 /// The index of `pallet_staking` in the polkadot runtime
 pub const POLKADOT_PALLET_STAKING_INDEX: u8 = 7u8;
@@ -187,6 +188,31 @@ pub struct StakingBondState<Source, Balance> {
 
     /// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
     pub unlocked_chunks: u32,
+}
+
+impl<Source, Balance> StakingBondState<Source, Balance>
+where
+    Balance: AtLeast32BitUnsigned + Copy,
+{
+    /// Mirror an `bond` or `bond_extra` that increased the bonded amount
+    pub fn add_bond(&mut self, amount: Balance) {
+        self.bonded = self.unbonded.saturating_add(amount);
+    }
+
+    /// Mirror an `unbond` call that
+    ///   - decreases the bonded balance by `amount`
+    ///   - increases the unbonded balance by `amount`
+    ///   - increases the unlocked chunks by +1
+    pub fn unbond(&mut self, amount: Balance) {
+        self.bonded = self.bonded.saturating_sub(amount);
+        self.unbonded = self.unbonded.saturating_add(amount);
+        self.unlocked_chunks = self.unlocked_chunks.saturating_add(1);
+    }
+
+    /// The total amount of balance currently held in the staking pallet
+    pub fn total_balance(&self) -> Balance {
+        self.bonded.saturating_add(self.unbonded)
+    }
 }
 
 /// Represents an excerpt from the `pallet_staking` weights
