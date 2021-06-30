@@ -1,6 +1,7 @@
 /**
  * Test the finalization of parachain intergration
  */
+import fs from "fs";
 import path from "path";
 import { Launch } from "@pint/e2e/src";
 import findUp from "find-up";
@@ -34,14 +35,25 @@ async function tail(
     file: string,
     match: (s: string) => boolean
 ): Promise<void> {
+    const root = await findUp("Cargo.toml");
+
     return new Promise(async (resolve) => {
-        const ps = spawn("tail", ["-f", file], {
-            cwd: path.resolve(String(await findUp("Cargo.toml")), ".."),
-            stdio: "pipe",
-        });
+        const ps = fs.existsSync(path.resolve(String(root), "../bin/pint"))
+            ? spawn("tail", ["-f", file], {
+                  cwd: path.resolve(String(root), ".."),
+                  stdio: "pipe",
+              })
+            : spawn("docker", ["exec", `tail -f ${file}`, "-it", "launch"], {
+                  stdio: "pipe",
+              });
 
         ps.stdout.on("data", (chunk: Buffer) => {
             chunk && match(chunk.toString()) && resolve(null);
+        });
+
+        ps.stderr.on("data", (chunk: Buffer) => {
+            process.stderr.write(chunk);
+            process.exit(1);
         });
     });
 }
