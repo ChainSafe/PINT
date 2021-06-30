@@ -1,20 +1,21 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+// enabled so unused types don't emit a warning
+#![allow(dead_code)]
+
 /// Basic relay config
-use frame_support::traits::GenesisBuild;
-use sp_runtime::AccountId32;
-use xcm_simulator::{decl_test_relay_chain};
+use xcm_simulator::decl_test_relay_chain;
 
 /// Relay chain runtime
 pub mod relay;
 
 decl_test_relay_chain! {
-	pub struct Relay {
-		Runtime = relay::Runtime,
-		XcmConfig = relay::XcmConfig,
-		new_ext = relay_ext(),
-	}
+    pub struct Relay {
+        Runtime = relay::Runtime,
+        XcmConfig = relay::XcmConfig,
+        new_ext = super::relay_ext(),
+    }
 }
 
 /// Common types used for tests
@@ -40,7 +41,6 @@ pub mod types {
 /// Basic converter types
 pub mod convert {
     use super::types::*;
-    use sp_runtime::traits::AccountIdConversion;
 
     pub struct AccountId32Convert;
     impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
@@ -52,17 +52,19 @@ pub mod convert {
 
 /// Support for call encoders
 pub mod calls {
-    use super::types::*;
+    use frame_support::sp_std::marker::PhantomData;
     use orml_traits::{parameter_type_with_key, GetByKey};
-    use sp_std::marker::PhantomData;
+
     use xcm_calls::{
         proxy::{ProxyCallEncoder, ProxyType},
         staking::StakingCallEncoder,
         PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
     };
 
+    use super::types::*;
+
+    // A type that states that all calls to the asset's native location can be encoded
     parameter_type_with_key! {
-        /// A type that states that all calls to the asset's native location can be encoded
         pub CanEncodeAll: |_asset_id: AssetId| -> bool {
            true
         };

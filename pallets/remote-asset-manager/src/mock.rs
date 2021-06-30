@@ -5,52 +5,36 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_remote_asset_manager;
-use frame_support::{
-    dispatch::DispatchResult,
-    ord_parameter_types, parameter_types,
-    sp_runtime::FixedPointNumber,
-    traits::{GenesisBuild, StorageMapShim},
-    PalletId,
-};
+use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use primitives::traits::MultiAssetRegistry;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{BlakeTwo256, IdentityLookup, Zero},
-    DispatchError,
+    traits::{IdentityLookup, Zero},
 };
 use xcm::v0::{
     Junction::{self, Parachain, Parent},
     MultiAsset,
-    MultiLocation::{self, X1, X2, X3},
+    MultiLocation::{self, X1},
     NetworkId, Xcm,
 };
-use xcm_calls::{
-    proxy::{ProxyCallEncoder, ProxyType},
-    staking::StakingCallEncoder,
-    PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
-};
 
-use cumulus_primitives_core::ParaId;
 use frame_support::{
     construct_runtime,
     traits::All,
     weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
 use frame_system::EnsureRoot;
-use polkadot_runtime_parachains::{configuration, origin, shared, ump};
 use sp_runtime::AccountId32;
 
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use xcm_builder::{
-    AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative,
-    ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
-    CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible, FixedWeightBounds,
-    IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32,
-    SovereignSignedViaLocation,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter,
+    FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
+    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 pub use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, NativeAsset, ParentAsSuperuser,
@@ -58,15 +42,17 @@ pub use xcm_builder::{
     TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use xcm_simulator::{decl_test_network, decl_test_parachain};
 
 pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
 
-
-#[path="../../../test-utils/xcm-test-support/src/lib.rs"] mod xcm_test_support;
+#[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
+mod xcm_test_support;
 
 pub mod para {
     use super::*;
+    use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
+    use frame_support::sp_runtime::traits::Identity;
 
     pub type AccountId = AccountId32;
     pub type Balance = u128;
@@ -204,9 +190,9 @@ pub mod para {
     }
 
     parameter_type_with_key! {
-    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
-        Zero::zero()
-    };
+        pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
+            Zero::zero()
+        };
     }
 
     impl orml_tokens::Config for Runtime {
@@ -218,6 +204,91 @@ pub mod para {
         type ExistentialDeposits = ExistentialDeposits;
         type MaxLocks = MaxLocks;
         type OnDust = ();
+    }
+
+    parameter_type_with_key! {
+        pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
+            ExistentialDeposit::get()
+        };
+    }
+
+    parameter_type_with_key! {
+        pub CanEncodeAsset: |_asset_id: AssetId| -> bool {
+           true
+        };
+    }
+
+    parameter_types! {
+        pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 10;
+        pub MinimumRedemption: u32 = 2;
+        pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
+        pub DOTContributionLimit: Balance = 999;
+        pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+        pub StringLimit: u32 = 4;
+
+        pub const RelayChainAssetId: AssetId = 0;
+        pub const PINTAssetId: AssetId = 1;
+       pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+    }
+
+    impl pallet_remote_asset_manager::Config for Runtime {
+        type Balance = Balance;
+        type AssetId = AssetId;
+        type AssetIdConvert = AssetIdConvert;
+        type AccountId32Convert = xcm_test_support::convert::AccountId32Convert;
+        // Encodes `pallet_staking` calls before transaction them to other chains
+        type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
+        // Encodes `pallet_proxy` calls before transaction them to other chains
+        type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
+        type SelfAssetId = PINTAssetId;
+        type SelfLocation = SelfLocation;
+        type SelfParaId = parachain_info::Pallet<Runtime>;
+        type RelayChainAssetId = RelayChainAssetId;
+        type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
+        type Assets = Currency;
+        type XcmExecutor = XcmExecutor<XcmConfig>;
+        type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
+        // Using root as the admin origin for now
+        type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+        type XcmSender = XcmRouter;
+        type Event = Event;
+        type AssetRegistry = MockAssetRegistry;
+        type WeightInfo = ();
+    }
+
+    pub struct MockAssetRegistry;
+    impl MultiAssetRegistry<AssetId> for MockAssetRegistry {
+        fn native_asset_location(_asset: &AssetId) -> Option<MultiLocation> {
+            None
+        }
+
+        fn is_liquid_asset(_asset: &AssetId) -> bool {
+            true
+        }
+    }
+
+    pub struct AssetIdConvert;
+    impl xcm_executor::traits::Convert<AssetId, MultiLocation> for AssetIdConvert {
+        fn convert(
+            asset: AssetId,
+        ) -> frame_support::sp_std::result::Result<MultiLocation, AssetId> {
+            MockAssetRegistry::native_asset_location(&asset).ok_or(asset)
+        }
+    }
+
+    pub struct XcmAssetConfig;
+    impl xcm_assets::Config for XcmAssetConfig {
+        type Call = Call;
+        type AssetId = AssetId;
+        type AssetIdConvert = AssetIdConvert;
+        type SelfAssetId = PINTAssetId;
+        type AccountId = AccountId;
+        type Amount = Balance;
+        type AmountU128Convert = Identity;
+        type SelfLocation = SelfLocation;
+        type AccountId32Convert = xcm_test_support::convert::AccountId32Convert;
+        type XcmExecutor = XcmExecutor<XcmConfig>;
+        type WeightLimit = UnitWeightCost;
     }
 
     pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -254,245 +325,12 @@ pub mod para {
 
             PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
 
+            // crate dependencies
             Currency: orml_tokens::{Pallet, Event<T>},
+            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
         }
     );
 }
-
-//
-//
-//
-// type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
-// type Block = frame_system::mocking::MockBlock<Test>;
-//
-// // Configure a mock runtime to test the pallet.
-// frame_support::construct_runtime!(
-//     pub enum Test where
-//         Block = Block,
-//         NodeBlock = Block,
-//         UncheckedExtrinsic = UncheckedExtrinsic,
-//     {
-//         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-//         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-//         Currency: orml_tokens::{Pallet, Event<T>},
-//     }
-// );
-//
-// parameter_types! {
-//     pub const BlockHashCount: u64 = 250;
-//     pub const SS58Prefix: u8 = 42;
-// }
-//
-// pub(crate) type Balance = u128;
-// pub(crate) type Amount = i128;
-// pub(crate) type AccountId = u64;
-// pub(crate) type AssetId = u32;
-// pub(crate) type BlockNumber = u64;
-//
-// impl system::Config for Test {
-//     type BaseCallFilter = ();
-//     type BlockWeights = ();
-//     type BlockLength = ();
-//     type DbWeight = ();
-//     type Origin = Origin;
-//     type Call = Call;
-//     type Index = u64;
-//     type BlockNumber = BlockNumber;
-//     type Hash = H256;
-//     type Hashing = BlakeTwo256;
-//     type AccountId = AccountId;
-//     type Lookup = IdentityLookup<Self::AccountId>;
-//     type Header = Header;
-//     type Event = Event;
-//     type BlockHashCount = BlockHashCount;
-//     type Version = ();
-//     type PalletInfo = PalletInfo;
-//     type AccountData = ();
-//     type OnNewAccount = ();
-//     type OnKilledAccount = ();
-//     type SystemWeightInfo = ();
-//     type SS58Prefix = SS58Prefix;
-//     type OnSetCode = ();
-// }
-//
-// pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
-//
-// ord_parameter_types! {
-//     pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
-// }
-//
-// // param types for balances
-// parameter_types! {
-//     pub const MaxLocks: u32 = 1024;
-//     pub static ExistentialDeposit: Balance = 420;
-// }
-//
-// impl pallet_balances::Config for Test {
-//     type Balance = Balance;
-//     type DustRemoval = ();
-//     type Event = Event;
-//     type ExistentialDeposit = ExistentialDeposit;
-//     type AccountStore = StorageMapShim<
-//         pallet_balances::Account<Test>,
-//         system::Provider<Test>,
-//         AccountId,
-//         pallet_balances::AccountData<Balance>,
-//     >;
-//     type MaxLocks = MaxLocks;
-//     type MaxReserves = ();
-//     type ReserveIdentifier = [u8; 8];
-//     type WeightInfo = ();
-// }
-//
-
-//
-// impl orml_tokens::Config for Test {
-//     type Event = Event;
-//     type Balance = Balance;
-//     type Amount = Amount;
-//     type CurrencyId = AssetId;
-//     type WeightInfo = ();
-//     type ExistentialDeposits = ExistentialDeposits;
-//     type MaxLocks = MaxLocks;
-//     type OnDust = ();
-// }
-//
-// parameter_type_with_key! {
-//     pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
-//         ExistentialDeposit::get()
-//     };
-// }
-//
-// parameter_types! {
-//     pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
-//     pub MinimumRedemption: u32 = 2;
-//     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
-//     pub DOTContributionLimit: Balance = 999;
-//     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
-//     pub StringLimit: u32 = 4;
-//
-//     pub const RelayChainAssetId: AssetId = 0;
-//     pub const PINTAssetId: AssetId = 1;
-//     pub const SelfParaId: ParaId = ParaId(*b"pint");
-//     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(SelfParaId::get()));
-//
-// }
-//
-//
-// impl pallet_remote_asset_manager::Config for Test {
-//     type Balance = Balance;
-//     type AssetId = AssetId;
-//     type AssetIdConvert = AssetIdConvert;
-//     type AccountId32Convert = AccountId32Convert;
-//     // Encodes `pallet_staking` calls before transaction them to other chains
-//     type PalletStakingCallEncoder = PalletStakingEncoder;
-//     // Encodes `pallet_proxy` calls before transaction them to other chains
-//     type PalletProxyCallEncoder = PalletProxyEncoder;
-//     type SelfAssetId = PINTAssetId;
-//     type SelfLocation = SelfLocation;
-//     type SelfParaId = SelfParaId;
-//     type RelayChainAssetId = RelayChainAssetId;
-//     type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
-//     type Assets = Currencies;
-//     type XcmExecutor = XcmExecutor<XcmConfig>;
-//     type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
-//     // Using root as the admin origin for now
-//     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-//     type XcmSender = XcmRouter;
-//     type Event = Event;
-//     type AssetRegistry = MockAssetRegistry;
-//     type WeightInfo = ();
-// }
-//
-// struct MockAssetRegistry;
-// impl MultiAssetRegistry<AssetId> for MockAssetRegistry {
-//     fn native_asset_location(_asset: &AssetId) -> Option<MultiLocation> {
-//         None
-//     }
-//
-//     fn is_liquid_asset(_asset: &AssetId) -> bool {
-//         true
-//     }
-// }
-//
-// /// The encoder to use when transacting `pallet_staking` calls
-// pub struct PalletStakingEncoder;
-// impl StakingCallEncoder<AccountId, Balance, AccountId> for PalletStakingEncoder {
-//     type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
-//     type SourceEncoder = PassthroughEncoder<AccountId, AssetId>;
-//     type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
-// }
-//
-// impl PalletCallEncoder for PalletStakingEncoder {
-//     type Context = AssetId;
-//     fn can_encode(_ctx: &Self::Context) -> bool {
-//         true
-//     }
-// }
-//
-// pub struct PalletProxyEncoder;
-// impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
-//     type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
-//     type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
-//     type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
-// }
-// impl PalletCallEncoder for PalletProxyEncoder {
-//     type Context = AssetId;
-//     fn can_encode(_ctx: &Self::Context) -> bool {
-//         // TODO check in `AssetRegistry`
-//         true
-//     }
-// }
-//
-//
-// pub const PINT_ASSET_ID: AssetId = 0u32;
-// pub const ASSET_A_ID: AssetId = 1u32;
-// pub const ASSET_B_ID: AssetId = 2u32;
-// pub const SAFT_ASSET_ID: AssetId = 99u32;
-// pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
-//
-// pub struct ExtBuilder {
-//     balances: Vec<(AccountId, AssetId, Balance)>,
-// }
-//
-// pub(crate) const ASHLEY: AccountId = 0;
-//
-// // Returns default values for genesis config
-// impl Default for ExtBuilder {
-//     fn default() -> Self {
-//         Self {
-//             balances: vec![
-//                 (ADMIN_ACCOUNT_ID, ASSET_A_ID, 1000_000_000_000_000u128),
-//                 (ADMIN_ACCOUNT_ID, ASSET_B_ID, 1000_000_000_000_000u128),
-//                 (ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1000_000_000_000_000u128),
-//             ],
-//         }
-//     }
-// }
-//
-// impl ExtBuilder {
-//     // builds genesis config
-//
-//     pub fn with_balances(mut self, balances: Vec<(AccountId, AssetId, Balance)>) -> Self {
-//         self.balances = balances;
-//         self
-//     }
-//
-//     pub fn build(self) -> sp_io::TestExternalities {
-//         let mut t = frame_system::GenesisConfig::default()
-//             .build_storage::<Test>()
-//             .unwrap();
-//
-//         orml_tokens::GenesisConfig::<Test> {
-//             balances: self.balances,
-//         }
-//         .assimilate_storage(&mut t)
-//         .unwrap();
-//
-//         t.into()
-//     }
-// }
-
 
 decl_test_parachain! {
     pub struct ParaA {
@@ -535,13 +373,13 @@ pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
         &parachain_info_config,
         &mut t,
     )
-        .unwrap();
+    .unwrap();
 
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![(ALICE, INITIAL_BALANCE)],
     }
-        .assimilate_storage(&mut t)
-        .unwrap();
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
@@ -558,8 +396,8 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![(ALICE, INITIAL_BALANCE)],
     }
-        .assimilate_storage(&mut t)
-        .unwrap();
+    .assimilate_storage(&mut t)
+    .unwrap();
 
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));

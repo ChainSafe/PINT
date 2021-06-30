@@ -636,4 +636,11 @@ pub mod pallet {
     pub trait WeightInfo {
         fn transfer() -> Weight;
     }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn transfer() -> Weight {
+            Default::default()
+        }
+    }
 }

@@ -5465,6 +5465,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "log",
+ "orml-tokens",
  "orml-traits",
  "pallet-balances",
  "pallet-staking",
@@ -5484,7 +5485,6 @@ dependencies = [
  "xcm-calls",
  "xcm-executor",
  "xcm-simulator",
- "xcm-test-support",
 ]
 
 [[package]]
@@ -12265,33 +12265,6 @@ dependencies = [
  "sp-io",
  "sp-std",
  "xcm",
- "xcm-executor",
-]
-
-[[package]]
-name = "xcm-test-support"
-version = "0.0.1"
-dependencies = [
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcm",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "pallet-xcm",
- "parachain-info",
- "parity-scale-codec",
- "polkadot-parachain",
- "polkadot-runtime-parachains",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "sp-std",
- "xcm",
- "xcm-builder",
  "xcm-executor",
 ]
 
