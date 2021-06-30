@@ -25,7 +25,7 @@ interface TxResult {
 }
 
 // Message of launching complete
-const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
+export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
