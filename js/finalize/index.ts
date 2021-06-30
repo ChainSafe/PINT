@@ -43,7 +43,7 @@ async function tail(
                   cwd: path.resolve(String(root), ".."),
                   stdio: "pipe",
               })
-            : spawn("docker", ["exec", `tail -f ${file}`, "-it", "launch"], {
+            : spawn("docker", ["exec", "-it", "launch", `tail -f ${file}`], {
                   stdio: "pipe",
               });
 
