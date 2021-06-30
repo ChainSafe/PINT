@@ -34,7 +34,7 @@ async function tail(
     file: string,
     match: (s: string) => boolean
 ): Promise<void> {
-    new Promise(async (resolve) => {
+    return new Promise(async (resolve) => {
         const ps = spawn("tail", ["-f", file], {
             cwd: path.resolve(String(await findUp("Cargo.toml")), ".."),
             stdio: "pipe",
@@ -62,8 +62,8 @@ async function main() {
                 );
             });
 
-            // console.log("FINALIZE SUCCEED!");
-            // process.exit(0);
+            console.log("FINALIZE SUCCEED!");
+            process.exit(0);
         }
     });
 
@@ -74,7 +74,9 @@ async function main() {
     });
 
     // Log errors
-    ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
+    ps.stderr.on("data", (chunk: Buffer) =>
+        process.stderr.write(chunk.toString())
+    );
 }
 
 (() => {
