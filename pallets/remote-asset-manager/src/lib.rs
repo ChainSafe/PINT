@@ -8,6 +8,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
+mod mock;
+
+#[cfg(test)]
+mod tests;
+
 pub use pallet::*;
 
 mod traits;
@@ -629,5 +635,12 @@ pub mod pallet {
     /// Trait for the asset-index pallet extrinsic weights.
     pub trait WeightInfo {
         fn transfer() -> Weight;
+    }
+
+    /// For backwards compatibility and tests
+    impl WeightInfo for () {
+        fn transfer() -> Weight {
+            Default::default()
+        }
     }
 }
