@@ -5,7 +5,7 @@
 #
 # This Dockerfile builds the environment of e2e tests
 FROM debian:buster-slim
-COPY config.json launch/config.json
+COPY config.json config.json
 COPY js/polkadot-launch polkadot-launch
 COPY --from=chainsafe/pint /usr/local/bin/pint bin/
 COPY --from=clearloop/rococo-v1 /polkadot bin/
@@ -21,4 +21,4 @@ RUN apt-get update -y \
     && npm install \
     && npm run build
 EXPOSE 9988
-ENTRYPOINT [ "node", "polkadot-launch/dist/index.js", "launch/config.json" ]
+ENTRYPOINT [ "node", "polkadot-launch/dist/index.js", "config.json" ]
