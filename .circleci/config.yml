@@ -35,13 +35,6 @@ commands:
           command: |
             git submodule update --init
             docker build -f docker/launch.Dockerfile -t launch .
-      - run:
-          name: Install Nodejs
-          command: |
-            sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
-              && nvm install v15.9.0 \
-              && nvm use v15.9.0 \
-              && npm install yarn -g
   cargo_audit_setup:
     description: Install cargo-audit
     steps:
@@ -171,8 +164,12 @@ jobs:
       - run:
           name: Run e2e tests
           command:  |
-            sudo -s
-            source /root/.bashrc && cd js/e2e && yarn && yarn start
+            sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | \
+              sudo bash \
+              && nvm install v15.9.0 \
+              && nvm use v15.9.0 \
+              && npm install yarn -g \
+              cd js/e2e && yarn && yarn start
   docker-run-finalize:
     executor: test-executor
     description: Build and run finalization tests
@@ -181,8 +178,12 @@ jobs:
       - run:
           name: Run finalization tests
           command: |
-            sudo -s
-            source /root/.bashrc && cd js/e2e && yarn && yarn start
+            sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | \
+              sudo bash \
+              && nvm install v15.9.0 \
+              && nvm use v15.9.0 \
+              && npm install yarn -g \
+              && cd js/finalize && yarn && yarn start
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
