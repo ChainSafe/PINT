@@ -63,11 +63,15 @@ use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chai
 pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
 
 
+#[path="../../../test-utils/xcm-test-support/src/lib.rs"] mod xcm_test_support;
+
 pub mod para {
     use super::*;
 
     pub type AccountId = AccountId32;
     pub type Balance = u128;
+    pub type Amount = i128;
+    pub type AssetId = u32;
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
@@ -199,6 +203,23 @@ pub mod para {
         type XcmExecutor = XcmExecutor<XcmConfig>;
     }
 
+    parameter_type_with_key! {
+    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
+        Zero::zero()
+    };
+    }
+
+    impl orml_tokens::Config for Runtime {
+        type Event = Event;
+        type Balance = Balance;
+        type Amount = Amount;
+        type CurrencyId = AssetId;
+        type WeightInfo = ();
+        type ExistentialDeposits = ExistentialDeposits;
+        type MaxLocks = MaxLocks;
+        type OnDust = ();
+    }
+
     pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
 
     impl pallet_xcm::Config for Runtime {
@@ -232,6 +253,8 @@ pub mod para {
             CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
 
             PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
+
+            Currency: orml_tokens::{Pallet, Event<T>},
         }
     );
 }
@@ -321,11 +344,7 @@ pub mod para {
 //     type WeightInfo = ();
 // }
 //
-// parameter_type_with_key! {
-//     pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
-//         Zero::zero()
-//     };
-// }
+
 //
 // impl orml_tokens::Config for Test {
 //     type Event = Event;
@@ -489,17 +508,9 @@ decl_test_parachain! {
     }
 }
 
-decl_test_relay_chain! {
-    pub struct Relay {
-        Runtime = relay::Runtime,
-        XcmConfig = relay::XcmConfig,
-        new_ext = relay_ext(),
-    }
-}
-
 decl_test_network! {
     pub struct MockNet {
-        relay_chain = Relay,
+        relay_chain = xcm_test_support::Relay,
         parachains = vec![
             (1, ParaA),
             (2, ParaB),
@@ -538,7 +549,7 @@ pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
 }
 
 pub fn relay_ext() -> sp_io::TestExternalities {
-    use relay::{Runtime, System};
+    use xcm_test_support::relay::{Runtime, System};
 
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Runtime>()
