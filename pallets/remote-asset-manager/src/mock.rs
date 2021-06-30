@@ -62,238 +62,6 @@ use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chai
 
 pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
 
-decl_test_parachain! {
-    pub struct ParaA {
-        Runtime = para::Runtime,
-        new_ext = para_ext(1),
-    }
-}
-
-decl_test_parachain! {
-    pub struct ParaB {
-        Runtime = para::Runtime,
-        new_ext = para_ext(2),
-    }
-}
-
-decl_test_relay_chain! {
-    pub struct Relay {
-        Runtime = relay::Runtime,
-        XcmConfig = relay::XcmConfig,
-        new_ext = relay_ext(),
-    }
-}
-
-decl_test_network! {
-    pub struct MockNet {
-        relay_chain = Relay,
-        parachains = vec![
-            (1, ParaA),
-            (2, ParaB),
-        ],
-    }
-}
-
-pub const INITIAL_BALANCE: u128 = 1_000_000_000;
-
-pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
-    use para::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    let parachain_info_config = parachain_info::GenesisConfig {
-        parachain_id: para_id.into(),
-    };
-
-    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
-        &parachain_info_config,
-        &mut t,
-    )
-    .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub fn relay_ext() -> sp_io::TestExternalities {
-    use relay::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
-pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
-
-/// relay chain mocks
-pub mod relay {
-    use super::*;
-
-    pub type AccountId = AccountId32;
-    pub type Balance = u128;
-
-    parameter_types! {
-        pub const BlockHashCount: u64 = 250;
-    }
-
-    impl frame_system::Config for Runtime {
-        type Origin = Origin;
-        type Call = Call;
-        type Index = u64;
-        type BlockNumber = u64;
-        type Hash = H256;
-        type Hashing = ::sp_runtime::traits::BlakeTwo256;
-        type AccountId = AccountId;
-        type Lookup = IdentityLookup<Self::AccountId>;
-        type Header = Header;
-        type Event = Event;
-        type BlockHashCount = BlockHashCount;
-        type BlockWeights = ();
-        type BlockLength = ();
-        type Version = ();
-        type PalletInfo = PalletInfo;
-        type AccountData = pallet_balances::AccountData<Balance>;
-        type OnNewAccount = ();
-        type OnKilledAccount = ();
-        type DbWeight = ();
-        type BaseCallFilter = ();
-        type SystemWeightInfo = ();
-        type SS58Prefix = ();
-        type OnSetCode = ();
-    }
-
-    parameter_types! {
-        pub ExistentialDeposit: Balance = 1;
-        pub const MaxLocks: u32 = 50;
-        pub const MaxReserves: u32 = 50;
-    }
-
-    impl pallet_balances::Config for Runtime {
-        type MaxLocks = MaxLocks;
-        type Balance = Balance;
-        type Event = Event;
-        type DustRemoval = ();
-        type ExistentialDeposit = ExistentialDeposit;
-        type AccountStore = System;
-        type WeightInfo = ();
-        type MaxReserves = MaxReserves;
-        type ReserveIdentifier = [u8; 8];
-    }
-
-    impl shared::Config for Runtime {}
-
-    impl configuration::Config for Runtime {}
-
-    parameter_types! {
-        pub const KsmLocation: MultiLocation = MultiLocation::Null;
-        pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
-        pub const AnyNetwork: NetworkId = NetworkId::Any;
-        pub Ancestry: MultiLocation = MultiLocation::Null;
-        pub UnitWeightCost: Weight = 1_000;
-    }
-
-    pub type SovereignAccountOf = (
-        ChildParachainConvertsVia<ParaId, AccountId>,
-        AccountId32Aliases<KusamaNetwork, AccountId>,
-    );
-
-    pub type LocalAssetTransactor =
-        XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, SovereignAccountOf, AccountId, ()>;
-
-    type LocalOriginConverter = (
-        SovereignSignedViaLocation<SovereignAccountOf, Origin>,
-        ChildParachainAsNative<origin::Origin, Origin>,
-        SignedAccountId32AsNative<KusamaNetwork, Origin>,
-        ChildSystemParachainAsSuperuser<ParaId, Origin>,
-    );
-
-    parameter_types! {
-        pub const BaseXcmWeight: Weight = 1_000;
-        pub KsmPerSecond: (MultiLocation, u128) = (KsmLocation::get(), 1);
-    }
-
-    pub type XcmRouter = super::RelayChainXcmRouter;
-    pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
-
-    pub struct XcmConfig;
-    impl Config for XcmConfig {
-        type Call = Call;
-        type XcmSender = XcmRouter;
-        type AssetTransactor = LocalAssetTransactor;
-        type OriginConverter = LocalOriginConverter;
-        type IsReserve = ();
-        type IsTeleporter = ();
-        type LocationInverter = LocationInverter<Ancestry>;
-        type Barrier = Barrier;
-        type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
-        type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ()>;
-        type ResponseHandler = ();
-    }
-
-    pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, KusamaNetwork>;
-
-    impl pallet_xcm::Config for Runtime {
-        type Event = Event;
-        type SendXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-        type XcmRouter = XcmRouter;
-        // Anyone can execute XCM messages locally...
-        type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-        type XcmExecuteFilter = ();
-        type XcmExecutor = XcmExecutor<XcmConfig>;
-        type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-        type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-        type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
-    }
-
-    parameter_types! {
-        pub const FirstMessageFactorPercent: u64 = 100;
-    }
-
-    impl ump::Config for Runtime {
-        type Event = Event;
-        type UmpSink = ump::XcmSink<XcmExecutor<XcmConfig>, Runtime>;
-        type FirstMessageFactorPercent = FirstMessageFactorPercent;
-    }
-
-    impl origin::Config for Runtime {}
-
-    type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-    type Block = frame_system::mocking::MockBlock<Runtime>;
-
-    construct_runtime!(
-        pub enum Runtime where
-            Block = Block,
-            NodeBlock = Block,
-            UncheckedExtrinsic = UncheckedExtrinsic,
-        {
-            System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-            Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-            ParasOrigin: origin::{Pallet, Origin},
-            ParasUmp: ump::{Pallet, Call, Storage, Event},
-            XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>},
-        }
-    );
-}
 
 pub mod para {
     use super::*;
@@ -705,3 +473,87 @@ pub mod para {
 //         t.into()
 //     }
 // }
+
+
+decl_test_parachain! {
+    pub struct ParaA {
+        Runtime = para::Runtime,
+        new_ext = para_ext(1),
+    }
+}
+
+decl_test_parachain! {
+    pub struct ParaB {
+        Runtime = para::Runtime,
+        new_ext = para_ext(2),
+    }
+}
+
+decl_test_relay_chain! {
+    pub struct Relay {
+        Runtime = relay::Runtime,
+        XcmConfig = relay::XcmConfig,
+        new_ext = relay_ext(),
+    }
+}
+
+decl_test_network! {
+    pub struct MockNet {
+        relay_chain = Relay,
+        parachains = vec![
+            (1, ParaA),
+            (2, ParaB),
+        ],
+    }
+}
+
+pub const INITIAL_BALANCE: u128 = 1_000_000_000;
+
+pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
+    use para::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    let parachain_info_config = parachain_info::GenesisConfig {
+        parachain_id: para_id.into(),
+    };
+
+    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
+        &parachain_info_config,
+        &mut t,
+    )
+        .unwrap();
+
+    pallet_balances::GenesisConfig::<Runtime> {
+        balances: vec![(ALICE, INITIAL_BALANCE)],
+    }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub fn relay_ext() -> sp_io::TestExternalities {
+    use relay::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    pallet_balances::GenesisConfig::<Runtime> {
+        balances: vec![(ALICE, INITIAL_BALANCE)],
+    }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<xcm_test_support::relay::Runtime>;
+pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
