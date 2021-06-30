@@ -39,7 +39,6 @@ commands:
           name: Install Nodejs
           command: |
             sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
-              && source ~/.bashrc \
               && nvm install v15.9.0 \
               && nvm use v15.9.0 \
               && npm install yarn -g
@@ -171,7 +170,7 @@ jobs:
       - prepare_launch_env
       - run:
           name: Run e2e tests
-          command:  cd js/e2e && yarn && yarn start
+          command:  source ~/.bashrc && cd js/e2e && yarn && yarn start
   docker-run-finalize:
     executor: test-executor
     description: Build and run finalization tests
@@ -179,7 +178,7 @@ jobs:
       - prepare_launch_env
       - run:
           name: Run finalization tests
-          command: cd js/finalize && yarn && yarn start
+          command: source ~/.bashrc && cd js/finalize && yarn && yarn start
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
