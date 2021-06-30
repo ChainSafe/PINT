@@ -170,7 +170,7 @@ jobs:
       - prepare_launch_env
       - run:
           name: Run e2e tests
-          command:  source ~/.bashrc && cd js/e2e && yarn && yarn start
+          command:  source /root/.bashrc && cd js/e2e && yarn && yarn start
   docker-run-finalize:
     executor: test-executor
     description: Build and run finalization tests
@@ -178,7 +178,7 @@ jobs:
       - prepare_launch_env
       - run:
           name: Run finalization tests
-          command: source ~/.bashrc && cd js/finalize && yarn && yarn start
+          command: source /root/.bashrc && cd js/finalize && yarn && yarn start
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
