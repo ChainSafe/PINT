@@ -43,13 +43,9 @@ async function tail(
                   cwd: path.resolve(String(root), ".."),
                   stdio: "pipe",
               })
-            : spawn(
-                  "docker",
-                  ["exec", "-it", "launch", "tail", "-f", `${file}`],
-                  {
-                      stdio: "pipe",
-                  }
-              );
+            : spawn("docker", ["exec", "launch", "tail", "-f", `${file}`], {
+                  stdio: "pipe",
+              });
 
         ps.stdout.on("data", (chunk: Buffer) => {
             chunk && match(chunk.toString()) && resolve(null);
