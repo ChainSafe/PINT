@@ -9,29 +9,29 @@ use cumulus_primitives_core::ParaId;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
 use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
 use xcm_builder::{
-    AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative, ChildParachainConvertsVia,
-    ChildSystemParachainAsSuperuser, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible,
-    FixedWeightBounds, IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative,
+    ChildParachainConvertsVia, ChildSystemParachainAsSuperuser,
+    CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible, FixedWeightBounds,
+    IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32,
     SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
 
-pub type AccountId = AccountId32;
-pub type Balance = u128;
+use super::types::*;
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+    pub const BlockHashCount: u64 = 250;
 }
 
 impl frame_system::Config for Runtime {
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
-    type BlockNumber = u64;
+    type BlockNumber = BlockNumber;
     type Hash = H256;
     type Hashing = ::sp_runtime::traits::BlakeTwo256;
     type AccountId = AccountId;
-    type Lookup = IdentityLookup<Self::AccountId>;
+    type Lookup = Lookup;
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
@@ -50,9 +50,9 @@ impl frame_system::Config for Runtime {
 }
 
 parameter_types! {
-	pub ExistentialDeposit: Balance = 1;
-	pub const MaxLocks: u32 = 50;
-	pub const MaxReserves: u32 = 50;
+    pub ExistentialDeposit: Balance = 420;
+    pub const MaxLocks: u32 = 50;
+    pub const MaxReserves: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -72,11 +72,11 @@ impl shared::Config for Runtime {}
 impl configuration::Config for Runtime {}
 
 parameter_types! {
-	pub const KsmLocation: MultiLocation = MultiLocation::Null;
-	pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
-	pub const AnyNetwork: NetworkId = NetworkId::Any;
-	pub Ancestry: MultiLocation = MultiLocation::Null;
-	pub UnitWeightCost: Weight = 1_000;
+    pub const KsmLocation: MultiLocation = MultiLocation::Null;
+    pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
+    pub const AnyNetwork: NetworkId = NetworkId::Any;
+    pub Ancestry: MultiLocation = MultiLocation::Null;
+    pub UnitWeightCost: Weight = 1_000;
 }
 
 pub type SovereignAccountOf = (
@@ -85,7 +85,7 @@ pub type SovereignAccountOf = (
 );
 
 pub type LocalAssetTransactor =
-XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, SovereignAccountOf, AccountId, ()>;
+    XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, SovereignAccountOf, AccountId, ()>;
 
 type LocalOriginConverter = (
     SovereignSignedViaLocation<SovereignAccountOf, Origin>,
@@ -95,8 +95,8 @@ type LocalOriginConverter = (
 );
 
 parameter_types! {
-	pub const BaseXcmWeight: Weight = 1_000;
-	pub KsmPerSecond: (MultiLocation, u128) = (KsmLocation::get(), 1);
+    pub const BaseXcmWeight: Weight = 1_000;
+    pub KsmPerSecond: (MultiLocation, u128) = (KsmLocation::get(), 1);
 }
 
 pub type XcmRouter = super::RelayChainXcmRouter;
@@ -133,7 +133,7 @@ impl pallet_xcm::Config for Runtime {
 }
 
 parameter_types! {
-	pub const FirstMessageFactorPercent: u64 = 100;
+    pub const FirstMessageFactorPercent: u64 = 100;
 }
 
 impl ump::Config for Runtime {
@@ -148,15 +148,15 @@ type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		ParasOrigin: origin::{Pallet, Origin},
-		ParasUmp: ump::{Pallet, Call, Storage, Event},
-		XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>},
-	}
+    pub enum Runtime where
+        Block = Block,
+        NodeBlock = Block,
+        UncheckedExtrinsic = UncheckedExtrinsic,
+    {
+        System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        ParasOrigin: origin::{Pallet, Origin},
+        ParasUmp: ump::{Pallet, Call, Storage, Event},
+        XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>},
+    }
 );

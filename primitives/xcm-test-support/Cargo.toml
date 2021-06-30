@@ -36,5 +36,11 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "releas
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.5" }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.5" }
 
+# orml
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+
+# pint
+xcm-calls = { path = "../xcm-calls" }
+
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
