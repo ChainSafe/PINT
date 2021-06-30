@@ -169,7 +169,32 @@ jobs:
               && cd js/e2e \
               && yarn \
               && yarn start
-
+  docker-run-finalize:
+    executor: test-executor
+    description: Build and run e2e tests
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Load Archived Docker Image
+          command: docker load -i /tmp/workspace/image.tar
+      - checkout
+      - run:
+          name: Build PINT launch Image
+          command: |
+            git submodule update --init
+            docker build -f docker/launch.Dockerfile -t launch .
+      - run:
+          name: Run e2e tests
+          command: |
+            sudo curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | sudo bash \
+              && source ~/.bashrc \
+              && nvm install v15.9.0 \
+              && nvm use v15.9.0 \
+              && npm install yarn -g \
+              && cd js/finalize \
+              && yarn \
+              && yarn start
   docker-publish-latest:
     executor: test-executor
     description: Publish latest Docker Image
@@ -214,6 +239,9 @@ workflows:
     jobs:
       - docker-build-release
       - docker-run-e2e:
+          requires:
+            - docker-build-release
+      - docker-run-finalize:
           requires:
             - docker-build-release
       - docker-publish-latest:
