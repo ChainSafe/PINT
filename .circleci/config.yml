@@ -169,7 +169,7 @@ jobs:
               && nvm install v15.9.0 \
               && nvm use v15.9.0 \
               && npm install yarn -g \
-              cd js/e2e && yarn && yarn start
+              && cd js/e2e && yarn && yarn start
   docker-run-finalize:
     executor: test-executor
     description: Build and run finalization tests
