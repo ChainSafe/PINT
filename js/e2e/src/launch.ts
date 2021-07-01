@@ -32,6 +32,8 @@ export async function docker(stdio?: StdioOptions): Promise<ChildProcess> {
         [
             "docker",
             "run",
+            "--name",
+            "launch",
             "-p",
             "9988:9988",
             "-p",

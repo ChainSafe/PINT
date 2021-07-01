@@ -25,7 +25,7 @@ interface TxResult {
 }
 
 // Message of launching complete
-const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
+export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
@@ -108,7 +108,9 @@ export default class Runner implements Config {
         });
 
         // Log errors
-        ps.stderr.on("data", (chunk: Buffer) => console.log(chunk.toString()));
+        ps.stderr.on("data", (chunk: Buffer) =>
+            process.stderr.write(chunk.toString())
+        );
 
         // Kill all processes when exiting.
         process.on("exit", () => {
