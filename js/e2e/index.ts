@@ -10,6 +10,13 @@ const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
+    const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
+        X2: [
+            api.createType("Junction", { Parent: null }),
+            api.createType("Junction", { Parachain: 300 }),
+        ],
+    });
+
     return [
         /* balance */
         {
@@ -34,7 +41,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 ASSET_ID_A,
                 1000000,
-                api.createType("AssetAvailability" as any),
+                api.createType("AssetAvailability" as any, {
+                    Liquid: ROCOCO_AND_STATEMINT,
+                }),
                 1000000,
             ],
             verify: async () => {
