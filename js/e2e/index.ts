@@ -1,4 +1,4 @@
-/**
+/**OA
  * E2E tests for PINT
  */
 import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
@@ -11,10 +11,10 @@ const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
-        X2: [
-            api.createType("Junction", { Parent: null }),
-            api.createType("Junction", { Parachain: 300 }),
-        ],
+        // NOTE:
+        //
+        // The current XCMRouter in PINT only supports X1
+        X1: api.createType("Junction", { Parent: null }),
     });
 
     return [
@@ -53,6 +53,26 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     "assetIndex.addAsset failed"
                 );
             },
+        },
+        /* remote-asset-manager*/
+        {
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendAddProxy",
+            args: [ASSET_ID_A, "Any", config.alice.address],
+        },
+        {
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendBond",
+            args: [
+                ASSET_ID_A,
+                config.alice.address,
+                1000,
+                api.createType("RewardDestination", {
+                    Staked: null,
+                }),
+            ],
         },
         /* committee */
         {

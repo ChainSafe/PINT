@@ -6294,6 +6294,7 @@ dependencies = [
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
+ "xcm-calls",
 ]
 
 [[package]]
@@ -6920,7 +6921,7 @@ dependencies = [
 [[package]]
 name = "polkadot-rpc"
 version = "0.9.5"
-source = "git+https://github.com/paritytech//polkadot?rev=3ce09da502dd74d88f24d76f579d19fd4e6c5624#3ce09da502dd74d88f24d76f579d19fd4e6c5624"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.5#3ce09da502dd74d88f24d76f579d19fd4e6c5624"
 dependencies = [
  "beefy-gadget",
  "beefy-gadget-rpc",
@@ -6953,7 +6954,7 @@ dependencies = [
 [[package]]
 name = "polkadot-rpc"
 version = "0.9.5"
-source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.5#3ce09da502dd74d88f24d76f579d19fd4e6c5624"
+source = "git+https://github.com/paritytech//polkadot?rev=3ce09da502dd74d88f24d76f579d19fd4e6c5624#3ce09da502dd74d88f24d76f579d19fd4e6c5624"
 dependencies = [
  "beefy-gadget",
  "beefy-gadget-rpc",
@@ -8575,10 +8576,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "sc-client-api",
- "sp-authorship 3.0.0 (git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc)",
+ "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
  "sp-runtime",
  "thiserror",
 ]
@@ -8586,10 +8587,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "sc-client-api",
- "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5)",
+ "sp-authorship 3.0.0 (git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc)",
  "sp-runtime",
  "thiserror",
 ]
@@ -8799,7 +8800,7 @@ dependencies = [
 [[package]]
 name = "sc-light"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "hash-db",
  "lazy_static",
@@ -8818,7 +8819,7 @@ dependencies = [
 [[package]]
 name = "sc-light"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "hash-db",
  "lazy_static",
@@ -9776,7 +9777,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -9788,7 +9789,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -10058,7 +10059,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -10069,7 +10070,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.5#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "lazy_static",
  "sp-core",

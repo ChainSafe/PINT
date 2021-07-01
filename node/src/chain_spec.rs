@@ -9,6 +9,10 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify, Zero};
+use xcm_calls::{
+    proxy::{ProxyConfig, ProxyWeights},
+    staking::{RewardDestination, StakingConfig, StakingWeights},
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
@@ -227,5 +231,33 @@ fn pint_testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
+        remote_asset_manager: parachain_runtime::RemoteAssetManagerConfig {
+            staking_configs: vec![(
+                42,
+                StakingConfig {
+                    pallet_index: 7,
+                    max_unlocking_chunks: 42,
+                    pending_unbond_calls: 42,
+                    reward_destination: RewardDestination::Staked,
+                    minimum_balance: 0,
+                    weights: StakingWeights {
+                        bond: 1000_u64,
+                        bond_extra: 1000_u64,
+                        unbond: 1000_u64,
+                        withdraw_unbonded: 1000_u64,
+                    },
+                },
+            )],
+            proxy_configs: vec![(
+                42,
+                ProxyConfig {
+                    pallet_index: 29,
+                    weights: ProxyWeights {
+                        add_proxy: 1000_u64,
+                        remove_proxy: 1000_u64,
+                    },
+                },
+            )],
+        },
     }
 }
