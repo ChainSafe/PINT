@@ -60,6 +60,22 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "remoteAssetManager",
             call: "sendAddProxy",
             args: [ASSET_ID_A, "Any", config.alice.address],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.proxies(
+                                ASSET_ID_A,
+                                config.alice.address
+                            )
+                        ).toJSON()
+                    ) ==
+                        JSON.stringify({
+                            added: ["Any"],
+                        }),
+                    "remoteAssetManager.sendAddProxy failed"
+                );
+            },
         },
         {
             signed: config.alice,
@@ -73,6 +89,27 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     Staked: null,
                 }),
             ],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.palletStakingBondState(
+                                ASSET_ID_A
+                            )
+                        ).toJSON()
+                    ) ===
+                        JSON.stringify({
+                            controller: {
+                                id: config.alice.address,
+                            },
+                            bonded: 1000,
+                            unbonded: 0,
+                            unlocked_chunks: 0,
+                        }),
+
+                    "remoteAssetManager.sendBond failed"
+                );
+            },
         },
         /* committee */
         {

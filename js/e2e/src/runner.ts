@@ -137,6 +137,7 @@ export default class Runner implements Config {
     ): Promise<Runner> {
         const provider = new WsProvider(ws);
         const keyring = new Keyring({ type: "sr25519" });
+        keyring.setSS58Format(0);
 
         // pairs
         const pair = keyring.addFromUri(uri);
