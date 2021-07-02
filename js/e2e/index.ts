@@ -1,4 +1,4 @@
-/**
+/**OA
  * E2E tests for PINT
  */
 import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
@@ -10,6 +10,13 @@ const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
+    const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
+        // NOTE:
+        //
+        // The current XCMRouter in PINT only supports X1
+        X1: api.createType("Junction", { Parent: null }),
+    });
+
     return [
         /* balance */
         {
@@ -34,7 +41,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 ASSET_ID_A,
                 1000000,
-                api.createType("AssetAvailability" as any),
+                api.createType("AssetAvailability" as any, {
+                    Liquid: ROCOCO_AND_STATEMINT,
+                }),
                 1000000,
             ],
             verify: async () => {
@@ -42,6 +51,63 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isSome,
                     "assetIndex.addAsset failed"
+                );
+            },
+        },
+        /* remote-asset-manager*/
+        {
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendAddProxy",
+            args: [ASSET_ID_A, "Any", config.alice.address],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.proxies(
+                                ASSET_ID_A,
+                                config.alice.address
+                            )
+                        ).toJSON()
+                    ) ==
+                        JSON.stringify({
+                            added: ["Any"],
+                        }),
+                    "remoteAssetManager.sendAddProxy failed"
+                );
+            },
+        },
+        {
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendBond",
+            args: [
+                ASSET_ID_A,
+                config.alice.address,
+                1000,
+                api.createType("RewardDestination", {
+                    Staked: null,
+                }),
+            ],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.palletStakingBondState(
+                                ASSET_ID_A
+                            )
+                        ).toJSON()
+                    ) ===
+                        JSON.stringify({
+                            controller: {
+                                id: config.alice.address,
+                            },
+                            bonded: 1000,
+                            unbonded: 0,
+                            unlocked_chunks: 0,
+                        }),
+
+                    "remoteAssetManager.sendBond failed"
                 );
             },
         },

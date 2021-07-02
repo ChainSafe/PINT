@@ -34,6 +34,7 @@ jsonrpc-core = '15.1.0'
 
 # Local Dependencies
 parachain-runtime = { path = '../runtime' }
+xcm-calls = { path = '../primitives/xcm-calls' }
 
 # Substrate Dependencies
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }

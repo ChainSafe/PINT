@@ -776,7 +776,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
     // Using root as the admin origin for now
-    type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+    type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type XcmSender = XcmRouter;
     type Event = Event;
     type AssetRegistry = AssetIndex;
@@ -816,7 +816,7 @@ construct_runtime!(
         Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
         LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
         SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
-        RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
+        RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
         ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
 
