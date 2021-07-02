@@ -4850,6 +4850,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "orml-unknown-tokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#443ee91bc2ca5f1fc155c0378eef6e89b67e2e97"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
@@ -5832,6 +5846,7 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-unknown-tokens",
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-index",

@@ -304,26 +304,6 @@ pub type LocationToAccountId = (
     AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-//
-// pub type LocalAssetTransactor = MultiAssetAdapter<
-//     // Use this balance type
-//     Balance,
-//     // Use this multicurrency for asset balances
-//     Currencies,
-//     // Use this for a registry of supported asset
-//     AssetIndex,
-//     // Use this to convert from fungible to balance type
-//     IsAsset,
-//     // The account type
-//     AccountId,
-//     // Use this to convert Multilocations to accounts
-//     LocationToAccountId,
-//     // The asset identifier type
-//     AssetId,
-//     // Use this to determine convert a Multiasset to an AssetId
-//     AssetIdConvert,
-// >;
-
 /// Means for transacting assets on this chain.
 pub type LocalAssetTransactor = MultiCurrencyAdapter<
     // Use this multicurrency for asset balances
