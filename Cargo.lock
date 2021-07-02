@@ -5488,15 +5488,24 @@ dependencies = [
 name = "pallet-remote-asset-manager"
 version = "0.0.1"
 dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
  "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "log",
+ "orml-tokens",
+ "orml-traits",
  "pallet-balances",
  "pallet-staking",
+ "pallet-xcm",
+ "parachain-info",
  "parity-scale-codec",
+ "polkadot-parachain",
+ "polkadot-runtime-parachains",
  "primitives",
  "serde",
  "sp-core",
@@ -5507,6 +5516,7 @@ dependencies = [
  "xcm-builder",
  "xcm-calls",
  "xcm-executor",
+ "xcm-simulator",
 ]
 
 [[package]]
@@ -12272,6 +12282,24 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+]
+
+[[package]]
+name = "xcm-simulator"
+version = "0.1.0"
+source = "git+https://github.com/shaunxw/xcm-simulator?rev=75d1437#75d143704e5e1301e0dca2c292a5dcf1abd7ee13"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "frame-support",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
