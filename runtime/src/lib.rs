@@ -31,7 +31,7 @@ use frame_system::{
     EnsureSigned,
 };
 
-# orml imports
+// orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
 use orml_xcm_support::{ExecuteXcm as ExecuteXcmT, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
@@ -433,8 +433,8 @@ impl pallet_xcm::Config for Runtime {
     type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-    type XcmReserveTransferFilter = ();
+    type XcmTeleportFilter = ();
+    type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
@@ -747,8 +747,8 @@ impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
 impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
     fn convert(account_id: AccountId) -> MultiLocation {
         Junction::AccountId32 {
-            id: Self::convert(account_id),
             network: NetworkId::Any,
+            id: Self::convert(account_id),
         }
         .into()
     }
