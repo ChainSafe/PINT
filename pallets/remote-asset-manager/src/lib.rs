@@ -220,7 +220,6 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
         fn build(&self) {
-            // Members::<T>::insert(member, MemberType::Council);
             self.staking_configs
                 .iter()
                 .for_each(|(id, config)| <PalletStakingConfig<T>>::insert(id, config));
