@@ -31,9 +31,13 @@ use frame_system::{
     EnsureSigned,
 };
 
+# orml imports
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+use orml_xcm_support::{ExecuteXcm as ExecuteXcmT, IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
+
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
-use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{BodyId, Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
@@ -57,9 +61,6 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
-
 use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
@@ -414,7 +415,7 @@ impl xcm_assets::Config for XcmAssetConfig {
     type WeightLimit = UnitWeightCost;
 }
 
-pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RelayNetwork>,);
+pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
