@@ -184,6 +184,8 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
+        /// Thrown if a SAFT operation was requested for a registered liquid asset.
+        ExpectedSAFT,
         /// Invalid metadata given.
         BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
@@ -643,10 +645,30 @@ pub mod pallet {
             // register the asset
             Self::insert_asset_availability(asset_id, availability);
 
-            // increase the total issuance
-            let issued = T::IndexToken::issue(nav);
-            // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, issued);
+            // mint PINT into caller's balance increasing the total issuance
+            T::IndexToken::deposit_creating(&caller, nav);
+            Ok(())
+        }
+
+        fn add_saft(
+            caller: &T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+        ) -> DispatchResult {
+            // ensure that the given asset id is either SAFT or not yet registered
+            Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
+                if let Some(exits) = maybe_available.replace(AssetAvailability::Saft) {
+                    ensure!(exits.is_saft(), Error::<T>::ExpectedSAFT);
+                }
+                Ok(())
+            })?;
+
+            // mint SAFT into the treasury's account
+            T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+            // mint PINT into caller's balance increasing the total issuance
+            T::IndexToken::deposit_creating(&caller, nav);
+
             Ok(())
         }
 

@@ -16,7 +16,10 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
         availability: AssetAvailability,
     ) -> DispatchResult;
 
-
+    /// Mints the SAFT into the index and awards the caller with given amount of PINT token.
+    /// If an asset with the given AssetId does not already exist, it will be registered as SAFT.
+    /// Fails if the availability of the asset is liquid.
+    fn add_saft(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 
     /// Sets the availability of the given asset.
     /// If the asset was already registered, the old `AssetAvailability` is returned.
