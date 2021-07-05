@@ -448,7 +448,7 @@ dependencies = [
 [[package]]
 name = "beefy-gadget"
 version = "0.1.0"
-source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=299dd5fd3fabd99c3c919f1312001283ddc5b365#299dd5fd3fabd99c3c919f1312001283ddc5b365"
+source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=f8ef26cc6d5ba23e31af9a839a8f004294c8b42a#f8ef26cc6d5ba23e31af9a839a8f004294c8b42a"
 dependencies = [
  "beefy-primitives",
  "futures 0.3.15",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "beefy-gadget-rpc"
 version = "0.1.0"
-source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=299dd5fd3fabd99c3c919f1312001283ddc5b365#299dd5fd3fabd99c3c919f1312001283ddc5b365"
+source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=f8ef26cc6d5ba23e31af9a839a8f004294c8b42a#f8ef26cc6d5ba23e31af9a839a8f004294c8b42a"
 dependencies = [
  "beefy-gadget",
  "beefy-primitives",
@@ -497,7 +497,7 @@ dependencies = [
 [[package]]
 name = "beefy-primitives"
 version = "0.1.0"
-source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=299dd5fd3fabd99c3c919f1312001283ddc5b365#299dd5fd3fabd99c3c919f1312001283ddc5b365"
+source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=f8ef26cc6d5ba23e31af9a839a8f004294c8b42a#f8ef26cc6d5ba23e31af9a839a8f004294c8b42a"
 dependencies = [
  "parity-scale-codec",
  "sp-api",
@@ -4767,7 +4767,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#443ee91bc2ca5f1fc155c0378eef6e89b67e2e97"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4783,7 +4783,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#443ee91bc2ca5f1fc155c0378eef6e89b67e2e97"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4798,7 +4798,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#443ee91bc2ca5f1fc155c0378eef6e89b67e2e97"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4813,9 +4813,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "orml-utilities"
+name = "orml-unknown-tokens"
 version = "0.4.1-dev"
 source = "git+https://github.com/open-web3-stack/open-runtime-module-library?branch=master#443ee91bc2ca5f1fc155c0378eef6e89b67e2e97"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-std",
+ "xcm",
+]
+
+[[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -4823,6 +4837,39 @@ dependencies = [
  "sp-io",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "orml-xcm-support"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
+dependencies = [
+ "frame-support",
+ "orml-traits",
+ "parity-scale-codec",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "orml-xtokens"
+version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5505324#55053241229a8e842dbb717c2bb281daa9fbdf04"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "orml-traits",
+ "orml-xcm-support",
+ "parity-scale-codec",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -4957,7 +5004,7 @@ dependencies = [
 [[package]]
 name = "pallet-beefy"
 version = "0.1.0"
-source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=299dd5fd3fabd99c3c919f1312001283ddc5b365#299dd5fd3fabd99c3c919f1312001283ddc5b365"
+source = "git+https://github.com/paritytech//grandpa-bridge-gadget?rev=f8ef26cc6d5ba23e31af9a839a8f004294c8b42a#f8ef26cc6d5ba23e31af9a839a8f004294c8b42a"
 dependencies = [
  "beefy-primitives",
  "frame-support",
@@ -5762,6 +5809,9 @@ dependencies = [
  "orml-currencies",
  "orml-tokens",
  "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
  "pallet-asset-index",
  "pallet-aura",
  "pallet-authorship",
@@ -8506,10 +8556,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "sc-client-api",
- "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
+ "sp-authorship 3.0.0 (git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc)",
  "sp-runtime",
  "thiserror",
 ]
@@ -8517,10 +8567,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.9.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "sc-client-api",
- "sp-authorship 3.0.0 (git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc)",
+ "sp-authorship 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7)",
  "sp-runtime",
  "thiserror",
 ]
@@ -8730,7 +8780,7 @@ dependencies = [
 [[package]]
 name = "sc-light"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "hash-db",
  "lazy_static",
@@ -8749,7 +8799,7 @@ dependencies = [
 [[package]]
 name = "sc-light"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "hash-db",
  "lazy_static",
@@ -9695,7 +9745,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -9707,7 +9757,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -9977,7 +10027,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -9988,7 +10038,7 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "3.0.0"
-source = "git+https://github.com/paritytech//substrate?rev=9c572625f6557dfdb19f47474369a0327d51dfbc#9c572625f6557dfdb19f47474369a0327d51dfbc"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.7#9c572625f6557dfdb19f47474369a0327d51dfbc"
 dependencies = [
  "lazy_static",
  "sp-core",
@@ -11287,7 +11337,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
 dependencies = [
  "cfg-if 0.1.10",
- "rand 0.7.3",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

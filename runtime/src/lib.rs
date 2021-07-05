@@ -31,6 +31,11 @@ use frame_system::{
     EnsureSigned,
 };
 
+// orml imports
+use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::parameter_type_with_key;
+use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
+
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
 use pallet_xcm::XcmPassthrough;
@@ -38,10 +43,10 @@ use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{BodyId, Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
 use xcm::v0::{Junction::*, MultiLocation::*};
 use xcm_builder::{
-    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, EnsureXcmOrigin,
-    FixedWeightBounds, LocationInverter, NativeAsset, ParentIsDefault, RelayChainAsNative,
-    SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-    SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, UsingComponents,
+    AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin,
+    FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter, ParentIsDefault,
+    RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
 use xcm_executor::{traits::Convert, XcmExecutor};
 
@@ -56,10 +61,6 @@ pub use frame_support::{
     },
     PalletId, StorageValue,
 };
-use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
-
-use pallet_asset_index::MultiAssetAdapter;
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
@@ -74,10 +75,12 @@ use xcm_calls::{
     staking::StakingCallEncoder,
     PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 };
-use xcm_executor::traits::MatchesFungible;
 
+/// Additional chain specific constants
+mod constants;
 /// Weights of pallets
 mod weights;
+use constants::{fee::*, time::*};
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -109,26 +112,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
 };
-
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
-// Unit = the base number of indivisible units for balances
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
@@ -322,22 +305,16 @@ pub type LocationToAccountId = (
 );
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = MultiAssetAdapter<
-    // Use this balance type
-    Balance,
+pub type LocalAssetTransactor = MultiCurrencyAdapter<
     // Use this multicurrency for asset balances
     Currencies,
-    // Use this for a registry of supported asset
-    AssetIndex,
-    // Use this to convert from fungible to balance type
-    IsAsset,
-    // The account type
+    // handle in event of unknown tokens
+    UnknownTokens,
+    // Convert
+    IsNativeConcrete<AssetId, AssetIdConvert>,
     AccountId,
-    // Use this to convert Multilocations to accounts
     LocationToAccountId,
-    // The asset identifier type
     AssetId,
-    // Use this to determine convert a Multiasset to an AssetId
     AssetIdConvert,
 >;
 
@@ -363,10 +340,10 @@ pub type XcmOriginToTransactDispatchOrigin = (
 );
 
 parameter_types! {
-    // One XCM operation is 1_000_000 weight - almost certainly a conservative estimate.
-    pub UnitWeightCost: Weight = 1_000_000;
+    // One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
+    pub const UnitWeightCost: Weight = 200_000_000;
     // One UNIT buys 1 second of weight.
-    pub const WeightPrice: (MultiLocation, u128) = (X1(Parent), UNIT);
+    pub const UnitPerSecond: (MultiLocation, u128) = (X1(Parent), UNIT);
 }
 
 match_type! {
@@ -378,8 +355,6 @@ match_type! {
 pub type Barrier = (
     TakeWeightCredit,
     AllowTopLevelPaidExecutionFrom<All<MultiLocation>>,
-    AllowUnpaidExecutionFrom<ParentOrParentsUnitPlurality>,
-    // ^^^ Parent & its unit plurality gets free execution
 );
 
 pub struct XcmConfig;
@@ -389,12 +364,13 @@ impl xcm_executor::Config for XcmConfig {
     // How to withdraw and deposit an asset.
     type AssetTransactor = LocalAssetTransactor;
     type OriginConverter = XcmOriginToTransactDispatchOrigin;
-    type IsReserve = NativeAsset;
-    type IsTeleporter = NativeAsset;
+    type IsReserve = MultiNativeAsset;
+    type IsTeleporter = ();
     type LocationInverter = LocationInverter<Ancestry>;
     type Barrier = Barrier;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-    type Trader = UsingComponents<IdentityFee<Balance>, RelayLocation, AccountId, Balances, ()>;
+    // TODO: make PINT treasury the beneficiary of trading fees
+    type Trader = FixedRateOfConcreteFungible<UnitPerSecond, ()>;
     type ResponseHandler = (); // Don't handle responses for now.
 }
 
@@ -413,7 +389,7 @@ impl xcm_assets::Config for XcmAssetConfig {
     type WeightLimit = UnitWeightCost;
 }
 
-pub type LocalOriginToLocation = (SignedToAccountId32<Origin, AccountId, RelayNetwork>,);
+pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
@@ -431,8 +407,8 @@ impl pallet_xcm::Config for Runtime {
     type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
     type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-    type XcmReserveTransferFilter = ();
+    type XcmTeleportFilter = ();
+    type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 }
 
@@ -634,7 +610,7 @@ parameter_types! {
 
 // --- ORML configurations
 parameter_type_with_key! {
-    pub ExistentialDeposits: |_currency_id: AssetId| -> Balance {
+    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
         Zero::zero()
     };
 }
@@ -666,12 +642,39 @@ impl orml_currencies::Config for Runtime {
     type WeightInfo = ();
 }
 
+impl orml_xtokens::Config for Runtime {
+    type Event = Event;
+    type Balance = Balance;
+    type CurrencyId = AssetId;
+    type CurrencyIdConvert = AssetIdConvert;
+    type AccountIdToMultiLocation = AccountId32Convert;
+    type SelfLocation = SelfLocation;
+    type XcmExecutor = XcmExecutor<XcmConfig>;
+    type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+}
+
+impl orml_unknown_tokens::Config for Runtime {
+    type Event = Event;
+}
+
 pub struct AssetIdConvert;
 impl Convert<AssetId, MultiLocation> for AssetIdConvert {
     fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
         AssetIndex::native_asset_location(&asset).ok_or(asset)
     }
 }
+impl sp_runtime::traits::Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+    fn convert(asset: AssetId) -> Option<MultiLocation> {
+        AssetIndex::native_asset_location(&asset)
+    }
+}
+
+impl sp_runtime::traits::Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
+    fn convert(location: MultiLocation) -> Option<AssetId> {
+        <Self as Convert<MultiLocation, AssetId>>::convert(location).ok()
+    }
+}
+
 impl Convert<MultiLocation, AssetId> for AssetIdConvert {
     fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
         match &location {
@@ -695,6 +698,12 @@ impl Convert<MultiLocation, AssetId> for AssetIdConvert {
     }
 }
 
+impl sp_runtime::traits::Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
+    fn convert(asset: MultiAsset) -> Option<AssetId> {
+        <Self as Convert<MultiAsset, AssetId>>::convert(asset).ok()
+    }
+}
+
 impl Convert<MultiAsset, AssetId> for AssetIdConvert {
     fn convert(asset: MultiAsset) -> sp_std::result::Result<AssetId, MultiAsset> {
         if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
@@ -705,23 +714,20 @@ impl Convert<MultiAsset, AssetId> for AssetIdConvert {
     }
 }
 
-/// Type to check if an asset is supported and then convert it into native balance
-pub struct IsAsset;
-impl MatchesFungible<Balance> for IsAsset {
-    fn matches_fungible(a: &MultiAsset) -> Option<Balance> {
-        if let MultiAsset::ConcreteFungible { id, amount } = a {
-            if AssetIdConvert::convert(id.clone()).is_ok() {
-                return Some(*amount);
-            }
-        }
-        None
-    }
-}
-
 pub struct AccountId32Convert;
 impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
+    }
+}
+
+impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
+    fn convert(account_id: AccountId) -> MultiLocation {
+        Junction::AccountId32 {
+            network: NetworkId::Any,
+            id: Self::convert(account_id),
+        }
+        .into()
     }
 }
 
@@ -820,11 +826,14 @@ construct_runtime!(
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
         ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
 
-        // XCM helpers
+        // XCM
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
         DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
         PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin}
+        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
+
+        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
+        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event}
     }
 );
 
