@@ -11,6 +11,7 @@ export const definitions = {
             types: {
                 Address: "MultiAddress",
                 LookupSource: "MultiAddress",
+                LookupSourceFor: "LookupSource",
                 Action: "Call",
                 AssetId: "u32",
                 AccountIdFor: "AccountId",
@@ -59,6 +60,12 @@ export const definitions = {
                     assets: "Vec<AssetWithdrawal>",
                 },
                 ProposalNonce: "u32",
+                ProxyType: {
+                    _enum: ["Any", "NonTransfer", "Governance", "Staking"],
+                },
+                ProxyState: {
+                    added: "Vec<ProxyType>",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,
@@ -69,6 +76,12 @@ export const definitions = {
                 SAFTRecord: {
                     nav: "Balance",
                     units: "Balance",
+                },
+                StakingBondState: {
+                    controller: "LookupSourceFor",
+                    bonded: "Balance",
+                    unbonded: "Balance",
+                    unlocked_chunks: "u32",
                 },
                 Vote: {
                     _enum: {
