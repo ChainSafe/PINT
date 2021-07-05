@@ -3,14 +3,14 @@
 
 use crate as pallet;
 use crate::mock::*;
-use crate::types::{AssetWithdrawal, RedemptionState};
-use frame_support::sp_runtime::FixedU128;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, sp_runtime::FixedU128};
 use orml_traits::MultiCurrency;
-use pallet::types::AssetAvailability;
+use pallet::{
+    traits::AssetRecorder,
+    types::{AssetAvailability, AssetWithdrawal, RedemptionState},
+};
 use pallet_price_feed::PriceFeed;
-use sp_runtime::traits::BadOrigin;
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use xcm::v0::MultiLocation;
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -241,6 +241,39 @@ fn deposit_ok_for_when_price_feed_unavailable() {
             UNKNOWN_ASSET_ID,
             1
         ),);
+    })
+}
+
+#[test]
+fn can_add_saft() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5),);
+        assert_eq!(
+            pallet::Assets::<Test>::get(ASSET_A_ID),
+            Some(AssetAvailability::Saft)
+        );
+        assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+        assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), 5);
+        assert_eq!(AssetIndex::index_token_issuance(), 5);
+    });
+}
+
+#[test]
+fn add_saft_fails_on_liquid_already_registered() {
+    let balance = vec![(ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
+    new_test_ext_with_balance(balance).execute_with(|| {
+        assert_ok!(AssetIndex::add_asset(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            UNKNOWN_ASSET_ID,
+            100,
+            AssetAvailability::Liquid(MultiLocation::Null),
+            5
+        ));
+        assert_noop!(
+            AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 100, 5),
+            pallet::Error::<Test>::ExpectedSAFT
+        );
     })
 }
 
