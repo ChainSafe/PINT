@@ -682,7 +682,7 @@ pub mod pallet {
         }
 
         fn remove_asset(_: &T::AssetId) -> DispatchResult {
-            todo!();
+            Ok(())
         }
     }
 

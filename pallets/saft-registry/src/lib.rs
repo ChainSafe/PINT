@@ -23,7 +23,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::MultiCurrency;
-    use pallet_asset_index::traits::{AssetAvailability, AssetRecorder};
+    use pallet_asset_index::traits::AssetRecorder;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -112,16 +112,8 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
 
-            // mint SAFT first that get transferred into the index in the next step
-            T::Currency::deposit(asset_id, &caller, units)?;
-
-            <T as Config>::AssetRecorder::add_asset(
-                &caller,
-                asset_id,
-                units,
-                nav.clone(),
-                AssetAvailability::Saft,
-            )?;
+            // mint SAFT units into the index and credit the caller's account with PINT
+            <T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav.clone())?;
 
             let index = ActiveSAFTs::<T>::mutate(asset_id, |records| {
                 let index = records.len() as u32;
