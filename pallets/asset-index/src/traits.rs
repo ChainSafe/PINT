@@ -16,6 +16,15 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
         availability: AssetAvailability,
     ) -> DispatchResult;
 
+
+
+    /// Sets the availability of the given asset.
+    /// If the asset was already registered, the old `AssetAvailability` is returned.
+    fn insert_asset_availability(
+        asset_id: AssetId,
+        availability: AssetAvailability,
+    ) -> Option<AssetAvailability>;
+
     fn remove_asset(id: &AssetId) -> DispatchResult;
 }
 

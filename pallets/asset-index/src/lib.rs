@@ -641,13 +641,22 @@ pub mod pallet {
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 
             // register the asset
-            Assets::<T>::insert(asset_id, availability);
+            Self::insert_asset_availability(asset_id, availability);
 
             // increase the total issuance
             let issued = T::IndexToken::issue(nav);
             // add minted PINT to user's balance
             T::IndexToken::resolve_creating(&caller, issued);
             Ok(())
+        }
+
+        fn insert_asset_availability(
+            asset_id: T::AssetId,
+            availability: AssetAvailability,
+        ) -> Option<AssetAvailability> {
+            Assets::<T>::mutate(asset_id, |maybe_available| {
+                maybe_available.replace(availability)
+            })
         }
 
         fn remove_asset(_: &T::AssetId) -> DispatchResult {
