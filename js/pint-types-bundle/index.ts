@@ -13,7 +13,6 @@ export const definitions = {
                 LookupSource: "MultiAddress",
                 LookupSourceFor: "LookupSource",
                 Action: "Call",
-                AssetId: "u32",
                 AccountIdFor: "AccountId",
                 AccountBalance: {
                     available: "Balance",
@@ -25,6 +24,12 @@ export const definitions = {
                         Saft: null,
                     },
                 },
+                AssetId: "u32",
+                AssetMetadata: {
+                    name: "BoundedString",
+                    symbol: "BoundedString",
+                    decimals: "u8",
+                },
                 AssetWithdrawal: {
                     asset: "AssetId",
                     state: "RedemptionState",
@@ -32,6 +37,7 @@ export const definitions = {
                 },
                 Balance: "u128",
                 BalanceFor: "Balance",
+                BoundedString: "BoundedVec<u8, 50>",
                 CommitteeMember: {
                     account_id: "AccountId",
                     member_type: "MemberType",
