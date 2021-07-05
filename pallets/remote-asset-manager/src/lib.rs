@@ -66,7 +66,7 @@ pub mod pallet {
         ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config  {
         /// The balance type for cross chain transfers
         type Balance: Parameter
             + Member
