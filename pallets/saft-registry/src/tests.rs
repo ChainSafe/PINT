@@ -30,14 +30,25 @@ fn non_admin_cannot_call_any_extrinsics() {
 
 #[test]
 fn admin_can_add_and_remove_saft() {
+    let units = 20;
+    let nav = 100;
     new_test_ext().execute_with(|| {
         // add
         assert_ok!(SaftRegistry::add_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A,
-            100,
-            20
+            nav,
+            units
         ));
+        assert_eq!(
+            super::ActiveSAFTs::<Test>::get(ASSET_A),
+            vec![SAFTRecord::new(nav, units)]
+        );
+        assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A), units);
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), nav);
+        assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav);
+        assert_eq!(AssetIndex::index_token_issuance(), nav);
+
         assert_eq!(
             super::ActiveSAFTs::<Test>::get(ASSET_A),
             vec![SAFTRecord::new(100, 20)]

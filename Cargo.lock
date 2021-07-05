@@ -5507,6 +5507,8 @@ dependencies = [
  "orml-traits",
  "pallet-asset-index",
  "pallet-balances",
+ "pallet-price-feed",
+ "pallet-remote-asset-manager",
  "parity-scale-codec",
  "serde",
  "sp-core",
