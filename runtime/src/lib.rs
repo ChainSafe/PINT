@@ -504,7 +504,6 @@ impl pallet_saft_registry::Config for Runtime {
     type Balance = Balance;
     type AssetRecorder = AssetIndex;
     type AssetId = AssetId;
-    type Currency = Currencies;
     type WeightInfo = weights::pallet_saft_registry::WeightInfo<Runtime>;
 }
 

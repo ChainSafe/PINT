@@ -22,7 +22,6 @@ pub mod pallet {
         sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*, transactional,
     };
     use frame_system::pallet_prelude::*;
-    use orml_traits::MultiCurrency;
     use pallet_asset_index::traits::AssetRecorder;
 
     #[pallet::config]
@@ -33,12 +32,6 @@ pub mod pallet {
         type Balance: Parameter + AtLeast32BitUnsigned + Default + Copy;
         type AssetId: Parameter + From<u32> + Copy;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        /// Currency type for add/remove SAFT to/from the user's sovereign account
-        type Currency: MultiCurrency<
-            Self::AccountId,
-            CurrencyId = Self::AssetId,
-            Balance = Self::Balance,
-        >;
         /// The weight for this pallet's extrinsics.
         type WeightInfo: WeightInfo;
     }
@@ -132,7 +125,8 @@ pub mod pallet {
             asset_id: T::AssetId,
             index: u32,
         ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let who = ensure_signed(origin)?;
 
             let index_usize: usize = index as usize;
 
@@ -140,8 +134,8 @@ pub mod pallet {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
-                    safts.remove(index_usize);
-                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
+                    let record = safts.remove(index_usize);
+                    T::AssetRecorder::remove_saft(who, asset_id, record.units, record.nav)?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())

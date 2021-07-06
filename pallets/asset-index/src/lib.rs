@@ -159,6 +159,15 @@ pub mod pallet {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+        /// An asset was removed from the index and some index token transferred or burned
+        /// \[AssetId, AssetUnits, Account, Recipient, IndexTokenNAV\]
+        AssetRemoved(
+            T::AssetId,
+            T::Balance,
+            AccountIdFor<T>,
+            Option<AccountIdFor<T>>,
+            T::Balance,
+        ),
         /// A new deposit of an asset into the index has been performed
         /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -184,8 +193,12 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
-        /// Thrown if a SAFT operation was requested for a registered liquid asset.
+        /// Thrown if a SAFT asset operation was requested for a registered liquid asset.
         ExpectedSAFT,
+        /// Thrown if a liquid asset operation was requested for a registered SAFT asset.
+        ExpectedLiquid,
+        /// Thrown when trying to remove liquid assets without recipient
+        NoRecipient,
         /// Invalid metadata given.
         BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
@@ -207,18 +220,18 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Callable by the governance committee to add new assets to the index and mint
+        /// Callable by the governance committee to add new liquid assets to the index and mint
         /// the given amount IndexToken.
         /// The amount of PINT minted and awarded to the LP is specified as part of the
         /// associated proposal
         /// Caller's balance is updated to allocate the correct amount of the IndexToken.
-        ///If the asset does not exist yet, it will get created.
+        /// If the asset does not exist yet, it will get created with the given location.
         #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn add_asset(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             units: T::Balance,
-            availability: AssetAvailability,
+            location: MultiLocation,
             value: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
@@ -231,15 +244,40 @@ pub mod pallet {
             )?;
 
             // transfer the caller's fund into the treasury account
-            <Self as AssetRecorder<T::AccountId, T::AssetId, T::Balance>>::add_asset(
-                &caller,
-                asset_id,
-                units,
-                value,
-                availability,
-            )?;
+            Self::add_liquid(&caller, asset_id, units, value, location)?;
 
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Dispatches transfer to move assets out of the index’s account,
+        /// if a liquid asset is specified
+        /// Callable by an admin.
+        ///
+        /// Updates the index to reflect the removed assets (units) by burning index token accordingly.
+        /// If the given asset is liquid, an xcm transfer will be dispatched to transfer
+        /// the given units into the sovereign account of either:
+        /// - the given `recipient` if provided
+        /// - the caller's account if `recipient` is `None`
+        pub fn remove_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
+
+            // calculate current PINT equivalent value
+            let value = Self::calculate_pint_equivalent(asset_id, units)?;
+
+            // transfer the caller's fund into the treasury account
+            Self::remove_liquid(caller.clone(), asset_id, units, value, recipient.clone())?;
+
+            Self::deposit_event(Event::AssetRemoved(
+                asset_id, units, caller, recipient, value,
+            ));
             Ok(().into())
         }
 
@@ -632,18 +670,18 @@ pub mod pallet {
 
     impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
         /// Creates an entry in the assets map and contributes the given amount of asset to the treasury.
-        fn add_asset(
+        fn add_liquid(
             caller: &T::AccountId,
             asset_id: T::AssetId,
             units: T::Balance,
             nav: T::Balance,
-            availability: AssetAvailability,
+            location: MultiLocation,
         ) -> DispatchResult {
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 
             // register the asset
-            Self::insert_asset_availability(asset_id, availability);
+            Self::insert_asset_availability(asset_id, AssetAvailability::Liquid(location));
 
             // mint PINT into caller's balance increasing the total issuance
             T::IndexToken::deposit_creating(&caller, nav);
@@ -681,7 +719,47 @@ pub mod pallet {
             })
         }
 
-        fn remove_asset(_: &T::AssetId) -> DispatchResult {
+        fn remove_liquid(
+            who: T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResult {
+            ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
+            ensure!(
+                T::IndexToken::can_slash(&who, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            let recipient = recipient.unwrap_or_else(|| who.clone());
+
+            // Execute the transfer which will take of updating the balance
+            T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
+
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&who, nav);
+
+            Ok(())
+        }
+
+        fn remove_saft(
+            who: T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+        ) -> DispatchResult {
+            ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
+            ensure!(
+                T::IndexToken::can_slash(&who, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            // burn SAFT by withdrawing from the index
+            T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&who, nav);
+
             Ok(())
         }
     }

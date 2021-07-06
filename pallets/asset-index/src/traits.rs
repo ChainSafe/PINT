@@ -3,17 +3,18 @@
 
 pub use crate::types::{AssetAvailability, AssetMetadata};
 use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned};
+use xcm::v0::MultiLocation;
 
 pub trait AssetRecorder<AccountId, AssetId, Balance> {
-    /// Add an asset into the index.
+    /// Add an liquid asset into the index.
     /// If an asset with the given AssetId does not already exist, it will be registered.
     /// This moves the given units from the caller's balance into the index's and issues PINT accordingly.
-    fn add_asset(
+    fn add_liquid(
         caller: &AccountId,
         id: AssetId,
         units: Balance,
         nav: Balance,
-        availability: AssetAvailability,
+        location: MultiLocation,
     ) -> DispatchResult;
 
     /// Mints the SAFT into the index and awards the caller with given amount of PINT token.
@@ -28,7 +29,20 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
         availability: AssetAvailability,
     ) -> Option<AssetAvailability>;
 
-    fn remove_asset(id: &AssetId) -> DispatchResult;
+    /// Dispatches transfer to move liquid assets out of the index’s account.
+    /// Updates the index by burning the given amount of index token from
+    /// the caller's account.
+    fn remove_liquid(
+        who: AccountId,
+        id: AssetId,
+        units: Balance,
+        nav: Balance,
+        recipient: Option<AccountId>,
+    ) -> DispatchResult;
+
+    /// Burns the given amount of SAFT token from the index and
+    /// the nav from the caller's account
+    fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
 /// Type that calculations any fees to be deducted for every withdrawal.
