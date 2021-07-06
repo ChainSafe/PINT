@@ -31,6 +31,7 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
     /// Dispatches transfer to move assets out of the index’s account, if a liquid asset is specified, burns the SAFT otherwise.
     /// Updates the index by burning the given amount of index token.
     fn remove_asset(
+        who: AccountId,
         id: AssetId,
         units: Balance,
         nav: Balance,

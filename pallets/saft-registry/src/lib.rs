@@ -132,7 +132,8 @@ pub mod pallet {
             asset_id: T::AssetId,
             index: u32,
         ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let who = ensure_signed(origin)?;
 
             let index_usize: usize = index as usize;
 
@@ -140,8 +141,14 @@ pub mod pallet {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
-                    safts.remove(index_usize);
-                    <T as Config>::AssetRecorder::remove_asset(&asset_id)?;
+                    let record = safts.remove(index_usize);
+                    <T as Config>::AssetRecorder::remove_asset(
+                        who,
+                        asset_id,
+                        record.units,
+                        record.nav,
+                        None,
+                    )?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())

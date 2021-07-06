@@ -269,13 +269,14 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
-            let recipient = recipient.unwrap_or(caller);
+            let recipient = recipient.unwrap_or_else(|| caller.clone());
 
             // calculate current PINT equivalent value
             let value = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer the caller's fund into the treasury account
             <Self as AssetRecorder<T::AccountId, T::AssetId, T::Balance>>::remove_asset(
+                caller,
                 asset_id,
                 units,
                 value,
@@ -725,14 +726,14 @@ pub mod pallet {
         }
 
         fn remove_asset(
+            who: T::AccountId,
             asset_id: T::AssetId,
             units: T::Balance,
             nav: T::Balance,
             recipient: Option<T::AccountId>,
         ) -> DispatchResult {
-            let treasury = Self::treasury_account();
             ensure!(
-                T::IndexToken::can_slash(&treasury, nav),
+                T::IndexToken::can_slash(&who, nav),
                 Error::<T>::InsufficientDeposit
             );
 
@@ -745,11 +746,11 @@ pub mod pallet {
                 )?;
             } else {
                 // burn SAFT by withdrawing from the index
-                T::Currency::withdraw(asset_id, &treasury, units)?;
+                T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
             }
 
             // burn index token accordingly, no index token changes in the meantime
-            T::IndexToken::slash(&treasury, nav);
+            T::IndexToken::slash(&who, nav);
 
             Ok(())
         }

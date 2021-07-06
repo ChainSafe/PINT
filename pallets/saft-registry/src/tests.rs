@@ -51,7 +51,7 @@ fn admin_can_add_and_remove_saft() {
 
         assert_eq!(
             super::ActiveSAFTs::<Test>::get(ASSET_A),
-            vec![SAFTRecord::new(100, 20)]
+            vec![SAFTRecord::new(nav, units)]
         );
         // remove
         assert_ok!(SaftRegistry::remove_saft(
