@@ -39,7 +39,19 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "assetIndex",
             call: "setMetadata",
             args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-            verify: async () => {},
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        await api.query.assetIndex.metadata(ASSET_ID_A)
+                    ) ===
+                        JSON.stringify({
+                            name: "PINT_TEST",
+                            symbol: "P",
+                            decimals: "9",
+                        }),
+                    "assetIndex.setMetadata failed"
+                );
+            },
         },
         {
             signed: config.alice,
@@ -65,23 +77,23 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
-            args: [ASSET_ID_A, 1],
+            args: [ASSET_ID_A, 1000],
             verify: async () => {},
         },
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "withdraw",
-            args: [1000000],
-            verify: async () => {},
-        },
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "completeWithdraw",
-            args: [],
-            verify: async () => {},
-        },
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "withdraw",
+        //     args: [1000000],
+        //     verify: async () => {},
+        // },
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "completeWithdraw",
+        //     args: [],
+        //     verify: async () => {},
+        // },
         /* remote-asset-manager*/
         {
             signed: config.alice,
