@@ -188,7 +188,6 @@ impl pallet_saft_registry::Config for Test {
     type Balance = Balance;
     type AssetRecorder = AssetIndex;
     type AssetId = AssetId;
-    type Currency = Currency;
     type WeightInfo = ();
 }
 

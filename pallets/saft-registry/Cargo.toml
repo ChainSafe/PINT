@@ -19,9 +19,6 @@ frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch =
 # PINT dependencies
 pallet-asset-index = {path = "../asset-index", default-features = false }
 
-# ORML Dependencies
-orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
-
 [dev-dependencies]
 serde = { version = "1.0.101" }
 
@@ -35,6 +32,8 @@ pallet-asset-index = { path = "../asset-index" }
 pallet-remote-asset-manager = { path = "../remote-asset-manager" }
 pallet-price-feed = { path = "../price-feed" }
 
+# ORML Dependencies
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 [package.metadata.docs.rs]

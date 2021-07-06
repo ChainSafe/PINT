@@ -22,7 +22,6 @@ pub mod pallet {
         sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*, transactional,
     };
     use frame_system::pallet_prelude::*;
-    use orml_traits::MultiCurrency;
     use pallet_asset_index::traits::AssetRecorder;
 
     #[pallet::config]
@@ -33,12 +32,6 @@ pub mod pallet {
         type Balance: Parameter + AtLeast32BitUnsigned + Default + Copy;
         type AssetId: Parameter + From<u32> + Copy;
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-        /// Currency type for add/remove SAFT to/from the user's sovereign account
-        type Currency: MultiCurrency<
-            Self::AccountId,
-            CurrencyId = Self::AssetId,
-            Balance = Self::Balance,
-        >;
         /// The weight for this pallet's extrinsics.
         type WeightInfo: WeightInfo;
     }
