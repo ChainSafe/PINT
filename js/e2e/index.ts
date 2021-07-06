@@ -37,6 +37,13 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             signed: config.alice,
             pallet: "assetIndex",
+            call: "setMetadata",
+            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+            verify: async () => {},
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
             call: "addAsset",
             args: [
                 ASSET_ID_A,
@@ -47,25 +54,33 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 1000000,
             ],
             verify: async () => {
-                // assert(
-                //     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-                //         .isSome,
-                //     "assetIndex.addAsset failed"
-                // );
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isSome,
+                    "assetIndex.addAsset failed"
+                );
             },
         },
         {
             signed: config.alice,
             pallet: "assetIndex",
-            call: "setMetadata",
-            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.metadata(ASSET_ID_A)) as any)
-                        .isSome,
-                    "assetIndex.setMetadata failed"
-                );
-            },
+            call: "deposit",
+            args: [ASSET_ID_A, 1],
+            verify: async () => {},
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "withdraw",
+            args: [1000000],
+            verify: async () => {},
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "completeWithdraw",
+            args: [],
+            verify: async () => {},
         },
         /* remote-asset-manager*/
         {
@@ -156,7 +171,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                             await api.derive.chain.bestNumber()
                         ).toNumber();
                         console.log(`\t | current block: ${currentBlock}`);
-
                         console.log("\t | waiting for the voting peirod...");
                         const end = ((
                             await api.query.committee.votes(hash)
