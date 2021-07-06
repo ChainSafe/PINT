@@ -94,7 +94,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
         None,
         None,
         Extensions {
-            relay_chain: "rococo-dev".into(),
+            relay_chain: "rococo-local".into(),
             para_id: id.into(),
         },
     )
