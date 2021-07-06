@@ -45,15 +45,46 @@ Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run o
 
 ### Local Testnet
 
-Polkadot (rococo-v1 branch):
+Polkadot (release-v0.9.x branch)
+
 ```
-cargo build --release --features real-overseer
+cargo build --release
 
 ./target/release/polkadot build-spec --chain rococo-local --raw --disable-default-bootnode > rococo_local.json
 
-./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay1 --validator --bob --port 50555
-./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay0 --validator --alice --port 50556
+./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay0 --validator --alice --port 9844
+
+./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay1 --validator --bob --port 9955
 ```
+
+PINT Parachain:
+
+```
+# this command assumes the chain spec is in a directory named polkadot that is a sibling of the pint directory
+./target/release/pint --collator --alice --chain pint-dev --ws-port 9945 --parachain-id 200 --rpc-cors all -- --execution wasm --chain ../polkadot/rococo_local.json --ws-port 9977 --rpc-cors all
+```
+
+### Registering on Local Relay Chain
+
+In order to produce blocks you will need to register the parachain as detailed in the [Substrate Cumulus Workshop](https://substrate.dev/cumulus-workshop/#/en/3-parachains/2-register) by going to
+
+Developer -> sudo -> paraSudoWrapper -> sudoScheduleParaInitialize(id, genesis)
+
+Ensure you set the `ParaId` to `200` and the `parachain: Bool` to `Yes`.
+
+```
+cargo build --release
+# Build the Chain spec
+./target/release/pint build-spec --disable-default-bootnode > ./pint-local-plain.json
+# Build the raw file
+./target/release/pint build-spec --chain=./pint-local-plain.json --raw --disable-default-bootnode > ./pint-local.json
+
+
+# export genesis state and wasm
+./target/release/pint export-genesis-state --parachain-id 200 > ./resources/para-200-genesis
+./target/release/pint export-genesis-wasm > ./para-200.wasm
+```
+
 
 * [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in the  `./bin` folder and
     * Run globally
@@ -62,8 +93,3 @@ cargo build --release --features real-overseer
         * ``` yarn ```
         * ``` yarn start ```
 
-Substrate Parachain Template:
-```
-# this command assumes the chain spec is in a directory named polkadot that is a sibling of the working directory
-./target/release/parachain-collator -d local-test --collator --alice --ws-port 9945 --parachain-id 200 -- --chain ../polkadot/rococo_local.json
-```
