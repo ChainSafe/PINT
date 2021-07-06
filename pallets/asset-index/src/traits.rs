@@ -39,6 +39,10 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
         nav: Balance,
         recipient: Option<AccountId>,
     ) -> DispatchResult;
+
+    /// Burns the given amount of SAFT token from the index and
+    /// the nav from the caller's account
+    fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
 /// Type that calculations any fees to be deducted for every withdrawal.

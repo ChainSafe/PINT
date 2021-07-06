@@ -142,13 +142,7 @@ pub mod pallet {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
                     let record = safts.remove(index_usize);
-                    <T as Config>::AssetRecorder::remove_liquid(
-                        who,
-                        asset_id,
-                        record.units,
-                        record.nav,
-                        None,
-                    )?;
+                    T::AssetRecorder::remove_saft(who, asset_id, record.units, record.nav)?;
                     Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, index));
 
                     Ok(())

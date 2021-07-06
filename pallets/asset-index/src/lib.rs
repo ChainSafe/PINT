@@ -726,20 +726,37 @@ pub mod pallet {
             nav: T::Balance,
             recipient: Option<T::AccountId>,
         ) -> DispatchResult {
-            let recipient = recipient.unwrap_or_else(|| who.clone());
+            ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
             ensure!(
                 T::IndexToken::can_slash(&who, nav),
                 Error::<T>::InsufficientDeposit
             );
 
-            if Self::is_liquid_asset(&asset_id) {
-                // Execute the transfer which will take of updating the balance
-                T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
-            } else {
-                // burn SAFT by withdrawing from the index
-                T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
-            }
+            let recipient = recipient.unwrap_or_else(|| who.clone());
 
+            // Execute the transfer which will take of updating the balance
+            T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
+
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&who, nav);
+
+            Ok(())
+        }
+
+        fn remove_saft(
+            who: T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+        ) -> DispatchResult {
+            ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
+            ensure!(
+                T::IndexToken::can_slash(&who, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            // burn SAFT by withdrawing from the index
+            T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
             // burn index token accordingly, no index token changes in the meantime
             T::IndexToken::slash(&who, nav);
 
