@@ -28,7 +28,14 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
         availability: AssetAvailability,
     ) -> Option<AssetAvailability>;
 
-    fn remove_asset(id: &AssetId) -> DispatchResult;
+    /// Dispatches transfer to move assets out of the index’s account, if a liquid asset is specified, burns the SAFT otherwise.
+    /// Updates the index by burning the given amount of index token.
+    fn remove_asset(
+        id: AssetId,
+        units: Balance,
+        nav: Balance,
+        recipient: Option<AccountId>,
+    ) -> DispatchResult;
 }
 
 /// Type that calculations any fees to be deducted for every withdrawal.

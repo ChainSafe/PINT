@@ -159,6 +159,10 @@ pub mod pallet {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+
+        /// An asset was removed from the index and some index token transfered or burned
+        /// \[AssetId, AssetUnits, Recipient, IndexTokenNAV\]
+        AssetRemoved(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
         /// A new deposit of an asset into the index has been performed
         /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -184,8 +188,12 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
-        /// Thrown if a SAFT operation was requested for a registered liquid asset.
+        /// Thrown if a SAFT asset operation was requested for a registered liquid asset.
         ExpectedSAFT,
+        /// Thrown if a liquid asset operation was requested for a registered SAFT asset.
+        ExpectedLiquid,
+        /// Thrown when trying to remove liquid assets without recipient
+        NoRecipient,
         /// Invalid metadata given.
         BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
@@ -240,6 +248,41 @@ pub mod pallet {
             )?;
 
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Dispatches transfer to move assets out of the index’s account,
+        /// if a liquid asset is specified
+        /// Callable by an admin.
+        ///
+        /// Updates the index to reflect the removed assets (units) by burning index token accordingly.
+        /// If the given asset is liquid, an xcm transfer will be dispatched to transfer
+        /// the given units into the sovereign account of either:
+        /// - the given `recipient` if provided
+        /// - the caller's account if `recipient` is `None`
+        pub fn remove_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
+            let recipient = recipient.unwrap_or(caller);
+
+            // calculate current PINT equivalent value
+            let value = Self::calculate_pint_equivalent(asset_id, units)?;
+
+            // transfer the caller's fund into the treasury account
+            <Self as AssetRecorder<T::AccountId, T::AssetId, T::Balance>>::remove_asset(
+                asset_id,
+                units,
+                value,
+                Some(recipient.clone()),
+            )?;
+
+            Self::deposit_event(Event::AssetRemoved(asset_id, units, recipient, value));
             Ok(().into())
         }
 
@@ -681,7 +724,33 @@ pub mod pallet {
             })
         }
 
-        fn remove_asset(_: &T::AssetId) -> DispatchResult {
+        fn remove_asset(
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResult {
+            let treasury = Self::treasury_account();
+            ensure!(
+                T::IndexToken::can_slash(&treasury, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            if Self::is_liquid_asset(&asset_id) {
+                // Execute the transfer which will take of updating the balance
+                T::RemoteAssetManager::transfer_asset(
+                    recipient.ok_or(Error::<T>::NoRecipient)?,
+                    asset_id,
+                    units,
+                )?;
+            } else {
+                // burn SAFT by withdrawing from the index
+                T::Currency::withdraw(asset_id, &treasury, units)?;
+            }
+
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&treasury, nav);
+
             Ok(())
         }
     }
