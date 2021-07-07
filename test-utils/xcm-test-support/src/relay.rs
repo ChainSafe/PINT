@@ -1,11 +1,22 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::{construct_runtime, parameter_types, traits::All, weights::Weight};
+use codec::{Decode, Encode};
+use frame_support::{
+    construct_runtime, parameter_types,
+    traits::{
+        All, Currency, FindAuthor, Imbalance, InstanceFilter, MaxEncodedLen, OnUnbalanced,
+        OneSessionHandler,
+    },
+    weights::Weight,
+};
 use sp_core::H256;
 use sp_runtime::testing::Header;
 
 use cumulus_primitives_core::ParaId;
+use frame_election_provider_support::onchain;
+use pallet_staking as staking;
+use pallet_staking::*;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
 use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
 use xcm_builder::{

@@ -46,6 +46,7 @@ use xcm_simulator::{decl_test_network, decl_test_parachain};
 
 pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
 
+// import this directly so we can override the relay_ext function and XcmRouter
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
 
