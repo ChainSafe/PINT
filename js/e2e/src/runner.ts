@@ -208,18 +208,12 @@ export default class Runner implements Config {
                         `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
                     );
 
-                    const res = await this.runTx(requiredEx);
-                    if (typeof res == "string") {
-                        this.errors.push(res);
-                    }
+                    await this.runTx(requiredEx);
                 }
             }
 
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            const res = await this.runTx(ex);
-            if (typeof res == "string") {
-                this.errors.push(res);
-            }
+            await this.runTx(ex);
         }
 
         // exit
@@ -264,7 +258,9 @@ export default class Runner implements Config {
             this.sendTx(tx, ex.signed, ex.inBlock),
             ex.timeout
         ).catch((err: any) => {
-            return `-> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
+            this.errors.push(
+                `-> Error: ${ex.pallet}.${ex.call} failed: ${err}`
+            );
         })) as TxResult;
 
         // run post calls
@@ -284,14 +280,13 @@ export default class Runner implements Config {
 
         // execute verify script
         if (ex.verify) {
-            const verifyRes = await ex.verify(ex.shared);
-            if (typeof verifyRes === "string") {
-                this.errors.push(`-> Error: ${verifyRes}`);
-            }
+            await ex.verify(ex.shared);
         }
 
-        res.unsub && (await res.unsub)();
-        console.log(`\t | block hash: ${res.blockHash}`);
+        if (res && res.unsub) {
+            (await res.unsub)();
+            console.log(`\t | block hash: ${res.blockHash}`);
+        }
     }
 
     /**
