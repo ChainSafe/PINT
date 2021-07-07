@@ -92,7 +92,7 @@ pub mod pallet {
             Self::Balance,
         >;
         /// Type used to identify assets
-        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
+        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy + MaybeSerializeDeserialize;
 
         /// Currency type for deposit/withdraw assets to/from the user's sovereign account
         type Currency: MultiReservableCurrency<
@@ -151,6 +151,29 @@ pub mod pallet {
         GetDefault,
         ConstU32<300_000>,
     >;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub assets: Vec<(T::AssetId, AssetAvailability)>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                assets: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            for (asset, availability) in self.assets.iter().cloned() {
+                Assets::<T>::insert(asset, availability)
+            }
+        }
+    }
 
     #[pallet::event]
     #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor < T > = "AccountId", T::Balance = "Balance")]

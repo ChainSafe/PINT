@@ -15,19 +15,22 @@ use frame_support::sp_std::{
 };
 use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
+#[cfg(feature = "std")]
+use serde::{Deserialize, Serialize};
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
     traits::{Convert, MatchesFungible, TransactAsset},
     Assets,
 };
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Defines the location of an asset
 /// Liquid implies it exists on a chain somewhere in the network and
 /// can be moved around
 /// SAFT implies the asset is a Simple Agreement for Future Tokens and the
 /// promised tokens are not able to be transferred or traded until some time
 /// in the future.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetAvailability {
     Liquid(MultiLocation),
     Saft,
