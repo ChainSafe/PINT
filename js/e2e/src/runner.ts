@@ -49,6 +49,7 @@ export default class Runner implements Config {
     public api: ApiPromise;
     public pair: KeyringPair;
     public exs: Extrinsic[];
+    public errors: string[];
 
     /**
      * Wait for n blocks
@@ -205,15 +206,29 @@ export default class Runner implements Config {
                     console.log(
                         `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
                     );
-                    await this.runTx(requiredEx);
+
+                    const res = await this.runTx(requiredEx);
+                    if (typeof res == "string") {
+                        this.errors.push(res);
+                    }
                 }
             }
 
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            await this.runTx(ex);
+            const res = await this.runTx(ex);
+            if (typeof res == "string") {
+                this.errors.push(res);
+            }
         }
 
         // exit
+        if (this.errors.length > 0) {
+            console.log(`Failed tests: ${this.errors.length}`);
+            for (const error of this.errors) {
+                console.log(error);
+            }
+            process.exit(1);
+        }
         console.log("COMPLETE TESTS!");
         process.exit(0);
     }
@@ -223,7 +238,7 @@ export default class Runner implements Config {
      *
      * @param {ex} Extrinsic
      */
-    public async runTx(ex: Extrinsic): Promise<void> {
+    public async runTx(ex: Extrinsic): Promise<void | string> {
         // flush arguments
         const args: any[] = [];
         for (const arg of ex.args) {
@@ -248,8 +263,7 @@ export default class Runner implements Config {
             this.sendTx(tx, ex.signed, ex.inBlock),
             ex.timeout
         ).catch((err: any) => {
-            console.error(`${ex.pallet}.${ex.call} failed: ${err}`);
-            process.exit(1);
+            return `-> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
         })) as TxResult;
 
         // run post calls
