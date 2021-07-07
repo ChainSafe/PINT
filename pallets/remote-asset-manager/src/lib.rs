@@ -616,14 +616,14 @@ pub mod pallet {
 
     impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
         fn transfer_asset(
-            who: AccountIdFor<T>,
+            recipient: AccountIdFor<T>,
             asset: T::AssetId,
             amount: T::Balance,
         ) -> DispatchResult {
             // ensures the min stash is still available after the transfer
             Self::ensure_stash(asset.clone(), amount)?;
 
-            let outcome = T::XcmAssets::execute_xcm_transfer(who, asset, amount)
+            let outcome = T::XcmAssets::execute_xcm_transfer(recipient, asset, amount)
                 .map_err(|_| Error::<T>::XcmError)?;
             outcome
                 .ensure_complete()

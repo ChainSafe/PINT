@@ -19,7 +19,7 @@ benchmarks! {
         RawOrigin::Signed(caller.clone()),
         asset_id,
         million,
-        AssetAvailability::Liquid(MultiLocation::Null),
+        MultiLocation::Null,
         million
     ) verify {
         assert_eq!(
