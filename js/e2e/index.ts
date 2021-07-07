@@ -8,7 +8,6 @@ const ASSET_ID_A: number = 42;
 const ASSET_ID_B: number = 43;
 const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
-const PINT_ASSET_ID: number = 1;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
@@ -93,6 +92,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "assetIndex",
             call: "completeWithdraw",
             args: [],
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "removeAsset",
+            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
         },
         /* remote-asset-manager*/
         {

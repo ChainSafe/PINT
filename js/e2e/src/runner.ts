@@ -247,7 +247,10 @@ export default class Runner implements Config {
         const res = (await this.timeout(
             this.sendTx(tx, ex.signed, ex.inBlock),
             ex.timeout
-        )) as TxResult;
+        ).catch((err: any) => {
+            console.error(`${ex.pallet}.${ex.call} failed: ${err}`);
+            process.exit(1);
+        })) as TxResult;
 
         // run post calls
         if (ex.post) {
@@ -327,24 +330,16 @@ export default class Runner implements Config {
 
                         if (events) {
                             events.forEach((value: EventRecord): void => {
-                                if (value.event.method.indexOf("Failed") > -1) {
-                                    reject(
-                                        value.phase.toString() +
-                                            `: ${value.event.section}.${value.event.method}` +
-                                            value.event.data.toString() +
-                                            " failed"
-                                    );
-                                }
-
                                 if (
                                     (value.event.data[0] as DispatchError)
                                         .isModule
                                 ) {
+                                    const error = this.api.registry.findMetaError(
+                                        (value.event
+                                            .data[0] as DispatchError).asModule.toU8a()
+                                    );
                                     reject(
-                                        this.api.registry.findMetaError(
-                                            (value.event
-                                                .data[0] as DispatchError).asModule.toU8a()
-                                        )
+                                        `${error.section}.${error.method}: ${error.documentation}`
                                     );
                                 }
                             });
