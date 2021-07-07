@@ -183,6 +183,7 @@ export default class Runner implements Config {
         this.api = config.api;
         this.pair = config.pair;
         this.exs = config.exs;
+        this.errors = [];
     }
 
     /**
