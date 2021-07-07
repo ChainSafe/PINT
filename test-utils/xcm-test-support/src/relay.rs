@@ -404,6 +404,11 @@ impl pallet_assets::Config for Runtime {
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
+// The configured indices for the runtime
+pub const STAKING_PALLET_INDEX: u8 = 7u8;
+pub const PROXY_PALLET_INDEX: u8 = 29u8;
+pub const ASSETS_PALLET_INDEX: u8 = 50u8;
+
 construct_runtime!(
     pub enum Runtime where
         Block = Block,

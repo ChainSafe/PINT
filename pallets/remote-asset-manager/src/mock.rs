@@ -10,7 +10,7 @@ use frame_support::{
     traits::All,
     weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use frame_support::{ord_parameter_types, parameter_types, traits::GenesisBuild, PalletId};
 use frame_system as system;
 use frame_system::EnsureRoot;
 use orml_traits::parameter_type_with_key;
@@ -42,19 +42,24 @@ use xcm_executor::{Config, XcmExecutor};
 use xcm_simulator::{decl_test_network, decl_test_parachain};
 
 use primitives::traits::MultiAssetRegistry;
-use xcm_test_support::types::*;
+pub use xcm_test_support::{relay, types::*, Relay};
 
 use crate as pallet_remote_asset_manager;
-
-pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
+use xcm_calls::{
+    proxy::{ProxyConfig, ProxyWeights},
+    staking::{RewardDestination, StakingConfig, StakingWeights},
+};
 
 // import this directly so we can override the relay_ext function and XcmRouter
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
 
+pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
+pub const ADMIN_ACCOUNT: AccountId32 = AccountId32::new([1u8; 32]);
 pub const INITIAL_BALANCE: Balance = 1_000_000_000;
-
 pub const PARA_ID: u32 = 1u32;
+pub const PARA_ASSET: AssetId = 1;
+pub const RELAY_CHAIN_ASSET: AssetId = 42;
 
 decl_test_parachain! {
     pub struct Para {
@@ -63,7 +68,7 @@ decl_test_parachain! {
     }
 }
 
-/// Returns the para's account 
+/// Returns the para's account
 pub fn para_relay_account() -> AccountId {
     use sp_runtime::traits::AccountIdConversion;
     let para: ParaId = PARA_ID.into();
@@ -72,7 +77,7 @@ pub fn para_relay_account() -> AccountId {
 
 decl_test_network! {
     pub struct MockNet {
-        relay_chain = xcm_test_support::Relay,
+        relay_chain = Relay,
         parachains = vec![
             (PARA_ID, Para),
         ],
@@ -103,13 +108,45 @@ pub fn para_ext(
         .assimilate_storage(&mut t)
         .unwrap();
 
+    // add xcm transact configs for the native asset of the relay chain
+    pallet_remote_asset_manager::GenesisConfig::<Runtime> {
+        staking_configs: vec![(
+            RELAY_CHAIN_ASSET,
+            StakingConfig {
+                pallet_index: relay::STAKING_PALLET_INDEX,
+                max_unlocking_chunks: 42,
+                pending_unbond_calls: 42,
+                reward_destination: RewardDestination::Staked,
+                minimum_balance: 0,
+                weights: StakingWeights {
+                    bond: 1000_u64,
+                    bond_extra: 1000_u64,
+                    unbond: 1000_u64,
+                    withdraw_unbonded: 1000_u64,
+                },
+            },
+        )],
+        proxy_configs: vec![(
+            RELAY_CHAIN_ASSET,
+            ProxyConfig {
+                pallet_index: relay::PROXY_PALLET_INDEX,
+                weights: ProxyWeights {
+                    add_proxy: 1000_u64,
+                    remove_proxy: 1000_u64,
+                },
+            },
+        )],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
     let mut ext = sp_io::TestExternalities::new(t);
     ext.execute_with(|| System::set_block_number(1));
     ext
 }
 
 pub fn relay_ext() -> sp_io::TestExternalities {
-    use xcm_test_support::relay::{Runtime, System};
+    use relay::{Runtime, System};
 
     let mut t = frame_system::GenesisConfig::default()
         .build_storage::<Runtime>()
@@ -119,7 +156,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![
             (ALICE, INITIAL_BALANCE),
-            (para_relay_account()  , INITIAL_BALANCE),
+            (para_relay_account(), INITIAL_BALANCE),
         ],
     }
     .assimilate_storage(&mut t)
@@ -130,7 +167,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     ext
 }
 
-pub type RelayChainPalletXcm = pallet_xcm::Pallet<xcm_test_support::relay::Runtime>;
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 
 pub mod para {
@@ -307,9 +344,13 @@ pub mod para {
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
         pub StringLimit: u32 = 4;
 
-        pub const RelayChainAssetId: AssetId = 0;
-        pub const PINTAssetId: AssetId = 1;
+        pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
+        pub const PINTAssetId: AssetId = PARA_ASSET;
        pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+    }
+
+    ord_parameter_types! {
+        pub const AdminAccountId: AccountId = ADMIN_ACCOUNT;
     }
 
     impl pallet_remote_asset_manager::Config for Runtime {
@@ -330,7 +371,7 @@ pub mod para {
         type XcmExecutor = XcmExecutor<XcmConfig>;
         type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
         // Using root as the admin origin for now
-        type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+        type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type XcmSender = XcmRouter;
         type Event = Event;
         type AssetRegistry = MockAssetRegistry;

@@ -4,15 +4,13 @@
 use crate as pallet;
 use crate::mock::*;
 
-use codec::Encode;
 use frame_support::assert_ok;
+use relay::ProxyType as RelayProxyType;
 use xcm::v0::{
     Junction::{self, Parachain, Parent},
-    MultiAsset::*,
-    MultiLocation::*,
     NetworkId, OriginKind,
-    Xcm::*,
 };
+use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
 fn print_events<T: frame_system::Config>(context: &str) {
@@ -23,29 +21,35 @@ fn print_events<T: frame_system::Config>(context: &str) {
 }
 
 #[test]
-fn can_bond() {
+fn para_account_funded_on_relay() {
     MockNet::reset();
 
+    Relay::execute_with(|| {
+        let para_balance_on_relay =
+            pallet_balances::Pallet::<relay::Runtime>::free_balance(&para_relay_account());
+        assert_eq!(para_balance_on_relay, INITIAL_BALANCE);
+    });
+}
+
+#[test]
+fn can_transact_register_proxy() {
+    MockNet::reset();
+
+    Para::execute_with(|| {
+        let x = para::RemoteAssetManager::send_add_proxy(
+            para::Origin::signed(ADMIN_ACCOUNT),
+            RELAY_CHAIN_ASSET,
+            ParaProxyType(RelayProxyType::Staking as u8),
+            None,
+        );
+        dbg!(x);
+
+        print_events::<para::Runtime>("Para");
+    });
+    //
     // Relay::execute_with(|| {
-    //     assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
-    // 			relay::Origin::signed(ALICE),
-    // 			X1(Parachain(1)),
-    // 			X1(Junction::AccountId32 {
-    // 				network: NetworkId::Any,
-    // 				id: ALICE.into(),
-    // 			}),
-    // 			vec![ConcreteFungible { id: Null, amount: 123 }],
-    // 			123,
-    // 		));
-    // });
-    //
-    // ParaA::execute_with(|| {
-    //     // free execution, full amount received
-    //     assert_eq!(
-    //         pallet_balances::Pallet::<para::Runtime>::free_balance(&ALICE),
-    //         INITIAL_BALANCE + 123
-    //     );
-    //
-    //     print_events::<para::Runtime>("ParaA");
+    //     let para_balance_on_relay =
+    //         pallet_balances::Pallet::<relay::Runtime>::free_balance(&para_relay_account());
+    //     assert_eq!(para_balance_on_relay, INITIAL_BALANCE);
     // });
 }
