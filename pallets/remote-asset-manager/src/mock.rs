@@ -4,12 +4,20 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
-use crate as pallet_remote_asset_manager;
+use cumulus_primitives_core::ParaId;
+use frame_support::{
+    construct_runtime,
+    traits::All,
+    weights::{constants::WEIGHT_PER_SECOND, Weight},
+};
 use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
 use frame_system as system;
+use frame_system::EnsureRoot;
 use orml_traits::parameter_type_with_key;
-use primitives::traits::MultiAssetRegistry;
+use pallet_xcm::XcmPassthrough;
+use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
+use sp_runtime::AccountId32;
 use sp_runtime::{
     testing::Header,
     traits::{IdentityLookup, Zero},
@@ -20,17 +28,6 @@ use xcm::v0::{
     MultiLocation::{self, X1},
     NetworkId, Xcm,
 };
-
-use frame_support::{
-    construct_runtime,
-    traits::All,
-    weights::{constants::WEIGHT_PER_SECOND, Weight},
-};
-use frame_system::EnsureRoot;
-use sp_runtime::AccountId32;
-
-use pallet_xcm::XcmPassthrough;
-use polkadot_parachain::primitives::Sibling;
 use xcm_builder::{
     AccountId32Aliases, AllowUnpaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter,
     FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
@@ -44,21 +41,104 @@ pub use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 use xcm_simulator::{decl_test_network, decl_test_parachain};
 
+use primitives::traits::MultiAssetRegistry;
+use xcm_test_support::types::*;
+
+use crate as pallet_remote_asset_manager;
+
 pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
 
 // import this directly so we can override the relay_ext function and XcmRouter
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
 
+pub const INITIAL_BALANCE: Balance = 1_000_000_000;
+
+pub const PARA_ID: u32 = 1u32;
+
+decl_test_parachain! {
+    pub struct Para {
+        Runtime = para::Runtime,
+        new_ext = para_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
+    }
+}
+
+/// Returns the para's account 
+pub fn para_relay_account() -> AccountId {
+    use sp_runtime::traits::AccountIdConversion;
+    let para: ParaId = PARA_ID.into();
+    para.into_account()
+}
+
+decl_test_network! {
+    pub struct MockNet {
+        relay_chain = xcm_test_support::Relay,
+        parachains = vec![
+            (PARA_ID, Para),
+        ],
+    }
+}
+
+pub fn para_ext(
+    parachain_id: u32,
+    mut balances: Vec<(AccountId32, Balance)>,
+) -> sp_io::TestExternalities {
+    use para::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    let parachain_info_config = parachain_info::GenesisConfig {
+        parachain_id: parachain_id.into(),
+    };
+
+    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
+        &parachain_info_config,
+        &mut t,
+    )
+    .unwrap();
+
+    pallet_balances::GenesisConfig::<Runtime> { balances }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub fn relay_ext() -> sp_io::TestExternalities {
+    use xcm_test_support::relay::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    // also fund the parachain's sovereign account on the relay chain
+    pallet_balances::GenesisConfig::<Runtime> {
+        balances: vec![
+            (ALICE, INITIAL_BALANCE),
+            (para_relay_account()  , INITIAL_BALANCE),
+        ],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<xcm_test_support::relay::Runtime>;
+pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
+
 pub mod para {
-    use super::*;
-    use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
     use frame_support::sp_runtime::traits::Identity;
 
-    pub type AccountId = AccountId32;
-    pub type Balance = u128;
-    pub type Amount = i128;
-    pub type AssetId = u32;
+    use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
+
+    use super::*;
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
@@ -332,78 +412,3 @@ pub mod para {
         }
     );
 }
-
-decl_test_parachain! {
-    pub struct ParaA {
-        Runtime = para::Runtime,
-        new_ext = para_ext(1),
-    }
-}
-
-decl_test_parachain! {
-    pub struct ParaB {
-        Runtime = para::Runtime,
-        new_ext = para_ext(2),
-    }
-}
-
-decl_test_network! {
-    pub struct MockNet {
-        relay_chain = xcm_test_support::Relay,
-        parachains = vec![
-            (1, ParaA),
-            (2, ParaB),
-        ],
-    }
-}
-
-pub const INITIAL_BALANCE: u128 = 1_000_000_000;
-
-pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
-    use para::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    let parachain_info_config = parachain_info::GenesisConfig {
-        parachain_id: para_id.into(),
-    };
-
-    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
-        &parachain_info_config,
-        &mut t,
-    )
-    .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub fn relay_ext() -> sp_io::TestExternalities {
-    use xcm_test_support::relay::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub type RelayChainPalletXcm = pallet_xcm::Pallet<xcm_test_support::relay::Runtime>;
-pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
