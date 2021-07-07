@@ -8,6 +8,7 @@ const ASSET_ID_A: number = 42;
 const ASSET_ID_B: number = 43;
 const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
+const PINT_ASSET_ID: number = 1;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
@@ -42,7 +43,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             verify: async () => {
                 assert(
                     JSON.stringify(
-                        await api.query.assetIndex.metadata(ASSET_ID_A)
+                        (
+                            await api.query.assetIndex.metadata(ASSET_ID_A)
+                        ).toHuman()
                     ) ===
                         JSON.stringify({
                             name: "PINT_TEST",
@@ -59,11 +62,11 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             call: "addAsset",
             args: [
                 ASSET_ID_A,
-                1000000,
+                BALANCE_THOUSAND,
                 api.createType("AssetAvailability" as any, {
                     Liquid: ROCOCO_AND_STATEMINT,
                 }),
-                1000000,
+                BALANCE_THOUSAND,
             ],
             verify: async () => {
                 assert(
@@ -77,23 +80,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
-            args: [ASSET_ID_A, 1000],
-            verify: async () => {},
+            args: [ASSET_ID_A, BALANCE_THOUSAND],
         },
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "withdraw",
-        //     args: [1000000],
-        //     verify: async () => {},
-        // },
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "completeWithdraw",
-        //     args: [],
-        //     verify: async () => {},
-        // },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "withdraw",
+            args: [BALANCE_THOUSAND],
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "completeWithdraw",
+            args: [],
+        },
         /* remote-asset-manager*/
         {
             signed: config.alice,

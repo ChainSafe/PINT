@@ -149,6 +149,12 @@ export default class Runner implements Config {
         // create api
         const api = await ApiPromise.create({
             provider,
+            typesAlias: {
+                tokens: {
+                    AccountData: "OrmlAccountData",
+                    BalanceLock: "OrmlBalanceLock",
+                },
+            },
             types: Object.assign(
                 {
                     ...ChainlinkTypes,

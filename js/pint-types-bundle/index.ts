@@ -61,6 +61,11 @@ export const definitions = {
                     member: "CommitteeMember",
                     vote: "Vote",
                 },
+                OrmlAccountData: {
+                    free: "Balance",
+                    frozen: "Balance",
+                    reserved: "Balance",
+                },
                 PendingRedemption: {
                     initiated: "BlockNumber",
                     assets: "Vec<AssetWithdrawal>",
