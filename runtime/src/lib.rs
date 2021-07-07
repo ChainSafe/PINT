@@ -795,44 +795,43 @@ construct_runtime!(
         NodeBlock = opaque::Block,
         UncheckedExtrinsic = UncheckedExtrinsic,
     {
-        System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-        TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
-        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
+        System: frame_system::{Pallet, Call, Config, Storage, Event<T>} = 0,
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent} = 1,
+        Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
+        TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
+        Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
 
         // Parachain
-        ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>},
-        ParachainInfo: parachain_info::{Pallet, Storage, Config},
+        ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 5,
+        ParachainInfo: parachain_info::{Pallet, Storage, Config} = 6,
 
         // Collator. The order of the 4 below are important and shall not change.
-        Authorship: pallet_authorship::{Pallet, Call, Storage},
-        CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>},
-        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>},
-        Aura: pallet_aura::{Pallet, Config<T>},
-        AuraExt: cumulus_pallet_aura_ext::{Pallet, Config},
+        Authorship: pallet_authorship::{Pallet, Call, Storage} = 7,
+        CollatorSelection: pallet_collator_selection::{Pallet, Call, Storage, Event<T>, Config<T>} = 8,
+        Session: pallet_session::{Pallet, Call, Storage, Event, Config<T>} = 9,
+        Aura: pallet_aura::{Pallet, Config<T>} = 10,
+        AuraExt: cumulus_pallet_aura_ext::{Pallet, Config} = 11,
 
         // ORML related pallets
-        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>},
-        Currencies: orml_currencies::{Pallet, Call, Event<T>},
+        Tokens: orml_tokens::{Pallet, Storage, Call, Event<T>, Config<T>} = 12,
+        Currencies: orml_currencies::{Pallet, Call, Event<T>} = 13,
+        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>} = 14,
+        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event} = 15,
 
         // PINT pallets
-        AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
-        LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>},
-        SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
-        RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
-        PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
-        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>},
+        AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>} = 16,
+        Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 17,
+        LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>} = 18,
+        SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>} = 19,
+        RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>} = 20,
+        PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>} = 21,
+        ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>} = 22,
 
         // XCM
-        XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
-        DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
-        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
-
-        XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
-        UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event}
+        XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 23,
+        DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 24,
+        PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin} = 25,
+        CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 26
     }
 );
 
