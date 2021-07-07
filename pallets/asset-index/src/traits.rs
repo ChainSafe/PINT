@@ -3,19 +3,11 @@
 
 pub use crate::types::{AssetAvailability, AssetMetadata};
 use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUnsigned};
-use xcm::v0::MultiLocation;
 
 pub trait AssetRecorder<AccountId, AssetId, Balance> {
     /// Add an liquid asset into the index.
-    /// If an asset with the given AssetId does not already exist, it will be registered.
     /// This moves the given units from the caller's balance into the index's and issues PINT accordingly.
-    fn add_liquid(
-        caller: &AccountId,
-        id: AssetId,
-        units: Balance,
-        nav: Balance,
-        location: MultiLocation,
-    ) -> DispatchResult;
+    fn add_liquid(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 
     /// Mints the SAFT into the index and awards the caller with given amount of PINT token.
     /// If an asset with the given AssetId does not already exist, it will be registered as SAFT.
