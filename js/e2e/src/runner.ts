@@ -282,10 +282,12 @@ export default class Runner implements Config {
         }
 
         // execute verify script
-        if (ex.verify)
-            await ex.verify(ex.shared).catch((err) => {
-                throw err;
-            });
+        if (ex.verify) {
+            const verifyRes = await ex.verify(ex.shared);
+            if (typeof verifyRes === "string") {
+                this.errors.push(`-> Error: ${verifyRes}`);
+            }
+        }
 
         res.unsub && (await res.unsub)();
         console.log(`\t | block hash: ${res.blockHash}`);

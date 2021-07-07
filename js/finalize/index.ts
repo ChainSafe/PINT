@@ -11,7 +11,7 @@ import { ChildProcess, spawn } from "child_process";
 const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
 // PINT finalization regex
-const PINT_FINALIZE: RegExp = /\[Parachain\].*finalized #(\d)/;
+export const PINT_FINALIZE: RegExp = /\[Parachain\].*finalized #(\d)/;
 
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
