@@ -287,7 +287,7 @@ export default class Runner implements Config {
                 throw err;
             });
 
-        (await res.unsub)();
+        res.unsub && (await res.unsub)();
         console.log(`\t | block hash: ${res.blockHash}`);
     }
 
