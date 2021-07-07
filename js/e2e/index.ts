@@ -62,9 +62,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 ASSET_ID_A,
                 BALANCE_THOUSAND,
-                api.createType("AssetAvailability" as any, {
-                    Liquid: ROCOCO_AND_STATEMINT,
-                }),
+                ROCOCO_AND_STATEMINT,
                 BALANCE_THOUSAND,
             ],
             verify: async () => {
