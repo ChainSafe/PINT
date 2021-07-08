@@ -10,7 +10,7 @@ const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
-    const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
+    const ROCOCO = api.createType("MultiLocation", {
         // NOTE:
         //
         // The current XCMRouter in PINT only supports X1
@@ -38,14 +38,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
-            args: [
-                ASSET_ID_A,
-                1000000,
-                api.createType("AssetAvailability" as any, {
-                    Liquid: ROCOCO_AND_STATEMINT,
-                }),
-                1000000,
-            ],
+            args: [ASSET_ID_A, 1000000, ROCOCO, 1000000],
             verify: async () => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
