@@ -269,12 +269,8 @@ pub mod pallet {
             // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
-                Price::from_inner(
-                    amount
-                        .checked_div(&units)
-                        .ok_or(<Error<T>>::InvalidPrice)?
-                        .into(),
-                ),
+                Price::checked_from_rational(amount.into(), units.into())
+                    .ok_or(<Error<T>>::InvalidPrice)?,
             )?;
 
             // register asset if not yet known
