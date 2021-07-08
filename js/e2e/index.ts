@@ -34,27 +34,27 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             ],
         },
         /* asset-index */
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "setMetadata",
-            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-            verify: async () => {
-                assert(
-                    JSON.stringify(
-                        (
-                            await api.query.assetIndex.metadata(ASSET_ID_A)
-                        ).toHuman()
-                    ) ===
-                        JSON.stringify({
-                            name: "PINT_TEST",
-                            symbol: "P",
-                            decimals: "9",
-                        }),
-                    "assetIndex.setMetadata failed"
-                );
-            },
-        },
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "setMetadata",
+        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+        //     verify: async () => {
+        //         assert(
+        //             JSON.stringify(
+        //                 (
+        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
+        //                 ).toHuman()
+        //             ) ===
+        //                 JSON.stringify({
+        //                     name: "PINT_TEST",
+        //                     symbol: "P",
+        //                     decimals: "9",
+        //                 }),
+        //             "assetIndex.setMetadata failed"
+        //         );
+        //     },
+        // },
         {
             signed: config.alice,
             pallet: "assetIndex",
@@ -91,12 +91,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             call: "completeWithdraw",
             args: [],
         },
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "removeAsset",
-            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-        },
+        // TODO: blocked by https://github.com/ChainSafe/PINT/pull/161
+        //
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "removeAsset",
+        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+        // },
         /* remote-asset-manager*/
         {
             signed: config.alice,

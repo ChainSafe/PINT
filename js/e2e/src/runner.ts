@@ -258,9 +258,9 @@ export default class Runner implements Config {
             this.sendTx(tx, ex.signed, ex.inBlock),
             ex.timeout
         ).catch((err: any) => {
-            this.errors.push(
-                `-> Error: ${ex.pallet}.${ex.call} failed: ${err}`
-            );
+            const fmt = `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
+            console.log(fmt);
+            this.errors.push(fmt);
         })) as TxResult;
 
         // run post calls
