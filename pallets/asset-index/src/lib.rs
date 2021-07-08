@@ -168,6 +168,9 @@ pub mod pallet {
             Option<AccountIdFor<T>>,
             T::Balance,
         ),
+        /// A new asset was registered in the index
+        /// \[Asset, Availability\]
+        AssetRegistered(T::AssetId, AssetAvailability),
         /// A new deposit of an asset into the index has been performed
         /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -213,6 +216,8 @@ pub mod pallet {
         NAVOverflow,
         /// Thrown when to withdrawals are available to complete
         NoPendingWithdrawals,
+        /// Thrown if the asset that should be added is already registered
+        AssetAlreadyExists,
     }
 
     #[pallet::hooks]
@@ -237,6 +242,16 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
 
+            let availability = AssetAvailability::Liquid(location);
+
+            // check whether this is a new asset and make sure locations match otherwise
+            let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
+                ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
+                false
+            } else {
+                true
+            };
+
             // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
@@ -244,7 +259,13 @@ pub mod pallet {
             )?;
 
             // transfer the caller's fund into the treasury account
-            Self::add_liquid(&caller, asset_id, units, value, location)?;
+            Self::add_liquid(&caller, asset_id, units, value)?;
+
+            // register asset if not yet known
+            if is_new_asset {
+                Assets::<T>::insert(asset_id, availability.clone());
+                Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            }
 
             Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
             Ok(().into())
@@ -279,6 +300,30 @@ pub mod pallet {
                 asset_id, units, caller, recipient, value,
             ));
             Ok(().into())
+        }
+
+        /// Registers a new asset in the index together with its availability
+        ///
+        /// Only callable by the admin origin and for assets that are not yet registered.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn register_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            availability: AssetAvailability,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+
+            Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
+                // allow new assets only
+                ensure!(
+                    maybe_available.replace(availability.clone()).is_none(),
+                    Error::<T>::AssetAlreadyExists
+                );
+                Ok(())
+            })?;
+
+            Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            Ok(())
         }
 
         /// Force the metadata for an asset to some value.
@@ -675,14 +720,9 @@ pub mod pallet {
             asset_id: T::AssetId,
             units: T::Balance,
             nav: T::Balance,
-            location: MultiLocation,
         ) -> DispatchResult {
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
-
-            // register the asset
-            Self::insert_asset_availability(asset_id, AssetAvailability::Liquid(location));
-
             // mint PINT into caller's balance increasing the total issuance
             T::IndexToken::deposit_creating(&caller, nav);
             Ok(())
