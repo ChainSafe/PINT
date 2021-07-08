@@ -5,6 +5,8 @@ import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
 
 const ASSET_ID_A: number = 42;
+const ASSET_ID_A_UNITS: number = 10000;
+const ASSET_ID_A_VALUE: number = 10000;
 const ASSET_ID_B: number = 43;
 const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
@@ -59,7 +61,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
-            args: [ASSET_ID_A, BALANCE_THOUSAND, ROCOCO, BALANCE_THOUSAND],
+            args: [ASSET_ID_A, ASSET_ID_A_UNITS, ROCOCO, ASSET_ID_A_VALUE],
             verify: async () => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)

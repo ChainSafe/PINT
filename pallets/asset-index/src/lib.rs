@@ -35,7 +35,7 @@ pub mod pallet {
             FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+        traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -93,6 +93,10 @@ pub mod pallet {
         >;
         /// Type used to identify assets
         type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
+
+        /// The native asset id
+        #[pallet::constant]
+        type SelfAssetId: Get<Self::AssetId>;
 
         /// Currency type for deposit/withdraw assets to/from the user's sovereign account
         type Currency: MultiReservableCurrency<
@@ -168,6 +172,9 @@ pub mod pallet {
             Option<AccountIdFor<T>>,
             T::Balance,
         ),
+        /// A new asset was registered in the index
+        /// \[Asset, Availability\]
+        AssetRegistered(T::AssetId, AssetAvailability),
         /// A new deposit of an asset into the index has been performed
         /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -193,6 +200,8 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
+        /// Thrown if the given asset was the native asset and is disallowed
+        NativeAssetDisallowed,
         /// Thrown if a SAFT asset operation was requested for a registered liquid asset.
         ExpectedSAFT,
         /// Thrown if a liquid asset operation was requested for a registered SAFT asset.
@@ -213,6 +222,10 @@ pub mod pallet {
         NAVOverflow,
         /// Thrown when to withdrawals are available to complete
         NoPendingWithdrawals,
+        /// Thrown if the asset that should be added is already registered
+        AssetAlreadyExists,
+        /// Thrown when adding assets with zero amount or units
+        InvalidPrice,
     }
 
     #[pallet::hooks]
@@ -232,21 +245,45 @@ pub mod pallet {
             asset_id: T::AssetId,
             units: T::Balance,
             location: MultiLocation,
-            value: T::Balance,
+            amount: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+
+            let availability = AssetAvailability::Liquid(location);
+
+            // check whether this is a new asset and make sure locations match otherwise
+            let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
+                ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
+                false
+            } else {
+                true
+            };
+
+            // transfer the caller's fund into the treasury account
+            Self::add_liquid(&caller, asset_id, units, amount)?;
 
             // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
-                Price::from_inner(value.saturating_mul(units).into()),
+                Price::from_inner(
+                    amount
+                        .checked_div(&units)
+                        .ok_or(<Error<T>>::InvalidPrice)?
+                        .into(),
+                ),
             )?;
 
-            // transfer the caller's fund into the treasury account
-            Self::add_liquid(&caller, asset_id, units, value, location)?;
+            // register asset if not yet known
+            if is_new_asset {
+                Assets::<T>::insert(asset_id, availability.clone());
+                Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            }
 
-            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, amount));
             Ok(().into())
         }
 
@@ -268,6 +305,13 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            Self::ensure_not_native_asset(&asset_id)?;
 
             // calculate current PINT equivalent value
             let value = Self::calculate_pint_equivalent(asset_id, units)?;
@@ -279,6 +323,30 @@ pub mod pallet {
                 asset_id, units, caller, recipient, value,
             ));
             Ok(().into())
+        }
+
+        /// Registers a new asset in the index together with its availability
+        ///
+        /// Only callable by the admin origin and for assets that are not yet registered.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn register_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            availability: AssetAvailability,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+
+            Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
+                // allow new assets only
+                ensure!(
+                    maybe_available.replace(availability.clone()).is_none(),
+                    Error::<T>::AssetAlreadyExists
+                );
+                Ok(())
+            })?;
+
+            Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            Ok(())
         }
 
         /// Force the metadata for an asset to some value.
@@ -334,24 +402,32 @@ pub mod pallet {
         pub fn deposit(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            amount: T::Balance,
+            units: T::Balance,
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
 
             // only liquid assets can be deposited
             Self::ensure_liquid_asset(&asset_id)?;
 
-            let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer from the caller's sovereign account into the treasury's account
-            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
 
             // add minted PINT to user's balance
             T::IndexToken::resolve_creating(&caller, issued);
-            Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
+            Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
             Ok(().into())
         }
 
@@ -666,6 +742,15 @@ pub mod pallet {
                 .ok_or(Error::<T>::UnsupportedAsset)?;
             Ok(())
         }
+
+        /// Ensures the given asset is not the native asset
+        fn ensure_not_native_asset(asset_id: &T::AssetId) -> DispatchResult {
+            ensure!(
+                *asset_id != T::SelfAssetId::get(),
+                Error::<T>::NativeAssetDisallowed
+            );
+            Ok(())
+        }
     }
 
     impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
@@ -675,14 +760,14 @@ pub mod pallet {
             asset_id: T::AssetId,
             units: T::Balance,
             nav: T::Balance,
-            location: MultiLocation,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be added
+            Self::ensure_not_native_asset(&asset_id)?;
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
-
-            // register the asset
-            Self::insert_asset_availability(asset_id, AssetAvailability::Liquid(location));
-
             // mint PINT into caller's balance increasing the total issuance
             T::IndexToken::deposit_creating(&caller, nav);
             Ok(())
@@ -694,6 +779,12 @@ pub mod pallet {
             units: T::Balance,
             nav: T::Balance,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be added as saft
+            Self::ensure_not_native_asset(&asset_id)?;
+
             // ensure that the given asset id is either SAFT or not yet registered
             Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
                 if let Some(exits) = maybe_available.replace(AssetAvailability::Saft) {
@@ -726,6 +817,9 @@ pub mod pallet {
             nav: T::Balance,
             recipient: Option<T::AccountId>,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
             ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
             ensure!(
                 T::IndexToken::can_slash(&who, nav),
@@ -749,6 +843,12 @@ pub mod pallet {
             units: T::Balance,
             nav: T::Balance,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be processed here
+            Self::ensure_not_native_asset(&asset_id)?;
+
             ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
             ensure!(
                 T::IndexToken::can_slash(&who, nav),
