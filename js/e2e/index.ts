@@ -34,27 +34,27 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             ],
         },
         /* asset-index */
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "setMetadata",
-        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-        //     verify: async () => {
-        //         assert(
-        //             JSON.stringify(
-        //                 (
-        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
-        //                 ).toHuman()
-        //             ) ===
-        //                 JSON.stringify({
-        //                     name: "PINT_TEST",
-        //                     symbol: "P",
-        //                     decimals: "9",
-        //                 }),
-        //             "assetIndex.setMetadata failed"
-        //         );
-        //     },
-        // },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "setMetadata",
+            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.assetIndex.metadata(ASSET_ID_A)
+                        ).toHuman()
+                    ) ===
+                        JSON.stringify({
+                            name: "PINT_TEST",
+                            symbol: "P",
+                            decimals: "9",
+                        }),
+                    "assetIndex.setMetadata failed"
+                );
+            },
+        },
         {
             signed: config.alice,
             pallet: "assetIndex",
