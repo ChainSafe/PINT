@@ -249,6 +249,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
 
             let availability = AssetAvailability::Liquid(location);
 
@@ -302,6 +305,11 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+
+            Self::ensure_not_native_asset(&asset_id)?;
 
             Self::ensure_not_native_asset(&asset_id)?;
 
@@ -397,6 +405,11 @@ pub mod pallet {
             units: T::Balance,
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
 
             // native asset can't be deposited here
             Self::ensure_not_native_asset(&asset_id)?;
@@ -748,6 +761,9 @@ pub mod pallet {
             units: T::Balance,
             nav: T::Balance,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
             // native asset can't be added
             Self::ensure_not_native_asset(&asset_id)?;
             // transfer the given units of asset from the caller into the treasury account
@@ -763,6 +779,9 @@ pub mod pallet {
             units: T::Balance,
             nav: T::Balance,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
             // native asset can't be added as saft
             Self::ensure_not_native_asset(&asset_id)?;
 
@@ -798,6 +817,9 @@ pub mod pallet {
             nav: T::Balance,
             recipient: Option<T::AccountId>,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
             ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
             ensure!(
                 T::IndexToken::can_slash(&who, nav),
@@ -821,6 +843,9 @@ pub mod pallet {
             units: T::Balance,
             nav: T::Balance,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
             // native asset can't be processed here
             Self::ensure_not_native_asset(&asset_id)?;
 
