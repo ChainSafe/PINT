@@ -10,7 +10,7 @@ const BALANCE_THOUSAND: number = 100000000000;
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
-    const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
+    const ROCOCO = api.createType("MultiLocation", {
         // NOTE:
         //
         // The current XCMRouter in PINT only supports X1
@@ -59,12 +59,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
-            args: [
-                ASSET_ID_A,
-                BALANCE_THOUSAND,
-                ROCOCO_AND_STATEMINT,
-                BALANCE_THOUSAND,
-            ],
+            args: [ASSET_ID_A, BALANCE_THOUSAND, ROCOCO, BALANCE_THOUSAND],
             verify: async () => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
@@ -83,13 +78,31 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
-            args: [BALANCE_THOUSAND],
+            args: [BALANCE_THOUSAND / 4],
+            verify: async () => {
+                assert(
+                    ((
+                        await api.query.assetIndex.pendingWithdrawals(
+                            config.alice.address
+                        )
+                    ).toHuman() as any).length === 1,
+                    "assetIndex.withdraw failed"
+                );
+            },
         },
         {
             signed: config.alice,
             pallet: "assetIndex",
             call: "completeWithdraw",
             args: [],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.pendingWithdrawals(
+                        config.alice.address
+                    )) as any).isNone,
+                    "assetIndex.completeWithdraw failed"
+                );
+            },
         },
         // TODO: blocked by https://github.com/ChainSafe/PINT/pull/161
         //
@@ -382,7 +395,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
     ];
 };
-
 // main
 (async () => {
     await Runner.run(TESTS);
