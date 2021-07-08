@@ -87,7 +87,7 @@ pub mod pallet {
         type DOTContributionLimit: Get<Self::Balance>;
         /// Type that handles cross chain transfers
         type RemoteAssetManager: RemoteAssetManager<
-            AccountIdFor<Self>,
+            Self::AccountId,
             Self::AssetId,
             Self::Balance,
         >;

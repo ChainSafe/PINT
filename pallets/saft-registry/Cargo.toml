@@ -47,8 +47,6 @@ std = [
     'frame-system/std',
 
     'pallet-asset-index/std',
-
-    'orml-traits/std',
 ]
 runtime-benchmarks = [
     'frame-benchmarking',

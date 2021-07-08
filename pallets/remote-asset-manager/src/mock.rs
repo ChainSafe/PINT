@@ -17,7 +17,6 @@ use orml_traits::parameter_type_with_key;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
-use sp_runtime::AccountId32;
 use sp_runtime::{
     testing::Header,
     traits::{IdentityLookup, Zero},
@@ -42,7 +41,7 @@ use xcm_executor::{Config, XcmExecutor};
 use xcm_simulator::{decl_test_network, decl_test_parachain};
 
 use primitives::traits::MultiAssetRegistry;
-pub use xcm_test_support::{relay, types::*, Relay};
+pub use xcm_test_support::{relay, Relay};
 
 use crate as pallet_remote_asset_manager;
 use xcm_calls::{
@@ -54,8 +53,8 @@ use xcm_calls::{
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
 
-pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
-pub const ADMIN_ACCOUNT: AccountId32 = AccountId32::new([1u8; 32]);
+pub const ALICE: AccountId = AccountId::new([0u8; 32]);
+pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
 pub const INITIAL_BALANCE: Balance = 1_000_000_000;
 pub const PARA_ID: u32 = 1u32;
 pub const PARA_ASSET: AssetId = 1;
@@ -86,7 +85,7 @@ decl_test_network! {
 
 pub fn para_ext(
     parachain_id: u32,
-    mut balances: Vec<(AccountId32, Balance)>,
+    mut balances: Vec<(AccountId, Balance)>,
 ) -> sp_io::TestExternalities {
     use para::{Runtime, System};
 
@@ -170,38 +169,53 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 
-pub mod para {
-    use frame_support::sp_runtime::traits::Identity;
+use frame_support::sp_runtime::traits::Identity;
+pub type AccountId = sp_runtime::AccountId32;
 
+pub type BlockNumber = u64;
+
+pub type Balance = u128;
+
+pub type Amount = i128;
+
+pub type AssetId = u32;
+
+pub type Lookup = IdentityLookup<AccountId>;
+
+pub type AccountLookupSource = AccountId;
+
+pub mod para {
     use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
 
     use super::*;
+    use frame_support::dispatch::DispatchError;
+    use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
     }
 
     impl frame_system::Config for Runtime {
-        type Origin = Origin;
-        type Call = Call;
-        type Index = u64;
-        type BlockNumber = u64;
-        type Hash = H256;
-        type Hashing = ::sp_runtime::traits::BlakeTwo256;
-        type AccountId = AccountId;
-        type Lookup = IdentityLookup<Self::AccountId>;
-        type Header = Header;
-        type Event = Event;
-        type BlockHashCount = BlockHashCount;
+        type BaseCallFilter = ();
         type BlockWeights = ();
         type BlockLength = ();
+        type AccountId = AccountId;
+        type Call = Call;
+        type Lookup = IdentityLookup<Self::AccountId>;
+        type Index = u64;
+        type BlockNumber = BlockNumber;
+        type Hash = H256;
+        type Hashing = sp_runtime::traits::BlakeTwo256;
+        type Header = Header;
+        type Event = Event;
+        type Origin = Origin;
+        type BlockHashCount = BlockHashCount;
+        type DbWeight = ();
         type Version = ();
         type PalletInfo = PalletInfo;
-        type AccountData = pallet_balances::AccountData<Balance>;
         type OnNewAccount = ();
         type OnKilledAccount = ();
-        type DbWeight = ();
-        type BaseCallFilter = ();
+        type AccountData = pallet_balances::AccountData<Balance>;
         type SystemWeightInfo = ();
         type SS58Prefix = ();
         type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -338,19 +352,73 @@ pub mod para {
 
     parameter_types! {
         pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 10;
-        pub MinimumRedemption: u32 = 2;
+        pub MinimumRedemption: u32 = 0;
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
-        pub StringLimit: u32 = 4;
+        pub PalletStringLimit: u32 = 4;
 
         pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
         pub const PINTAssetId: AssetId = PARA_ASSET;
-       pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+        pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
     }
 
     ord_parameter_types! {
         pub const AdminAccountId: AccountId = ADMIN_ACCOUNT;
+    }
+
+    impl pallet_asset_index::Config for Runtime {
+        // Using signed as the admin origin for testing now
+        type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+        type Event = Event;
+        type AssetId = AssetId;
+        type IndexToken = Balances;
+        type Balance = Balance;
+        type LockupPeriod = LockupPeriod;
+        type MinimumRedemption = MinimumRedemption;
+        type WithdrawalPeriod = WithdrawalPeriod;
+        type DOTContributionLimit = DOTContributionLimit;
+        type RemoteAssetManager = MockRemote;
+        type Currency = Currency;
+        type PriceFeed = MockPriceFeed;
+        type TreasuryPalletId = TreasuryPalletId;
+        type WithdrawalFee = ();
+        type StringLimit = PalletStringLimit;
+        type WeightInfo = ();
+    }
+
+    pub struct MockRemote;
+    use sp_runtime::DispatchResult;
+    impl pallet_remote_asset_manager::traits::RemoteAssetManager<AccountId, u32, u128> for MockRemote {
+        fn transfer_asset(who: AccountId, asset: u32, amount: u128) -> DispatchResult {
+            todo!()
+        }
+
+        fn bond(asset: u32, amount: u128) -> DispatchResult {
+            todo!()
+        }
+
+        fn unbond(asset: u32, amount: u128) -> DispatchResult {
+            todo!()
+        }
+    }
+
+    pub struct MockPriceFeed;
+    impl PriceFeed<AssetId> for MockPriceFeed {
+        fn get_price(_quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            todo!()
+        }
+
+        fn get_price_pair(
+            _base: AssetId,
+            _quote: AssetId,
+        ) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            todo!()
+        }
+
+        fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            todo!()
+        }
     }
 
     impl pallet_remote_asset_manager::Config for Runtime {
@@ -444,12 +512,12 @@ pub mod para {
             XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
             DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
             CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
-
             PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
 
             // crate dependencies
+            AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
             Currency: orml_tokens::{Pallet, Event<T>},
-            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
+            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>}
         }
     );
 }

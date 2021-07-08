@@ -614,9 +614,9 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
+    impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
         fn transfer_asset(
-            recipient: AccountIdFor<T>,
+            recipient: T::AccountId,
             asset: T::AssetId,
             amount: T::Balance,
         ) -> DispatchResult {
