@@ -224,6 +224,8 @@ pub mod pallet {
         NoPendingWithdrawals,
         /// Thrown if the asset that should be added is already registered
         AssetAlreadyExists,
+        /// Thrown when adding assets with zero amount or units
+        InvalidPrice,
     }
 
     #[pallet::hooks]
@@ -243,7 +245,7 @@ pub mod pallet {
             asset_id: T::AssetId,
             units: T::Balance,
             location: MultiLocation,
-            value: T::Balance,
+            amount: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
@@ -262,12 +264,17 @@ pub mod pallet {
             };
 
             // transfer the caller's fund into the treasury account
-            Self::add_liquid(&caller, asset_id, units, value)?;
+            Self::add_liquid(&caller, asset_id, units, amount)?;
 
             // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
-                Price::from_inner(value.saturating_mul(units).into()),
+                Price::from_inner(
+                    amount
+                        .checked_div(&units)
+                        .ok_or(<Error<T>>::InvalidPrice)?
+                        .into(),
+                ),
             )?;
 
             // register asset if not yet known
@@ -276,7 +283,7 @@ pub mod pallet {
                 Self::deposit_event(Event::AssetRegistered(asset_id, availability));
             }
 
-            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, amount));
             Ok(().into())
         }
 
@@ -301,6 +308,8 @@ pub mod pallet {
             if units.is_zero() {
                 return Ok(().into());
             }
+
+            Self::ensure_not_native_asset(&asset_id)?;
 
             Self::ensure_not_native_asset(&asset_id)?;
 
@@ -393,29 +402,32 @@ pub mod pallet {
         pub fn deposit(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            amount: T::Balance,
+            units: T::Balance,
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
-            if amount.is_zero() {
+            if units.is_zero() {
                 return Ok(().into());
             }
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
+
             // native asset can't be deposited here
             Self::ensure_not_native_asset(&asset_id)?;
 
             // only liquid assets can be deposited
             Self::ensure_liquid_asset(&asset_id)?;
 
-            let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer from the caller's sovereign account into the treasury's account
-            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
 
             // add minted PINT to user's balance
             T::IndexToken::resolve_creating(&caller, issued);
-            Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
+            Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
             Ok(().into())
         }
 
