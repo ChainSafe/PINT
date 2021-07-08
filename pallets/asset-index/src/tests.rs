@@ -68,6 +68,22 @@ fn admin_can_add_asset() {
 }
 
 #[test]
+fn native_asset_disallowed() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            AssetIndex::add_asset(
+                Origin::signed(ADMIN_ACCOUNT_ID),
+                PINT_ASSET_ID,
+                100,
+                MultiLocation::Null,
+                5
+            ),
+            pallet::Error::<Test>::NativeAssetDisallowed
+        );
+    });
+}
+
+#[test]
 fn admin_can_add_asset_twice_and_units_accumulate() {
     new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
@@ -164,6 +180,16 @@ fn deposit_only_works_for_added_liquid_assets() {
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
             pallet::Error::<Test>::UnsupportedAsset
+        );
+    });
+}
+
+#[test]
+fn deposit_fail_for_native_asset() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            AssetIndex::deposit(Origin::signed(ASHLEY), PINT_ASSET_ID, 1_000),
+            pallet::Error::<Test>::NativeAssetDisallowed
         );
     });
 }
