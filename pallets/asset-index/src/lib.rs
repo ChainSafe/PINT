@@ -407,14 +407,14 @@ pub mod pallet {
             let pint_amount = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer from the caller's sovereign account into the treasury's account
-            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
 
             // add minted PINT to user's balance
             T::IndexToken::resolve_creating(&caller, issued);
-            Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
+            Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
             Ok(().into())
         }
 
