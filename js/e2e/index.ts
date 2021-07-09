@@ -3,15 +3,19 @@
  */
 import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
+import { Balance } from "@polkadot/types/interfaces/runtime";
+import BN from "bn.js";
 
 const ASSET_ID_A: number = 42;
-const ASSET_ID_A_UNITS: number = 10000;
-const ASSET_ID_A_VALUE: number = 10000;
+const ASSET_ID_A_UNITS: number = 1;
+const ASSET_ID_A_VALUE: number = 1;
+const ASSET_ID_A_DEPOSIT: BN = new BN(10000);
 const ASSET_ID_B: number = 43;
-const BALANCE_THOUSAND: number = 100000000000;
+const BALANCE_THOUSAND: number = 1000;
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
+    const PINT: Balance = api.createType("Balance", Math.pow(10, 12));
     const ROCOCO = api.createType("MultiLocation", {
         // NOTE:
         //
@@ -20,43 +24,43 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     });
 
     return [
-        /* balance */
-        {
-            signed: config.alice,
-            pallet: "balances",
-            call: "transfer",
-            args: [config.charlie.address, BALANCE_THOUSAND],
-            post: [
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.dave.address, BALANCE_THOUSAND],
-                },
-            ],
-        },
-        /* asset-index */
-        {
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "setMetadata",
-            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-            verify: async () => {
-                assert(
-                    JSON.stringify(
-                        (
-                            await api.query.assetIndex.metadata(ASSET_ID_A)
-                        ).toHuman()
-                    ) ===
-                        JSON.stringify({
-                            name: "PINT_TEST",
-                            symbol: "P",
-                            decimals: "9",
-                        }),
-                    "assetIndex.setMetadata failed"
-                );
-            },
-        },
+        // /* balance */
+        // {
+        //     signed: config.alice,
+        //     pallet: "balances",
+        //     call: "transfer",
+        //     args: [config.charlie.address, BALANCE_THOUSAND],
+        //     post: [
+        //         {
+        //             signed: config.alice,
+        //             pallet: "balances",
+        //             call: "transfer",
+        //             args: [config.dave.address, BALANCE_THOUSAND],
+        //         },
+        //     ],
+        // },
+        // /* asset-index */
+        // {
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "setMetadata",
+        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+        //     verify: async () => {
+        //         assert(
+        //             JSON.stringify(
+        //                 (
+        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
+        //                 ).toHuman()
+        //             ) ===
+        //                 JSON.stringify({
+        //                     name: "PINT_TEST",
+        //                     symbol: "P",
+        //                     decimals: "9",
+        //                 }),
+        //             "assetIndex.setMetadata failed"
+        //         );
+        //     },
+        // },
         {
             signed: config.alice,
             pallet: "assetIndex",
@@ -71,10 +75,26 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            shared: async () => {
+                return (await api.query.system.account(config.alice.address))
+                    .data.free;
+            },
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
-            args: [ASSET_ID_A, BALANCE_THOUSAND],
+            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
+
+                // cover weight fee
+                assert(
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
+                    "assetIndex.deposit failed"
+                );
+            },
         },
         {
             signed: config.alice,
