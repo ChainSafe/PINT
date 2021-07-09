@@ -24,43 +24,43 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     });
 
     return [
-        // /* balance */
-        // {
-        //     signed: config.alice,
-        //     pallet: "balances",
-        //     call: "transfer",
-        //     args: [config.charlie.address, BALANCE_THOUSAND],
-        //     post: [
-        //         {
-        //             signed: config.alice,
-        //             pallet: "balances",
-        //             call: "transfer",
-        //             args: [config.dave.address, BALANCE_THOUSAND],
-        //         },
-        //     ],
-        // },
-        // /* asset-index */
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "setMetadata",
-        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-        //     verify: async () => {
-        //         assert(
-        //             JSON.stringify(
-        //                 (
-        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
-        //                 ).toHuman()
-        //             ) ===
-        //                 JSON.stringify({
-        //                     name: "PINT_TEST",
-        //                     symbol: "P",
-        //                     decimals: "9",
-        //                 }),
-        //             "assetIndex.setMetadata failed"
-        //         );
-        //     },
-        // },
+        /* balance */
+        {
+            signed: config.alice,
+            pallet: "balances",
+            call: "transfer",
+            args: [config.charlie.address, BALANCE_THOUSAND],
+            post: [
+                {
+                    signed: config.alice,
+                    pallet: "balances",
+                    call: "transfer",
+                    args: [config.dave.address, BALANCE_THOUSAND],
+                },
+            ],
+        },
+        /* asset-index */
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "setMetadata",
+            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.assetIndex.metadata(ASSET_ID_A)
+                        ).toHuman()
+                    ) ===
+                        JSON.stringify({
+                            name: "PINT_TEST",
+                            symbol: "P",
+                            decimals: "9",
+                        }),
+                    "assetIndex.setMetadata failed"
+                );
+            },
+        },
         {
             signed: config.alice,
             pallet: "assetIndex",
