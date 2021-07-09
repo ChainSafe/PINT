@@ -4893,7 +4893,6 @@ dependencies = [
  "pallet-balances",
  "pallet-chainlink-feed",
  "pallet-price-feed",
- "pallet-remote-asset-manager",
  "parity-scale-codec",
  "primitives",
  "serde",

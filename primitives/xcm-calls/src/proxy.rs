@@ -20,7 +20,9 @@ pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 pub struct ProxyType(pub u8);
 
 impl From<u8> for ProxyType {
-    fn from(x: u8) -> Self { ProxyType(x) }
+    fn from(x: u8) -> Self {
+        ProxyType(x)
+    }
 }
 
 impl ProxyType {

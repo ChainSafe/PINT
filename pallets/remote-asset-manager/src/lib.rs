@@ -35,7 +35,7 @@ pub mod pallet {
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use primitives::traits::MultiAssetRegistry;
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
