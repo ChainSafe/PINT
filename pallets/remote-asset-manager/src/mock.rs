@@ -17,10 +17,7 @@ use orml_traits::parameter_type_with_key;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
-use sp_runtime::{
-    testing::Header,
-    traits::{IdentityLookup, Zero},
-};
+use sp_runtime::{testing::Header, traits::Zero};
 use xcm::v0::{
     Junction::{self, Parachain, Parent},
     MultiAsset,
@@ -41,7 +38,6 @@ use xcm_executor::{Config, XcmExecutor};
 use xcm_simulator::{decl_test_network, decl_test_parachain};
 
 use primitives::traits::MultiAssetRegistry;
-pub use xcm_test_support::{relay, Relay};
 
 use crate as pallet_remote_asset_manager;
 use xcm_calls::{
@@ -52,6 +48,7 @@ use xcm_calls::{
 // import this directly so we can override the relay_ext function and XcmRouter
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
+pub use xcm_test_support::{relay, types::*, Relay};
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
@@ -85,7 +82,7 @@ decl_test_network! {
 
 pub fn para_ext(
     parachain_id: u32,
-    mut balances: Vec<(AccountId, Balance)>,
+    balances: Vec<(AccountId, Balance)>,
 ) -> sp_io::TestExternalities {
     use para::{Runtime, System};
 
@@ -169,27 +166,12 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 
-use frame_support::sp_runtime::traits::Identity;
-pub type AccountId = sp_runtime::AccountId32;
-
-pub type BlockNumber = u64;
-
-pub type Balance = u128;
-
-pub type Amount = i128;
-
-pub type AssetId = u32;
-
-pub type Lookup = IdentityLookup<AccountId>;
-
-pub type AccountLookupSource = AccountId;
-
 pub mod para {
-    use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
-
+    use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
     use super::*;
     use frame_support::dispatch::DispatchError;
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+    use sp_runtime::traits::Identity;
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
@@ -199,30 +181,30 @@ pub mod para {
         type BaseCallFilter = ();
         type BlockWeights = ();
         type BlockLength = ();
-        type AccountId = AccountId;
+        type Origin = Origin;
         type Call = Call;
-        type Lookup = IdentityLookup<Self::AccountId>;
         type Index = u64;
         type BlockNumber = BlockNumber;
         type Hash = H256;
         type Hashing = sp_runtime::traits::BlakeTwo256;
+        type AccountId = AccountId;
+        type Lookup = Lookup;
         type Header = Header;
         type Event = Event;
-        type Origin = Origin;
         type BlockHashCount = BlockHashCount;
         type DbWeight = ();
         type Version = ();
         type PalletInfo = PalletInfo;
+        type AccountData = pallet_balances::AccountData<Balance>;
         type OnNewAccount = ();
         type OnKilledAccount = ();
-        type AccountData = pallet_balances::AccountData<Balance>;
         type SystemWeightInfo = ();
         type SS58Prefix = ();
         type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
     }
 
     parameter_types! {
-        pub ExistentialDeposit: Balance = 1;
+        pub const ExistentialDeposit: Balance = 1;
         pub const MaxLocks: u32 = 50;
         pub const MaxReserves: u32 = 50;
     }
@@ -356,7 +338,7 @@ pub mod para {
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
-        pub PalletStringLimit: u32 = 4;
+        pub StringLimit: u32 = 4;
 
         pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
         pub const PINTAssetId: AssetId = PARA_ASSET;
@@ -368,8 +350,7 @@ pub mod para {
     }
 
     impl pallet_asset_index::Config for Runtime {
-        // Using signed as the admin origin for testing now
-        type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+        type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type Event = Event;
         type AssetId = AssetId;
         type IndexToken = Balances;
@@ -378,29 +359,13 @@ pub mod para {
         type MinimumRedemption = MinimumRedemption;
         type WithdrawalPeriod = WithdrawalPeriod;
         type DOTContributionLimit = DOTContributionLimit;
-        type RemoteAssetManager = MockRemote;
+        type RemoteAssetManager = RemoteAssetManager;
         type Currency = Currency;
         type PriceFeed = MockPriceFeed;
         type TreasuryPalletId = TreasuryPalletId;
+        type StringLimit = StringLimit;
         type WithdrawalFee = ();
-        type StringLimit = PalletStringLimit;
         type WeightInfo = ();
-    }
-
-    pub struct MockRemote;
-    use sp_runtime::DispatchResult;
-    impl pallet_remote_asset_manager::traits::RemoteAssetManager<AccountId, u32, u128> for MockRemote {
-        fn transfer_asset(who: AccountId, asset: u32, amount: u128) -> DispatchResult {
-            todo!()
-        }
-
-        fn bond(asset: u32, amount: u128) -> DispatchResult {
-            todo!()
-        }
-
-        fn unbond(asset: u32, amount: u128) -> DispatchResult {
-            todo!()
-        }
     }
 
     pub struct MockPriceFeed;
@@ -442,19 +407,8 @@ pub mod para {
         type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type XcmSender = XcmRouter;
         type Event = Event;
-        type AssetRegistry = MockAssetRegistry;
+        type AssetRegistry = AssetIndex;
         type WeightInfo = ();
-    }
-
-    pub struct MockAssetRegistry;
-    impl MultiAssetRegistry<AssetId> for MockAssetRegistry {
-        fn native_asset_location(_asset: &AssetId) -> Option<MultiLocation> {
-            None
-        }
-
-        fn is_liquid_asset(_asset: &AssetId) -> bool {
-            true
-        }
     }
 
     pub struct AssetIdConvert;
@@ -462,7 +416,7 @@ pub mod para {
         fn convert(
             asset: AssetId,
         ) -> frame_support::sp_std::result::Result<MultiLocation, AssetId> {
-            MockAssetRegistry::native_asset_location(&asset).ok_or(asset)
+            AssetIndex::native_asset_location(&asset).ok_or(asset)
         }
     }
 
@@ -509,15 +463,17 @@ pub mod para {
 
             ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
             ParachainInfo: parachain_info::{Pallet, Storage, Config},
+
+            // crate dependencies
+            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
+            Currency: orml_tokens::{Pallet, Event<T>},
+            AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
+
+
             XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
             DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
             CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
             PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-
-            // crate dependencies
-            AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-            Currency: orml_tokens::{Pallet, Event<T>},
-            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>}
         }
     );
 }

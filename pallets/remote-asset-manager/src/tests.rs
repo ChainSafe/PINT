@@ -1,16 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate as pallet;
 use crate::mock::*;
 
-use frame_support::assert_ok;
-use relay::ProxyType as RelayProxyType;
-use xcm::v0::{
-    Junction::{self, Parachain, Parent},
-    NetworkId, OriginKind,
-};
-use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
 fn print_events<T: frame_system::Config>(context: &str) {
@@ -38,7 +30,6 @@ fn para_account_funded_on_relay() {
 #[test]
 fn can_transact_register_proxy() {
     MockNet::reset();
-    use pallet::traits::RemoteAssetManager;
 
     Para::execute_with(|| {
         // para::RemoteAssetManager::transfer_asset(para_relay_account(), 5,100);
