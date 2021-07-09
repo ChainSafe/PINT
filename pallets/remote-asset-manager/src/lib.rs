@@ -16,8 +16,6 @@ mod tests;
 
 pub use pallet::*;
 
-mod traits;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
