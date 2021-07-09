@@ -11,7 +11,7 @@ const ASSET_ID_A_UNITS: number = 1;
 const ASSET_ID_A_VALUE: number = 1;
 const ASSET_ID_A_DEPOSIT: BN = new BN(10000);
 const ASSET_ID_B: number = 43;
-const BALANCE_THOUSAND: number = 1000;
+const BALANCE_THOUSAND: BN = new BN(1000);
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
@@ -29,13 +29,19 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "balances",
             call: "transfer",
-            args: [config.charlie.address, BALANCE_THOUSAND],
+            args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
             post: [
                 {
                     signed: config.alice,
                     pallet: "balances",
                     call: "transfer",
-                    args: [config.dave.address, BALANCE_THOUSAND],
+                    args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
+                },
+                {
+                    signed: config.alice,
+                    pallet: "balances",
+                    call: "transfer",
+                    args: [config.dave.address, PINT.mul(BALANCE_THOUSAND)],
                 },
             ],
         },
@@ -100,7 +106,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
-            args: [BALANCE_THOUSAND / 4],
+            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
             verify: async () => {
                 assert(
                     ((
