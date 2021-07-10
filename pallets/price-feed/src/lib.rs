@@ -244,15 +244,14 @@ pub mod pallet {
             base: T::AssetId,
             quote: T::AssetId,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            let (base_feed_id, quote_feed_id) = match (
+            let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) = (
                 Self::get_asset_feed_id(&base),
                 Self::get_asset_feed_id(&quote),
             ) {
-                (None, Some(_)) | (Some(_), None) | (None, None) => {
-                    return <InitialPricePairs<T>>::get(&quote)
-                        .ok_or(Error::<T>::AssetPriceFeedNotFound.into())
-                }
-                (Some(b), Some(q)) => (b, q),
+                (b, q)
+            } else {
+                return <InitialPricePairs<T>>::get(&quote)
+                    .ok_or(Error::<T>::AssetPriceFeedNotFound.into());
             };
 
             let (last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
