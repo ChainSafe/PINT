@@ -85,7 +85,7 @@
   "SpecIndex": "Vec<u8>",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
-  "FeedId": "u32",
+  "FeedId": "u64",
   "FeedIdFor": "FeedId",
   "RoundId": "u32",
   "Value": "u128",
