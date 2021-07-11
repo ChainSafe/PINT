@@ -49,12 +49,7 @@
   },
   "ProposalNonce": "u32",
   "ProxyType": {
-    "_enum": [
-      "Any",
-      "NonTransfer",
-      "Governance",
-      "Staking"
-    ]
+    "_enum": ["Any", "NonTransfer", "Governance", "Staking"]
   },
   "ProxyState": {
     "added": "Vec<ProxyType>"
@@ -91,6 +86,7 @@
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
   "FeedId": "u32",
+  "FeedIdFor": "FeedId",
   "RoundId": "u32",
   "Value": "u128",
   "FeedConfig": {
