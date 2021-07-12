@@ -40,6 +40,7 @@ serde = { version = "1.0.101", features = ["derive"] }
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
 sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
+sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
@@ -75,7 +76,10 @@ pallet-price-feed = { path = "../price-feed" }
 xcm-simulator = { git = "https://github.com/shaunxw/xcm-simulator", branch = "master" }
 
 # ORML
+orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 [features]
 default = ['std']
