@@ -22,7 +22,6 @@ xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'relea
 
 # PINT dependencies
 pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
-#pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
