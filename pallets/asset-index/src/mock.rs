@@ -130,12 +130,14 @@ parameter_types! {
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
     pub StringLimit: u32 = 4;
+    pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 }
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type Event = Event;
     type AssetId = AssetId;
+    type SelfAssetId = PINTAssetId;
     type IndexToken = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;

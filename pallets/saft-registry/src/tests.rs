@@ -29,6 +29,34 @@ fn non_admin_cannot_call_any_extrinsics() {
 }
 
 #[test]
+fn native_asset_disallowed() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            SaftRegistry::add_saft(
+                Origin::signed(ADMIN_ACCOUNT_ID),
+                PINTAssetId::get(),
+                100,
+                100
+            ),
+            pallet_asset_index::Error::<Test>::NativeAssetDisallowed
+        );
+    });
+}
+
+#[test]
+fn empty_deposit_does_nothing() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(SaftRegistry::add_saft(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A,
+            0,
+            0
+        ));
+        assert!(super::ActiveSAFTs::<Test>::get(ASSET_A).is_empty(),);
+    });
+}
+
+#[test]
 fn admin_can_add_and_remove_saft() {
     let units = 20;
     let nav = 100;

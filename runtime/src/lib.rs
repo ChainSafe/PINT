@@ -586,6 +586,7 @@ impl pallet_asset_index::Config for Runtime {
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type Event = Event;
     type AssetId = AssetId;
+    type SelfAssetId = PINTAssetId;
     type IndexToken = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;

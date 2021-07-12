@@ -18,8 +18,11 @@ mod tests;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo, pallet_prelude::*,
-        sp_runtime::traits::AtLeast32BitUnsigned, sp_std::prelude::*, transactional,
+        dispatch::DispatchResultWithPostInfo,
+        pallet_prelude::*,
+        sp_runtime::traits::{AtLeast32BitUnsigned, Zero},
+        sp_std::prelude::*,
+        transactional,
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_index::traits::AssetRecorder;
@@ -104,7 +107,9 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
-
+            if units.is_zero() {
+                return Ok(().into());
+            }
             // mint SAFT units into the index and credit the caller's account with PINT
             <T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav.clone())?;
 
