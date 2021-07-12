@@ -9,7 +9,7 @@ use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use pallet_remote_asset_manager::RemoteAssetManager;
+use primitives::traits::RemoteAssetManager;
 use sp_runtime::DispatchResult;
 
 use sp_core::H256;

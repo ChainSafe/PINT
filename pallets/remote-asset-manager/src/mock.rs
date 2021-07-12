@@ -4,15 +4,22 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
-use crate as pallet_remote_asset_manager;
-use frame_support::{parameter_types, traits::GenesisBuild, PalletId};
+use cumulus_primitives_core::ParaId;
+use frame_support::{
+    construct_runtime,
+    traits::All,
+    weights::{constants::WEIGHT_PER_SECOND, Weight},
+};
+use frame_support::{ord_parameter_types, parameter_types, traits::GenesisBuild, PalletId};
 use frame_system as system;
+use frame_system::EnsureRoot;
 use orml_traits::parameter_type_with_key;
-use primitives::traits::MultiAssetRegistry;
+use pallet_xcm::XcmPassthrough;
+use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
-    traits::{IdentityLookup, Zero},
+    traits::{AccountIdConversion, Zero},
 };
 use xcm::v0::{
     Junction::{self, Parachain, Parent},
@@ -20,21 +27,9 @@ use xcm::v0::{
     MultiLocation::{self, X1},
     NetworkId, Xcm,
 };
-
-use frame_support::{
-    construct_runtime,
-    traits::All,
-    weights::{constants::WEIGHT_PER_SECOND, Weight},
-};
-use frame_system::EnsureRoot;
-use sp_runtime::AccountId32;
-
-use pallet_xcm::XcmPassthrough;
-use polkadot_parachain::primitives::Sibling;
 use xcm_builder::{
-    AccountId32Aliases, AllowUnpaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter,
-    FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, FixedRateOfConcreteFungible, FixedWeightBounds,
+    LocationInverter, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 pub use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, NativeAsset, ParentAsSuperuser,
@@ -44,53 +39,177 @@ pub use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 use xcm_simulator::{decl_test_network, decl_test_parachain};
 
-pub const ALICE: AccountId32 = AccountId32::new([0u8; 32]);
+use primitives::traits::MultiAssetRegistry;
 
+use crate as pallet_remote_asset_manager;
+use xcm_calls::{
+    proxy::{ProxyConfig, ProxyWeights},
+    staking::{RewardDestination, StakingConfig, StakingWeights},
+};
+
+// import this directly so we can override the relay_ext function and XcmRouter
 #[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
 mod xcm_test_support;
+pub use xcm_test_support::{relay, types::*, Relay};
+
+pub const ALICE: AccountId = AccountId::new([0u8; 32]);
+pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
+pub const INITIAL_BALANCE: Balance = 1_000_000_000;
+pub const PARA_ID: u32 = 1u32;
+pub const PARA_ASSET: AssetId = 1;
+pub const RELAY_CHAIN_ASSET: AssetId = 42;
+
+decl_test_parachain! {
+    pub struct Para {
+        Runtime = para::Runtime,
+        new_ext = para_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
+    }
+}
+
+/// Returns the para's account
+pub fn para_relay_account() -> AccountId {
+    let para: ParaId = PARA_ID.into();
+    para.into_account()
+}
+
+decl_test_network! {
+    pub struct MockNet {
+        relay_chain = Relay,
+        parachains = vec![
+            (PARA_ID, Para),
+        ],
+    }
+}
+
+pub fn para_ext(
+    parachain_id: u32,
+    balances: Vec<(AccountId, Balance)>,
+) -> sp_io::TestExternalities {
+    use para::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    let parachain_info_config = parachain_info::GenesisConfig {
+        parachain_id: parachain_id.into(),
+    };
+
+    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
+        &parachain_info_config,
+        &mut t,
+    )
+    .unwrap();
+
+    pallet_balances::GenesisConfig::<Runtime> { balances }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+    // add xcm transact configs for the native asset of the relay chain
+    // NOTE: weights are raw estimates
+    pallet_remote_asset_manager::GenesisConfig::<Runtime> {
+        staking_configs: vec![(
+            RELAY_CHAIN_ASSET,
+            StakingConfig {
+                pallet_index: relay::STAKING_PALLET_INDEX,
+                max_unlocking_chunks: 42,
+                pending_unbond_calls: 42,
+                reward_destination: RewardDestination::Staked,
+                minimum_balance: 0,
+                weights: StakingWeights {
+                    bond: 650_000_000,
+                    bond_extra: 350_000_000,
+                    unbond: 1000_u64,
+                    withdraw_unbonded: 1000_u64,
+                },
+            },
+        )],
+        proxy_configs: vec![(
+            RELAY_CHAIN_ASSET,
+            ProxyConfig {
+                pallet_index: relay::PROXY_PALLET_INDEX,
+                weights: ProxyWeights {
+                    add_proxy: 180_000_000,
+                    remove_proxy: 1000_u64,
+                },
+            },
+        )],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub fn relay_ext() -> sp_io::TestExternalities {
+    use relay::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    // also fund the parachain's sovereign account on the relay chain
+    pallet_balances::GenesisConfig::<Runtime> {
+        balances: vec![
+            (ALICE, INITIAL_BALANCE),
+            (para_relay_account(), INITIAL_BALANCE),
+        ],
+    }
+    .assimilate_storage(&mut t)
+    .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
+pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 
 pub mod para {
+    use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
     use super::*;
-    use crate::mock::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
-    use frame_support::sp_runtime::traits::Identity;
-
-    pub type AccountId = AccountId32;
-    pub type Balance = u128;
-    pub type Amount = i128;
-    pub type AssetId = u32;
+    use codec::Decode;
+    use frame_support::dispatch::DispatchError;
+    use orml_currencies::BasicCurrencyAdapter;
+    use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
+    use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+    use sp_runtime::traits::{Convert, Identity};
+    use sp_runtime::FixedPointNumber;
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
     }
 
     impl frame_system::Config for Runtime {
+        type BaseCallFilter = ();
+        type BlockWeights = ();
+        type BlockLength = ();
         type Origin = Origin;
         type Call = Call;
         type Index = u64;
-        type BlockNumber = u64;
+        type BlockNumber = BlockNumber;
         type Hash = H256;
-        type Hashing = ::sp_runtime::traits::BlakeTwo256;
+        type Hashing = sp_runtime::traits::BlakeTwo256;
         type AccountId = AccountId;
-        type Lookup = IdentityLookup<Self::AccountId>;
+        type Lookup = Lookup;
         type Header = Header;
         type Event = Event;
         type BlockHashCount = BlockHashCount;
-        type BlockWeights = ();
-        type BlockLength = ();
+        type DbWeight = ();
         type Version = ();
         type PalletInfo = PalletInfo;
         type AccountData = pallet_balances::AccountData<Balance>;
         type OnNewAccount = ();
         type OnKilledAccount = ();
-        type DbWeight = ();
-        type BaseCallFilter = ();
         type SystemWeightInfo = ();
         type SS58Prefix = ();
         type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
     }
 
     parameter_types! {
-        pub ExistentialDeposit: Balance = 1;
+        pub const ExistentialDeposit: Balance = 1;
         pub const MaxLocks: u32 = 50;
         pub const MaxReserves: u32 = 50;
     }
@@ -151,8 +270,22 @@ pub mod para {
         pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), 1);
     }
 
-    pub type LocalAssetTransactor =
-        XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
+    /// Means for transacting assets on this chain.
+    pub type LocalAssetTransactor = MultiCurrencyAdapter<
+        // Use this multicurrency for asset balances
+        Currency,
+        // handle in event of unknown tokens
+        UnknownTokens,
+        // Convert
+        IsNativeConcrete<AssetId, AssetIdConvert>,
+        AccountId,
+        LocationToAccountId,
+        AssetId,
+        AssetIdConvert,
+    >;
+
+    // pub type LocalAssetTransactor =
+    //     XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
     pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
     pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
@@ -206,6 +339,18 @@ pub mod para {
         type OnDust = ();
     }
 
+    impl orml_unknown_tokens::Config for Runtime {
+        type Event = Event;
+    }
+
+    impl orml_currencies::Config for Runtime {
+        type Event = Event;
+        type MultiCurrency = Tokens;
+        type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+        type GetNativeCurrencyId = PINTAssetId;
+        type WeightInfo = ();
+    }
+
     parameter_type_with_key! {
         pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
             ExistentialDeposit::get()
@@ -220,15 +365,65 @@ pub mod para {
 
     parameter_types! {
         pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 10;
-        pub MinimumRedemption: u32 = 2;
+        pub MinimumRedemption: u32 = 0;
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+        pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
         pub StringLimit: u32 = 4;
 
-        pub const RelayChainAssetId: AssetId = 0;
-        pub const PINTAssetId: AssetId = 1;
-       pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+        pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
+        pub const PINTAssetId: AssetId = PARA_ASSET;
+        pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+    }
+
+    ord_parameter_types! {
+        pub const AdminAccountId: AccountId = ADMIN_ACCOUNT;
+    }
+
+    impl pallet_asset_index::Config for Runtime {
+        type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+        type Event = Event;
+        type AssetId = AssetId;
+        type SelfAssetId = PINTAssetId;
+        type IndexToken = Balances;
+        type Balance = Balance;
+        type LockupPeriod = LockupPeriod;
+        type MinimumRedemption = MinimumRedemption;
+        type WithdrawalPeriod = WithdrawalPeriod;
+        type DOTContributionLimit = DOTContributionLimit;
+        type RemoteAssetManager = RemoteAssetManager;
+        type Currency = Currency;
+        type PriceFeed = MockPriceFeed;
+        type TreasuryPalletId = TreasuryPalletId;
+        type StringLimit = StringLimit;
+        type WithdrawalFee = ();
+        type WeightInfo = ();
+    }
+
+    // mock price multiplier for relay/para price pair
+    pub const RELAY_PRICE_MULTIPLIER: Balance = 2;
+
+    pub struct MockPriceFeed;
+    impl PriceFeed<AssetId> for MockPriceFeed {
+        fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            Self::get_price_pair(PARA_ASSET, quote)
+        }
+
+        fn get_price_pair(
+            base: AssetId,
+            quote: AssetId,
+        ) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            let price = match quote {
+                RELAY_CHAIN_ASSET => Price::checked_from_integer(RELAY_PRICE_MULTIPLIER).unwrap(),
+                _ => return Err(pallet_asset_index::Error::<Runtime>::UnsupportedAsset.into()),
+            };
+            Ok(AssetPricePair { base, quote, price })
+        }
+
+        fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            todo!()
+        }
     }
 
     impl pallet_remote_asset_manager::Config for Runtime {
@@ -249,22 +444,11 @@ pub mod para {
         type XcmExecutor = XcmExecutor<XcmConfig>;
         type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
         // Using root as the admin origin for now
-        type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+        type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type XcmSender = XcmRouter;
         type Event = Event;
-        type AssetRegistry = MockAssetRegistry;
+        type AssetRegistry = AssetIndex;
         type WeightInfo = ();
-    }
-
-    pub struct MockAssetRegistry;
-    impl MultiAssetRegistry<AssetId> for MockAssetRegistry {
-        fn native_asset_location(_asset: &AssetId) -> Option<MultiLocation> {
-            None
-        }
-
-        fn is_liquid_asset(_asset: &AssetId) -> bool {
-            true
-        }
     }
 
     pub struct AssetIdConvert;
@@ -272,7 +456,38 @@ pub mod para {
         fn convert(
             asset: AssetId,
         ) -> frame_support::sp_std::result::Result<MultiLocation, AssetId> {
-            MockAssetRegistry::native_asset_location(&asset).ok_or(asset)
+            AssetIndex::native_asset_location(&asset).ok_or(asset)
+        }
+    }
+
+    impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
+        fn convert(location: MultiLocation) -> Option<AssetId> {
+            match &location {
+                MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
+                MultiLocation::X3(
+                    Junction::Parent,
+                    Junction::Parachain(id),
+                    Junction::GeneralKey(key),
+                ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+                    if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+                        if AssetIndex::is_liquid_asset(&asset_id) {
+                            return Some(asset_id);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            None
+        }
+    }
+
+    impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
+        fn convert(asset: MultiAsset) -> Option<AssetId> {
+            if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
+                Self::convert(id.clone())
+            } else {
+                None
+            }
         }
     }
 
@@ -319,90 +534,19 @@ pub mod para {
 
             ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
             ParachainInfo: parachain_info::{Pallet, Storage, Config},
+
+            // crate dependencies
+            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
+            Tokens: orml_tokens::{Pallet, Event<T>},
+            Currency: orml_currencies::{Pallet, Call, Event<T>},
+            UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
+            AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
+
+
             XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
             DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
             CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
-
             PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-
-            // crate dependencies
-            Currency: orml_tokens::{Pallet, Event<T>},
-            RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>},
         }
     );
 }
-
-decl_test_parachain! {
-    pub struct ParaA {
-        Runtime = para::Runtime,
-        new_ext = para_ext(1),
-    }
-}
-
-decl_test_parachain! {
-    pub struct ParaB {
-        Runtime = para::Runtime,
-        new_ext = para_ext(2),
-    }
-}
-
-decl_test_network! {
-    pub struct MockNet {
-        relay_chain = xcm_test_support::Relay,
-        parachains = vec![
-            (1, ParaA),
-            (2, ParaB),
-        ],
-    }
-}
-
-pub const INITIAL_BALANCE: u128 = 1_000_000_000;
-
-pub fn para_ext(para_id: u32) -> sp_io::TestExternalities {
-    use para::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    let parachain_info_config = parachain_info::GenesisConfig {
-        parachain_id: para_id.into(),
-    };
-
-    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
-        &parachain_info_config,
-        &mut t,
-    )
-    .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub fn relay_ext() -> sp_io::TestExternalities {
-    use xcm_test_support::relay::{Runtime, System};
-
-    let mut t = frame_system::GenesisConfig::default()
-        .build_storage::<Runtime>()
-        .unwrap();
-
-    pallet_balances::GenesisConfig::<Runtime> {
-        balances: vec![(ALICE, INITIAL_BALANCE)],
-    }
-    .assimilate_storage(&mut t)
-    .unwrap();
-
-    let mut ext = sp_io::TestExternalities::new(t);
-    ext.execute_with(|| System::set_block_number(1));
-    ext
-}
-
-pub type RelayChainPalletXcm = pallet_xcm::Pallet<xcm_test_support::relay::Runtime>;
-pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;

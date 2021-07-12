@@ -16,13 +16,10 @@ mod tests;
 
 pub use pallet::*;
 
-mod traits;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    pub use crate::traits::*;
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -35,7 +32,7 @@ pub mod pallet {
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use primitives::traits::MultiAssetRegistry;
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
@@ -614,9 +611,9 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> RemoteAssetManager<AccountIdFor<T>, T::AssetId, T::Balance> for Pallet<T> {
+    impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
         fn transfer_asset(
-            recipient: AccountIdFor<T>,
+            recipient: T::AccountId,
             asset: T::AssetId,
             amount: T::Balance,
         ) -> DispatchResult {

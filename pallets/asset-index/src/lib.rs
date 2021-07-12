@@ -43,7 +43,6 @@ pub mod pallet {
     use xcm::opaque::v0::MultiLocation;
 
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-    use pallet_remote_asset_manager::RemoteAssetManager;
 
     pub use crate::traits::AssetRecorder;
     use crate::traits::WithdrawalFee;
@@ -51,7 +50,7 @@ pub mod pallet {
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
-    use primitives::traits::MultiAssetRegistry;
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -86,11 +85,7 @@ pub mod pallet {
         #[pallet::constant]
         type DOTContributionLimit: Get<Self::Balance>;
         /// Type that handles cross chain transfers
-        type RemoteAssetManager: RemoteAssetManager<
-            AccountIdFor<Self>,
-            Self::AssetId,
-            Self::Balance,
-        >;
+        type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
         /// Type used to identify assets
         type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
 

@@ -19,6 +19,12 @@ pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 #[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
 pub struct ProxyType(pub u8);
 
+impl From<u8> for ProxyType {
+    fn from(x: u8) -> Self {
+        ProxyType(x)
+    }
+}
+
 impl ProxyType {
     /// Represents the `Staking` variant of the polkadot `ProxyType` enum
     pub const fn polkadot_staking() -> Self {
