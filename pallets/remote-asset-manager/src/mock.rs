@@ -17,7 +17,10 @@ use orml_traits::parameter_type_with_key;
 use pallet_xcm::XcmPassthrough;
 use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
-use sp_runtime::{testing::Header, traits::Zero};
+use sp_runtime::{
+    testing::Header,
+    traits::{AccountIdConversion, Zero},
+};
 use xcm::v0::{
     Junction::{self, Parachain, Parent},
     MultiAsset,
@@ -25,9 +28,8 @@ use xcm::v0::{
     NetworkId, Xcm,
 };
 use xcm_builder::{
-    AccountId32Aliases, AllowUnpaidExecutionFrom,
-    FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
-    SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
+    AccountId32Aliases, AllowUnpaidExecutionFrom, FixedRateOfConcreteFungible, FixedWeightBounds,
+    LocationInverter, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 pub use xcm_builder::{
     AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, NativeAsset, ParentAsSuperuser,
@@ -66,7 +68,6 @@ decl_test_parachain! {
 
 /// Returns the para's account
 pub fn para_relay_account() -> AccountId {
-    use sp_runtime::traits::AccountIdConversion;
     let para: ParaId = PARA_ID.into();
     para.into_account()
 }
@@ -105,6 +106,7 @@ pub fn para_ext(
         .unwrap();
 
     // add xcm transact configs for the native asset of the relay chain
+    // NOTE: weights are raw estimates
     pallet_remote_asset_manager::GenesisConfig::<Runtime> {
         staking_configs: vec![(
             RELAY_CHAIN_ASSET,
@@ -115,8 +117,8 @@ pub fn para_ext(
                 reward_destination: RewardDestination::Staked,
                 minimum_balance: 0,
                 weights: StakingWeights {
-                    bond: 1000_u64,
-                    bond_extra: 1000_u64,
+                    bond: 650_000_000,
+                    bond_extra: 350_000_000,
                     unbond: 1000_u64,
                     withdraw_unbonded: 1000_u64,
                 },
@@ -127,7 +129,7 @@ pub fn para_ext(
             ProxyConfig {
                 pallet_index: relay::PROXY_PALLET_INDEX,
                 weights: ProxyWeights {
-                    add_proxy: 1000_u64,
+                    add_proxy: 180_000_000,
                     remove_proxy: 1000_u64,
                 },
             },
@@ -164,7 +166,6 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 }
 
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
-pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 
 pub mod para {
     use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
@@ -175,6 +176,7 @@ pub mod para {
     use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
     use sp_runtime::traits::{Convert, Identity};
+    use sp_runtime::FixedPointNumber;
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
@@ -367,6 +369,7 @@ pub mod para {
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+        pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
         pub StringLimit: u32 = 4;
 
         pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
@@ -397,17 +400,24 @@ pub mod para {
         type WeightInfo = ();
     }
 
+    // mock price multiplier for relay/para price pair
+    pub const RELAY_PRICE_MULTIPLIER: Balance = 2;
+
     pub struct MockPriceFeed;
     impl PriceFeed<AssetId> for MockPriceFeed {
-        fn get_price(_quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-            todo!()
+        fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+            Self::get_price_pair(PARA_ASSET, quote)
         }
 
         fn get_price_pair(
-            _base: AssetId,
-            _quote: AssetId,
+            base: AssetId,
+            quote: AssetId,
         ) -> Result<AssetPricePair<AssetId>, DispatchError> {
-            todo!()
+            let price = match quote {
+                RELAY_CHAIN_ASSET => Price::checked_from_integer(RELAY_PRICE_MULTIPLIER).unwrap(),
+                _ => return Err(pallet_asset_index::Error::<Runtime>::UnsupportedAsset.into()),
+            };
+            Ok(AssetPricePair { base, quote, price })
         }
 
         fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
