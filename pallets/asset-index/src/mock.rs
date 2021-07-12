@@ -15,7 +15,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use pallet_remote_asset_manager::RemoteAssetManager;
+use primitives::traits::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
