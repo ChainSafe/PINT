@@ -25,7 +25,7 @@ use xcm::v0::{
     NetworkId, Xcm,
 };
 use xcm_builder::{
-    AccountId32Aliases, AllowUnpaidExecutionFrom, CurrencyAdapter as XcmCurrencyAdapter,
+    AccountId32Aliases, AllowUnpaidExecutionFrom,
     FixedRateOfConcreteFungible, FixedWeightBounds, IsConcrete, LocationInverter,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
@@ -169,9 +169,12 @@ pub type ParachainPalletXcm = pallet_xcm::Pallet<para::Runtime>;
 pub mod para {
     use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
     use super::*;
+    use codec::Decode;
     use frame_support::dispatch::DispatchError;
+    use orml_currencies::BasicCurrencyAdapter;
+    use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-    use sp_runtime::traits::Identity;
+    use sp_runtime::traits::{Convert, Identity};
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;
@@ -265,8 +268,22 @@ pub mod para {
         pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), 1);
     }
 
-    pub type LocalAssetTransactor =
-        XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
+    /// Means for transacting assets on this chain.
+    pub type LocalAssetTransactor = MultiCurrencyAdapter<
+        // Use this multicurrency for asset balances
+        Currency,
+        // handle in event of unknown tokens
+        UnknownTokens,
+        // Convert
+        IsNativeConcrete<AssetId, AssetIdConvert>,
+        AccountId,
+        LocationToAccountId,
+        AssetId,
+        AssetIdConvert,
+    >;
+
+    // pub type LocalAssetTransactor =
+    //     XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
     pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
     pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
@@ -318,6 +335,18 @@ pub mod para {
         type ExistentialDeposits = ExistentialDeposits;
         type MaxLocks = MaxLocks;
         type OnDust = ();
+    }
+
+    impl orml_unknown_tokens::Config for Runtime {
+        type Event = Event;
+    }
+
+    impl orml_currencies::Config for Runtime {
+        type Event = Event;
+        type MultiCurrency = Tokens;
+        type NativeCurrency = BasicCurrencyAdapter<Runtime, Balances, Amount, BlockNumber>;
+        type GetNativeCurrencyId = PINTAssetId;
+        type WeightInfo = ();
     }
 
     parameter_type_with_key! {
@@ -420,6 +449,37 @@ pub mod para {
         }
     }
 
+    impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
+        fn convert(location: MultiLocation) -> Option<AssetId> {
+            match &location {
+                MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
+                MultiLocation::X3(
+                    Junction::Parent,
+                    Junction::Parachain(id),
+                    Junction::GeneralKey(key),
+                ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+                    if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+                        if AssetIndex::is_liquid_asset(&asset_id) {
+                            return Some(asset_id);
+                        }
+                    }
+                }
+                _ => {}
+            }
+            None
+        }
+    }
+
+    impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
+        fn convert(asset: MultiAsset) -> Option<AssetId> {
+            if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
+                Self::convert(id.clone())
+            } else {
+                None
+            }
+        }
+    }
+
     pub struct XcmAssetConfig;
     impl xcm_assets::Config for XcmAssetConfig {
         type Call = Call;
@@ -466,7 +526,9 @@ pub mod para {
 
             // crate dependencies
             RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
-            Currency: orml_tokens::{Pallet, Event<T>},
+            Tokens: orml_tokens::{Pallet, Event<T>},
+            Currency: orml_currencies::{Pallet, Call, Event<T>},
+            UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
             AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
 
 

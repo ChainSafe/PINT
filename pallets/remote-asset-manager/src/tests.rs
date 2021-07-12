@@ -3,7 +3,16 @@
 
 use crate::mock::*;
 
+use frame_support::{assert_noop, assert_ok};
+use pallet_asset_index::types::AssetAvailability;
+use xcm::v0::{
+    Junction::{self, *},
+    MultiAsset::*,
+    MultiLocation::*,
+    NetworkId,
+};
 use xcm_simulator::TestExt;
+use frame_support::traits::fungibles::Inspect;
 
 fn print_events<T: frame_system::Config>(context: &str) {
     println!("------ {:?} events ------", context);
@@ -13,7 +22,11 @@ fn print_events<T: frame_system::Config>(context: &str) {
 }
 
 fn register_relay() {
-    // para::AssetIndex;
+    assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::register_asset(
+        para::Origin::signed(ADMIN_ACCOUNT.clone()),
+        RELAY_CHAIN_ASSET,
+        AssetAvailability::Liquid(Parent.into())
+    ));
 }
 
 #[test]
@@ -28,10 +41,50 @@ fn para_account_funded_on_relay() {
 }
 
 #[test]
+fn can_deposit_from_relay() {
+    MockNet::reset();
+    let relay_deposit_amount = 1000;
+    Para::execute_with(|| register_relay());
+
+    Relay::execute_with(|| {
+        // transfer from relay to parachain
+        assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
+            relay::Origin::signed(ALICE),
+            X1(Parachain(PARA_ID)),
+            X1(Junction::AccountId32 {
+                network: NetworkId::Any,
+                id: ALICE.into(),
+            }),
+            vec![ConcreteFungible {
+                id: Null,
+                amount: relay_deposit_amount
+            }],
+            relay_deposit_amount as u64,
+        ));
+    });
+    Para::execute_with(|| {
+        // ensure deposit arrived
+        assert_eq!(
+            orml_tokens::Pallet::<para::Runtime>::total_issuance(
+                RELAY_CHAIN_ASSET
+            ),
+            relay_deposit_amount
+        );
+        assert_eq!(
+            orml_tokens::Pallet::<para::Runtime>::balance(
+                RELAY_CHAIN_ASSET, &ALICE
+            ),
+            relay_deposit_amount
+        );
+    });
+}
+#[test]
 fn can_transact_register_proxy() {
     MockNet::reset();
 
     Para::execute_with(|| {
+        register_relay()
+
         // para::RemoteAssetManager::transfer_asset(para_relay_account(), 5,100);
         // let x = para::RemoteAssetManager::send_add_proxy(
         //     para::Origin::signed(ADMIN_ACCOUNT),
