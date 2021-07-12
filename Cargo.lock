@@ -5523,6 +5523,7 @@ dependencies = [
  "pallet-price-feed",
  "pallet-remote-asset-manager",
  "parity-scale-codec",
+ "primitives",
  "serde",
  "sp-core",
  "sp-io",

@@ -31,6 +31,7 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'p
 pallet-asset-index = { path = "../asset-index" }
 pallet-remote-asset-manager = { path = "../remote-asset-manager" }
 pallet-price-feed = { path = "../price-feed" }
+primitives = { path = "../../primitives/primitives" }
 
 # ORML Dependencies
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
