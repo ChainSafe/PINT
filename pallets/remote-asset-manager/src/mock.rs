@@ -385,6 +385,7 @@ pub mod para {
         type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type Event = Event;
         type AssetId = AssetId;
+        type SelfAssetId = PINTAssetId;
         type IndexToken = Balances;
         type Balance = Balance;
         type LockupPeriod = LockupPeriod;
