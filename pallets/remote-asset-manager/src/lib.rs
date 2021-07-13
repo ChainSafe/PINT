@@ -39,7 +39,7 @@ pub mod pallet {
     };
     use xcm_executor::traits::Convert as XcmConvert;
 
-    use orml_traits::{GetByKey, MultiCurrency};
+    use orml_traits::{GetByKey, MultiCurrency, XcmTransfer};
     use xcm_assets::XcmAssetHandler;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
@@ -63,7 +63,7 @@ pub mod pallet {
         ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
     #[pallet::config]
-    pub trait Config: frame_system::Config  {
+    pub trait Config: frame_system::Config {
         /// The balance type for cross chain transfers
         type Balance: Parameter
             + Member
@@ -136,6 +136,8 @@ pub mod pallet {
 
         /// The type that handles all the cross chain asset transfers
         type XcmAssets: XcmAssetHandler<Self::AccountId, Self::Balance, Self::AssetId>;
+        /// The type that handles all the cross chain asset transfers
+        type XcmAssetTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
 
         /// Origin that is allowed to send cross chain messages on behalf of the PINT chain
         type AdminOrigin: EnsureOrigin<Self::Origin>;

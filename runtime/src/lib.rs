@@ -787,6 +787,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type Assets = Currencies;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
+    type XcmAssetTransfer = XTokens;
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type XcmSender = XcmRouter;
