@@ -16,7 +16,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdConversion, Zero},
+    traits::{AccountIdConversion, Convert, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -48,7 +48,7 @@ use xcm_builder::{
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{traits::Convert, XcmExecutor};
+use xcm_executor::XcmExecutor;
 
 // A few exports that help ease life for downstream crates.
 use codec::Decode;
@@ -649,70 +649,53 @@ impl orml_unknown_tokens::Config for Runtime {
 }
 
 pub struct AssetIdConvert;
-impl Convert<AssetId, MultiLocation> for AssetIdConvert {
-    fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
-        AssetIndex::native_asset_location(&asset).ok_or(asset)
-    }
-}
-impl sp_runtime::traits::Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
     fn convert(asset: AssetId) -> Option<MultiLocation> {
         AssetIndex::native_asset_location(&asset)
     }
 }
 
-impl sp_runtime::traits::Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
+impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
     fn convert(location: MultiLocation) -> Option<AssetId> {
-        <Self as Convert<MultiLocation, AssetId>>::convert(location).ok()
-    }
-}
-
-impl Convert<MultiLocation, AssetId> for AssetIdConvert {
-    fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
-        match &location {
-            MultiLocation::X1(Junction::Parent) => return Ok(RelayChainAssetId::get()),
+        match location {
+            MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
             MultiLocation::X3(
                 Junction::Parent,
                 Junction::Parachain(id),
                 Junction::GeneralKey(key),
-            ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+            ) if ParaId::from(id) == ParachainInfo::parachain_id().into() => {
                 // decode the general key
                 if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
                     // check `asset_id` is supported
                     if AssetIndex::is_liquid_asset(&asset_id) {
-                        return Ok(asset_id);
+                        return Some(asset_id);
                     }
                 }
             }
             _ => {}
         }
-        Err(location)
+        None
     }
 }
 
-impl sp_runtime::traits::Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
+impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
     fn convert(asset: MultiAsset) -> Option<AssetId> {
-        <Self as Convert<MultiAsset, AssetId>>::convert(asset).ok()
-    }
-}
-
-impl Convert<MultiAsset, AssetId> for AssetIdConvert {
-    fn convert(asset: MultiAsset) -> sp_std::result::Result<AssetId, MultiAsset> {
         if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
-            Self::convert(id.clone()).map_err(|_| asset)
+            Self::convert(id.clone())
         } else {
-            Err(asset)
+            None
         }
     }
 }
 
 pub struct AccountId32Convert;
-impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
+impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
     }
 }
 
-impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
+impl Convert<AccountId, MultiLocation> for AccountId32Convert {
     fn convert(account_id: AccountId) -> MultiLocation {
         Junction::AccountId32 {
             network: NetworkId::Any,
