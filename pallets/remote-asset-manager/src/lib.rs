@@ -28,7 +28,7 @@ pub mod pallet {
         sp_runtime::traits::{
             AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero,
         },
-        sp_std::prelude::*,
+        sp_std::{self, mem, prelude::*},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
@@ -41,6 +41,8 @@ pub mod pallet {
 
     use orml_traits::{GetByKey, MultiCurrency};
     use xcm_assets::XcmAssetHandler;
+    use xcm_calls::proxy::ProxyWeights;
+    use xcm_calls::staking::StakingWeights;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
         staking::{
@@ -242,6 +244,10 @@ pub mod pallet {
         SentAddProxy(T::AssetId, AccountIdFor<T>, ProxyType),
         /// Successfully sent a cross chain message to remove a proxy. \[asset, delegate, proxy type\]
         SentRemoveProxy(T::AssetId, AccountIdFor<T>, ProxyType),
+        /// Updated the staking weights of an asset. \[asset, old weights, new weights\]
+        UpdatedStakingCallWeights(T::AssetId, StakingWeights, StakingWeights),
+        /// Updated the proxy weights of an asset. \[asset, old weights, new weights\]
+        UpdatedProxyCallWeights(T::AssetId, ProxyWeights, ProxyWeights),
     }
 
     #[pallet::error]
@@ -420,6 +426,64 @@ pub mod pallet {
 
             Self::deposit_event(Event::SentAddProxy(asset, delegate, proxy_type));
             Ok(().into())
+        }
+
+        /// Updates the configured staking weights for the given asset.
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn update_staking_weights(
+            origin: OriginFor<T>,
+            asset: T::AssetId,
+            weights: StakingWeights,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let old_weights = PalletStakingConfig::<T>::try_mutate(
+                &asset,
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoPalletConfigFound)?;
+                    let old = mem::replace(&mut config.weights, weights.clone());
+                    Ok(old)
+                },
+            )?;
+
+            Self::deposit_event(Event::UpdatedStakingCallWeights(
+                asset,
+                old_weights,
+                weights,
+            ));
+
+            Ok(())
+        }
+
+        /// Updates the configured proxy weights for the given asset.
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn update_proxy_weights(
+            origin: OriginFor<T>,
+            asset: T::AssetId,
+            weights: ProxyWeights,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let old_weights = PalletProxyConfig::<T>::try_mutate(
+                &asset,
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoPalletConfigFound)?;
+                    let old = mem::replace(&mut config.weights, weights.clone());
+                    Ok(old)
+                },
+            )?;
+
+            Self::deposit_event(Event::UpdatedProxyCallWeights(asset, old_weights, weights));
+
+            Ok(())
         }
     }
 
