@@ -4767,7 +4767,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4783,7 +4783,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4798,7 +4798,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4829,7 +4829,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -4842,7 +4842,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -4856,7 +4856,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=51341d9#51341d928687ef0b5fd8b038d307eade715a7fe2"
+source = "git+https://github.com/mattsse/open-runtime-module-library?branch=add-xcm-transfer-trait#f2d01ad41f6e01d99a141d933fad7aea75d25c8e"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
