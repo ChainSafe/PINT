@@ -26,6 +26,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_index::traits::AssetRecorder;
+    use xcm::v0::MultiLocation;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -80,6 +81,9 @@ pub mod pallet {
         /// The NAV for a SAFT was updated
         /// \[AssetId, AssetIndex, OldNav, NewNav\]
         NavUpdated(T::AssetId, u32, T::Balance, T::Balance),
+        /// A SAFT was converted into a liquid asset
+        /// \[AssetId, MultiLocation\]
+        ConvertedToLiquid(T::AssetId, MultiLocation),
     }
 
     #[pallet::error]
@@ -175,6 +179,20 @@ pub mod pallet {
                 }
             })?;
             Ok(().into())
+        }
+
+        /// Converts the given SAFT asset into a liquid asset with the given location
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn convert_to_liquid(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            location: MultiLocation,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            // TODO: how to handle individual indices?
+
+            Ok(())
         }
     }
 
