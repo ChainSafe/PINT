@@ -2,9 +2,8 @@
  * Utils
  */
 
-export function assert(r: boolean, msg: string) {
+export function assert(r: boolean, msg: string): string | void {
     if (!r) {
-        console.error(msg);
-        process.exit(1);
+        return msg;
     }
 }

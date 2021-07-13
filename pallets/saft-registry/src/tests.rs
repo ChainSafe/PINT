@@ -29,18 +29,57 @@ fn non_admin_cannot_call_any_extrinsics() {
 }
 
 #[test]
+fn native_asset_disallowed() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            SaftRegistry::add_saft(
+                Origin::signed(ADMIN_ACCOUNT_ID),
+                PINTAssetId::get(),
+                100,
+                100
+            ),
+            pallet_asset_index::Error::<Test>::NativeAssetDisallowed
+        );
+    });
+}
+
+#[test]
+fn empty_deposit_does_nothing() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(SaftRegistry::add_saft(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A,
+            0,
+            0
+        ));
+        assert!(super::ActiveSAFTs::<Test>::get(ASSET_A).is_empty(),);
+    });
+}
+
+#[test]
 fn admin_can_add_and_remove_saft() {
+    let units = 20;
+    let nav = 100;
     new_test_ext().execute_with(|| {
         // add
         assert_ok!(SaftRegistry::add_saft(
             Origin::signed(ADMIN_ACCOUNT_ID),
             ASSET_A,
-            100,
-            20
+            nav,
+            units
         ));
         assert_eq!(
             super::ActiveSAFTs::<Test>::get(ASSET_A),
-            vec![SAFTRecord::new(100, 20)]
+            vec![SAFTRecord::new(nav, units)]
+        );
+        assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A), units);
+        assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), nav);
+        assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav);
+        assert_eq!(AssetIndex::index_token_issuance(), nav);
+
+        assert_eq!(
+            super::ActiveSAFTs::<Test>::get(ASSET_A),
+            vec![SAFTRecord::new(nav, units)]
         );
         // remove
         assert_ok!(SaftRegistry::remove_saft(

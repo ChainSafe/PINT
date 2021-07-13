@@ -35,7 +35,7 @@ pub mod pallet {
             FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, ExistenceRequirement, LockableCurrency, WithdrawReasons},
+        traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -43,7 +43,6 @@ pub mod pallet {
     use xcm::opaque::v0::MultiLocation;
 
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-    use pallet_remote_asset_manager::RemoteAssetManager;
 
     pub use crate::traits::AssetRecorder;
     use crate::traits::WithdrawalFee;
@@ -51,7 +50,7 @@ pub mod pallet {
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
-    use primitives::traits::MultiAssetRegistry;
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -86,13 +85,13 @@ pub mod pallet {
         #[pallet::constant]
         type DOTContributionLimit: Get<Self::Balance>;
         /// Type that handles cross chain transfers
-        type RemoteAssetManager: RemoteAssetManager<
-            AccountIdFor<Self>,
-            Self::AssetId,
-            Self::Balance,
-        >;
+        type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
         /// Type used to identify assets
         type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
+
+        /// The native asset id
+        #[pallet::constant]
+        type SelfAssetId: Get<Self::AssetId>;
 
         /// Currency type for deposit/withdraw assets to/from the user's sovereign account
         type Currency: MultiReservableCurrency<
@@ -159,6 +158,18 @@ pub mod pallet {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
+        /// An asset was removed from the index and some index token transferred or burned
+        /// \[AssetId, AssetUnits, Account, Recipient, IndexTokenNAV\]
+        AssetRemoved(
+            T::AssetId,
+            T::Balance,
+            AccountIdFor<T>,
+            Option<AccountIdFor<T>>,
+            T::Balance,
+        ),
+        /// A new asset was registered in the index
+        /// \[Asset, Availability\]
+        AssetRegistered(T::AssetId, AssetAvailability),
         /// A new deposit of an asset into the index has been performed
         /// \[AssetId, AssetUnits, Account, PINTPayout\]
         Deposited(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
@@ -184,6 +195,14 @@ pub mod pallet {
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
+        /// Thrown if the given asset was the native asset and is disallowed
+        NativeAssetDisallowed,
+        /// Thrown if a SAFT asset operation was requested for a registered liquid asset.
+        ExpectedSAFT,
+        /// Thrown if a liquid asset operation was requested for a registered SAFT asset.
+        ExpectedLiquid,
+        /// Thrown when trying to remove liquid assets without recipient
+        NoRecipient,
         /// Invalid metadata given.
         BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
@@ -198,6 +217,10 @@ pub mod pallet {
         NAVOverflow,
         /// Thrown when to withdrawals are available to complete
         NoPendingWithdrawals,
+        /// Thrown if the asset that should be added is already registered
+        AssetAlreadyExists,
+        /// Thrown when adding assets with zero amount or units
+        InvalidPrice,
     }
 
     #[pallet::hooks]
@@ -205,40 +228,116 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Callable by the governance committee to add new assets to the index and mint
+        /// Callable by the governance committee to add new liquid assets to the index and mint
         /// the given amount IndexToken.
         /// The amount of PINT minted and awarded to the LP is specified as part of the
         /// associated proposal
         /// Caller's balance is updated to allocate the correct amount of the IndexToken.
-        ///If the asset does not exist yet, it will get created.
+        /// If the asset does not exist yet, it will get created with the given location.
         #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn add_asset(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             units: T::Balance,
-            availability: AssetAvailability,
-            value: T::Balance,
+            location: MultiLocation,
+            amount: T::Balance,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+
+            let availability = AssetAvailability::Liquid(location);
+
+            // check whether this is a new asset and make sure locations match otherwise
+            let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
+                ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
+                false
+            } else {
+                true
+            };
+
+            // transfer the caller's fund into the treasury account
+            Self::add_liquid(&caller, asset_id, units, amount)?;
 
             // Store initial price pair if not exists
             T::PriceFeed::ensure_price(
                 asset_id,
-                Price::from_inner(value.saturating_mul(units).into()),
+                Price::checked_from_rational(amount.into(), units.into())
+                    .ok_or(<Error<T>>::InvalidPrice)?,
             )?;
+
+            // register asset if not yet known
+            if is_new_asset {
+                Assets::<T>::insert(asset_id, availability.clone());
+                Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            }
+
+            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, amount));
+            Ok(().into())
+        }
+
+        #[pallet::weight(10_000)] // TODO: Set weights
+        /// Dispatches transfer to move assets out of the index’s account,
+        /// if a liquid asset is specified
+        /// Callable by an admin.
+        ///
+        /// Updates the index to reflect the removed assets (units) by burning index token accordingly.
+        /// If the given asset is liquid, an xcm transfer will be dispatched to transfer
+        /// the given units into the sovereign account of either:
+        /// - the given `recipient` if provided
+        /// - the caller's account if `recipient` is `None`
+        pub fn remove_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResultWithPostInfo {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+            let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            // calculate current PINT equivalent value
+            let value = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer the caller's fund into the treasury account
-            <Self as AssetRecorder<T::AccountId, T::AssetId, T::Balance>>::add_asset(
-                &caller,
-                asset_id,
-                units,
-                value,
-                availability,
-            )?;
+            Self::remove_liquid(caller.clone(), asset_id, units, value, recipient.clone())?;
 
-            Self::deposit_event(Event::AssetAdded(asset_id, units, caller, value));
+            Self::deposit_event(Event::AssetRemoved(
+                asset_id, units, caller, recipient, value,
+            ));
             Ok(().into())
+        }
+
+        /// Registers a new asset in the index together with its availability
+        ///
+        /// Only callable by the admin origin and for assets that are not yet registered.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn register_asset(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            availability: AssetAvailability,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin.clone())?;
+
+            Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
+                // allow new assets only
+                ensure!(
+                    maybe_available.replace(availability.clone()).is_none(),
+                    Error::<T>::AssetAlreadyExists
+                );
+                Ok(())
+            })?;
+
+            Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+            Ok(())
         }
 
         /// Force the metadata for an asset to some value.
@@ -294,24 +393,32 @@ pub mod pallet {
         pub fn deposit(
             origin: OriginFor<T>,
             asset_id: T::AssetId,
-            amount: T::Balance,
+            units: T::Balance,
         ) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
+            if units.is_zero() {
+                return Ok(().into());
+            }
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            // native asset can't be deposited here
+            Self::ensure_not_native_asset(&asset_id)?;
 
             // only liquid assets can be deposited
             Self::ensure_liquid_asset(&asset_id)?;
 
-            let pint_amount = Self::calculate_pint_equivalent(asset_id, amount)?;
+            let pint_amount = Self::calculate_pint_equivalent(asset_id, units)?;
 
             // transfer from the caller's sovereign account into the treasury's account
-            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), amount)?;
+            T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
             // increase the total issuance
             let issued = T::IndexToken::issue(pint_amount);
 
             // add minted PINT to user's balance
             T::IndexToken::resolve_creating(&caller, issued);
-            Self::deposit_event(Event::Deposited(asset_id, amount, caller, pint_amount));
+            Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
             Ok(().into())
         }
 
@@ -626,32 +733,125 @@ pub mod pallet {
                 .ok_or(Error::<T>::UnsupportedAsset)?;
             Ok(())
         }
+
+        /// Ensures the given asset is not the native asset
+        fn ensure_not_native_asset(asset_id: &T::AssetId) -> DispatchResult {
+            ensure!(
+                *asset_id != T::SelfAssetId::get(),
+                Error::<T>::NativeAssetDisallowed
+            );
+            Ok(())
+        }
     }
 
     impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
         /// Creates an entry in the assets map and contributes the given amount of asset to the treasury.
-        fn add_asset(
+        fn add_liquid(
             caller: &T::AccountId,
             asset_id: T::AssetId,
             units: T::Balance,
             nav: T::Balance,
-            availability: AssetAvailability,
         ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be added
+            Self::ensure_not_native_asset(&asset_id)?;
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
-
-            // register the asset
-            Assets::<T>::insert(asset_id, availability);
-
-            // increase the total issuance
-            let issued = T::IndexToken::issue(nav);
-            // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, issued);
+            // mint PINT into caller's balance increasing the total issuance
+            T::IndexToken::deposit_creating(&caller, nav);
             Ok(())
         }
 
-        fn remove_asset(_: &T::AssetId) -> DispatchResult {
-            todo!();
+        fn add_saft(
+            caller: &T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+        ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be added as saft
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            // ensure that the given asset id is either SAFT or not yet registered
+            Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
+                if let Some(exits) = maybe_available.replace(AssetAvailability::Saft) {
+                    ensure!(exits.is_saft(), Error::<T>::ExpectedSAFT);
+                }
+                Ok(())
+            })?;
+
+            // mint SAFT into the treasury's account
+            T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+            // mint PINT into caller's balance increasing the total issuance
+            T::IndexToken::deposit_creating(&caller, nav);
+
+            Ok(())
+        }
+
+        fn insert_asset_availability(
+            asset_id: T::AssetId,
+            availability: AssetAvailability,
+        ) -> Option<AssetAvailability> {
+            Assets::<T>::mutate(asset_id, |maybe_available| {
+                maybe_available.replace(availability)
+            })
+        }
+
+        fn remove_liquid(
+            who: T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+            recipient: Option<T::AccountId>,
+        ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
+            ensure!(
+                T::IndexToken::can_slash(&who, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            let recipient = recipient.unwrap_or_else(|| who.clone());
+
+            // Execute the transfer which will take of updating the balance
+            T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
+
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&who, nav);
+
+            Ok(())
+        }
+
+        fn remove_saft(
+            who: T::AccountId,
+            asset_id: T::AssetId,
+            units: T::Balance,
+            nav: T::Balance,
+        ) -> DispatchResult {
+            if units.is_zero() {
+                return Ok(());
+            }
+            // native asset can't be processed here
+            Self::ensure_not_native_asset(&asset_id)?;
+
+            ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
+            ensure!(
+                T::IndexToken::can_slash(&who, nav),
+                Error::<T>::InsufficientDeposit
+            );
+
+            // burn SAFT by withdrawing from the index
+            T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
+            // burn index token accordingly, no index token changes in the meantime
+            T::IndexToken::slash(&who, nav);
+
+            Ok(())
         }
     }
 

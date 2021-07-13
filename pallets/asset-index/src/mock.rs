@@ -15,7 +15,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use pallet_remote_asset_manager::RemoteAssetManager;
+use primitives::traits::RemoteAssetManager;
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -130,12 +130,14 @@ parameter_types! {
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
     pub StringLimit: u32 = 4;
+    pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 }
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type Event = Event;
     type AssetId = AssetId;
+    type SelfAssetId = PINTAssetId;
     type IndexToken = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;

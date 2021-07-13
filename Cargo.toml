@@ -8,6 +8,7 @@ members = [
     'primitives/*',
     'runtime',
 ]
+exclude = ["test-utils/xcm-test-support"]
 
 [patch."https://github.com/paritytech/substrate"]
 frame-benchmarking = { git = "https://github.com/paritytech//substrate", rev = '9c572625f6557dfdb19f47474369a0327d51dfbc'}
