@@ -107,7 +107,7 @@ pub struct ProxyState {
 impl ProxyState {
     /// Whether the given proxy is already set
     pub fn contains(&self, proxy: &ProxyType) -> bool {
-        self.added.contains(&proxy)
+        self.added.contains(proxy)
     }
 
     /// Adds the proxy to the list
