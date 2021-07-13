@@ -171,7 +171,6 @@ pub struct StakingConfig<AccountId, Balance> {
     pub minimum_balance: Balance,
     /// The configured weights for `pallet_staking`
     pub weights: StakingWeights,
-    // TODO add minumum (un)bond  that has to be met for executing XCM (un)bonding calls
 }
 
 /// Represents the bond state of the PINT's sovereign account on a chain
