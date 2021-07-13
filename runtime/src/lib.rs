@@ -13,7 +13,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Identity};
+use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
     traits::{AccountIdConversion, Zero},
@@ -377,21 +377,6 @@ impl xcm_executor::Config for XcmConfig {
     // TODO: make PINT treasury the beneficiary of trading fees
     type Trader = FixedRateOfConcreteFungible<UnitPerSecond, ()>;
     type ResponseHandler = (); // Don't handle responses for now.
-}
-
-pub struct XcmAssetConfig;
-impl xcm_assets::Config for XcmAssetConfig {
-    type Call = Call;
-    type AssetId = AssetId;
-    type AssetIdConvert = AssetIdConvert;
-    type SelfAssetId = PINTAssetId;
-    type AccountId = AccountId;
-    type Amount = Balance;
-    type AmountU128Convert = Identity;
-    type SelfLocation = SelfLocation;
-    type AccountId32Convert = AccountId32Convert;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type WeightLimit = UnitWeightCost;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -786,7 +771,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
     type Assets = Currencies;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
     type XcmAssetTransfer = XTokens;
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
