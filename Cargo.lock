@@ -1796,6 +1796,7 @@ dependencies = [
 name = "derive"
 version = "0.1.0"
 dependencies = [
+ "proc-macro2 1.0.27",
  "quote 1.0.9",
  "syn 1.0.73",
 ]
@@ -5477,6 +5478,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
+ "derive",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",

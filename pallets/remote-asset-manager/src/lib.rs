@@ -21,6 +21,7 @@ pub use pallet::*;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     use cumulus_primitives_core::ParaId;
+    use derive::xcm_error;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -245,6 +246,7 @@ pub mod pallet {
     }
 
     #[pallet::error]
+    #[xcm_error]
     pub enum Error<T> {
         /// Thrown when the proxy type was already set.
         AlreadyProxy,

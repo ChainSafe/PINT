@@ -1,11 +1,12 @@
 //! PINT proc-macros
 extern crate proc_macro;
 
+mod derive;
 mod xcm;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(xcm)]
-pub fn xcm_error(input: TokenStream) -> TokenStream {
+#[proc_macro_attribute]
+pub fn xcm_error(_attr: TokenStream, input: TokenStream) -> TokenStream {
     xcm::error(input)
 }
