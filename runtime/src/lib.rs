@@ -344,6 +344,11 @@ parameter_types! {
     pub const UnitWeightCost: Weight = 200_000_000;
     // One UNIT buys 1 second of weight.
     pub const UnitPerSecond: (MultiLocation, u128) = (X1(Parent), UNIT);
+
+    // The base weight for an XCM message
+    // The actual weight for an XCM message will determined by
+    // `T::BaseXcmWeight  + T::Weigher::weight(&msg)`
+    pub const BaseXcmWeight: Weight = 100_000_000;
 }
 
 match_type! {
@@ -651,6 +656,7 @@ impl orml_xtokens::Config for Runtime {
     type SelfLocation = SelfLocation;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+    type BaseXcmWeight = BaseXcmWeight;
 }
 
 impl orml_unknown_tokens::Config for Runtime {
