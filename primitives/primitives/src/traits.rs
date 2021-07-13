@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::sp_runtime::DispatchResult;
-use xcm::v0::MultiLocation;
+use xcm::v0::{MultiLocation, Outcome};
+use frame_support::dispatch::DispatchError;
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
@@ -26,7 +27,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
     ///       if the location of the asset is a reserve location of PINT (Relay Chain)
     ///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset order will be
     ///       dispatched as XCM ReserveAssetDeposit with an Xcm Deposit order
-    fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
+    fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) ->  frame_support::sp_std::result::Result<Outcome, DispatchError>;
 
     /// Dispatch XCM to bond assets
     fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
