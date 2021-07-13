@@ -5484,6 +5484,7 @@ dependencies = [
  "pallet-asset-index",
  "pallet-assets",
  "pallet-balances",
+ "pallet-collective",
  "pallet-price-feed",
  "pallet-proxy",
  "pallet-session",
@@ -5503,7 +5504,6 @@ dependencies = [
  "sp-staking",
  "sp-std",
  "xcm",
- "xcm-assets",
  "xcm-builder",
  "xcm-calls",
  "xcm-executor",
@@ -5867,7 +5867,6 @@ dependencies = [
  "sp-version",
  "substrate-wasm-builder 4.0.0",
  "xcm",
- "xcm-assets",
  "xcm-builder",
  "xcm-calls",
  "xcm-executor",
@@ -12157,25 +12156,6 @@ dependencies = [
  "derivative",
  "impl-trait-for-tuples",
  "parity-scale-codec",
-]
-
-[[package]]
-name = "xcm-assets"
-version = "0.0.1"
-dependencies = [
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "orml-xtokens",
- "pallet-balances",
- "parity-scale-codec",
- "serde",
- "sp-core",
- "sp-io",
- "sp-runtime",
- "xcm",
- "xcm-builder",
- "xcm-executor",
 ]
 
 [[package]]
