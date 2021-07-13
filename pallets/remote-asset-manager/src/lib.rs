@@ -40,7 +40,6 @@ pub mod pallet {
 
     use orml_traits::{GetByKey, MultiCurrency, XcmTransfer};
     use xcm::v0::Outcome;
-    use xcm_assets::XcmAssetHandler;
     use xcm_calls::{
         proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
         staking::{
@@ -134,8 +133,6 @@ pub mod pallet {
         /// Executor for cross chain messages.
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
 
-        /// The type that handles all the cross chain asset transfers
-        type XcmAssets: XcmAssetHandler<Self::AccountId, Self::Balance, Self::AssetId>;
         /// The type that handles all the cross chain asset transfers
         type XcmAssetTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
 
