@@ -21,7 +21,6 @@ pub use pallet::*;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     use cumulus_primitives_core::ParaId;
-    use derive::xcm_error;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
@@ -246,7 +245,7 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    #[xcm_error]
+    #[derive::xcm_error]
     pub enum Error<T> {
         /// Thrown when the proxy type was already set.
         AlreadyProxy,
@@ -284,8 +283,70 @@ pub mod pallet {
         InsufficientBond,
         /// Thrown if the balance of the PINT parachain account would fall below the `MinimumRemoteStashBalance`
         InusufficientStash,
-        /// Error occurred during XCM
+        /// Execute XCM call failed
         XcmError,
+        //
+        //
+        // Expanded XCM errors
+        //
+        //
+        /// Undefined XCM Error
+        Undefined,
+        Overflow,
+        /// The operation is intentionally unsupported.
+        Unimplemented,
+        UnhandledXcmVersion,
+        UnhandledXcmMessage,
+        UnhandledEffect,
+        EscalationOfPrivilege,
+        UntrustedReserveLocation,
+        UntrustedTeleportLocation,
+        DestinationBufferOverflow,
+        /// The message and destination was recognized as being reachable but the operation could not be completed.
+        /// A human-readable explanation of the specific issue is provided.
+        SendFailed,
+        /// The message and destination combination was not recognized as being reachable.
+        CannotReachDestination,
+        MultiLocationFull,
+        FailedToDecode,
+        BadOrigin,
+        ExceedsMaxMessageSize,
+        FailedToTransactAsset,
+        /// Execution of the XCM would potentially result in a greater weight used than the pre-specified
+        /// weight limit. The amount that is potentially required is the parameter.
+        WeightLimitReached,
+        Wildcard,
+        /// The case where an XCM message has specified a optional weight limit and the weight required for
+        /// processing is too great.
+        ///
+        /// Used by:
+        /// - `Transact`
+        TooMuchWeightRequired,
+        /// The fees specified by the XCM message were not found in the holding account.
+        ///
+        /// Used by:
+        /// - `BuyExecution`
+        NotHoldingFees,
+        /// The weight of an XCM message is not computable ahead of execution. This generally means at least part
+        /// of the message is invalid, which could be due to it containing overly nested structures or an invalid
+        /// nested data segment (e.g. for the call in `Transact`).
+        WeightNotComputable,
+        /// The XCM did not pass the barrier condition for execution. The barrier condition differs on different
+        /// chains and in different circumstances, but generally it means that the conditions surrounding the message
+        /// were not such that the chain considers the message worth spending time executing. Since most chains
+        /// lift the barrier to execution on appropriate payment, presentation of an NFT voucher, or based on the
+        /// message origin, it means that none of those were the case.
+        Barrier,
+        /// Indicates that it is not possible for a location to have an asset be withdrawn or transferred from its
+        /// ownership. This probably means it doesn't own (enough of) it, but may also indicate that it is under a
+        /// lock, hold, freeze or is otherwise unavailable.
+        NotWithdrawable,
+        /// Indicates that the consensus system cannot deposit an asset under the ownership of a particular location.
+        LocationCannotHold,
+        /// The assets given to purchase weight is are insufficient for the weight desired.
+        TooExpensive,
+        /// The given asset is not handled.
+        AssetNotFound,
     }
 
     #[pallet::hooks]
