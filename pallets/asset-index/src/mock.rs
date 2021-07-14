@@ -22,6 +22,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup, Zero},
     DispatchError,
 };
+use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -157,8 +158,12 @@ pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
     for MockRemoteAssetManager
 {
-    fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-        Ok(())
+    fn transfer_asset(
+        _: AccountId,
+        _: AssetId,
+        _: Balance,
+    ) -> frame_support::sp_std::result::Result<Outcome, DispatchError> {
+        Ok(Outcome::Complete(0))
     }
 
     fn bond(_: AssetId, _: Balance) -> DispatchResult {

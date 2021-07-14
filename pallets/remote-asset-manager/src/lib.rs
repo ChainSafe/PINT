@@ -24,30 +24,29 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::Saturating,
-        sp_runtime::traits::{
-            AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero,
+        sp_runtime::{
+            traits::Saturating,
+            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero},
         },
         sp_std::{self, mem, prelude::*},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
+    use orml_traits::{GetByKey, MultiCurrency, XcmTransfer};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+    use xcm::v0::Outcome;
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
-    use xcm_executor::traits::Convert as XcmConvert;
-
-    use orml_traits::{GetByKey, MultiCurrency};
-    use xcm_assets::XcmAssetHandler;
-    use xcm_calls::proxy::ProxyWeights;
-    use xcm_calls::staking::StakingWeights;
     use xcm_calls::{
-        proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
+        proxy::{
+            ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
+            ProxyWeights,
+        },
         staking::{
             Bond, RewardDestination, StakingBondState, StakingCall, StakingCallEncoder,
-            StakingConfig,
+            StakingConfig, StakingWeights,
         },
         PalletCall, PalletCallEncoder,
     };
@@ -79,7 +78,7 @@ pub mod pallet {
         type AssetId: Parameter + Member + Clone + MaybeSerializeDeserialize;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
-        type AssetIdConvert: XcmConvert<Self::AssetId, MultiLocation>;
+        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
 
         /// Convert `Self::Account` to `AccountId32`
         type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
@@ -137,7 +136,7 @@ pub mod pallet {
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
 
         /// The type that handles all the cross chain asset transfers
-        type XcmAssets: XcmAssetHandler<Self::AccountId, Self::Balance, Self::AssetId>;
+        type XcmAssetTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
 
         /// Origin that is allowed to send cross chain messages on behalf of the PINT chain
         type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -290,6 +289,8 @@ pub mod pallet {
         InusufficientStash,
         /// Error occurred during XCM
         XcmError,
+        /// Currency is not cross-chain transferable.
+        NotCrossChainTransferableCurrency,
     }
 
     #[pallet::hooks]
@@ -680,16 +681,15 @@ pub mod pallet {
             recipient: T::AccountId,
             asset: T::AssetId,
             amount: T::Balance,
-        ) -> DispatchResult {
+        ) -> sp_std::result::Result<Outcome, DispatchError> {
+            // asset's native chain location
+            let dest: MultiLocation = T::AssetIdConvert::convert(asset.clone())
+                .ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
+
             // ensures the min stash is still available after the transfer
             Self::ensure_stash(asset.clone(), amount)?;
 
-            let outcome = T::XcmAssets::execute_xcm_transfer(recipient, asset, amount)
-                .map_err(|_| Error::<T>::XcmError)?;
-            outcome
-                .ensure_complete()
-                .map_err(|_| Error::<T>::XcmError)?;
-            Ok(())
+            T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
         }
 
         fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {

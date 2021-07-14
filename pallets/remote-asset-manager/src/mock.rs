@@ -175,7 +175,7 @@ pub mod para {
     use orml_currencies::BasicCurrencyAdapter;
     use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-    use sp_runtime::traits::{Convert, Identity};
+    use sp_runtime::traits::Convert;
     use sp_runtime::FixedPointNumber;
 
     parameter_types! {
@@ -351,6 +351,22 @@ pub mod para {
         type WeightInfo = ();
     }
 
+    parameter_types! {
+         pub const BaseXcmWeight: Weight = 100_000_000;
+    }
+
+    impl orml_xtokens::Config for Runtime {
+        type Event = Event;
+        type Balance = Balance;
+        type CurrencyId = AssetId;
+        type CurrencyIdConvert = AssetIdConvert;
+        type AccountIdToMultiLocation = xcm_test_support::convert::AccountId32Convert;
+        type SelfLocation = SelfLocation;
+        type XcmExecutor = XcmExecutor<XcmConfig>;
+        type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+        type BaseXcmWeight = BaseXcmWeight;
+    }
+
     parameter_type_with_key! {
         pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
             ExistentialDeposit::get()
@@ -442,7 +458,7 @@ pub mod para {
         type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
         type Assets = Currency;
         type XcmExecutor = XcmExecutor<XcmConfig>;
-        type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
+        type XcmAssetTransfer = XTokens;
         // Using root as the admin origin for now
         type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
         type XcmSender = XcmRouter;
@@ -452,11 +468,9 @@ pub mod para {
     }
 
     pub struct AssetIdConvert;
-    impl xcm_executor::traits::Convert<AssetId, MultiLocation> for AssetIdConvert {
-        fn convert(
-            asset: AssetId,
-        ) -> frame_support::sp_std::result::Result<MultiLocation, AssetId> {
-            AssetIndex::native_asset_location(&asset).ok_or(asset)
+    impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+        fn convert(asset: AssetId) -> Option<MultiLocation> {
+            AssetIndex::native_asset_location(&asset)
         }
     }
 
@@ -489,21 +503,6 @@ pub mod para {
                 None
             }
         }
-    }
-
-    pub struct XcmAssetConfig;
-    impl xcm_assets::Config for XcmAssetConfig {
-        type Call = Call;
-        type AssetId = AssetId;
-        type AssetIdConvert = AssetIdConvert;
-        type SelfAssetId = PINTAssetId;
-        type AccountId = AccountId;
-        type Amount = Balance;
-        type AmountU128Convert = Identity;
-        type SelfLocation = SelfLocation;
-        type AccountId32Convert = xcm_test_support::convert::AccountId32Convert;
-        type XcmExecutor = XcmExecutor<XcmConfig>;
-        type WeightLimit = UnitWeightCost;
     }
 
     pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -539,6 +538,7 @@ pub mod para {
             RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
             Tokens: orml_tokens::{Pallet, Event<T>},
             Currency: orml_currencies::{Pallet, Call, Event<T>},
+            XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
             UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
             AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
 
