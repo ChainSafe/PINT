@@ -41,11 +41,22 @@ pub mod types {
 /// Basic converter types
 pub mod convert {
     use super::types::*;
+    use xcm::v0::{Junction, MultiLocation, NetworkId};
 
     pub struct AccountId32Convert;
     impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
         fn convert(account_id: AccountId) -> [u8; 32] {
             account_id.into()
+        }
+    }
+
+    impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
+        fn convert(account_id: AccountId) -> MultiLocation {
+            Junction::AccountId32 {
+                network: NetworkId::Any,
+                id: Self::convert(account_id),
+            }
+            .into()
         }
     }
 }

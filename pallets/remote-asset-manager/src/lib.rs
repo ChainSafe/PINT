@@ -24,28 +24,29 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::traits::Saturating,
-        sp_runtime::traits::{
-            AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero,
+        sp_runtime::{
+            traits::Saturating,
+            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero},
         },
-        sp_std::prelude::*,
+        sp_std::{self, mem, prelude::*},
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
+    use orml_traits::{GetByKey, MultiCurrency, XcmTransfer};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+    use xcm::v0::Outcome;
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
-    use xcm_executor::traits::Convert as XcmConvert;
-
-    use orml_traits::{GetByKey, MultiCurrency};
-    use xcm_assets::XcmAssetHandler;
     use xcm_calls::{
-        proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType},
+        proxy::{
+            ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
+            ProxyWeights,
+        },
         staking::{
             Bond, RewardDestination, StakingBondState, StakingCall, StakingCallEncoder,
-            StakingConfig,
+            StakingConfig, StakingWeights,
         },
         PalletCall, PalletCallEncoder,
     };
@@ -77,7 +78,7 @@ pub mod pallet {
         type AssetId: Parameter + Member + Clone + MaybeSerializeDeserialize;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
-        type AssetIdConvert: XcmConvert<Self::AssetId, MultiLocation>;
+        type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
 
         /// Convert `Self::Account` to `AccountId32`
         type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
@@ -135,7 +136,7 @@ pub mod pallet {
         type XcmExecutor: ExecuteXcm<<Self as frame_system::Config>::Call>;
 
         /// The type that handles all the cross chain asset transfers
-        type XcmAssets: XcmAssetHandler<Self::AccountId, Self::Balance, Self::AssetId>;
+        type XcmAssetTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
 
         /// Origin that is allowed to send cross chain messages on behalf of the PINT chain
         type AdminOrigin: EnsureOrigin<Self::Origin>;
@@ -242,6 +243,10 @@ pub mod pallet {
         SentAddProxy(T::AssetId, AccountIdFor<T>, ProxyType),
         /// Successfully sent a cross chain message to remove a proxy. \[asset, delegate, proxy type\]
         SentRemoveProxy(T::AssetId, AccountIdFor<T>, ProxyType),
+        /// Updated the staking weights of an asset. \[asset, old weights, new weights\]
+        UpdatedStakingCallWeights(T::AssetId, StakingWeights, StakingWeights),
+        /// Updated the proxy weights of an asset. \[asset, old weights, new weights\]
+        UpdatedProxyCallWeights(T::AssetId, ProxyWeights, ProxyWeights),
     }
 
     #[pallet::error]
@@ -285,82 +290,8 @@ pub mod pallet {
         InusufficientStash,
         /// Execute XCM call failed
         XcmError,
-        //
-        //
-        // Expanded XCM errors
-        //
-        //
-        /// Undefined XCM Error
-        Undefined,
-        Overflow,
-        /// The operation is intentionally unsupported.
-        Unimplemented,
-        UnhandledXcmVersion,
-        UnhandledXcmMessage,
-        UnhandledEffect,
-        EscalationOfPrivilege,
-        UntrustedReserveLocation,
-        UntrustedTeleportLocation,
-        DestinationBufferOverflow,
-        /// The message and destination was recognized as being reachable but the operation could not be completed.
-        /// A human-readable explanation of the specific issue is provided.
-        SendFailed,
-        /// The message and destination combination was not recognized as being reachable.
-        CannotReachDestination,
-        MultiLocationFull,
-        FailedToDecode,
-        BadOrigin,
-        ExceedsMaxMessageSize,
-        FailedToTransactAsset,
-        /// Execution of the XCM would potentially result in a greater weight used than the pre-specified
-        /// weight limit. The amount that is potentially required is the parameter.
-        WeightLimitReached,
-        Wildcard,
-        /// The case where an XCM message has specified a optional weight limit and the weight required for
-        /// processing is too great.
-        ///
-        /// Used by:
-        /// - `Transact`
-        TooMuchWeightRequired,
-        /// The fees specified by the XCM message were not found in the holding account.
-        ///
-        /// Used by:
-        /// - `BuyExecution`
-        NotHoldingFees,
-        /// The weight of an XCM message is not computable ahead of execution. This generally means at least part
-        /// of the message is invalid, which could be due to it containing overly nested structures or an invalid
-        /// nested data segment (e.g. for the call in `Transact`).
-        WeightNotComputable,
-        /// The XCM did not pass the barrier condition for execution. The barrier condition differs on different
-        /// chains and in different circumstances, but generally it means that the conditions surrounding the message
-        /// were not such that the chain considers the message worth spending time executing. Since most chains
-        /// lift the barrier to execution on appropriate payment, presentation of an NFT voucher, or based on the
-        /// message origin, it means that none of those were the case.
-        Barrier,
-        /// Indicates that it is not possible for a location to have an asset be withdrawn or transferred from its
-        /// ownership. This probably means it doesn't own (enough of) it, but may also indicate that it is under a
-        /// lock, hold, freeze or is otherwise unavailable.
-        NotWithdrawable,
-        /// Indicates that the consensus system cannot deposit an asset under the ownership of a particular location.
-        LocationCannotHold,
-        /// The assets given to purchase weight is are insufficient for the weight desired.
-        TooExpensive,
-        /// The given asset is not handled.
-        AssetNotFound,
-        //
-        //
-        // Expanded OUTCOME Errors
-        //
-        //
-        /// Thrown when conversion from accountId to MultiLocation failed
-        BadLocation,
-        /// Can't transfer to the provided location.
-        InvalidDestination,
-        /// Thrown when the destination of a requested cross-chain transfer is the location of
-        /// the local chain itself
-        NoCrossChainTransfer,
-        /// Failed to convert the provided currency into a location
-        NotCrossChainTransferableAsset,
+        /// Currency is not cross-chain transferable.
+        NotCrossChainTransferableCurrency,
     }
 
     #[pallet::hooks]
@@ -497,6 +428,64 @@ pub mod pallet {
 
             Self::deposit_event(Event::SentAddProxy(asset, delegate, proxy_type));
             Ok(().into())
+        }
+
+        /// Updates the configured staking weights for the given asset.
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn update_staking_weights(
+            origin: OriginFor<T>,
+            asset: T::AssetId,
+            weights: StakingWeights,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let old_weights = PalletStakingConfig::<T>::try_mutate(
+                &asset,
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoPalletConfigFound)?;
+                    let old = mem::replace(&mut config.weights, weights.clone());
+                    Ok(old)
+                },
+            )?;
+
+            Self::deposit_event(Event::UpdatedStakingCallWeights(
+                asset,
+                old_weights,
+                weights,
+            ));
+
+            Ok(())
+        }
+
+        /// Updates the configured proxy weights for the given asset.
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn update_proxy_weights(
+            origin: OriginFor<T>,
+            asset: T::AssetId,
+            weights: ProxyWeights,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let old_weights = PalletProxyConfig::<T>::try_mutate(
+                &asset,
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoPalletConfigFound)?;
+                    let old = mem::replace(&mut config.weights, weights.clone());
+                    Ok(old)
+                },
+            )?;
+
+            Self::deposit_event(Event::UpdatedProxyCallWeights(asset, old_weights, weights));
+
+            Ok(())
         }
     }
 
@@ -693,14 +682,14 @@ pub mod pallet {
             recipient: T::AccountId,
             asset: T::AssetId,
             amount: T::Balance,
-        ) -> DispatchResult {
+        ) -> sp_std::result::Result<Outcome, DispatchError> {
+            // asset's native chain location
+            let dest: MultiLocation = T::AssetIdConvert::convert(asset.clone())
+                .ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
+
             // ensures the min stash is still available after the transfer
             Self::ensure_stash(asset.clone(), amount)?;
-            T::XcmAssets::execute_xcm_transfer(recipient, asset, amount)
-                .map_err(Into::<Error<T>>::into)?
-                .ensure_complete()
-                .map_err(Into::<Error<T>>::into)?;
-            Ok(())
+            T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
         }
 
         fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {

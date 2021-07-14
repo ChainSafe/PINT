@@ -13,10 +13,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
-use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Identity};
+use sp_runtime::traits::{AccountIdLookup, BlakeTwo256, Block as BlockT};
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdConversion, Zero},
+    traits::{AccountIdConversion, Convert, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -48,7 +48,7 @@ use xcm_builder::{
     RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
     SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
 };
-use xcm_executor::{traits::Convert, XcmExecutor};
+use xcm_executor::XcmExecutor;
 
 // A few exports that help ease life for downstream crates.
 use codec::Decode;
@@ -344,6 +344,11 @@ parameter_types! {
     pub const UnitWeightCost: Weight = 200_000_000;
     // One UNIT buys 1 second of weight.
     pub const UnitPerSecond: (MultiLocation, u128) = (X1(Parent), UNIT);
+
+    // The base weight for an XCM message
+    // The actual weight for an XCM message will determined by
+    // `T::BaseXcmWeight  + T::Weigher::weight(&msg)`
+    pub const BaseXcmWeight: Weight = 100_000_000;
 }
 
 match_type! {
@@ -372,21 +377,6 @@ impl xcm_executor::Config for XcmConfig {
     // TODO: make PINT treasury the beneficiary of trading fees
     type Trader = FixedRateOfConcreteFungible<UnitPerSecond, ()>;
     type ResponseHandler = (); // Don't handle responses for now.
-}
-
-pub struct XcmAssetConfig;
-impl xcm_assets::Config for XcmAssetConfig {
-    type Call = Call;
-    type AssetId = AssetId;
-    type AssetIdConvert = AssetIdConvert;
-    type SelfAssetId = PINTAssetId;
-    type AccountId = AccountId;
-    type Amount = Balance;
-    type AmountU128Convert = Identity;
-    type SelfLocation = SelfLocation;
-    type AccountId32Convert = AccountId32Convert;
-    type XcmExecutor = XcmExecutor<XcmConfig>;
-    type WeightLimit = UnitWeightCost;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -651,6 +641,7 @@ impl orml_xtokens::Config for Runtime {
     type SelfLocation = SelfLocation;
     type XcmExecutor = XcmExecutor<XcmConfig>;
     type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+    type BaseXcmWeight = BaseXcmWeight;
 }
 
 impl orml_unknown_tokens::Config for Runtime {
@@ -658,70 +649,53 @@ impl orml_unknown_tokens::Config for Runtime {
 }
 
 pub struct AssetIdConvert;
-impl Convert<AssetId, MultiLocation> for AssetIdConvert {
-    fn convert(asset: AssetId) -> sp_std::result::Result<MultiLocation, AssetId> {
-        AssetIndex::native_asset_location(&asset).ok_or(asset)
-    }
-}
-impl sp_runtime::traits::Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
+impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
     fn convert(asset: AssetId) -> Option<MultiLocation> {
         AssetIndex::native_asset_location(&asset)
     }
 }
 
-impl sp_runtime::traits::Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
+impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
     fn convert(location: MultiLocation) -> Option<AssetId> {
-        <Self as Convert<MultiLocation, AssetId>>::convert(location).ok()
-    }
-}
-
-impl Convert<MultiLocation, AssetId> for AssetIdConvert {
-    fn convert(location: MultiLocation) -> sp_std::result::Result<AssetId, MultiLocation> {
-        match &location {
-            MultiLocation::X1(Junction::Parent) => return Ok(RelayChainAssetId::get()),
+        match location {
+            MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
             MultiLocation::X3(
                 Junction::Parent,
                 Junction::Parachain(id),
                 Junction::GeneralKey(key),
-            ) if ParaId::from(*id) == ParachainInfo::parachain_id().into() => {
+            ) if ParaId::from(id) == ParachainInfo::parachain_id().into() => {
                 // decode the general key
                 if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
                     // check `asset_id` is supported
                     if AssetIndex::is_liquid_asset(&asset_id) {
-                        return Ok(asset_id);
+                        return Some(asset_id);
                     }
                 }
             }
             _ => {}
         }
-        Err(location)
+        None
     }
 }
 
-impl sp_runtime::traits::Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
+impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
     fn convert(asset: MultiAsset) -> Option<AssetId> {
-        <Self as Convert<MultiAsset, AssetId>>::convert(asset).ok()
-    }
-}
-
-impl Convert<MultiAsset, AssetId> for AssetIdConvert {
-    fn convert(asset: MultiAsset) -> sp_std::result::Result<AssetId, MultiAsset> {
         if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
-            Self::convert(id.clone()).map_err(|_| asset)
+            Self::convert(id.clone())
         } else {
-            Err(asset)
+            None
         }
     }
 }
 
 pub struct AccountId32Convert;
-impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
+impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
     fn convert(account_id: AccountId) -> [u8; 32] {
         account_id.into()
     }
 }
 
-impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
+impl Convert<AccountId, MultiLocation> for AccountId32Convert {
     fn convert(account_id: AccountId) -> MultiLocation {
         Junction::AccountId32 {
             network: NetworkId::Any,
@@ -780,7 +754,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
     type Assets = Currencies;
     type XcmExecutor = XcmExecutor<XcmConfig>;
-    type XcmAssets = xcm_assets::XcmAssetExecutor<XcmAssetConfig>;
+    type XcmAssetTransfer = XTokens;
     // Using root as the admin origin for now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
     type XcmSender = XcmRouter;

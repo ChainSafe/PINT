@@ -325,7 +325,7 @@ pub mod pallet {
             asset_id: T::AssetId,
             availability: AssetAvailability,
         ) -> DispatchResult {
-            T::AdminOrigin::ensure_origin(origin.clone())?;
+            T::AdminOrigin::ensure_origin(origin)?;
 
             Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
                 // allow new assets only
