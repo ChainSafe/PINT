@@ -347,6 +347,20 @@ pub mod pallet {
         TooExpensive,
         /// The given asset is not handled.
         AssetNotFound,
+        //
+        //
+        // Expanded OUTCOME Errors
+        //
+        //
+        /// Thrown when conversion from accountId to MultiLocation failed
+        BadLocation,
+        /// Can't transfer to the provided location.
+        InvalidDestination,
+        /// Thrown when the destination of a requested cross-chain transfer is the location of
+        /// the local chain itself
+        NoCrossChainTransfer,
+        /// Failed to convert the provided currency into a location
+        NotCrossChainTransferableAsset,
     }
 
     #[pallet::hooks]
@@ -682,12 +696,10 @@ pub mod pallet {
         ) -> DispatchResult {
             // ensures the min stash is still available after the transfer
             Self::ensure_stash(asset.clone(), amount)?;
-
-            let outcome = T::XcmAssets::execute_xcm_transfer(recipient, asset, amount)
-                .map_err(|_| Error::<T>::XcmError)?;
-            outcome
+            T::XcmAssets::execute_xcm_transfer(recipient, asset, amount)
+                .map_err(Into::<Error<T>>::into)?
                 .ensure_complete()
-                .map_err(|_| Error::<T>::XcmError)?;
+                .map_err(Into::<Error<T>>::into)?;
             Ok(())
         }
 
