@@ -196,8 +196,8 @@ beefy-gadget-rpc = { git = "https://github.com/paritytech//grandpa-bridge-gadget
 
 
 [patch."https://github.com/open-web3-stack/open-runtime-module-library"]
-orml-currencies = { git = "https://github.com/mattsse/open-runtime-module-library", branch = "add-xcm-transfer-trait" }
-orml-tokens = { git = "https://github.com/mattsse/open-runtime-module-library", branch = "add-xcm-transfer-trait" }
-orml-xtokens = { git = "https://github.com/mattsse/open-runtime-module-library", branch = "add-xcm-transfer-trait" }
-orml-xcm-support = { git = "https://github.com/mattsse/open-runtime-module-library", branch = "add-xcm-transfer-trait" }
-orml-traits = { git = "https://github.com/mattsse/open-runtime-module-library", branch = "add-xcm-transfer-trait" }
+orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
+orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
+orml-xtokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
+orml-xcm-support = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
+orml-traits = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
