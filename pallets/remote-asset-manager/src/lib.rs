@@ -287,8 +287,6 @@ pub mod pallet {
         InsufficientBond,
         /// Thrown if the balance of the PINT parachain account would fall below the `MinimumRemoteStashBalance`
         InusufficientStash,
-        /// Error occurred during XCM
-        XcmError,
         /// Currency is not cross-chain transferable.
         NotCrossChainTransferableCurrency,
     }
@@ -688,7 +686,6 @@ pub mod pallet {
 
             // ensures the min stash is still available after the transfer
             Self::ensure_stash(asset.clone(), amount)?;
-
             T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
         }
 
