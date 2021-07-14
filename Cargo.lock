@@ -1794,7 +1794,7 @@ dependencies = [
 
 [[package]]
 name = "derive"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "proc-macro2 1.0.27",
  "quote 1.0.9",
