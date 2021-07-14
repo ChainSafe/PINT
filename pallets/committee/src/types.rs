@@ -10,9 +10,6 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
-
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
 /// It has been proposed and has an assigned nonce.
@@ -31,7 +28,6 @@ impl<T: Config> Proposal<T> {
 }
 
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council proposals
