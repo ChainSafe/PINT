@@ -250,7 +250,6 @@ pub mod pallet {
     }
 
     #[pallet::error]
-    #[derive::xcm_error]
     pub enum Error<T> {
         /// Thrown when the proxy type was already set.
         AlreadyProxy,
