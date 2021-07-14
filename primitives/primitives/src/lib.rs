@@ -48,3 +48,25 @@ pub type FeedId = u64;
 
 /// Value type for price feeds.
 pub type Value = u128;
+
+pub mod fee {
+    use codec::{Encode, Decode};
+
+    /// Represents the fee rate where fee_rate = numerator / denominator
+    #[derive(Debug, Encode, Decode, Copy, Clone, PartialEq, Eq)]
+    #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+    pub struct Fee {
+        pub numerator: u32,
+        pub denominator: u32,
+    }
+
+    impl Default for Fee {
+        fn default() -> Self {
+            // 0.3%
+            Self {
+                numerator: 3,
+                denominator: 1_000
+            }
+        }
+    }
+}

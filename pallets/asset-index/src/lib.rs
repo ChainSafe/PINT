@@ -51,6 +51,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+    use primitives::fee::Fee;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -105,6 +106,10 @@ pub mod pallet {
 
         /// The type that calculates the withdrawal fee
         type WithdrawalFee: WithdrawalFee<Self::Balance>;
+
+        /// The basic fees that apply when a withdrawal is executed
+        #[pallet::constant]
+        type BaseWithdrawalFee: Get<Fee>;
 
         /// The treasury's pallet id, used for deriving its sovereign account ID.
         #[pallet::constant]
