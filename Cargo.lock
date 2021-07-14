@@ -5478,7 +5478,6 @@ dependencies = [
  "cumulus-pallet-xcm",
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
- "derive",
  "frame-benchmarking",
  "frame-election-provider-support",
  "frame-support",

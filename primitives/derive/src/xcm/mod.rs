@@ -1,6 +1,6 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
 //! XCM macros
-mod outcome;
 mod result;
-mod xcm;
 
 pub use result::error;

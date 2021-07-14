@@ -288,8 +288,6 @@ pub mod pallet {
         InsufficientBond,
         /// Thrown if the balance of the PINT parachain account would fall below the `MinimumRemoteStashBalance`
         InusufficientStash,
-        /// Execute XCM call failed
-        XcmError,
         /// Currency is not cross-chain transferable.
         NotCrossChainTransferableCurrency,
     }
