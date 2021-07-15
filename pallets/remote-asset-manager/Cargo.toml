@@ -54,7 +54,7 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'p
 pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
-pallet-collective = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', features = ['runtime-benchmarks'] }
+pallet-collective = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
 
 # cumulus
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.7" }
@@ -65,10 +65,10 @@ cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.7" }
 
 # polkadot
-xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.7', features = ['runtime-benchmarks'] }
+xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.7' }
 polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
-pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7", features = ['runtime-benchmarks'] }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.7" }
 
 # PINT
 pallet-asset-index = {path = "../asset-index" }
