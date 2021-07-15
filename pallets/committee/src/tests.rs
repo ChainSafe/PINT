@@ -4,9 +4,8 @@
 use crate as pallet;
 use crate::mock::*;
 use crate::{CommitteeMember, MemberType, Vote, VoteAggregate};
-use frame_support::{assert_noop, assert_ok, codec::Encode};
+use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
-use sp_runtime::traits::BadOrigin;
 use std::convert::{TryFrom, TryInto};
 
 const ASHLEY: AccountId = 0;
