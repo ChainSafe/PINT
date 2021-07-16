@@ -95,6 +95,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
+    #[pallet::origin]
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
 
     #[pallet::pallet]
