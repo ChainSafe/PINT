@@ -105,6 +105,9 @@ parameter_types! {
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
     pub StringLimit: u32 = 4;
     pub const PINTAssetId: AssetId = 99;
+
+    // No fees for now
+    pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
 impl pallet_asset_index::Config for Test {
@@ -123,7 +126,7 @@ impl pallet_asset_index::Config for Test {
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type StringLimit = StringLimit;
-    type WithdrawalFee = ();
+    type BaseWithdrawalFee = BaseWithdrawalFee;
     type WeightInfo = ();
 }
 

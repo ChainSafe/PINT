@@ -15,7 +15,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::traits::RemoteAssetManager;
+use primitives::{fee::FeeRate, traits::RemoteAssetManager};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,
@@ -131,6 +131,9 @@ parameter_types! {
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
     pub StringLimit: u32 = 4;
     pub const PINTAssetId: AssetId = PINT_ASSET_ID;
+
+    // No fees for now
+    pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
 impl pallet_asset_index::Config for Test {
@@ -149,7 +152,7 @@ impl pallet_asset_index::Config for Test {
     type PriceFeed = MockPriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
     type StringLimit = StringLimit;
-    type WithdrawalFee = ();
+    type BaseWithdrawalFee = BaseWithdrawalFee;
     type WeightInfo = ();
 }
 
