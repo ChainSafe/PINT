@@ -459,6 +459,7 @@ impl pallet_session::Config for Runtime {
 parameter_types! {
     pub const PotId: PalletId = PalletId(*b"PotStake");
     pub const MaxCandidates: u32 = 200;
+    pub const MinCandidates: u32 = 1;
     pub const MaxInvulnerables: u32 = 50;
 }
 
@@ -468,8 +469,13 @@ impl pallet_collator_selection::Config for Runtime {
     type UpdateOrigin = EnsureApprovedByCommittee;
     type PotId = PotId;
     type MaxCandidates = MaxCandidates;
+    type MinCandidates = MinCandidates;
     type MaxInvulnerables = MaxInvulnerables;
+    // should be a multiple of session or things will get inconsistent
     type KickThreshold = Period;
+    type ValidatorId = <Self as frame_system::Config>::AccountId;
+    type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
+    type ValidatorRegistration = Session;
     type WeightInfo = ();
 }
 
@@ -893,8 +899,9 @@ impl_runtime_apis! {
         fn validate_transaction(
             source: TransactionSource,
             tx: <Block as BlockT>::Extrinsic,
+            block_hash: <Block as BlockT>::Hash,
         ) -> TransactionValidity {
-            Executive::validate_transaction(source, tx)
+           Executive::validate_transaction(source, tx, block_hash)
         }
     }
 
