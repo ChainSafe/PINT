@@ -64,8 +64,8 @@ pub use frame_support::{
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
-use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
+use primitives::{fee::FeeRate, traits::MultiAssetRegistry};
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -569,6 +569,9 @@ parameter_types! {
     pub WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub PalletIndexStringLimit: u32 = 50;
+
+    // TODO: use actual fees
+    pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
 impl pallet_asset_index::Config for Runtime {
@@ -587,7 +590,7 @@ impl pallet_asset_index::Config for Runtime {
     type Currency = Currencies;
     type PriceFeed = PriceFeed;
     type TreasuryPalletId = TreasuryPalletId;
-    type WithdrawalFee = ();
+    type BaseWithdrawalFee = BaseWithdrawalFee;
     type StringLimit = PalletIndexStringLimit;
     type WeightInfo = weights::pallet_asset_index::WeightInfo<Self>;
 }
