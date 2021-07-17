@@ -314,8 +314,7 @@ pub mod pallet {
             let _ = ensure_signed(origin.clone())?;
             T::AdminOrigin::ensure_origin(origin)?;
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::chain_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             log::info!(target: "pint_xcm", "Attempting bond on: {:?} with controller {:?}", dest, controller, );
 
             // ensures that the call is encodable for the destination
@@ -383,8 +382,7 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin)?;
             let delegate = delegate.unwrap_or(who);
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::chain_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
             // ensures that the call is encodable for the destination
@@ -513,8 +511,7 @@ pub mod pallet {
                 return Ok(());
             }
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::chain_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
@@ -561,8 +558,7 @@ pub mod pallet {
                 return Ok(());
             }
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::chain_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
@@ -626,8 +622,7 @@ pub mod pallet {
         /// Remove any unlocked chunks from the `unlocking` queue.
         /// An `withdraw_unbonded` call must be signed by the controller account.
         pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::chain_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),

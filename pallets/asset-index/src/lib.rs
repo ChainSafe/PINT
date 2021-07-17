@@ -40,7 +40,7 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use xcm::opaque::v0::MultiLocation;
+    use xcm::opaque::v0::{Junction, MultiLocation};
 
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
@@ -864,6 +864,17 @@ pub mod pallet {
                     None
                 }
             })
+        }
+
+        fn chain_location(asset: &T::AssetId) -> Option<MultiLocation> {
+            let location = Self::native_asset_location(asset)?;
+            match (location.first(), location.at(1)) {
+                (Some(Junction::Parent), Some(Junction::Parachain(id))) => {
+                    Some((Junction::Parent, Junction::Parachain(*id)).into())
+                }
+                (Some(Junction::Parent), _) => Some(Junction::Parent.into()),
+                _ => None,
+            }
         }
 
         fn is_liquid_asset(asset: &T::AssetId) -> bool {

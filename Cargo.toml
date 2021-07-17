@@ -194,7 +194,6 @@ beefy-primitives = { git = "https://github.com/paritytech//grandpa-bridge-gadget
 beefy-gadget = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
 beefy-gadget-rpc = { git = "https://github.com/paritytech//grandpa-bridge-gadget", rev = "f8ef26cc6d5ba23e31af9a839a8f004294c8b42a" }
 
-
 [patch."https://github.com/open-web3-stack/open-runtime-module-library"]
 orml-currencies = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
 orml-tokens = { git = "https://github.com/open-web3-stack//open-runtime-module-library", rev = "3bf16d6" }
