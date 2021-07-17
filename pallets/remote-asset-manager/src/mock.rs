@@ -391,6 +391,9 @@ pub mod para {
         pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
         pub const PINTAssetId: AssetId = PARA_ASSET;
         pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+
+         // No fees for now
+        pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
     }
 
     ord_parameter_types! {
@@ -413,7 +416,7 @@ pub mod para {
         type PriceFeed = MockPriceFeed;
         type TreasuryPalletId = TreasuryPalletId;
         type StringLimit = StringLimit;
-        type WithdrawalFee = ();
+        type BaseWithdrawalFee = BaseWithdrawalFee;
         type WeightInfo = ();
     }
 

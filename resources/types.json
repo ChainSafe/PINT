@@ -28,6 +28,10 @@
   },
   "CurrencyId": "AssetId",
   "CurrencyIdOf": "CurrencyId",
+  "FeeRate": {
+    "numerator": "u32",
+    "denominator": "u32"
+  },
   "HashFor": "Hash",
   "IndexAssetData": {
     "units": "Balance",

@@ -44,6 +44,10 @@ export const definitions = {
                 },
                 CurrencyId: "AssetId",
                 CurrencyIdOf: "CurrencyId",
+                FeeRate: {
+                    numerator: "u32",
+                    denominator: "u32",
+                },
                 FeedId: "u64",
                 FeedIdFor: "FeedId",
                 HashFor: "Hash",

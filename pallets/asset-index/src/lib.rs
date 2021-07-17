@@ -45,11 +45,11 @@ pub mod pallet {
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
     pub use crate::traits::AssetRecorder;
-    use crate::traits::WithdrawalFee;
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
     };
+    use primitives::fee::{BaseFee, FeeRate};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -69,7 +69,8 @@ pub mod pallet {
             + Default
             + Copy
             + MaybeSerializeDeserialize
-            + Into<u128>;
+            + Into<u128>
+            + BaseFee;
         /// Period after the minting of the index token for which 100% is locked up.
         /// Only applies to users contributing assets directly to index
         #[pallet::constant]
@@ -103,8 +104,9 @@ pub mod pallet {
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
 
-        /// The type that calculates the withdrawal fee
-        type WithdrawalFee: WithdrawalFee<Self::Balance>;
+        /// The basic fees that apply when a withdrawal is executed
+        #[pallet::constant]
+        type BaseWithdrawalFee: Get<FeeRate>;
 
         /// The treasury's pallet id, used for deriving its sovereign account ID.
         #[pallet::constant]
@@ -448,7 +450,9 @@ pub mod pallet {
                 free_balance.saturating_sub(amount),
             )?;
 
-            let fee = T::WithdrawalFee::withdrawal_fee(amount);
+            let fee = amount
+                .fee(T::BaseWithdrawalFee::get())
+                .ok_or(Error::<T>::AssetUnitsOverflow)?;
             let redeem = amount
                 .checked_sub(&fee)
                 .ok_or(Error::<T>::InsufficientDeposit)?
