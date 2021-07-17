@@ -32,7 +32,7 @@ pub mod pallet {
         traits::Get,
     };
     use frame_system::pallet_prelude::*;
-    use orml_traits::{GetByKey, MultiCurrency, XcmTransfer};
+    use orml_traits::{location::Parse, GetByKey, MultiCurrency, XcmTransfer};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
     use xcm::v0::Outcome;
     use xcm::{
@@ -287,6 +287,8 @@ pub mod pallet {
         InsufficientBond,
         /// Thrown if the balance of the PINT parachain account would fall below the `MinimumRemoteStashBalance`
         InusufficientStash,
+        /// Thrown if liquid asset has invalid chain location
+        InvalidChainLocation,
         /// Currency is not cross-chain transferable.
         NotCrossChainTransferableCurrency,
     }
@@ -314,8 +316,10 @@ pub mod pallet {
             let _ = ensure_signed(origin.clone())?;
             T::AdminOrigin::ensure_origin(origin)?;
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::native_asset_location(&asset)
+                .ok_or(Error::<T>::UnknownAsset)?
+                .chain_part()
+                .ok_or(Error::<T>::InvalidChainLocation)?;
             log::info!(target: "pint_xcm", "Attempting bond on: {:?} with controller {:?}", dest, controller, );
 
             // ensures that the call is encodable for the destination
@@ -383,8 +387,10 @@ pub mod pallet {
             T::AdminOrigin::ensure_origin(origin)?;
             let delegate = delegate.unwrap_or(who);
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::native_asset_location(&asset)
+                .ok_or(Error::<T>::UnknownAsset)?
+                .chain_part()
+                .ok_or(Error::<T>::InvalidChainLocation)?;
             log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
             // ensures that the call is encodable for the destination
@@ -513,8 +519,10 @@ pub mod pallet {
                 return Ok(());
             }
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::native_asset_location(&asset)
+                .ok_or(Error::<T>::UnknownAsset)?
+                .chain_part()
+                .ok_or(Error::<T>::InvalidChainLocation)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
@@ -561,8 +569,10 @@ pub mod pallet {
                 return Ok(());
             }
 
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::native_asset_location(&asset)
+                .ok_or(Error::<T>::UnknownAsset)?
+                .chain_part()
+                .ok_or(Error::<T>::InvalidChainLocation)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
@@ -626,8 +636,10 @@ pub mod pallet {
         /// Remove any unlocked chunks from the `unlocking` queue.
         /// An `withdraw_unbonded` call must be signed by the controller account.
         pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
-            let dest =
-                T::AssetRegistry::native_asset_location(&asset).ok_or(Error::<T>::UnknownAsset)?;
+            let dest = T::AssetRegistry::native_asset_location(&asset)
+                .ok_or(Error::<T>::UnknownAsset)?
+                .chain_part()
+                .ok_or(Error::<T>::InvalidChainLocation)?;
             // ensures that the call is encodable for the destination
             ensure!(
                 T::PalletProxyCallEncoder::can_encode(&asset),
