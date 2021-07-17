@@ -11,9 +11,6 @@ pub trait MultiAssetRegistry<AssetId> {
     /// asset is native from the point of view of the current system
     fn native_asset_location(asset: &AssetId) -> Option<MultiLocation>;
 
-    /// Determines the chain location of the given asset
-    fn chain_location(asset: &AssetId) -> Option<MultiLocation>;
-
     /// Whether the given identifier is currently supported as a liquid asset
     fn is_liquid_asset(asset: &AssetId) -> bool;
 }
