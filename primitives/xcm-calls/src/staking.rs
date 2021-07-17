@@ -9,6 +9,7 @@ use frame_support::{
     weights::{constants::RocksDbWeight, Weight},
     RuntimeDebug,
 };
+
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -228,10 +229,9 @@ pub struct StakingWeights {
     pub withdraw_unbonded: Weight,
 }
 
-impl StakingWeights {
+impl Default for StakingWeights {
     /// The weights as defined in `pallet_staking` on polkadot
-    // TODO: import pallet_staking weights directly?
-    pub fn polkadot() -> Self {
+    fn default() -> Self {
         #![allow(clippy::unnecessary_cast)]
         let weight = RocksDbWeight::get();
         Self {

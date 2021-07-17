@@ -3,7 +3,11 @@
 
 //! Xcm support for `pallet_proxy` calls
 use codec::{Decode, Encode, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
+use frame_support::{
+    sp_std::vec::Vec,
+    weights::{constants::RocksDbWeight, Weight},
+    RuntimeDebug,
+};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -136,4 +140,24 @@ pub struct ProxyWeights {
     pub add_proxy: Weight,
     /// Weight for `remove_proxy` extrinsic
     pub remove_proxy: Weight,
+}
+
+impl Default for ProxyWeights {
+    /// The weights as defined in `pallet_staking` on polkadot
+    ///
+    /// 32 is from https://github.com/paritytech/polkadot/blob/0c670d826c7ce80b26e6214c411dc7320af58854/runtime/polkadot/src/lib.rs#L871
+    fn default() -> Self {
+        #![allow(clippy::unnecessary_cast)]
+        let weight = RocksDbWeight::get();
+        Self {
+            add_proxy: (34_650_000 as Weight)
+                .saturating_add((212_000 as Weight).saturating_mul(32 as Weight))
+                .saturating_add(weight.reads(1 as Weight))
+                .saturating_add(weight.writes(1 as Weight)),
+            remove_proxy: (34_378_000 as Weight)
+                .saturating_add((240_000 as Weight).saturating_mul(32 as Weight))
+                .saturating_add(weight.reads(1 as Weight))
+                .saturating_add(weight.writes(1 as Weight)),
+        }
+    }
 }

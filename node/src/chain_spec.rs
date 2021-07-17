@@ -240,22 +240,14 @@ fn pint_testnet_genesis(
                     pending_unbond_calls: 42,
                     reward_destination: RewardDestination::Staked,
                     minimum_balance: 0,
-                    weights: StakingWeights {
-                        bond: 1000_u64,
-                        bond_extra: 1000_u64,
-                        unbond: 1000_u64,
-                        withdraw_unbonded: 1000_u64,
-                    },
+                    weights: StakingWeights::default(),
                 },
             )],
             proxy_configs: vec![(
                 42,
                 ProxyConfig {
                     pallet_index: 29,
-                    weights: ProxyWeights {
-                        add_proxy: 1000_u64,
-                        remove_proxy: 1000_u64,
-                    },
+                    weights: ProxyWeights::default(),
                 },
             )],
         },
