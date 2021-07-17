@@ -429,6 +429,13 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "assetIndex",
             call: "removeAsset",
             args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isNone,
+                    "assetIndex.addAsset failed"
+                );
+            },
         },
     ];
 };
