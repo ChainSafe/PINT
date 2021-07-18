@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 // Local Runtime Types
-use parachain_runtime::RuntimeApi;
+use pint_runtime::RuntimeApi;
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{
@@ -39,8 +39,8 @@ type Hash = sp_core::H256;
 // Native executor instance.
 native_executor_instance!(
     pub ParachainRuntimeExecutor,
-    parachain_runtime::api::dispatch,
-    parachain_runtime::native_version,
+    pint_runtime::api::dispatch,
+    pint_runtime::native_version,
     frame_benchmarking::benchmarking::HostFunctions,
 );
 
