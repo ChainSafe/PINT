@@ -4,6 +4,7 @@
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
 use parachain_runtime::{AccountId, AuraId, Signature};
+use pint_runtime_common::traits::XcmRuntimeCallWeights;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -240,14 +241,14 @@ fn pint_testnet_genesis(
                     pending_unbond_calls: 42,
                     reward_destination: RewardDestination::Staked,
                     minimum_balance: 0,
-                    weights: StakingWeights::default(),
+                    weights: StakingWeights::polkadot(),
                 },
             )],
             proxy_configs: vec![(
                 42,
                 ProxyConfig {
                     pallet_index: 29,
-                    weights: ProxyWeights::default(),
+                    weights: ProxyWeights::polkadot(),
                 },
             )],
         },

@@ -34,6 +34,7 @@ jsonrpc-core = '15.1.0'
 
 # Local Dependencies
 parachain-runtime = { path = '../runtime' }
+pint-runtime-common = { path = '../runtime/common' }
 xcm-calls = { path = '../primitives/xcm-calls' }
 
 # Substrate Dependencies

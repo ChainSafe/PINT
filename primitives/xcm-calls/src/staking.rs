@@ -4,11 +4,7 @@
 //! Xcm support for `pallet_staking` calls
 
 use codec::{Compact, Decode, Encode, Output};
-use frame_support::{
-    sp_std::vec::Vec,
-    weights::{constants::RocksDbWeight, Weight},
-    RuntimeDebug,
-};
+use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -227,26 +223,4 @@ pub struct StakingWeights {
     pub unbond: Weight,
     /// Weight for `withdraw_unbonded` extrinsic
     pub withdraw_unbonded: Weight,
-}
-
-impl Default for StakingWeights {
-    /// The weights as defined in `pallet_staking` on polkadot
-    fn default() -> Self {
-        #![allow(clippy::unnecessary_cast)]
-        let weight = RocksDbWeight::get();
-        Self {
-            bond: (75_102_000 as Weight)
-                .saturating_add(weight.reads(5 as Weight))
-                .saturating_add(weight.writes(4 as Weight)),
-            bond_extra: (57_637_000 as Weight)
-                .saturating_add(weight.reads(3 as Weight))
-                .saturating_add(weight.writes(2 as Weight)),
-            unbond: (52_115_000 as Weight)
-                .saturating_add(weight.reads(4 as Weight))
-                .saturating_add(weight.writes(3 as Weight)),
-            withdraw_unbonded: (52_115_000 as Weight)
-                .saturating_add(weight.reads(4 as Weight))
-                .saturating_add(weight.writes(3 as Weight)),
-        }
-    }
 }

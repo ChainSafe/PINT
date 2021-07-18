@@ -6309,6 +6309,7 @@ dependencies = [
  "pallet-transaction-payment-rpc",
  "parachain-runtime",
  "parity-scale-codec",
+ "pint-runtime-common",
  "polkadot-cli",
  "polkadot-parachain",
  "polkadot-primitives",
@@ -6346,6 +6347,14 @@ dependencies = [
  "substrate-build-script-utils",
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
+ "xcm-calls",
+]
+
+[[package]]
+name = "pint-runtime-common"
+version = "0.0.1"
+dependencies = [
+ "frame-support",
  "xcm-calls",
 ]
 
