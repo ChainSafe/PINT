@@ -5,5 +5,5 @@
 /// Weights of Xcm calls for different runtimes
 pub trait XcmRuntimeCallWeights {
     fn polkadot() -> Self;
-    // fn kusama() -> Self;
+    fn kusama() -> Self;
 }
