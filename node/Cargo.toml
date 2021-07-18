@@ -18,7 +18,7 @@ substrate-build-script-utils = { git = 'https://github.com/paritytech/substrate'
 [features]
 default = []
 runtime-benchmarks = [
-    'parachain-runtime/runtime-benchmarks',
+    'pint-runtime/runtime-benchmarks',
     'polkadot-service/runtime-benchmarks'
 ]
 [dependencies]
@@ -33,7 +33,8 @@ futures = { version = "0.3.1", features = ["compat"] }
 jsonrpc-core = '15.1.0'
 
 # Local Dependencies
-parachain-runtime = { path = '../runtime' }
+pint-runtime = { path = '../runtime' }
+pint-runtime-common = { path = '../runtime/common' }
 xcm-calls = { path = '../primitives/xcm-calls' }
 
 # Substrate Dependencies
