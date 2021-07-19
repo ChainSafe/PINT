@@ -650,6 +650,16 @@ pub mod pallet {
             )?;
             Ok(().into())
         }
+
+        /// Updates the index token locks of the caller.
+        ///
+        /// This removes expired locks and updates the caller's index token balance accordingly.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
+            let caller = ensure_signed(origin)?;
+            Self::do_update_index_token_locks(&caller);
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
