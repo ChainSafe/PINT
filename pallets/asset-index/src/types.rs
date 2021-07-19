@@ -21,15 +21,15 @@ use xcm_executor::{
     Assets,
 };
 
-/// Abstraction over the lock of minted index token that are locked up
+/// Abstraction over the lock of minted index token that are locked up for
+/// `LockupPeriod`
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct IndexTokenLockInfo<BlockNumber, Balance> {
+pub struct IndexTokenLock<BlockNumber, Balance> {
     /// Locked amount of index token.
     pub locked: Balance,
     /// The block when the locked index token can be unlocked.
     pub end_block: BlockNumber,
 }
-
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Defines the location of an asset
