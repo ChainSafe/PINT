@@ -35,7 +35,7 @@ pub mod pallet {
             FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+        traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons, LockIdentifier},
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -46,9 +46,7 @@ pub mod pallet {
 
     pub use crate::traits::AssetRecorder;
     pub use crate::types::MultiAssetAdapter;
-    use crate::types::{
-        AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
-    };
+    use crate::types::{AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState, IndexTokenLockInfo};
     use primitives::fee::{BaseFee, FeeRate};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 
@@ -75,6 +73,10 @@ pub mod pallet {
         /// Only applies to users contributing assets directly to index
         #[pallet::constant]
         type LockupPeriod: Get<Self::BlockNumber>;
+        /// The identifier for the index token lock.
+        /// Used to lock up deposits for `T::LockupPeriod`.
+        #[pallet::constant]
+        type IndexTokenLockIdentifier: Get<LockIdentifier>;
         /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
         #[pallet::constant]
         type MinimumRedemption: Get<Self::Balance>;
@@ -138,6 +140,17 @@ pub mod pallet {
         Blake2_128Concat,
         T::AccountId,
         Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
+        OptionQuery,
+    >;
+
+    #[pallet::storage]
+    ///  (AccountId) -> Vec<IndexTokenLockInfo>
+    /// tracks the minted index token that are locked up until their `LockupPeriod` is over
+    pub type IndexTokenLocks<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Vec<IndexTokenLockInfo<T::BlockNumber, T::Balance>>,
         OptionQuery,
     >;
 
