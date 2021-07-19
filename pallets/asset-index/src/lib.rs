@@ -465,6 +465,9 @@ pub mod pallet {
                 Error::<T>::MinimumRedemption
             );
 
+            // update the locks of prior deposits
+            Self::do_update_index_token_locks(&caller);
+
             let free_balance = T::IndexToken::free_balance(&caller);
             T::IndexToken::ensure_can_withdraw(
                 &caller,
@@ -788,9 +791,11 @@ pub mod pallet {
                 locked: amount,
                 end_block: current_block + T::LockupPeriod::get(),
             });
+            Self::do_insert_index_token_locks(user, locks);
         }
 
-        fn do_update_locks(
+        /// inserts the given locks and filters expired locks.
+        fn do_insert_index_token_locks(
             user: &T::AccountId,
             locks: Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
         ) {
@@ -821,6 +826,14 @@ pub mod pallet {
 
             IndexTokenLocks::<T>::insert(user, locks);
             LockedIndexToken::<T>::insert(user, locked);
+        }
+
+        /// Updates the index token locks for the given user.
+        fn do_update_index_token_locks(user: &T::AccountId) {
+            let locks = IndexTokenLocks::<T>::get(user);
+            if !locks.is_empty() {
+                Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
+            }
         }
     }
 
