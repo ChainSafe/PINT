@@ -815,7 +815,7 @@ pub mod pallet {
             let locks = locks
                 .into_iter()
                 .filter(|lock| {
-                    if current_block > lock.end_block {
+                    if current_block >= lock.end_block {
                         // lock period is over
                         false
                     } else {
@@ -826,16 +826,23 @@ pub mod pallet {
                 })
                 .collect::<Vec<_>>();
 
-            // set the lock, if it already exists, this will update it
-            T::IndexToken::set_lock(
-                T::IndexTokenLockIdentifier::get(),
-                user,
-                locked,
-                WithdrawReasons::all(),
-            );
+            if locks.is_empty() {
+                // remove the lock entirely
+                T::IndexToken::remove_lock(T::IndexTokenLockIdentifier::get(), user);
+                IndexTokenLocks::<T>::remove(user);
+                LockedIndexToken::<T>::remove(user);
+            } else {
+                // set the lock, if it already exists, this will update it
+                T::IndexToken::set_lock(
+                    T::IndexTokenLockIdentifier::get(),
+                    user,
+                    locked,
+                    WithdrawReasons::all(),
+                );
 
-            IndexTokenLocks::<T>::insert(user, locks);
-            LockedIndexToken::<T>::insert(user, locked);
+                IndexTokenLocks::<T>::insert(user, locks);
+                LockedIndexToken::<T>::insert(user, locked);
+            }
         }
 
         /// Updates the index token locks for the given user.
