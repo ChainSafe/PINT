@@ -16,9 +16,9 @@ mod tests;
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
+#[allow(clippy::large_enum_variant)]
 pub mod pallet {
     use frame_support::{
-        dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
         sp_runtime::traits::{AtLeast32BitUnsigned, Zero},
         sp_std::prelude::*,
@@ -26,6 +26,8 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use pallet_asset_index::traits::AssetRecorder;
+    use pallet_asset_index::types::AssetAvailability;
+    use xcm::v0::MultiLocation;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -80,12 +82,17 @@ pub mod pallet {
         /// The NAV for a SAFT was updated
         /// \[AssetId, AssetIndex, OldNav, NewNav\]
         NavUpdated(T::AssetId, u32, T::Balance, T::Balance),
+        /// A SAFT was converted into a liquid asset
+        /// \[AssetId, MultiLocation\]
+        ConvertedToLiquid(T::AssetId, MultiLocation),
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        // No SAFT with the given index exists for the given AssetId
+        /// No SAFT with the given index exists for the given AssetId
         AssetIndexOutOfBounds,
+        /// Thrown if the given asset was not a known SAFT.
+        ExpectedSAFT,
     }
 
     #[pallet::hooks]
@@ -104,14 +111,14 @@ pub mod pallet {
             asset_id: T::AssetId,
             nav: T::Balance,
             units: T::Balance,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let caller = ensure_signed(origin)?;
             if units.is_zero() {
-                return Ok(().into());
+                return Ok(());
             }
             // mint SAFT units into the index and credit the caller's account with PINT
-            <T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav.clone())?;
+            <T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;
 
             let index = ActiveSAFTs::<T>::mutate(asset_id, |records| {
                 let index = records.len() as u32;
@@ -121,7 +128,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::<T>::SAFTAdded(asset_id, index));
 
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(10_000)] // TODO: Set weights
@@ -129,13 +136,13 @@ pub mod pallet {
             origin: OriginFor<T>,
             asset_id: T::AssetId,
             index: u32,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin.clone())?;
             let who = ensure_signed(origin)?;
 
             let index_usize: usize = index as usize;
 
-            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
+            ActiveSAFTs::<T>::try_mutate(asset_id, |safts| -> Result<(), DispatchError> {
                 if index_usize >= safts.len() {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 } else {
@@ -147,7 +154,7 @@ pub mod pallet {
                 }
             })?;
 
-            Ok(().into())
+            Ok(())
         }
 
         #[pallet::weight(T::WeightInfo::report_nav())]
@@ -158,13 +165,13 @@ pub mod pallet {
             asset_id: T::AssetId,
             index: u32,
             latest_nav: T::Balance,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin)?;
             let index_usize: usize = index as usize;
-            ActiveSAFTs::<T>::try_mutate(asset_id.clone(), |safts| -> Result<(), DispatchError> {
+            ActiveSAFTs::<T>::try_mutate(asset_id, |safts| -> Result<(), DispatchError> {
                 if let Some(mut nav_record) = safts.get_mut(index_usize) {
-                    let old_nav = nav_record.nav.clone();
-                    nav_record.nav = latest_nav.clone();
+                    let old_nav = nav_record.nav;
+                    nav_record.nav = latest_nav;
                     Self::deposit_event(Event::<T>::NavUpdated(
                         asset_id, index, old_nav, latest_nav,
                     ));
@@ -174,7 +181,32 @@ pub mod pallet {
                     Err(Error::<T>::AssetIndexOutOfBounds.into())
                 }
             })?;
-            Ok(().into())
+            Ok(())
+        }
+
+        /// Converts the given SAFT asset into a liquid asset with the given location
+        #[pallet::weight(T::WeightInfo::convert_to_liquid())]
+        #[transactional]
+        pub fn convert_to_liquid(
+            origin: OriginFor<T>,
+            asset_id: T::AssetId,
+            location: MultiLocation,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            // update the asset location and ensure it was a SAFT
+            let maybe_availability =
+                T::AssetRecorder::insert_asset_availability(asset_id, location.clone().into());
+            ensure!(
+                maybe_availability == Some(AssetAvailability::Saft),
+                Error::<T>::ExpectedSAFT
+            );
+
+            // remove all SAFT records, balances are already tracked for each deposit
+            ActiveSAFTs::<T>::remove(&asset_id);
+
+            Self::deposit_event(Event::<T>::ConvertedToLiquid(asset_id, location));
+            Ok(())
         }
     }
 
@@ -187,6 +219,7 @@ pub mod pallet {
         //
         // fn remove_saft() -> Weight;
         fn report_nav() -> Weight;
+        fn convert_to_liquid() -> Weight;
     }
 
     /// For backwards compatibility and tests
@@ -196,6 +229,10 @@ pub mod pallet {
         }
 
         fn report_nav() -> Weight {
+            Default::default()
+        }
+
+        fn convert_to_liquid() -> Weight {
             Default::default()
         }
     }

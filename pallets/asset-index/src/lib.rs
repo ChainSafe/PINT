@@ -326,9 +326,6 @@ pub mod pallet {
             if units.is_zero() {
                 return Ok(().into());
             }
-
-            Self::ensure_not_native_asset(&asset_id)?;
-
             Self::ensure_not_native_asset(&asset_id)?;
 
             // calculate current PINT equivalent value
@@ -426,9 +423,6 @@ pub mod pallet {
             if units.is_zero() {
                 return Ok(().into());
             }
-            // native asset can't be deposited here
-            Self::ensure_not_native_asset(&asset_id)?;
-
             // native asset can't be deposited here
             Self::ensure_not_native_asset(&asset_id)?;
 

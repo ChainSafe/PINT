@@ -4793,7 +4793,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4809,7 +4809,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4824,7 +4824,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4855,7 +4855,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -4868,7 +4868,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -4882,7 +4882,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
-source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=ca054d3#ca054d3078a8d157d0c176ed319d6ff49f38d349"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=1095b9c#1095b9c0004dd6cf10bf67908ed35ff12b78e51b"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",

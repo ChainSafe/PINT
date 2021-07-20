@@ -16,6 +16,9 @@ frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'pol
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false, optional = true }
 
+# polkadot
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8', default-features = false }
+
 # PINT dependencies
 pallet-asset-index = {path = "../asset-index", default-features = false }
 
@@ -29,8 +32,6 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
-# polkadot
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8' }
 
 pallet-asset-index = { path = "../asset-index" }
 pallet-remote-asset-manager = { path = "../remote-asset-manager" }
@@ -50,6 +51,8 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+
+    'xcm/std',
 
     'pallet-asset-index/std',
 ]
