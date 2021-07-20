@@ -55,6 +55,12 @@ impl AssetAvailability {
     }
 }
 
+impl From<MultiLocation> for AssetAvailability {
+    fn from(location: MultiLocation) -> Self {
+        AssetAvailability::Liquid(location)
+    }
+}
+
 /// Metadata for an asset
 #[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
 pub struct AssetMetadata<BoundedString> {
