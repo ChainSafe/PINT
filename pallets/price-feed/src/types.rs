@@ -49,12 +49,14 @@ where
         self.price.reciprocal()
     }
 
-    /// Calculates the total volume of the provided units of the `quote` assetId w.r.t. price pair
+    /// Calculates the total volume of the provided units of the `quote` assetId
+    /// w.r.t. price pair
     pub fn volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
         self.price.checked_mul_int(units)
     }
 
-    /// Calculates the total volume of the provided units of the `base` assetId w.r.t. price pair
+    /// Calculates the total volume of the provided units of the `base` assetId
+    /// w.r.t. price pair
     pub fn reciprocal_volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
         self.reciprocal_price()?.checked_mul_int(units)
     }

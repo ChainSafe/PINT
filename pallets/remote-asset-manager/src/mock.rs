@@ -285,7 +285,8 @@ pub mod para {
     >;
 
     // pub type LocalAssetTransactor =
-    //     XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
+    //     XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>,
+    // LocationToAccountId, AccountId, ()>;
 
     pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
     pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;

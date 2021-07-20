@@ -74,15 +74,17 @@ pub mod pallet {
             + MaybeSerializeDeserialize
             + Into<u128>
             + BaseFee;
-        /// Period after the minting of the index token for which 100% is locked up.
-        /// Only applies to users contributing assets directly to index
+        /// Period after the minting of the index token for which 100% is locked
+        /// up. Only applies to users contributing assets directly to
+        /// index
         #[pallet::constant]
         type LockupPeriod: Get<Self::BlockNumber>;
         /// The identifier for the index token lock.
         /// Used to lock up deposits for `T::LockupPeriod`.
         #[pallet::constant]
         type IndexTokenLockIdentifier: Get<LockIdentifier>;
-        /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
+        /// The minimum amount of the index token that can be redeemed for the
+        /// underlying asset in the index
         #[pallet::constant]
         type MinimumRedemption: Get<Self::Balance>;
         /// Minimum amount of time between redeeming index tokens
@@ -101,7 +103,8 @@ pub mod pallet {
         #[pallet::constant]
         type SelfAssetId: Get<Self::AssetId>;
 
-        /// Currency type for deposit/withdraw assets to/from the user's sovereign account
+        /// Currency type for deposit/withdraw assets to/from the user's
+        /// sovereign account
         type Currency: MultiReservableCurrency<
             Self::AccountId,
             CurrencyId = Self::AssetId,
@@ -115,7 +118,8 @@ pub mod pallet {
         #[pallet::constant]
         type BaseWithdrawalFee: Get<FeeRate>;
 
-        /// The treasury's pallet id, used for deriving its sovereign account ID.
+        /// The treasury's pallet id, used for deriving its sovereign account
+        /// ID.
         #[pallet::constant]
         type TreasuryPalletId: Get<PalletId>;
 
@@ -149,8 +153,8 @@ pub mod pallet {
     >;
 
     #[pallet::storage]
-    /// Tracks the locks of the minted index token that are locked up until their `LockupPeriod` is over
-    ///  (AccountId) -> Vec<IndexTokenLockInfo>
+    /// Tracks the locks of the minted index token that are locked up until
+    /// their `LockupPeriod` is over  (AccountId) -> Vec<IndexTokenLockInfo>
     pub type IndexTokenLocks<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
@@ -185,8 +189,9 @@ pub mod pallet {
         /// A new asset was added to the index and some index token paid out
         /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
-        /// An asset was removed from the index and some index token transferred or burned
-        /// \[AssetId, AssetUnits, Account, Recipient, IndexTokenNAV\]
+        /// An asset was removed from the index and some index token transferred
+        /// or burned \[AssetId, AssetUnits, Account, Recipient,
+        /// IndexTokenNAV\]
         AssetRemoved(
             T::AssetId,
             T::Balance,
@@ -212,21 +217,25 @@ pub mod pallet {
             AccountIdFor<T>,
             Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
         ),
-        /// New metadata has been set for an asset. \[asset_id, name, symbol, decimals\]
+        /// New metadata has been set for an asset. \[asset_id, name, symbol,
+        /// decimals\]
         MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
     }
 
     #[pallet::error]
     pub enum Error<T> {
-        /// Thrown if adding units to an asset holding causes its numerical type to overflow
+        /// Thrown if adding units to an asset holding causes its numerical type
+        /// to overflow
         AssetUnitsOverflow,
         /// The given asset ID is unknown.
         UnknownAsset,
         /// Thrown if the given asset was the native asset and is disallowed
         NativeAssetDisallowed,
-        /// Thrown if a SAFT asset operation was requested for a registered liquid asset.
+        /// Thrown if a SAFT asset operation was requested for a registered
+        /// liquid asset.
         ExpectedSAFT,
-        /// Thrown if a liquid asset operation was requested for a registered SAFT asset.
+        /// Thrown if a liquid asset operation was requested for a registered
+        /// SAFT asset.
         ExpectedLiquid,
         /// Thrown when trying to remove liquid assets without recipient
         NoRecipient,
@@ -234,11 +243,13 @@ pub mod pallet {
         BadMetadata,
         /// Thrown if no index could be found for an asset identifier.
         UnsupportedAsset,
-        /// Thrown if calculating the volume of units of an asset with it's price overflows.
+        /// Thrown if calculating the volume of units of an asset with it's
+        /// price overflows.
         AssetVolumeOverflow,
         /// Thrown if the given amount of PINT to redeem is too low
         MinimumRedemption,
-        /// Thrown when the redeemer does not have enough PINT as is requested for withdrawal.
+        /// Thrown when the redeemer does not have enough PINT as is requested
+        /// for withdrawal.
         InsufficientDeposit,
         /// Thrown when calculating the NAV resulted in a overflow
         NAVOverflow,
@@ -255,12 +266,13 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Callable by the governance committee to add new liquid assets to the index and mint
-        /// the given amount IndexToken.
-        /// The amount of PINT minted and awarded to the LP is specified as part of the
-        /// associated proposal
-        /// Caller's balance is updated to allocate the correct amount of the IndexToken.
-        /// If the asset does not exist yet, it will get created with the given location.
+        /// Callable by the governance committee to add new liquid assets to the
+        /// index and mint the given amount IndexToken.
+        /// The amount of PINT minted and awarded to the LP is specified as part
+        /// of the associated proposal
+        /// Caller's balance is updated to allocate the correct amount of the
+        /// IndexToken. If the asset does not exist yet, it will get
+        /// created with the given location.
         #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn add_asset(
             origin: OriginFor<T>,
@@ -310,9 +322,10 @@ pub mod pallet {
         /// if a liquid asset is specified
         /// Callable by an admin.
         ///
-        /// Updates the index to reflect the removed assets (units) by burning index token accordingly.
-        /// If the given asset is liquid, an xcm transfer will be dispatched to transfer
-        /// the given units into the sovereign account of either:
+        /// Updates the index to reflect the removed assets (units) by burning
+        /// index token accordingly. If the given asset is liquid, an
+        /// xcm transfer will be dispatched to transfer the given units
+        /// into the sovereign account of either:
         /// - the given `recipient` if provided
         /// - the caller's account if `recipient` is `None`
         pub fn remove_asset(
@@ -342,7 +355,8 @@ pub mod pallet {
 
         /// Registers a new asset in the index together with its availability
         ///
-        /// Only callable by the admin origin and for assets that are not yet registered.
+        /// Only callable by the admin origin and for assets that are not yet
+        /// registered.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn register_asset(
             origin: OriginFor<T>,
@@ -371,13 +385,17 @@ pub mod pallet {
         /// Any deposit is left alone.
         ///
         /// - `id`: The identifier of the asset to update.
-        /// - `name`: The user friendly name of this asset. Limited in length by `StringLimit`.
-        /// - `symbol`: The exchange symbol for this asset. Limited in length by `StringLimit`.
-        /// - `decimals`: The number of decimals this asset uses to represent one unit.
+        /// - `name`: The user friendly name of this asset. Limited in length by
+        ///   `StringLimit`.
+        /// - `symbol`: The exchange symbol for this asset. Limited in length by
+        ///   `StringLimit`.
+        /// - `decimals`: The number of decimals this asset uses to represent
+        ///   one unit.
         ///
         /// Emits `MetadataSet`.
         ///
-        /// Weight: `O(N + S)` where N and S are the length of the name and symbol respectively.
+        /// Weight: `O(N + S)` where N and S are the length of the name and
+        /// symbol respectively.
         #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn set_metadata(
             origin: OriginFor<T>,
@@ -409,10 +427,12 @@ pub mod pallet {
             })
         }
 
-        /// Initiate a transfer from the user's sovereign account into the index.
+        /// Initiate a transfer from the user's sovereign account into the
+        /// index.
         ///
-        /// This will withdraw the given amount from the user's sovereign account and mints PINT
-        /// proportionally using the latest available price pairs
+        /// This will withdraw the given amount from the user's sovereign
+        /// account and mints PINT proportionally using the latest
+        /// available price pairs
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn deposit(
             origin: OriginFor<T>,
@@ -441,16 +461,17 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Starts the withdraw process for the given amount of PINT to redeem for a distribution
-        /// of underlying assets.
+        /// Starts the withdraw process for the given amount of PINT to redeem
+        /// for a distribution of underlying assets.
         ///
-        /// All withdrawals undergo an unlocking period after which the assets can be withdrawn.
-        /// A withdrawal fee will be deducted from the PINT being redeemed by the LP depending on
-        /// how long the assets remained in the index.
-        /// The remaining PINT will be burned to match the new NAV after this withdrawal.
+        /// All withdrawals undergo an unlocking period after which the assets
+        /// can be withdrawn. A withdrawal fee will be deducted from the
+        /// PINT being redeemed by the LP depending on how long the
+        /// assets remained in the index. The remaining PINT will be
+        /// burned to match the new NAV after this withdrawal.
         ///
-        /// The distribution of the underlying assets will be equivalent to the ratio of the
-        /// liquid assets in the index.
+        /// The distribution of the underlying assets will be equivalent to the
+        /// ratio of the liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -478,7 +499,8 @@ pub mod pallet {
                 .ok_or(Error::<T>::InsufficientDeposit)?
                 .into();
 
-            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) / nav_a`
+            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) /
+            // nav_a`
             let mut liquid_assets_vol = T::Balance::zero();
             let mut asset_prices = Vec::new();
             for asset in Assets::<T>::iter()
@@ -493,7 +515,8 @@ pub mod pallet {
                 asset_prices.push((price, vol));
             }
 
-            // keep track of the pint units that are actually redeemed, to account for rounding
+            // keep track of the pint units that are actually redeemed, to account for
+            // rounding
             let mut redeemed_pint = 0;
             for (price, vol) in &mut asset_prices {
                 let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
@@ -538,7 +561,8 @@ pub mod pallet {
                 let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
                     // the XCM call was dispatched successfully, however, this is
                     //  *NOT* synonymous with a successful completion of the unbonding process.
-                    //  instead, this state implies that XCM is now being processed on a different parachain
+                    //  instead, this state implies that XCM is now being processed on a different
+                    // parachain
                     RedemptionState::Unbonding
                 } else {
                     // the manager encountered an error before being able to send the XCM call,
@@ -570,9 +594,11 @@ pub mod pallet {
         }
 
         /// Completes the unbonding process on other parachains and
-        /// transfers the redeemed assets into the sovereign account of the owner.
+        /// transfers the redeemed assets into the sovereign account of the
+        /// owner.
         ///
-        /// Only pending withdrawals that have completed their lockup period will be withdrawn.
+        /// Only pending withdrawals that have completed their lockup period
+        /// will be withdrawn.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -587,7 +613,8 @@ pub mod pallet {
                         .take()
                         .ok_or(<Error<T>>::NoPendingWithdrawals)?;
 
-                    // try to redeem each redemption, but only close it if all assets could be redeemed
+                    // try to redeem each redemption, but only close it if all assets could be
+                    // redeemed
                     let still_pending: Vec<_> = pending
                         .into_iter()
                         .filter_map(|mut redemption| {
@@ -612,7 +639,8 @@ pub mod pallet {
                                             );
 
                                             if asset.units.is_zero() {
-                                                // assets are now transferred completely into the user's sovereign account
+                                                // assets are now transferred completely into the
+                                                // user's sovereign account
                                                 asset.state = RedemptionState::Transferred;
                                             }
                                         }
@@ -647,7 +675,8 @@ pub mod pallet {
 
         /// Updates the index token locks of the caller.
         ///
-        /// This removes expired locks and updates the caller's index token balance accordingly.
+        /// This removes expired locks and updates the caller's index token
+        /// balance accordingly.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
             let caller = ensure_signed(origin)?;
@@ -657,7 +686,8 @@ pub mod pallet {
     }
 
     impl<T: Config> Pallet<T> {
-        /// The account of the treausry that keeps track of all the assets contributed to the index
+        /// The account of the treausry that keeps track of all the assets
+        /// contributed to the index
         pub fn treasury_account() -> AccountIdFor<T> {
             T::TreasuryPalletId::get().into_account()
         }
@@ -687,12 +717,14 @@ pub mod pallet {
             T::Currency::total_balance(asset, &Self::treasury_account())
         }
 
-        /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total pint`
+        /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total
+        /// pint`
         pub fn total_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(Assets::<T>::iter().map(|(k, _)| k))
         }
 
-        /// Calculates the NAV of all liquid assets the Index token: `sum(NAV_liquid) / total pint`
+        /// Calculates the NAV of all liquid assets the Index token:
+        /// `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(
                 Assets::<T>::iter()
@@ -701,7 +733,8 @@ pub mod pallet {
             )
         }
 
-        /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) / total pint`
+        /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) /
+        /// total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
             Self::calculate_nav(
                 Assets::<T>::iter()
@@ -743,7 +776,8 @@ pub mod pallet {
                 .and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?)
         }
 
-        /// Calculates the amount of PINT token the given units of the asset are worth
+        /// Calculates the amount of PINT token the given units of the asset are
+        /// worth
         fn calculate_pint_equivalent(
             asset: T::AssetId,
             units: T::Balance,
@@ -777,7 +811,8 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Mints the given amount of index token into the user's account and updates the lock accordingly
+        /// Mints the given amount of index token into the user's account and
+        /// updates the lock accordingly
         fn do_mint_index_token(user: &T::AccountId, amount: T::Balance) {
             // increase the total issuance
             let issued = T::IndexToken::issue(amount);
@@ -787,7 +822,8 @@ pub mod pallet {
             Self::do_add_index_token_lock(user, amount);
         }
 
-        /// Locks up the given amount of index token according to the `LockupPeriod` and updates the existing locks
+        /// Locks up the given amount of index token according to the
+        /// `LockupPeriod` and updates the existing locks
         fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
             let current_block = frame_system::Pallet::<T>::block_number();
             let mut locks = IndexTokenLocks::<T>::get(user);
@@ -849,7 +885,8 @@ pub mod pallet {
     }
 
     impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
-        /// Creates an entry in the assets map and contributes the given amount of asset to the treasury.
+        /// Creates an entry in the assets map and contributes the given amount
+        /// of asset to the treasury.
         fn add_liquid(
             caller: &T::AccountId,
             asset_id: T::AssetId,

@@ -74,7 +74,8 @@ pub mod calls {
 
     use super::types::*;
 
-    // A type that states that all calls to the asset's native location can be encoded
+    // A type that states that all calls to the asset's native location can be
+    // encoded
     parameter_type_with_key! {
         pub CanEncodeAll: |_asset_id: AssetId| -> bool {
            true

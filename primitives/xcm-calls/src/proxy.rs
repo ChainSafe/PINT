@@ -32,7 +32,8 @@ impl ProxyType {
     }
 }
 
-/// Provides encoder types to encode the associated types of the  `pallet_proxy::Config` trait depending on the configured Context.
+/// Provides encoder types to encode the associated types of the
+/// `pallet_proxy::Config` trait depending on the configured Context.
 pub trait ProxyCallEncoder<AccountId, ProxyType, BlockNumber>: PalletCallEncoder {
     /// Encodes the `<pallet_proxy::Config>::AccountId` depending on the context
     type AccountIdEncoder: EncodeWith<AccountId, Self::Context>;
@@ -40,7 +41,8 @@ pub trait ProxyCallEncoder<AccountId, ProxyType, BlockNumber>: PalletCallEncoder
     /// Encodes the `<pallet_proxy::Config>::ProxyType` depending on the context
     type ProxyTypeEncoder: EncodeWith<ProxyType, Self::Context>;
 
-    /// Encodes the `<pallet_proxy::Config>::BlockNumber` depending on the context
+    /// Encodes the `<pallet_proxy::Config>::BlockNumber` depending on the
+    /// context
     type BlockNumberEncoder: EncodeWith<BlockNumber, Self::Context>;
 }
 
@@ -67,7 +69,8 @@ where
 pub enum ProxyCall<AccountId, ProxyType, BlockNumber> {
     /// The [`add_proxy`](https://crates.parity.io/pallet_proxy/pallet/enum.Call.html#variant.add_proxy) extrinsic.
     ///
-    /// Register a proxy account for the sender that is able to make calls on its behalf.
+    /// Register a proxy account for the sender that is able to make calls on
+    /// its behalf.
     AddProxy(ProxyParams<AccountId, ProxyType, BlockNumber>),
     /// The [`remove_proxy`](https://crates.parity.io/pallet_proxy/pallet/enum.Call.html#variant.remove_proxy) extrinsic.
     ///
@@ -81,7 +84,8 @@ pub struct ProxyParams<AccountId, ProxyType, BlockNumber> {
     pub delegate: AccountId,
     /// The permissions to add/remove for this proxy account.
     pub proxy_type: ProxyType,
-    /// The announcement period required of the initial proxy. Will generally be zero
+    /// The announcement period required of the initial proxy. Will generally be
+    /// zero
     pub delay: BlockNumber,
 }
 

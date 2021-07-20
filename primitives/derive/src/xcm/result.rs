@@ -64,7 +64,7 @@ pub fn expand_errors() -> Vec<Arm> {
 
                     let mut segments = Punctuated::new();
                     segments.push(PathSegment {
-                        ident: ident.clone(),
+                        ident,
                         arguments: PathArguments::None,
                     });
 

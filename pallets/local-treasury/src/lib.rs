@@ -31,10 +31,12 @@ pub mod pallet {
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
-        /// Origin that is allowed to manage the treasury balance and initiate withdrawals
+        /// Origin that is allowed to manage the treasury balance and initiate
+        /// withdrawals
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// PalletId must be an unique 8 character string.
-        /// It is used to generate the account ID which holds the balance of the treasury.
+        /// It is used to generate the account ID which holds the balance of the
+        /// treasury.
         #[pallet::constant]
         type PalletId: Get<PalletId>;
         /// The pallet to use as the base currency for this treasury
@@ -53,8 +55,8 @@ pub mod pallet {
     #[pallet::metadata(AccountIdFor<T> = "AccountId", BalanceFor<T> = "AccountId")]
     #[pallet::generate_deposit(pub(super) fn deposit_event)]
     pub enum Event<T: Config> {
-        /// Admin successfully transferred some funds from the treasury to another account
-        /// parameters. \[initiator, recipient, amount\]
+        /// Admin successfully transferred some funds from the treasury to
+        /// another account parameters. \[initiator, recipient, amount\]
         Withdrawl(AccountIdFor<T>, BalanceFor<T>),
     }
 
@@ -75,7 +77,8 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Transfer balance from the treasury to another account. Only callable by the AdminOrigin.
+        /// Transfer balance from the treasury to another account. Only callable
+        /// by the AdminOrigin.
         #[pallet::weight(T::WeightInfo::withdraw())]
         pub fn withdraw(
             origin: OriginFor<T>,
