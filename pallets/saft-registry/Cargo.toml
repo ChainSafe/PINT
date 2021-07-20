@@ -23,7 +23,7 @@ xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8
 pallet-asset-index = {path = "../asset-index", default-features = false }
 
 [dev-dependencies]
-serde = { version = "1.0.101" }
+serde = { version = "1.0.124" }
 
 # substrate
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }

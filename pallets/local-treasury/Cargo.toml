@@ -17,7 +17,7 @@ frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polk
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false, optional = true }
 
 [dev-dependencies]
-serde = { version = "1.0.101" }
+serde = { version = "1.0.124" }
 
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
 sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
