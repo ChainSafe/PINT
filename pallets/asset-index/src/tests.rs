@@ -469,6 +469,24 @@ fn can_withdraw() {
             2_000
         ));
 
+        // try to withdraw all funds, but are locked
+        assert_noop!(
+            AssetIndex::withdraw(
+                Origin::signed(ASHLEY),
+                AssetIndex::index_token_balance(&ASHLEY)
+            ),
+            pallet_balances::Error::<Test>::LiquidityRestrictions
+        );
+
+        // all index token are currently locked
+        assert_eq!(
+            pallet::LockedIndexToken::<Test>::get(&ASHLEY),
+            AssetIndex::index_token_balance(&ASHLEY)
+        );
+
+        // advance the block number so that the lock expires
+        frame_system::Pallet::<Test>::set_block_number(LockupPeriod::get() + 1);
+
         // withdraw all funds
         assert_ok!(AssetIndex::withdraw(
             Origin::signed(ASHLEY),
@@ -490,8 +508,7 @@ fn can_withdraw() {
             pending
                 .assets
                 .iter()
-                .filter(|x| x.asset == ASSET_A_ID)
-                .next()
+                .find(|x| x.asset == ASSET_A_ID)
                 .expect("asset should be present"),
             &AssetWithdrawal {
                 asset: ASSET_A_ID,

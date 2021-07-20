@@ -16,11 +16,16 @@ const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     const PINT: Balance = api.createType("Balance", Math.pow(10, 12));
-    const ROCOCO = api.createType("MultiLocation", {
-        // NOTE:
-        //
-        // The current XCMRouter in PINT only supports X1
-        X1: api.createType("Junction", { Parent: null }),
+    const PARENT_LOCATION = api.createType("MultiLocation", {
+        X2: [
+            api.createType("Junction", { Parent: null }),
+            api.createType("Junction", {
+                AccountId32: {
+                    network: "Any",
+                    id: config.alice.address,
+                },
+            }),
+        ],
     });
 
     return [
@@ -71,7 +76,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
-            args: [ASSET_ID_A, ASSET_ID_A_UNITS, ROCOCO, ASSET_ID_A_VALUE],
+            args: [
+                ASSET_ID_A,
+                ASSET_ID_A_UNITS,
+                PARENT_LOCATION,
+                ASSET_ID_A_VALUE,
+            ],
             verify: async () => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
@@ -132,14 +142,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // TODO: blocked by https://github.com/ChainSafe/PINT/pull/161
-        //
-        // {
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "removeAsset",
-        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-        // },
         /* remote-asset-manager*/
         {
             signed: config.alice,
@@ -418,6 +420,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     `Report nav failed, expect: ${JSON.stringify(
                         expect
                     )}, result: ${JSON.stringify(saft[0])}`
+                );
+            },
+        },
+        /* asset-index */
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "removeAsset",
+            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isNone,
+                    "assetIndex.addAsset failed"
                 );
             },
         },

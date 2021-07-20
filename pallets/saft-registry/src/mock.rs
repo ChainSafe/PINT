@@ -5,7 +5,11 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_saft_registry;
-use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim, PalletId};
+use frame_support::{
+    ord_parameter_types, parameter_types,
+    traits::{LockIdentifier, StorageMapShim},
+    PalletId,
+};
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
@@ -18,6 +22,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentityLookup, Zero},
     DispatchError,
 };
+use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -98,32 +103,37 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-    pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
+    pub LockupPeriod: <Test as system::Config>::BlockNumber = 0;
     pub MinimumRedemption: u32 = 2;
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
     pub StringLimit: u32 = 4;
     pub const PINTAssetId: AssetId = 99;
+
+    // No fees for now
+    pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type Event = Event;
-    type AssetId = AssetId;
-    type SelfAssetId = PINTAssetId;
     type IndexToken = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;
+    type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
     type RemoteAssetManager = MockRemoteAssetManager;
+    type AssetId = AssetId;
+    type SelfAssetId = PINTAssetId;
     type Currency = Currency;
     type PriceFeed = MockPriceFeed;
+    type BaseWithdrawalFee = BaseWithdrawalFee;
     type TreasuryPalletId = TreasuryPalletId;
+    type Event = Event;
     type StringLimit = StringLimit;
-    type WithdrawalFee = ();
     type WeightInfo = ();
 }
 
@@ -131,8 +141,12 @@ pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance>
     for MockRemoteAssetManager
 {
-    fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-        Ok(())
+    fn transfer_asset(
+        _: AccountId,
+        _: AssetId,
+        _: Balance,
+    ) -> frame_support::sp_std::result::Result<Outcome, DispatchError> {
+        Ok(Outcome::Complete(0))
     }
 
     fn bond(_: AssetId, _: Balance) -> DispatchResult {

@@ -35,7 +35,9 @@ pub mod pallet {
             FixedPointNumber, FixedU128,
         },
         sp_std::{convert::TryInto, prelude::*, result::Result},
-        traits::{Currency, ExistenceRequirement, Get, LockableCurrency, WithdrawReasons},
+        traits::{
+            Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
+        },
         PalletId,
     };
     use frame_system::pallet_prelude::*;
@@ -45,11 +47,12 @@ pub mod pallet {
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
     pub use crate::traits::AssetRecorder;
-    use crate::traits::WithdrawalFee;
     pub use crate::types::MultiAssetAdapter;
     use crate::types::{
-        AssetAvailability, AssetMetadata, AssetWithdrawal, PendingRedemption, RedemptionState,
+        AssetAvailability, AssetMetadata, AssetWithdrawal, IndexTokenLock, PendingRedemption,
+        RedemptionState,
     };
+    use primitives::fee::{BaseFee, FeeRate};
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -69,11 +72,16 @@ pub mod pallet {
             + Default
             + Copy
             + MaybeSerializeDeserialize
-            + Into<u128>;
+            + Into<u128>
+            + BaseFee;
         /// Period after the minting of the index token for which 100% is locked up.
         /// Only applies to users contributing assets directly to index
         #[pallet::constant]
         type LockupPeriod: Get<Self::BlockNumber>;
+        /// The identifier for the index token lock.
+        /// Used to lock up deposits for `T::LockupPeriod`.
+        #[pallet::constant]
+        type IndexTokenLockIdentifier: Get<LockIdentifier>;
         /// The minimum amount of the index token that can be redeemed for the underlying asset in the index
         #[pallet::constant]
         type MinimumRedemption: Get<Self::Balance>;
@@ -103,8 +111,9 @@ pub mod pallet {
         /// The types that provides the necessary asset price pairs
         type PriceFeed: PriceFeed<Self::AssetId>;
 
-        /// The type that calculates the withdrawal fee
-        type WithdrawalFee: WithdrawalFee<Self::Balance>;
+        /// The basic fees that apply when a withdrawal is executed
+        #[pallet::constant]
+        type BaseWithdrawalFee: Get<FeeRate>;
 
         /// The treasury's pallet id, used for deriving its sovereign account ID.
         #[pallet::constant]
@@ -138,6 +147,24 @@ pub mod pallet {
         Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
         OptionQuery,
     >;
+
+    #[pallet::storage]
+    /// Tracks the locks of the minted index token that are locked up until their `LockupPeriod` is over
+    ///  (AccountId) -> Vec<IndexTokenLockInfo>
+    pub type IndexTokenLocks<T: Config> = StorageMap<
+        _,
+        Blake2_128Concat,
+        T::AccountId,
+        Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
+        ValueQuery,
+    >;
+
+    #[pallet::storage]
+    /// Tracks the amount of the currently locked index token per user.
+    /// This is equal to the sum(IndexTokenLocks[AccountId])
+    ///  (AccountId) -> Balance
+    pub type LockedIndexToken<T: Config> =
+        StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
     #[pallet::storage]
     /// Metadata of an asset ( for reversed usage now ).
@@ -325,7 +352,7 @@ pub mod pallet {
             asset_id: T::AssetId,
             availability: AssetAvailability,
         ) -> DispatchResult {
-            T::AdminOrigin::ensure_origin(origin.clone())?;
+            T::AdminOrigin::ensure_origin(origin)?;
 
             Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
                 // allow new assets only
@@ -413,11 +440,9 @@ pub mod pallet {
             // transfer from the caller's sovereign account into the treasury's account
             T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
-            // increase the total issuance
-            let issued = T::IndexToken::issue(pint_amount);
+            // mint index token in caller's account
+            Self::do_mint_index_token(&caller, pint_amount);
 
-            // add minted PINT to user's balance
-            T::IndexToken::resolve_creating(&caller, issued);
             Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
             Ok(().into())
         }
@@ -440,6 +465,9 @@ pub mod pallet {
                 Error::<T>::MinimumRedemption
             );
 
+            // update the locks of prior deposits
+            Self::do_update_index_token_locks(&caller);
+
             let free_balance = T::IndexToken::free_balance(&caller);
             T::IndexToken::ensure_can_withdraw(
                 &caller,
@@ -448,7 +476,9 @@ pub mod pallet {
                 free_balance.saturating_sub(amount),
             )?;
 
-            let fee = T::WithdrawalFee::withdrawal_fee(amount);
+            let fee = amount
+                .fee(T::BaseWithdrawalFee::get())
+                .ok_or(Error::<T>::AssetUnitsOverflow)?;
             let redeem = amount
                 .checked_sub(&fee)
                 .ok_or(Error::<T>::InsufficientDeposit)?
@@ -620,6 +650,16 @@ pub mod pallet {
             )?;
             Ok(().into())
         }
+
+        /// Updates the index token locks of the caller.
+        ///
+        /// This removes expired locks and updates the caller's index token balance accordingly.
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
+            let caller = ensure_signed(origin)?;
+            Self::do_update_index_token_locks(&caller);
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
@@ -741,6 +781,76 @@ pub mod pallet {
                 Error::<T>::NativeAssetDisallowed
             );
             Ok(())
+        }
+
+        /// Mints the given amount of index token into the user's account and updates the lock accordingly
+        fn do_mint_index_token(user: &T::AccountId, amount: T::Balance) {
+            // increase the total issuance
+            let issued = T::IndexToken::issue(amount);
+            // add minted PINT to user's free balance
+            T::IndexToken::resolve_creating(user, issued);
+
+            Self::do_add_index_token_lock(user, amount);
+        }
+
+        /// Locks up the given amount of index token according to the `LockupPeriod` and updates the existing locks
+        fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            let mut locks = IndexTokenLocks::<T>::get(user);
+            locks.push(IndexTokenLock {
+                locked: amount,
+                end_block: current_block + T::LockupPeriod::get(),
+            });
+            Self::do_insert_index_token_locks(user, locks);
+        }
+
+        /// inserts the given locks and filters expired locks.
+        fn do_insert_index_token_locks(
+            user: &T::AccountId,
+            locks: Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
+        ) {
+            let current_block = frame_system::Pallet::<T>::block_number();
+            let mut locked = T::Balance::zero();
+
+            let locks = locks
+                .into_iter()
+                .filter(|lock| {
+                    if current_block >= lock.end_block {
+                        // lock period is over
+                        false
+                    } else {
+                        // track locked amount
+                        locked = locked.saturating_add(lock.locked);
+                        true
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            if locks.is_empty() {
+                // remove the lock entirely
+                T::IndexToken::remove_lock(T::IndexTokenLockIdentifier::get(), user);
+                IndexTokenLocks::<T>::remove(user);
+                LockedIndexToken::<T>::remove(user);
+            } else {
+                // set the lock, if it already exists, this will update it
+                T::IndexToken::set_lock(
+                    T::IndexTokenLockIdentifier::get(),
+                    user,
+                    locked,
+                    WithdrawReasons::all(),
+                );
+
+                IndexTokenLocks::<T>::insert(user, locks);
+                LockedIndexToken::<T>::insert(user, locked);
+            }
+        }
+
+        /// Updates the index token locks for the given user.
+        fn do_update_index_token_locks(user: &T::AccountId) {
+            let locks = IndexTokenLocks::<T>::get(user);
+            if !locks.is_empty() {
+                Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
+            }
         }
     }
 
