@@ -77,10 +77,11 @@ mod constants;
 /// Weights of pallets
 mod weights;
 
-/// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
-/// the specifics of the runtime. They can then be made to be agnostic over specific formats
-/// of data like extrinsics, allowing for them to continue syncing the network through upgrades
-/// to even the core data structures.
+/// Opaque types. These are used by the CLI to instantiate machinery that don't
+/// need to know the specifics of the runtime. They can then be made to be
+/// agnostic over specific formats of data like extrinsics, allowing for them to
+/// continue syncing the network through upgrades to even the core data
+/// structures.
 pub mod opaque {
     pub use sp_runtime::OpaqueExtrinsic as UncheckedExtrinsic;
 
@@ -108,10 +109,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 1,
 };
 
-// 1 in 4 blocks (on average, not counting collisions) will be primary babe blocks.
+// 1 in 4 blocks (on average, not counting collisions) will be primary babe
+// blocks.
 pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
 
-/// The version information used to identify this runtime when compiled natively.
+/// The version information used to identify this runtime when compiled
+/// natively.
 #[cfg(feature = "std")]
 pub fn native_version() -> NativeVersion {
     NativeVersion {
@@ -120,11 +123,11 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-/// We assume that ~10% of the block weight is consumed by `on_initalize` handlers.
-/// This is used to limit the maximal weight of a single extrinsic.
+/// We assume that ~10% of the block weight is consumed by `on_initalize`
+/// handlers. This is used to limit the maximal weight of a single extrinsic.
 const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be used
-/// by  Operational  extrinsics.
+/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be
+/// used by  Operational  extrinsics.
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
 /// We allow for 0.5 seconds of compute with a 6 second average block time.
 const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
@@ -168,7 +171,8 @@ impl frame_system::Config for Runtime {
     type AccountId = AccountId;
     /// The aggregated dispatch type that is available for extrinsics.
     type Call = Call;
-    /// The lookup mechanism to get account ID from whatever is passed in dispatchers.
+    /// The lookup mechanism to get account ID from whatever is passed in
+    /// dispatchers.
     type Lookup = AccountIdLookup<AccountId, ()>;
     /// The index type for storing how many extrinsics an account has signed.
     type Index = Index;
@@ -184,7 +188,8 @@ impl frame_system::Config for Runtime {
     type Event = Event;
     /// The ubiquitous origin type.
     type Origin = Origin;
-    /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
+    /// Maximum number of block number to block hash mappings to keep (oldest
+    /// pruned first).
     type BlockHashCount = BlockHashCount;
     /// The weight of database operations that the runtime can invoke.
     type DbWeight = RocksDbWeight;
@@ -202,7 +207,8 @@ impl frame_system::Config for Runtime {
     type AccountData = pallet_balances::AccountData<Balance>;
     /// Weight information for the extrinsics of this pallet.
     type SystemWeightInfo = ();
-    /// This is used as an identifier of the chain. 42 is the generic substrate prefix.
+    /// This is used as an identifier of the chain. 42 is the generic substrate
+    /// prefix.
     type SS58Prefix = SS58Prefix;
     /// The set code logic of the parachain.
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -287,9 +293,10 @@ parameter_types! {
     ).into();
 }
 
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
-/// when determining ownership of accounts for asset transacting and when attempting to use XCM
-/// `Transact` in order to determine the dispatch Origin.
+/// Type for specifying how a `MultiLocation` can be converted into an
+/// `AccountId`. This is used when determining ownership of accounts for asset
+/// transacting and when attempting to use XCM `Transact` in order to determine
+/// the dispatch Origin.
 pub type LocationToAccountId = (
     // The parent (Relay-chain) origin converts to the default `AccountId`.
     ParentIsDefault<AccountId>,
@@ -313,9 +320,10 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
     AssetIdConvert,
 >;
 
-/// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
-/// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can
-/// biases the kind of local `Origin` it will become.
+/// This is the type we use to convert an (incoming) XCM origin into a local
+/// `Origin` instance, ready for dispatching a transaction with Xcm's
+/// `Transact`. There is an `OriginKind` which can biases the kind of local
+/// `Origin` it will become.
 pub type XcmOriginToTransactDispatchOrigin = (
     // Sovereign account converter; this attempts to derive an `AccountId` from the origin location
     // using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
@@ -376,8 +384,8 @@ impl xcm_executor::Config for XcmConfig {
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
 
-/// The means for routing XCM messages which are not for local execution into the right message
-/// queues.
+/// The means for routing XCM messages which are not for local execution into
+/// the right message queues.
 pub type XcmRouter = (
     // Two routers - use UMP to communicate with the relay chain:
     cumulus_primitives_utility::ParentAsUmp<ParachainSystem>,
@@ -668,9 +676,9 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
                 Junction::Parent,
                 Junction::Parachain(id),
                 Junction::GeneralKey(key),
-            ) if ParaId::from(id) == ParachainInfo::parachain_id().into() => {
+            ) if ParaId::from(id) == ParachainInfo::parachain_id() => {
                 // decode the general key
-                if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+                if let Ok(asset_id) = AssetId::decode(&mut &key[..]) {
                     // check `asset_id` is supported
                     if AssetIndex::is_liquid_asset(&asset_id) {
                         return Some(asset_id);
@@ -768,7 +776,8 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
-// Create the runtime by composing the FRAME pallets that were previously configured.
+// Create the runtime by composing the FRAME pallets that were previously
+// configured.
 construct_runtime!(
     pub enum Runtime where
         Block = Block,
@@ -1017,7 +1026,7 @@ impl cumulus_pallet_parachain_system::CheckInherents<Block> for CheckInherents {
             .create_inherent_data()
             .expect("Could not create the timestamp inherent data");
 
-        inherent_data.check_extrinsics(&block)
+        inherent_data.check_extrinsics(block)
     }
 }
 

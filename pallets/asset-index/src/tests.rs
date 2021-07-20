@@ -461,7 +461,8 @@ fn can_withdraw() {
 
         assert!(a_proportional_tokens + b_proportional_tokens <= user_pint);
 
-        // all SAFT holdings are ignored during withdrawal and don't have any effect on the payout
+        // all SAFT holdings are ignored during withdrawal and don't have any effect on
+        // the payout
         assert_ok!(AssetIndex::add_saft(
             &ADMIN_ACCOUNT_ID,
             SAFT_ASSET_ID,

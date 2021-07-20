@@ -6,16 +6,19 @@ use frame_support::{dispatch::DispatchResult, sp_runtime::traits::AtLeast32BitUn
 
 pub trait AssetRecorder<AccountId, AssetId, Balance> {
     /// Add an liquid asset into the index.
-    /// This moves the given units from the caller's balance into the index's and issues PINT accordingly.
+    /// This moves the given units from the caller's balance into the index's
+    /// and issues PINT accordingly.
     fn add_liquid(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 
-    /// Mints the SAFT into the index and awards the caller with given amount of PINT token.
-    /// If an asset with the given AssetId does not already exist, it will be registered as SAFT.
-    /// Fails if the availability of the asset is liquid.
+    /// Mints the SAFT into the index and awards the caller with given amount of
+    /// PINT token. If an asset with the given AssetId does not already
+    /// exist, it will be registered as SAFT. Fails if the availability of
+    /// the asset is liquid.
     fn add_saft(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 
     /// Sets the availability of the given asset.
-    /// If the asset was already registered, the old `AssetAvailability` is returned.
+    /// If the asset was already registered, the old `AssetAvailability` is
+    /// returned.
     fn insert_asset_availability(
         asset_id: AssetId,
         availability: AssetAvailability,

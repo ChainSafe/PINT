@@ -6,7 +6,8 @@ use frame_support::dispatch::DispatchError;
 
 /// An interface to access price data
 pub trait PriceFeed<AssetId> {
-    /// Returns the current price pair for `base/quote` where `base` is the native token
+    /// Returns the current price pair for `base/quote` where `base` is the
+    /// native token
     fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
 
     /// Returns the current price pair for `base/quote`

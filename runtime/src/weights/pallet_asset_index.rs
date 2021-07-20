@@ -5,7 +5,8 @@
 //!
 //! THIS FILE WAS AUTO-GENERATED USING THE SUBSTRATE BENCHMARK CLI VERSION 3.0.0
 //! DATE: 2021-06-16, STEPS: `[]`, REPEAT: 1, LOW RANGE: `[]`, HIGH RANGE: `[]`
-//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("pint-local"), DB CACHE: 128
+//! EXECUTION: Some(Wasm), WASM-EXECUTION: Compiled, CHAIN: Some("pint-local"),
+//! DB CACHE: 128
 
 // Executed Command:
 // ./target/release/pint

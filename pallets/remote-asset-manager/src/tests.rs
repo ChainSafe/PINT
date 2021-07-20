@@ -45,7 +45,8 @@ fn register_relay() {
     assert!(pallet_asset_index::Pallet::<para::Runtime>::is_liquid_asset(&RELAY_CHAIN_ASSET));
 }
 
-/// transfer the given amount of relay chain currency into the account on the parachain
+/// transfer the given amount of relay chain currency into the account on the
+/// parachain
 fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
     Relay::execute_with(|| {
         // transfer from relay to parachain

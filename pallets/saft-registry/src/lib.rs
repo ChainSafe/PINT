@@ -100,8 +100,9 @@ pub mod pallet {
 
     #[pallet::call]
     impl<T: Config> Pallet<T> {
-        /// Callable by the governance committee to add new SAFT to the index and mint the given amount of IndexToken.
-        /// The amount of PINT minted and awarded to the LP is specified as part of the
+        /// Callable by the governance committee to add new SAFT to the index
+        /// and mint the given amount of IndexToken. The amount of PINT
+        /// minted and awarded to the LP is specified as part of the
         /// associated proposal
         /// If the asset does not exist yet, it will get created.
         #[pallet::weight(T::WeightInfo::add_saft())]
@@ -184,7 +185,8 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Converts the given SAFT asset into a liquid asset with the given location
+        /// Converts the given SAFT asset into a liquid asset with the given
+        /// location
         #[pallet::weight(T::WeightInfo::convert_to_liquid())]
         #[transactional]
         pub fn convert_to_liquid(

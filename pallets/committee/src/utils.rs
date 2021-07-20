@@ -8,13 +8,15 @@ use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, One}
 // ---v0--||-----s1----|--v1--||-----s2----|--v2--|...
 //
 // Proposals submitted in s1 are voted upon in v1 and after that
-// they may or may not be executed and then are dropped from the ActiveProposals set.
+// they may or may not be executed and then are dropped from the ActiveProposals
+// set.
 //
 // Proposals submitted during v0 fall into the next submission period and
-// should be voted on in v1. To simplify implementation we assume the cycle begins with
-// an initial dummy voting period.
+// should be voted on in v1. To simplify implementation we assume the cycle
+// begins with an initial dummy voting period.
 //
-// Will return an None if any of the arithmetic operations fail due to overflow/underflow
+// Will return an None if any of the arithmetic operations fail due to
+// overflow/underflow
 //
 pub fn get_vote_end<T: CheckedAdd + CheckedMul + CheckedDiv + One>(
     current_block: &T,
@@ -29,7 +31,7 @@ pub fn get_vote_end<T: CheckedAdd + CheckedMul + CheckedDiv + One>(
         .checked_div(&epoch_period)?
         .checked_add(&T::one())?
         .checked_mul(&epoch_period)?
-        .checked_add(&voting_period)
+        .checked_add(voting_period)
 }
 
 #[cfg(test)]
@@ -41,8 +43,8 @@ mod tests {
     const PROPOSAL_P: i32 = 3;
 
     #[test]
-    // A proposal made during the start dummpy period must have votes submitted before
-    // the end of v1
+    // A proposal made during the start dummpy period must have votes submitted
+    // before the end of v1
     fn test_proposal_in_v0() {
         assert_eq!(
             get_vote_end(&0, &VOTE_P, &PROPOSAL_P),
