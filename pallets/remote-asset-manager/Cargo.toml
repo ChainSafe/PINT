@@ -82,7 +82,6 @@ orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-modul
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
-orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 [features]
 default = ['std']
@@ -102,7 +101,8 @@ std = [
     'cumulus-pallet-xcm/std',
     'cumulus-primitives-core/std',
 
-    'orml-traits/std'
+    'orml-traits/std',
+    'orml-xtokens/std',
 ]
 # this feature is only for compilation now
 runtime-benchmarks = [
