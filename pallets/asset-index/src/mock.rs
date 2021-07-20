@@ -9,6 +9,7 @@ use frame_support::{
     dispatch::DispatchResult,
     ord_parameter_types, parameter_types,
     sp_runtime::FixedPointNumber,
+    traits::LockIdentifier,
     traits::{GenesisBuild, StorageMapShim},
     PalletId,
 };
@@ -56,7 +57,6 @@ impl system::Config for Test {
     type BaseCallFilter = ();
     type BlockWeights = ();
     type BlockLength = ();
-    type DbWeight = ();
     type Origin = Origin;
     type Call = Call;
     type Index = u64;
@@ -68,6 +68,7 @@ impl system::Config for Test {
     type Header = Header;
     type Event = Event;
     type BlockHashCount = BlockHashCount;
+    type DbWeight = ();
     type Version = ();
     type PalletInfo = PalletInfo;
     type AccountData = ();
@@ -101,10 +102,10 @@ impl pallet_balances::Config for Test {
         AccountId,
         pallet_balances::AccountData<Balance>,
     >;
+    type WeightInfo = ();
     type MaxLocks = MaxLocks;
     type MaxReserves = ();
     type ReserveIdentifier = [u8; 8];
-    type WeightInfo = ();
 }
 
 parameter_type_with_key! {
@@ -120,8 +121,8 @@ impl orml_tokens::Config for Test {
     type CurrencyId = AssetId;
     type WeightInfo = ();
     type ExistentialDeposits = ExistentialDeposits;
-    type MaxLocks = MaxLocks;
     type OnDust = ();
+    type MaxLocks = MaxLocks;
 }
 
 parameter_types! {
@@ -130,6 +131,7 @@ parameter_types! {
     pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
     pub DOTContributionLimit: Balance = 999;
     pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+    pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
     pub StringLimit: u32 = 4;
     pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 
@@ -139,21 +141,22 @@ parameter_types! {
 
 impl pallet_asset_index::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
-    type Event = Event;
-    type AssetId = AssetId;
-    type SelfAssetId = PINTAssetId;
     type IndexToken = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;
+    type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;
     type RemoteAssetManager = MockRemoteAssetManager;
+    type AssetId = AssetId;
+    type SelfAssetId = PINTAssetId;
     type Currency = Currency;
     type PriceFeed = MockPriceFeed;
-    type TreasuryPalletId = TreasuryPalletId;
-    type StringLimit = StringLimit;
     type BaseWithdrawalFee = BaseWithdrawalFee;
+    type TreasuryPalletId = TreasuryPalletId;
+    type Event = Event;
+    type StringLimit = StringLimit;
     type WeightInfo = ();
 }
 

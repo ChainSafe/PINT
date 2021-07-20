@@ -7,7 +7,7 @@
 use cumulus_primitives_core::ParaId;
 use frame_support::{
     construct_runtime,
-    traits::All,
+    traits::{All, LockIdentifier},
     weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
 use frame_support::{ord_parameter_types, parameter_types, traits::GenesisBuild, PalletId};
@@ -380,11 +380,12 @@ pub mod para {
     }
 
     parameter_types! {
-        pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 10;
+        pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 0;
         pub MinimumRedemption: u32 = 0;
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
+        pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
         pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
         pub StringLimit: u32 = 4;
 
@@ -405,6 +406,7 @@ pub mod para {
         type Event = Event;
         type AssetId = AssetId;
         type SelfAssetId = PINTAssetId;
+        type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
         type IndexToken = Balances;
         type Balance = Balance;
         type LockupPeriod = LockupPeriod;
