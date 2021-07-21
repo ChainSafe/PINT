@@ -8,6 +8,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use pallet::*;
+
 #[cfg(test)]
 mod mock;
 
@@ -16,13 +18,10 @@ mod tests;
 
 pub mod types;
 
-pub use pallet::*;
-
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    use crate::types::StatemintConfig;
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -36,12 +35,13 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{location::Parse, GetByKey, MultiCurrency, XcmTransfer};
-    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
     use xcm::v0::Outcome;
     use xcm::{
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
+
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
     use xcm_calls::assets::{AssetsCall, AssetsCallEncoder, AssetsWeights};
     use xcm_calls::{
         proxy::{
@@ -54,6 +54,8 @@ pub mod pallet {
         },
         PalletCall, PalletCallEncoder,
     };
+
+    use crate::types::StatemintConfig;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
@@ -292,6 +294,12 @@ pub mod pallet {
         /// Updated the `pallet_assets` weights of the statemint config. \[old
         /// weights, new weights\]
         UpdatedStatemintCallWeights(AssetsWeights, AssetsWeights),
+        /// Enabled xcm support for the statemint parachain.
+        /// Transacting XCM calls to the statemint parachain is now possible
+        StatemintTransactionsEnabled,
+        /// Disabled xcm support for the statemint parachain.
+        /// Transacting XCM calls to the statemint parachain is now frozen
+        StatemintTransactionsDisabled,
     }
 
     #[pallet::error]
@@ -549,7 +557,6 @@ pub mod pallet {
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn update_statemint_assets_weights(
             origin: OriginFor<T>,
-            asset: T::AssetId,
             weights: AssetsWeights,
         ) -> DispatchResult {
             T::AdminOrigin::ensure_origin(origin)?;
@@ -568,9 +575,53 @@ pub mod pallet {
 
             Ok(())
         }
+
+        /// Enables XCM transactions for the statemint parachain, if configured.
+        ///
+        /// This is a noop if it's already enabled
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn enable_statemint_xcm(origin: OriginFor<T>) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+            // enable xcm support
+            let was_enabled = Self::update_statemint_xcm_state(true)?;
+            if !was_enabled {
+                Self::deposit_event(Event::StatemintTransactionsEnabled);
+            }
+            Ok(())
+        }
+
+        /// Disables XCM transactions for the statemint parachain, if configured.
+        ///
+        /// This is a noop if it's already disabled
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn disable_statemint_xcm(origin: OriginFor<T>) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+            // enable xcm support
+            let was_enabled = Self::update_statemint_xcm_state(false)?;
+            if was_enabled {
+                Self::deposit_event(Event::StatemintTransactionsDisabled);
+            }
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
+        /// Sets the `enabled` flag of the `StatemintConfig` to the given parameter.
+        ///
+        /// Returns the replaced value
+        fn update_statemint_xcm_state(state: bool) -> sp_std::result::Result<bool, DispatchError> {
+            StatemintParaConfig::<T>::try_mutate(
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoStatemintConfigFound)?;
+                    Ok(mem::replace(&mut config.enabled, state))
+                },
+            )
+        }
+
         /// Ensures that the given amount can be removed from PINT's sovereign
         /// account without falling below the configured
         /// `MinimumRemoteStashBalance`

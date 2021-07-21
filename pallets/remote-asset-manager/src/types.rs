@@ -18,7 +18,7 @@ pub struct StatemintConfig {
     /// no serde support
     pub parachain_id: u32,
     /// Whether interacting with the parachain is currently active
-    pub activated: bool,
+    pub enabled: bool,
     /// The `pallet_assets` asset id of the pint token on statemint
     pub pint_asset_id: u32,
 }
