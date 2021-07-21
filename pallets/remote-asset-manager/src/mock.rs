@@ -134,6 +134,7 @@ pub fn para_ext(
                 },
             },
         )],
+        statemint_config: None,
     }
     .assimilate_storage(&mut t)
     .unwrap();
@@ -170,6 +171,7 @@ pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 pub mod para {
     use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
     use super::*;
+    use crate::mock::xcm_test_support::calls::PalletAssetsEncoder;
     use codec::Decode;
     use frame_support::dispatch::DispatchError;
     use orml_currencies::BasicCurrencyAdapter;
@@ -457,6 +459,7 @@ pub mod para {
         type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
         // Encodes `pallet_proxy` calls before transaction them to other chains
         type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
+        type PalletAssetsCallEncoder = PalletAssetsEncoder<CanEncodeAsset>;
         type SelfAssetId = PINTAssetId;
         type SelfLocation = SelfLocation;
         type SelfParaId = parachain_info::Pallet<Runtime>;
