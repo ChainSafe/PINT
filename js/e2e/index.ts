@@ -157,7 +157,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                                 config.alice.address
                             )
                         ).toJSON()
-                    ) ==
+                    ) ===
                         JSON.stringify({
                             added: ["Any"],
                         }),
@@ -299,7 +299,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             verify: async (hash: string) => {
                 assert(
                     ((await api.query.committee.votes(hash)).toJSON() as any)
-                        .votes[0]["vote"] == "Aye",
+                        .votes[0].vote === "Aye",
                     "committee.vote failed"
                 );
             },
@@ -412,7 +412,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     units: 42,
                 };
                 assert(
-                    JSON.stringify(saft[0]) ==
+                    JSON.stringify(saft[0]) ===
                         JSON.stringify({
                             nav: 336,
                             units: 42,

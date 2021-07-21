@@ -30,7 +30,9 @@ export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
     try {
-        ps.send && !ps.killed && ps.send("exit");
+        if (ps.send && !ps.killed) {
+            ps.send("exit");
+        }
         ps.kill("SIGINT");
     } catch (e) {
         if (e.code !== "EPERM") {
@@ -102,28 +104,32 @@ export default class Runner implements Config {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
-        ps.stdout.on("data", async (chunk: Buffer) => {
-            process.stdout.write(chunk.toString());
-            if (chunk.includes(LAUNCH_COMPLETE)) {
-                console.log("COMPLETE LAUNCH!");
-                const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs();
+        if (ps.stdout) {
+            ps.stdout.on("data", async (chunk: Buffer) => {
+                process.stdout.write(chunk.toString());
+                if (chunk.includes(LAUNCH_COMPLETE)) {
+                    console.log("COMPLETE LAUNCH!");
+                    const runner = await Runner.build(exs, ws, uri);
+                    await runner.runTxs();
 
-                // while (runner.exs.length > 0) {
-                //     await runner.runTxs();
-                // }
-            }
-        });
+                    // while (runner.exs.length > 0) {
+                    //     await runner.runTxs();
+                    // }
+                }
+            });
+        }
 
         // Log errors
-        ps.stderr.on("data", (chunk: Buffer) =>
-            process.stderr.write(chunk.toString())
-        );
+        if (ps.stderr) {
+            ps.stderr.on("data", (chunk: Buffer) =>
+                process.stderr.write(chunk.toString())
+            );
+        }
 
         // Kill all processes when exiting.
         process.on("exit", () => {
             console.log("-> exit polkadot-launch...");
-            killAll(ps, process.exitCode);
+            killAll(ps, Number(process.exitCode));
         });
 
         // Handle ctrl+c to trigger `exit`.
@@ -200,6 +206,8 @@ export default class Runner implements Config {
         this.exs = config.exs;
         this.errors = [];
         this.nonce = 0;
+        this.finished = [];
+        this.queue = [];
     }
 
     // /**
@@ -251,7 +259,7 @@ export default class Runner implements Config {
 
             this.runTx(ex).then(() => {
                 this.finished.push(Runner.exId(ex));
-                this.exs = this.exs.filter((item) => item != ex);
+                this.exs = this.exs.filter((item) => item !== ex);
             });
         }
 
@@ -378,54 +386,61 @@ export default class Runner implements Config {
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             this.nonce += 1;
-            const unsub = se.signAndSend(
+            const unsub: any = se.signAndSend(
                 signed,
                 {
                     nonce: this.nonce,
                 },
-                (sr: ISubmittableResult) => {
-                    const status = sr.status;
-                    const events = sr.events;
-
-                    // console.log(`\t | - status: ${status.type}`);
-
-                    if (status.isInBlock) {
-                        if (inBlock)
-                            resolve({
-                                unsub,
-                                blockHash: status.asInBlock.toHex().toString(),
-                            });
-
-                        if (events) {
-                            events.forEach((value: EventRecord): void => {
-                                if (
-                                    (value.event.data[0] as DispatchError)
-                                        .isModule
-                                ) {
-                                    const error = this.api.registry.findMetaError(
-                                        (value.event
-                                            .data[0] as DispatchError).asModule.toU8a()
-                                    );
-                                    reject(
-                                        `${error.section}.${error.method}: ${error.documentation}`
-                                    );
-                                }
-                            });
-                        }
-                    } else if (status.isInvalid) {
-                        reject("Invalid Extrinsic");
-                    } else if (status.isRetracted) {
-                        reject("Extrinsic Retracted");
-                    } else if (status.isUsurped) {
-                        reject("Extrinsic Usupred");
-                    } else if (status.isFinalized) {
-                        resolve({
-                            unsub,
-                            blockHash: status.asFinalized.toHex().toString(),
-                        });
-                    }
-                }
+                (sr: ISubmittableResult) =>
+                    this.checkError(inBlock, unsub, sr, resolve, reject)
             );
         });
+    }
+
+    private async checkError(
+        inBlock: boolean,
+        unsub: Promise<() => void>,
+        sr: ISubmittableResult,
+        resolve: (value: TxResult | PromiseLike<TxResult>) => void,
+        reject: (reason?: any) => void
+    ) {
+        const status = sr.status;
+        const events = sr.events;
+
+        // console.log(`\t | - status: ${status.type}`);
+
+        if (status.isInBlock) {
+            if (inBlock) {
+                resolve({
+                    unsub,
+                    blockHash: status.asInBlock.toHex().toString(),
+                });
+            }
+
+            if (events) {
+                events.forEach((value: EventRecord): void => {
+                    if ((value.event.data[0] as DispatchError).isModule) {
+                        const error = this.api.registry.findMetaError(
+                            (value.event
+                                .data[0] as DispatchError).asModule.toU8a()
+                        );
+                        reject(
+                            `${error.section}.${error.method}: ${error.documentation}`
+                        );
+                    }
+                });
+            }
+        } else if (status.isInvalid) {
+            reject("Invalid Extrinsic");
+        } else if (status.isRetracted) {
+            reject("Extrinsic Retracted");
+        } else if (status.isUsurped) {
+            reject("Extrinsic Usupred");
+        } else if (status.isFinalized) {
+            resolve({
+                unsub,
+                blockHash: status.asFinalized.toHex().toString(),
+            });
+        }
     }
 }
