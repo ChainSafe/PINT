@@ -62,6 +62,7 @@ use constants::{fee::*, time::*};
 use pallet_committee::EnsureMember;
 pub use primitives::*;
 use primitives::{fee::FeeRate, traits::MultiAssetRegistry};
+use xcm_calls::assets::AssetsCallEncoder;
 use xcm_calls::{
     proxy::{ProxyCallEncoder, ProxyType},
     staking::StakingCallEncoder,
@@ -751,6 +752,22 @@ impl PalletCallEncoder for PalletStakingEncoder {
     }
 }
 
+/// The encoder to use when transacting `pallet_staking` calls
+pub struct PalletAssetsEncoder;
+impl AssetsCallEncoder<AssetId, AccountLookupSource, Balance> for PalletAssetsEncoder {
+    type CompactAssetIdEncoder = PassthroughEncoder<AssetId, AssetId>;
+    type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
+    type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+}
+
+impl PalletCallEncoder for PalletAssetsEncoder {
+    type Context = AssetId;
+    fn can_encode(ctx: &Self::Context) -> bool {
+        // only allow to interact with pint related token on statemint
+        *ctx == PINTAssetId::get()
+    }
+}
+
 impl pallet_remote_asset_manager::Config for Runtime {
     type Balance = Balance;
     type AssetId = AssetId;
@@ -760,6 +777,8 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type PalletStakingCallEncoder = PalletStakingEncoder;
     // Encodes `pallet_proxy` calls before transaction them to other chains
     type PalletProxyCallEncoder = PalletProxyEncoder;
+    // Encodes `pallet_assets` calls before transaction them to the statemint chain
+    type PalletAssetsCallEncoder = PalletAssetsEncoder;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;
