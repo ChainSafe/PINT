@@ -70,25 +70,6 @@ export default class Runner implements Config {
     }
 
     /**
-     * run E2E tests without launch
-     *
-     * @param {Builder} exs - Extrinsic builder
-     * @param {string} ws - "ws://0.0.0.0:9988" by default
-     * @param {string} uri - "//Alice" by default
-     * @returns {Promise<Runner>}
-     */
-    static async run_without_launch(
-        exs: Builder,
-        ws: string = "ws://127.0.0.1:9988",
-        uri: string = "//Alice"
-    ): Promise<void> {
-        console.log("bootstrap e2e tests...");
-        await cryptoWaitReady();
-        const runner = await Runner.build(exs, ws, uri);
-        await runner.runTxs();
-    }
-
-    /**
      * run E2E tests
      *
      * @param {Builder} exs - Extrinsic builder
@@ -263,8 +244,6 @@ export default class Runner implements Config {
             }
         }
         console.log(`\t | arguments: ${JSON.stringify(args)}`);
-
-        if (ex.block) await Runner.waitBlock(ex.block);
 
         // construct tx
         let tx = this.api.tx[ex.pallet][ex.call](...args);

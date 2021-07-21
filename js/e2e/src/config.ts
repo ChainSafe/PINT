@@ -16,9 +16,7 @@ export interface Extrinsic {
     pallet: string;
     call: string;
     args: any[];
-    block?: number;
     shared?: () => Promise<any>;
-    timeout?: number;
     verify?: (shared?: any) => Promise<void>;
     /// Required calls or functions before this extrinsic
     required?: (string | Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
