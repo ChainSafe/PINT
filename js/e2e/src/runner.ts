@@ -224,29 +224,6 @@ export default class Runner implements Config {
                 ex.shared = await ex.shared();
             }
 
-            if (ex.required) {
-                for (const required of ex.required) {
-                    if (typeof required === "string") {
-                        if (this.finished.includes(required)) {
-                            continue;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    let requiredEx: Extrinsic = required as Extrinsic;
-                    if (typeof required === "function") {
-                        requiredEx = await required(ex.shared);
-                    }
-
-                    console.log(
-                        `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
-                    );
-
-                    await this.runTx(requiredEx);
-                }
-            }
-
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
 
             this.runTx(ex).then(() => {
@@ -304,17 +281,39 @@ export default class Runner implements Config {
      * @param {ex} Extrinsic
      */
     public async runTx(ex: Extrinsic): Promise<void | string> {
+        if (ex.required) {
+            for (const required of ex.required) {
+                if (typeof required === "string") {
+                    if (this.finished.includes(required)) {
+                        continue;
+                    } else {
+                        break;
+                    }
+                }
+
+                let requiredEx: Extrinsic = required as Extrinsic;
+                if (typeof required === "function") {
+                    requiredEx = await required(ex.shared);
+                }
+
+                console.log(
+                    `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
+                );
+
+                await this.runTx(requiredEx);
+            }
+        }
+
         const tx = await this.buildTx(ex);
 
         // get res
-        const res = (await this.timeout(
-            this.sendTx(tx, ex.signed, ex.inBlock),
-            ex.timeout
-        ).catch((err: any) => {
-            const fmt = `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
-            console.log(fmt);
-            this.errors.push(fmt);
-        })) as TxResult;
+        const res = (await this.sendTx(tx, ex.signed, ex.inBlock).catch(
+            (err: any) => {
+                const fmt = `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
+                console.log(fmt);
+                this.errors.push(fmt);
+            }
+        )) as TxResult;
 
         // run post calls
         if (ex.post) {
@@ -340,29 +339,6 @@ export default class Runner implements Config {
             (await res.unsub)();
             // console.log(`\t | block hash: ${res.blockHash}`);
         }
-    }
-
-    /**
-     * Timeout for promise
-     *
-     * @param {Promise<T>} fn
-     * @param {number} ms
-     * @returns {Promise<T>}
-     */
-    private async timeout<T>(
-        fn: Promise<T>,
-        ms?: number
-    ): Promise<T | unknown> {
-        if (!ms) {
-            return fn;
-        }
-
-        return Promise.race([
-            fn,
-            new Promise((_, reject) => {
-                setTimeout(() => reject("Extrinsic timeout"), ms);
-            }),
-        ]);
     }
 
     /**

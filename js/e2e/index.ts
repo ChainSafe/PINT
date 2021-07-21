@@ -439,6 +439,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
     ].map(expandId);
 };
+
 // main
 (async () => {
     await Runner.run(TESTS);
