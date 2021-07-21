@@ -1,7 +1,7 @@
 /**OA
  * E2E tests for PINT
  */
-import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
+import { assert, expandId, Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
 import BN from "bn.js";
@@ -437,7 +437,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-    ];
+    ].map(expandId);
 };
 // main
 (async () => {

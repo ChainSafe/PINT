@@ -192,14 +192,6 @@ export default class Runner implements Config {
         });
     }
 
-    /**
-     * Get id of extrinsic
-     */
-    static exId(e: Extrinsic): string {
-        if (e.id) return e.id;
-        return `${e.pallet}.${e.call}`;
-    }
-
     constructor(config: Config) {
         this.api = config.api;
         this.pair = config.pair;
@@ -258,7 +250,7 @@ export default class Runner implements Config {
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
 
             this.runTx(ex).then(() => {
-                this.finished.push(Runner.exId(ex));
+                this.finished.push(String(ex.id));
                 this.exs = this.exs.filter((item) => item !== ex);
             });
         }
