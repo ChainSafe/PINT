@@ -14,7 +14,8 @@ pub struct StatemintConfig {
     pub assets_config: AssetsConfig,
     /// The id of the `statemint` parachain
     ///
-    /// *NOTE* using `u32` here instead of location, since `MultiLocation` has no serde support
+    /// *NOTE* using `u32` here instead of location, since `MultiLocation` has
+    /// no serde support
     pub parachain_id: u32,
     /// Whether interacting with the parachain is currently active
     pub activated: bool,

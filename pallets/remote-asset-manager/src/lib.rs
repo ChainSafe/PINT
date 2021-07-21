@@ -42,7 +42,7 @@ pub mod pallet {
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
-    use xcm_calls::assets::{AssetsCall, AssetsCallEncoder};
+    use xcm_calls::assets::{AssetsCall, AssetsCallEncoder, AssetsWeights};
     use xcm_calls::{
         proxy::{
             ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
@@ -289,6 +289,9 @@ pub mod pallet {
         /// Updated the proxy weights of an asset. \[asset, old weights, new
         /// weights\]
         UpdatedProxyCallWeights(T::AssetId, ProxyWeights, ProxyWeights),
+        /// Updated the `pallet_assets` weights of the statemint config. \[old
+        /// weights, new weights\]
+        UpdatedStatemintCallWeights(AssetsWeights, AssetsWeights),
     }
 
     #[pallet::error]
@@ -303,6 +306,8 @@ pub mod pallet {
         NotEncodableForLocation,
         /// Thrown when no config was found for the requested location
         NoPalletConfigFound,
+        /// Thrown when no config was found for `statemint`
+        NoStatemintConfigFound,
         /// Thrown when sending an Xcm `pallet_staking::bond` failed
         FailedToSendBondXcm,
         /// Thrown when sending an Xcm `pallet_staking::bond_extra` failed
@@ -534,6 +539,32 @@ pub mod pallet {
             )?;
 
             Self::deposit_event(Event::UpdatedProxyCallWeights(asset, old_weights, weights));
+
+            Ok(())
+        }
+
+        /// Updates the configured assets weights the statemint parachain
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn update_statemint_assets_weights(
+            origin: OriginFor<T>,
+            asset: T::AssetId,
+            weights: AssetsWeights,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            let old_weights = StatemintParaConfig::<T>::try_mutate(
+                |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+                    let config = maybe_config
+                        .as_mut()
+                        .ok_or(Error::<T>::NoStatemintConfigFound)?;
+                    let old = mem::replace(&mut config.assets_config.weights, weights.clone());
+                    Ok(old)
+                },
+            )?;
+
+            Self::deposit_event(Event::UpdatedStatemintCallWeights(old_weights, weights));
 
             Ok(())
         }
