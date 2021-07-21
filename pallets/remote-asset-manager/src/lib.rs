@@ -14,12 +14,15 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod types;
+
 pub use pallet::*;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+    use crate::types::StatemintConfig;
     use cumulus_primitives_core::ParaId;
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
@@ -39,6 +42,7 @@ pub mod pallet {
         opaque::v0::SendXcm,
         v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
     };
+    use xcm_calls::assets::{AssetsCall, AssetsCallEncoder};
     use xcm_calls::{
         proxy::{
             ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
@@ -54,6 +58,7 @@ pub mod pallet {
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     type BalanceFor<T> = <T as Config>::Balance;
+    type AssetIdFor<T> = <T as Config>::Balance;
 
     // A `pallet_staking` dispatchable on another chain
     type PalletStakingCall<T> = StakingCall<LookupSourceFor<T>, BalanceFor<T>, AccountIdFor<T>>;
@@ -62,6 +67,9 @@ pub mod pallet {
     // expects a `ProxyType` of u8 and blocknumber of u32
     type PalletProxyCall<T> =
         ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
+
+    // A `pallet_assets` dispatchable on another chain
+    type PalletAssetsCall<T> = AssetsCall<AssetIdFor<T>, LookupSourceFor<T>, BalanceFor<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -98,6 +106,15 @@ pub mod pallet {
             Self::AccountId,
             ProxyType,
             Self::BlockNumber,
+            Context = Self::AssetId,
+        >;
+
+        /// The encoder to use for encoding when transacting a `pallet_assets`
+        /// Call
+        type PalletAssetsCallEncoder: AssetsCallEncoder<
+            Self::AssetId,
+            <Self::Lookup as StaticLookup>::Source,
+            Self::Balance,
             Context = Self::AssetId,
         >;
 
@@ -202,6 +219,10 @@ pub mod pallet {
         ValueQuery,
     >;
 
+    /// The config of the statemint parachain and the internal `pallet_assets`
+    #[pallet::storage]
+    pub type StatemintParaConfig<T: Config> = StorageValue<_, StatemintConfig, OptionQuery>;
+
     #[pallet::genesis_config]
     #[allow(clippy::type_complexity)]
     pub struct GenesisConfig<T: Config> {
@@ -209,6 +230,8 @@ pub mod pallet {
         pub staking_configs: Vec<(T::AssetId, StakingConfig<T::AccountId, T::Balance>)>,
         /// key-value pairs for the `PalletProxyConfig` storage map
         pub proxy_configs: Vec<(T::AssetId, ProxyConfig)>,
+        /// configures the statemint parachain
+        pub statemint_config: Option<StatemintConfig>,
     }
 
     #[cfg(feature = "std")]
@@ -217,6 +240,7 @@ pub mod pallet {
             Self {
                 staking_configs: Default::default(),
                 proxy_configs: Default::default(),
+                statemint_config: None,
             }
         }
     }
@@ -226,11 +250,15 @@ pub mod pallet {
         fn build(&self) {
             self.staking_configs
                 .iter()
-                .for_each(|(id, config)| <PalletStakingConfig<T>>::insert(id, config));
+                .for_each(|(id, config)| PalletStakingConfig::<T>::insert(id, config));
 
             self.proxy_configs
                 .iter()
-                .for_each(|(id, config)| <PalletProxyConfig<T>>::insert(id, config));
+                .for_each(|(id, config)| PalletProxyConfig::<T>::insert(id, config));
+
+            if let Some(config) = self.statemint_config.clone() {
+                StatemintParaConfig::<T>::put(config)
+            }
         }
     }
 
