@@ -50,6 +50,9 @@ export default class Runner implements Config {
     public pair: KeyringPair;
     public exs: Extrinsic[];
     public errors: string[];
+    public finished: string[];
+    public queue: Extrinsic[];
+    public nonce: number;
 
     /**
      * Wait for n blocks
@@ -105,6 +108,10 @@ export default class Runner implements Config {
                 console.log("COMPLETE LAUNCH!");
                 const runner = await Runner.build(exs, ws, uri);
                 await runner.runTxs();
+
+                // while (runner.exs.length > 0) {
+                //     await runner.runTxs();
+                // }
             }
         });
 
@@ -179,12 +186,32 @@ export default class Runner implements Config {
         });
     }
 
+    /**
+     * Get id of extrinsic
+     */
+    static exId(e: Extrinsic): string {
+        if (e.id) return e.id;
+        return `${e.pallet}.${e.call}`;
+    }
+
     constructor(config: Config) {
         this.api = config.api;
         this.pair = config.pair;
         this.exs = config.exs;
         this.errors = [];
+        this.nonce = 0;
     }
+
+    // /**
+    //  * Batch extrinsics in queue
+    //  *
+    //  * @returns void
+    //  */
+    // public async batch() {
+    //     const runner = this;
+    //     const txs = runner.queue.map(async (ex) => await runner.buildTx(ex));
+    //     this.api.tx.utility.batch(txs);
+    // }
 
     /**
      * Execute transactions
@@ -199,6 +226,14 @@ export default class Runner implements Config {
 
             if (ex.required) {
                 for (const required of ex.required) {
+                    if (typeof required === "string") {
+                        if (this.finished.includes(required)) {
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+
                     let requiredEx: Extrinsic = required as Extrinsic;
                     if (typeof required === "function") {
                         requiredEx = await required(ex.shared);
@@ -213,7 +248,11 @@ export default class Runner implements Config {
             }
 
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            await this.runTx(ex);
+
+            this.runTx(ex).then(() => {
+                this.finished.push(Runner.exId(ex));
+                this.exs = this.exs.filter((item) => item != ex);
+            });
         }
 
         // exit
@@ -229,11 +268,14 @@ export default class Runner implements Config {
     }
 
     /**
-     * Run Extrinsic
+     * Build transaction from extrinsic
      *
      * @param {ex} Extrinsic
+     * @returns {SubmittableExtrinsic<"promise", ISubmittableResult>}
      */
-    public async runTx(ex: Extrinsic): Promise<void | string> {
+    public async buildTx(
+        ex: Extrinsic
+    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
         // flush arguments
         const args: any[] = [];
         for (const arg of ex.args) {
@@ -252,6 +294,17 @@ export default class Runner implements Config {
         if (!ex.signed) {
             tx = this.api.tx.sudo.sudo(tx);
         }
+
+        return tx;
+    }
+
+    /**
+     * Run Extrinsic
+     *
+     * @param {ex} Extrinsic
+     */
+    public async runTx(ex: Extrinsic): Promise<void | string> {
+        const tx = await this.buildTx(ex);
 
         // get res
         const res = (await this.timeout(
@@ -285,7 +338,7 @@ export default class Runner implements Config {
 
         if (res && res.unsub) {
             (await res.unsub)();
-            console.log(`\t | block hash: ${res.blockHash}`);
+            // console.log(`\t | block hash: ${res.blockHash}`);
         }
     }
 
@@ -324,14 +377,17 @@ export default class Runner implements Config {
         inBlock = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
+            this.nonce += 1;
             const unsub = se.signAndSend(
                 signed,
-                {},
+                {
+                    nonce: this.nonce,
+                },
                 (sr: ISubmittableResult) => {
                     const status = sr.status;
                     const events = sr.events;
 
-                    console.log(`\t | - status: ${status.type}`);
+                    // console.log(`\t | - status: ${status.type}`);
 
                     if (status.isInBlock) {
                         if (inBlock)

@@ -8,6 +8,8 @@ import { KeyringPair } from "@polkadot/keyring/types";
  * Extrinsic definition
  */
 export interface Extrinsic {
+    // extrinsic id
+    id?: string;
     inBlock?: boolean;
     // use signed origin
     signed?: KeyringPair;
@@ -19,7 +21,7 @@ export interface Extrinsic {
     timeout?: number;
     verify?: (shared?: any) => Promise<void>;
     /// Required calls or functions before this extrinsic
-    required?: (Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
+    required?: (string | Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
     /// Post calls or functions before this extrinsic
     post?: (Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
 }
