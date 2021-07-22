@@ -116,7 +116,8 @@ pub mod pallet {
             Context = Self::AssetId,
         >;
 
-        /// The account that holds the PINT that were moved to statemint
+        /// The account that holds the PINT that were moved to the statemint
+        /// parachain
         #[pallet::constant]
         type StatemintCustodian: Get<Self::AccountId>;
 
@@ -419,7 +420,7 @@ pub mod pallet {
                 PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
             // ensures enough balance is available to bond
-            Self::ensure_stash(asset.clone(), value)?;
+            Self::ensure_stash(asset, value)?;
 
             let call = PalletStakingCall::<T>::Bond(Bond {
                 controller: controller.clone(),
@@ -754,7 +755,7 @@ pub mod pallet {
                 PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
             // ensures enough balance is available to bond extra
-            Self::ensure_stash(asset.clone(), amount)?;
+            Self::ensure_stash(asset, amount)?;
 
             let call = PalletStakingCall::<T>::BondExtra(amount);
             let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
@@ -913,11 +914,11 @@ pub mod pallet {
             amount: T::Balance,
         ) -> sp_std::result::Result<Outcome, DispatchError> {
             // asset's native chain location
-            let dest: MultiLocation = T::AssetIdConvert::convert(asset.clone())
+            let dest: MultiLocation = T::AssetIdConvert::convert(asset)
                 .ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
 
             // ensures the min stash is still available after the transfer
-            Self::ensure_stash(asset.clone(), amount)?;
+            Self::ensure_stash(asset, amount)?;
             T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
         }
 

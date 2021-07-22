@@ -486,6 +486,7 @@ impl pallet_collator_selection::Config for Runtime {
 parameter_types! {
     pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
     pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+    pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
 }
 
 impl pallet_local_treasury::Config for Runtime {
@@ -779,6 +780,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     type PalletProxyCallEncoder = PalletProxyEncoder;
     // Encodes `pallet_assets` calls before transaction them to the statemint chain
     type PalletAssetsCallEncoder = PalletAssetsEncoder;
+    type StatemintCustodian = StatemintCustodian;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;

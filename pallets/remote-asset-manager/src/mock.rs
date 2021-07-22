@@ -390,6 +390,7 @@ pub mod para {
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
         pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
         pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+        pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
         pub StringLimit: u32 = 4;
 
         pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
@@ -460,6 +461,7 @@ pub mod para {
         // Encodes `pallet_proxy` calls before transaction them to other chains
         type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
         type PalletAssetsCallEncoder = PalletAssetsEncoder<CanEncodeAsset>;
+        type StatemintCustodian = StatemintCustodian;
         type SelfAssetId = PINTAssetId;
         type SelfLocation = SelfLocation;
         type SelfParaId = parachain_info::Pallet<Runtime>;
