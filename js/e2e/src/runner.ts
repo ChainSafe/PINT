@@ -27,6 +27,9 @@ interface TxResult {
 // Message of launching complete
 export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 
+// Substrate transaction
+export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
+
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
     try {
@@ -183,16 +186,44 @@ export default class Runner implements Config {
         this.queue = [];
     }
 
-    // /**
-    //  * Batch extrinsics in queue
-    //  *
-    //  * @returns void
-    //  */
-    // public async batch() {
-    //     const runner = this;
-    //     const txs = runner.queue.map(async (ex) => await runner.buildTx(ex));
-    //     this.api.tx.utility.batch(txs);
-    // }
+    /**
+     * Batch extrinsics in queue
+     *
+     * @returns void
+     */
+    public async batch() {
+        const runner = this;
+        // let txs: Transaction[] = [];
+        for (const e of this.exs) {
+            // check if executed
+            if (runner.finished.includes(String(e.id))) {
+                continue;
+            }
+
+            // 0. check if required ex with ids has finished
+            let requiredFinished = true;
+            for (const r in e.required) {
+                if (!this.finished.includes(r)) {
+                    requiredFinished = false;
+                    break;
+                }
+            }
+
+            if (!requiredFinished) {
+                continue;
+            }
+
+            // 1. build shared data
+            if (typeof e.shared === "function") {
+                e.shared = await e.shared();
+            }
+
+            // 2. pend transactions
+        }
+
+        // const txs = runner.queue.map(async (ex) => await runner.buildTx(ex));
+        // this.api.tx.utility.batch(txs);
+    }
 
     /**
      * Execute transactions
@@ -229,11 +260,9 @@ export default class Runner implements Config {
      * Build transaction from extrinsic
      *
      * @param {ex} Extrinsic
-     * @returns {SubmittableExtrinsic<"promise", ISubmittableResult>}
+     * @returns {Transaction}
      */
-    public async buildTx(
-        ex: Extrinsic
-    ): Promise<SubmittableExtrinsic<"promise", ISubmittableResult>> {
+    public async buildTx(ex: Extrinsic): Promise<Transaction> {
         // flush arguments
         const args: any[] = [];
         for (const arg of ex.args) {
@@ -260,29 +289,6 @@ export default class Runner implements Config {
      * @param {ex} Extrinsic
      */
     public async runTx(ex: Extrinsic): Promise<void | string> {
-        if (ex.required) {
-            for (const required of ex.required) {
-                if (typeof required === "string") {
-                    if (this.finished.includes(required)) {
-                        continue;
-                    } else {
-                        break;
-                    }
-                }
-
-                let requiredEx: Extrinsic = required as Extrinsic;
-                if (typeof required === "function") {
-                    requiredEx = await required(ex.shared);
-                }
-
-                console.log(
-                    `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
-                );
-
-                await this.runTx(requiredEx);
-            }
-        }
-
         const tx = await this.buildTx(ex);
 
         // get res
@@ -295,8 +301,8 @@ export default class Runner implements Config {
         )) as TxResult;
 
         // run post calls
-        if (ex.post) {
-            for (const post of ex.post) {
+        if (ex.with) {
+            for (const post of ex.with) {
                 let postEx: Extrinsic = post as Extrinsic;
                 if (typeof post === "function") {
                     postEx = await post(ex.shared);

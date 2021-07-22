@@ -21,7 +21,7 @@ export function expandId(e: Extrinsic): Extrinsic {
         }
     }
 
-    for (const r in e.post) {
+    for (const r in e.with) {
         if (typeof r !== "string" && typeof r !== "function") {
             expandId(r);
         }

@@ -19,9 +19,9 @@ export interface Extrinsic {
     shared?: () => Promise<any>;
     verify?: (shared?: any) => Promise<void>;
     /// Required calls or functions before this extrinsic
-    required?: (string | Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
-    /// Post calls or functions before this extrinsic
-    post?: (Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
+    required?: string[];
+    /// Calls or functions with this extrinsic
+    with?: (Extrinsic | ((shared?: any) => Promise<Extrinsic>))[];
 }
 
 /**

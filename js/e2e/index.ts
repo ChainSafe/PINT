@@ -35,7 +35,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "balances",
             call: "transfer",
             args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-            post: [
+            with: [
                 {
                     signed: config.alice,
                     pallet: "balances",
@@ -251,7 +251,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 api.createType("Vote" as any),
             ],
             // Post calls
-            post: [
+            with: [
                 async (hash: string): Promise<Extrinsic> => {
                     return {
                         inBlock: true,
