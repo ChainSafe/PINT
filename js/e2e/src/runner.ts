@@ -193,7 +193,7 @@ export default class Runner implements Config {
      */
     public async batch() {
         const runner = this;
-        // let txs: Transaction[] = [];
+        let queue: Extrinsic[] = [];
         for (const e of this.exs) {
             // check if executed
             if (runner.finished.includes(String(e.id))) {
@@ -213,16 +213,31 @@ export default class Runner implements Config {
                 continue;
             }
 
-            // 1. build shared data
+            // 1. Build shared data
             if (typeof e.shared === "function") {
                 e.shared = await e.shared();
             }
 
-            // 2. pend transactions
-        }
+            // 2. Pend transactions
+            queue.push(e);
+            for (const w of e.with) {
+                let withEx: Extrinsic = undefined;
+                if (typeof w === "function") {
+                    withEx = await w(e.shared);
+                }
 
-        // const txs = runner.queue.map(async (ex) => await runner.buildTx(ex));
-        // this.api.tx.utility.batch(txs);
+                queue.push(withEx);
+            }
+
+            // 3. register transactions
+            queue.forEach((e) => this.finished.push(e.id));
+
+            // 4. build transactions
+            const txs = queue.map(async (t) => await this.buildTx(t));
+
+            // 5. batch txs
+            // let unsub = this.api.tx.utility.batch(txs as any).signAndSend();
+        }
     }
 
     /**
@@ -237,11 +252,7 @@ export default class Runner implements Config {
             }
 
             console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-
-            this.runTx(ex).then(() => {
-                this.finished.push(String(ex.id));
-                this.exs = this.exs.filter((item) => item !== ex);
-            });
+            await this.runTx(ex);
         }
 
         // exit
@@ -294,9 +305,9 @@ export default class Runner implements Config {
         // get res
         const res = (await this.sendTx(tx, ex.signed, ex.inBlock).catch(
             (err: any) => {
-                const fmt = `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
-                console.log(fmt);
-                this.errors.push(fmt);
+                this.errors.push(
+                    `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`
+                );
             }
         )) as TxResult;
 
@@ -308,9 +319,6 @@ export default class Runner implements Config {
                     postEx = await post(ex.shared);
                 }
 
-                console.log(
-                    `----> run post extrinsic ${postEx.pallet}.${postEx.call}...`
-                );
                 await this.runTx(postEx);
             }
         }
@@ -322,7 +330,6 @@ export default class Runner implements Config {
 
         if (res && res.unsub) {
             (await res.unsub)();
-            // console.log(`\t | block hash: ${res.blockHash}`);
         }
     }
 
@@ -359,8 +366,6 @@ export default class Runner implements Config {
     ) {
         const status = sr.status;
         const events = sr.events;
-
-        // console.log(`\t | - status: ${status.type}`);
 
         if (status.isInBlock) {
             if (inBlock) {
