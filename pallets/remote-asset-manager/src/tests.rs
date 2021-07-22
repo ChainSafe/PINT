@@ -10,12 +10,14 @@ use crate::{
     pallet as pallet_remote_asset_manager,
 };
 
+use crate::types::StatemintConfig;
 use frame_support::{
     assert_noop, assert_ok,
     traits::{fungible::Inspect as _, tokens::fungibles::Inspect},
 };
 use orml_traits::MultiCurrencyExtended;
 use pallet_asset_index::types::AssetAvailability;
+use pallet_assets::WeightInfo;
 use primitives::traits::MultiAssetRegistry;
 use sp_runtime::traits::Zero;
 use xcm::v0::{
@@ -24,6 +26,7 @@ use xcm::v0::{
     MultiLocation::*,
     NetworkId,
 };
+use xcm_calls::assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX};
 use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
@@ -232,4 +235,78 @@ fn can_transact_staking() {
         // bond + 1x bond_extra
         assert_eq!(ledger.total, 2 * bond);
     });
+}
+
+#[test]
+fn can_transfer_to_statemint() {
+    MockNet::reset();
+    let spint_id = 1u32;
+    Statemint::execute_with(|| {
+        assert_ok!(pallet_assets::Pallet::<statemint_runtime::Runtime>::create(
+            statemint_runtime::Origin::signed(ALICE),
+            spint_id,
+            para_sovereign_account().into(),
+            100
+        ));
+
+        // mint some units
+        let supply = 5_000;
+        assert_ok!(pallet_assets::Pallet::<statemint_runtime::Runtime>::mint(
+            statemint_runtime::Origin::signed(para_sovereign_account()),
+            spint_id,
+            para_sovereign_account().into(),
+            supply
+        ));
+        assert_eq!(
+            pallet_assets::Pallet::<statemint_runtime::Runtime>::total_issuance(spint_id),
+            supply
+        );
+    });
+
+    let transfer_amount = 12345;
+    Para::execute_with(|| {
+        // try to send PINT, but no config yet
+        assert_noop!(
+            pallet_remote_asset_manager::Pallet::<para::Runtime>::transfer_to_statemint(
+                para::Origin::signed(ALICE),
+                transfer_amount
+            ),
+            pallet_remote_asset_manager::Error::<para::Runtime>::NoStatemintConfigFound
+        );
+
+        let config = StatemintConfig {
+            assets_config: AssetsConfig {
+                pallet_index: STATEMINT_PALLET_ASSETS_INDEX,
+                weights: assets_weights_from_runtime::<statemint_runtime::Runtime>(),
+            },
+            parachain_id: STATEMINT_PARA_ID,
+            enabled: false,
+            pint_asset_id: spint_id,
+        };
+
+        // let make_balance = 100_000;
+        // // issue some relay chain currency first
+        // orml_tokens::Pallet::<para::Runtime>::update_balance(
+        //     RELAY_CHAIN_ASSET,
+        //     &ParaTreasuryAccount::get(),
+        //     make_balance,
+        // )
+        //     .unwrap();
+    })
+}
+
+pub fn assets_weights_from_runtime<T: pallet_assets::Config>() -> AssetsWeights {
+    AssetsWeights {
+        mint: <T::WeightInfo as pallet_assets::WeightInfo>::mint(),
+        burn: <T::WeightInfo as pallet_assets::WeightInfo>::burn(),
+        transfer: <T::WeightInfo as pallet_assets::WeightInfo>::transfer(),
+        force_transfer: <T::WeightInfo as pallet_assets::WeightInfo>::force_transfer(),
+        freeze: <T::WeightInfo as pallet_assets::WeightInfo>::freeze(),
+        thaw: <T::WeightInfo as pallet_assets::WeightInfo>::thaw(),
+        freeze_asset: <T::WeightInfo as pallet_assets::WeightInfo>::freeze_asset(),
+        thaw_asset: <T::WeightInfo as pallet_assets::WeightInfo>::thaw_asset(),
+        approve_transfer: <T::WeightInfo as pallet_assets::WeightInfo>::approve_transfer(),
+        cancel_approval: <T::WeightInfo as pallet_assets::WeightInfo>::cancel_approval(),
+        transfer_approved: <T::WeightInfo as pallet_assets::WeightInfo>::transfer_approved(),
+    }
 }

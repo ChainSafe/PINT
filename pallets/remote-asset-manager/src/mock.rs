@@ -54,7 +54,7 @@ pub use xcm_test_support::{relay, types::*, Relay};
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
-pub const INITIAL_BALANCE: Balance = 1_000_000_000;
+pub const INITIAL_BALANCE: Balance = 1_000_000_000_000_000;
 pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
 pub const PARA_ASSET: AssetId = 1;
@@ -71,7 +71,7 @@ decl_test_parachain! {
 decl_test_parachain! {
     pub struct Statemint {
         Runtime = statemint_runtime::Runtime,
-        new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(para_sovereign_account(), INITIAL_BALANCE)]),
+        new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(ALICE, INITIAL_BALANCE),(para_sovereign_account(), INITIAL_BALANCE)]),
     }
 }
 
