@@ -26,23 +26,19 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
-        sp_runtime::{
-            traits::Saturating,
-            traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, StaticLookup, Zero},
+        sp_runtime::traits::{
+            AccountIdConversion, AtLeast32BitUnsigned, Convert, Saturating, StaticLookup, Zero,
         },
         sp_std::{self, mem, prelude::*},
         traits::Get,
+        transactional,
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{location::Parse, GetByKey, MultiCurrency, XcmTransfer};
-    use xcm::v0::Outcome;
-    use xcm::{
-        opaque::v0::SendXcm,
-        v0::{ExecuteXcm, MultiLocation, OriginKind, Xcm},
-    };
+    use xcm::v0::{ExecuteXcm, MultiLocation, OriginKind, Outcome, SendXcm, Xcm};
 
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
-    use xcm_calls::assets::{AssetsCall, AssetsCallEncoder, AssetsWeights};
+    use xcm_calls::assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights};
     use xcm_calls::{
         proxy::{
             ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
@@ -60,7 +56,7 @@ pub mod pallet {
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
     type BalanceFor<T> = <T as Config>::Balance;
-    type AssetIdFor<T> = <T as Config>::Balance;
+    type AssetIdFor<T> = <T as Config>::AssetId;
 
     // A `pallet_staking` dispatchable on another chain
     type PalletStakingCall<T> = StakingCall<LookupSourceFor<T>, BalanceFor<T>, AccountIdFor<T>>;
@@ -85,7 +81,7 @@ pub mod pallet {
             + Into<u128>;
 
         /// Asset Id that is used to identify different kinds of assets.
-        type AssetId: Parameter + Member + Clone + MaybeSerializeDeserialize;
+        type AssetId: Parameter + Member + Clone + Copy + MaybeSerializeDeserialize;
 
         /// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
         type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
@@ -119,6 +115,10 @@ pub mod pallet {
             Self::Balance,
             Context = Self::AssetId,
         >;
+
+        /// The account that holds the PINT that were moved to statemint
+        #[pallet::constant]
+        type StatemintCustodian: Get<Self::AccountId>;
 
         /// The native asset id
         #[pallet::constant]
@@ -222,6 +222,19 @@ pub mod pallet {
     >;
 
     /// The config of the statemint parachain and the internal `pallet_assets`
+    ///
+    /// Provides information that is required when sending XCM Transact calls:,
+    ///  - `id`: The identifier of the corresponding PINT asset in the
+    ///    `pallet_assets` on the statemint parachain.
+    ///  - `parachain id`: the parachain of the statemint chain
+    ///  - `weights`: the weights to use for the call
+    ///  - `pallet_index`: the index of `pallet_assets` within the statemint
+    ///    parachain's runtime. This is required so that the call gets decoded
+    ///    correctly on the receiver end.
+    ///
+    /// *NOTE*: It is assumed that the sovereign account of the PINT parachain
+    /// has admin privileges of the statemint PINT asset in the `pallet_assets`
+    /// on statemint.
     #[pallet::storage]
     pub type StatemintParaConfig<T: Config> =
         StorageValue<_, StatemintConfig<T::AssetId>, OptionQuery>;
@@ -303,6 +316,8 @@ pub mod pallet {
         StatemintTransactionsDisabled,
         /// Set statemint config. \[statemint config\]
         SetStatemintConfig(StatemintConfig<T::AssetId>),
+        /// Transfer to statemint succeeded. \[account, value\]
+        StatemintTransfer(T::AccountId, T::Balance),
     }
 
     #[pallet::error]
@@ -319,6 +334,8 @@ pub mod pallet {
         NoPalletConfigFound,
         /// Thrown when no config was found for `statemint`
         NoStatemintConfigFound,
+        /// Thrown when statemint support is currently disabled
+        StatemintDisabled,
         /// Thrown when sending an Xcm `pallet_staking::bond` failed
         FailedToSendBondXcm,
         /// Thrown when sending an Xcm `pallet_staking::bond_extra` failed
@@ -332,6 +349,8 @@ pub mod pallet {
         FailedToSendAddProxyXcm,
         /// Thrown when sending an Xcm `pallet_proxy::remove_proxy` failed
         FailedToSendRemoveProxyXcm,
+        /// Thrown when sending an Xcm `pallet_assets::mint` failed
+        FailedToSendAssetsMint,
         /// PINT's stash is already bonded.
         AlreadyBonded,
         /// PINT's stash is not bonded yet with  [`bond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond).
@@ -594,7 +613,8 @@ pub mod pallet {
             Ok(())
         }
 
-        /// Disables XCM transactions for the statemint parachain, if configured.
+        /// Disables XCM transactions for the statemint parachain, if
+        /// configured.
         ///
         /// This is a noop if it's already disabled
         /// Callable by the admin origin
@@ -624,10 +644,59 @@ pub mod pallet {
             Self::deposit_event(Event::SetStatemintConfig(config));
             Ok(())
         }
+
+        /// Attempts to transfer the given amount of index token to statemint.
+        ///
+        /// The given amount is transferred from the sender's balance to the
+        /// `StatemintCustodian`. This amount is then minted via XCM into the
+        /// caller's account via XCM on the statemint parachain.
+        ///
+        /// *NOTE* this currently assumes successful minting on statemint,
+        ///  there is no response with the result: https://github.com/ChainSafe/PINT/issues/173
+        #[pallet::weight(10_000)] // TODO: Set weights
+        #[transactional]
+        pub fn transfer_to_statemint(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
+            let who = ensure_signed(origin)?;
+
+            let config =
+                StatemintParaConfig::<T>::get().ok_or(Error::<T>::NoStatemintConfigFound)?;
+            ensure!(config.enabled, Error::<T>::StatemintDisabled);
+
+            let pint_asset = T::SelfAssetId::get();
+
+            // transfer the given amount to the custodian
+            T::Assets::transfer(pint_asset, &who, &T::StatemintCustodian::get(), amount)?;
+
+            let dest = config.location();
+            let beneficiary = T::Lookup::unlookup(who.clone());
+            let call = PalletAssetsCall::<T>::Mint(AssetParams {
+                id: config.pint_asset_id,
+                beneficiary,
+                amount,
+            });
+            let encoder = call.encoder::<T::PalletAssetsCallEncoder>(&pint_asset);
+
+            let xcm = Xcm::Transact {
+                origin_type: OriginKind::SovereignAccount,
+                require_weight_at_most: config.assets_config.weights.mint,
+                call: encoder
+                    .encode_runtime_call(config.assets_config.pallet_index)
+                    .encode()
+                    .into(),
+            };
+
+            let result = T::XcmSender::send_xcm(dest, xcm);
+            log::info!(target: "pint_xcm", "sent statemint pallet_assets::mint xcm: {:?} ",result);
+            ensure!(result.is_ok(), Error::<T>::FailedToSendAssetsMint);
+
+            Self::deposit_event(Event::StatemintTransfer(who, amount));
+            Ok(())
+        }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Sets the `enabled` flag of the `StatemintConfig` to the given parameter.
+        /// Sets the `enabled` flag of the `StatemintConfig` to the given
+        /// parameter.
         ///
         /// Returns the replaced value
         fn update_statemint_xcm_state(state: bool) -> sp_std::result::Result<bool, DispatchError> {
