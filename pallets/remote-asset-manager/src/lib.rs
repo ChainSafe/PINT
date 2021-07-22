@@ -223,7 +223,8 @@ pub mod pallet {
 
     /// The config of the statemint parachain and the internal `pallet_assets`
     #[pallet::storage]
-    pub type StatemintParaConfig<T: Config> = StorageValue<_, StatemintConfig, OptionQuery>;
+    pub type StatemintParaConfig<T: Config> =
+        StorageValue<_, StatemintConfig<T::AssetId>, OptionQuery>;
 
     #[pallet::genesis_config]
     #[allow(clippy::type_complexity)]
@@ -233,7 +234,7 @@ pub mod pallet {
         /// key-value pairs for the `PalletProxyConfig` storage map
         pub proxy_configs: Vec<(T::AssetId, ProxyConfig)>,
         /// configures the statemint parachain
-        pub statemint_config: Option<StatemintConfig>,
+        pub statemint_config: Option<StatemintConfig<T::AssetId>>,
     }
 
     #[cfg(feature = "std")]
@@ -300,6 +301,8 @@ pub mod pallet {
         /// Disabled xcm support for the statemint parachain.
         /// Transacting XCM calls to the statemint parachain is now frozen
         StatemintTransactionsDisabled,
+        /// Set statemint config. \[statemint config\]
+        SetStatemintConfig(StatemintConfig<T::AssetId>),
     }
 
     #[pallet::error]
@@ -370,11 +373,11 @@ pub mod pallet {
             value: T::Balance,
             payee: RewardDestination<AccountIdFor<T>>,
         ) -> DispatchResultWithPostInfo {
+            let _ = ensure_signed(origin.clone())?;
+            T::AdminOrigin::ensure_origin(origin)?;
             if value.is_zero() {
                 return Ok(().into());
             }
-            let _ = ensure_signed(origin.clone())?;
-            T::AdminOrigin::ensure_origin(origin)?;
 
             let dest = T::AssetRegistry::native_asset_location(&asset)
                 .ok_or(Error::<T>::UnknownAsset)?
@@ -603,6 +606,22 @@ pub mod pallet {
             if was_enabled {
                 Self::deposit_event(Event::StatemintTransactionsDisabled);
             }
+            Ok(())
+        }
+
+        /// Sets the statemint config.
+        ///
+        /// Callable by the admin origin
+        #[pallet::weight(10_000)] // TODO: Set weights
+        pub fn set_statemint_config(
+            origin: OriginFor<T>,
+            config: StatemintConfig<T::AssetId>,
+        ) -> DispatchResult {
+            T::AdminOrigin::ensure_origin(origin)?;
+
+            StatemintParaConfig::<T>::put(config.clone());
+
+            Self::deposit_event(Event::SetStatemintConfig(config));
             Ok(())
         }
     }
