@@ -83,7 +83,7 @@ fn para_account_funded_on_relay() {
 
     Relay::execute_with(|| {
         let para_balance_on_relay =
-            pallet_balances::Pallet::<relay::Runtime>::free_balance(&para_relay_account());
+            pallet_balances::Pallet::<relay::Runtime>::free_balance(&para_sovereign_account());
         assert_eq!(para_balance_on_relay, INITIAL_BALANCE);
     });
 }
@@ -142,7 +142,7 @@ fn can_transact_register_proxy() {
     Relay::execute_with(|| {
         // verify the proxy is registered
         let proxy = pallet_proxy::Pallet::<relay::Runtime>::find_proxy(
-            &para_relay_account(),
+            &para_sovereign_account(),
             &ADMIN_ACCOUNT,
             Option::None,
         )

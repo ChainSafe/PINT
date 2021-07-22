@@ -63,6 +63,7 @@ cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", bran
 cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
 cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
+statemint-runtime = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
 
 # polkadot
 xcm-builder = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8' }

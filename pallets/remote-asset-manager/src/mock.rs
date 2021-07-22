@@ -56,6 +56,7 @@ pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
 pub const INITIAL_BALANCE: Balance = 1_000_000_000;
 pub const PARA_ID: u32 = 1u32;
+pub const STATEMINT_PARA_ID: u32 = 200u32;
 pub const PARA_ASSET: AssetId = 1;
 pub const RELAY_CHAIN_ASSET: AssetId = 42;
 
@@ -66,8 +67,16 @@ decl_test_parachain! {
     }
 }
 
+// creates a `Statemint` runtime where the PINT parachains sovereign account has funds
+decl_test_parachain! {
+    pub struct Statemint {
+        Runtime = statemint_runtime::Runtime,
+        new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(para_sovereign_account(), INITIAL_BALANCE)]),
+    }
+}
+
 /// Returns the para's account
-pub fn para_relay_account() -> AccountId {
+pub fn para_sovereign_account() -> AccountId {
     let para: ParaId = PARA_ID.into();
     para.into_account()
 }
@@ -144,6 +153,35 @@ pub fn para_ext(
     ext
 }
 
+pub fn statemint_ext(
+    parachain_id: u32,
+    balances: Vec<(AccountId, Balance)>,
+) -> sp_io::TestExternalities {
+    use statemint_runtime::{Runtime, System};
+
+    let mut t = frame_system::GenesisConfig::default()
+        .build_storage::<Runtime>()
+        .unwrap();
+
+    let parachain_info_config = parachain_info::GenesisConfig {
+        parachain_id: parachain_id.into(),
+    };
+
+    <parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(
+        &parachain_info_config,
+        &mut t,
+    )
+    .unwrap();
+
+    pallet_balances::GenesisConfig::<Runtime> { balances }
+        .assimilate_storage(&mut t)
+        .unwrap();
+
+    let mut ext = sp_io::TestExternalities::new(t);
+    ext.execute_with(|| System::set_block_number(1));
+    ext
+}
+
 pub fn relay_ext() -> sp_io::TestExternalities {
     use relay::{Runtime, System};
 
@@ -155,7 +193,7 @@ pub fn relay_ext() -> sp_io::TestExternalities {
     pallet_balances::GenesisConfig::<Runtime> {
         balances: vec![
             (ALICE, INITIAL_BALANCE),
-            (para_relay_account(), INITIAL_BALANCE),
+            (para_sovereign_account(), INITIAL_BALANCE),
         ],
     }
     .assimilate_storage(&mut t)
