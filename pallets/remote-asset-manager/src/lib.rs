@@ -121,7 +121,8 @@ pub mod pallet {
         #[pallet::constant]
         type StatemintCustodian: Get<Self::AccountId>;
 
-        /// Minimum amount that can be transferred via XCM to the statemint parachain
+        /// Minimum amount that can be transferred via XCM to the statemint
+        /// parachain
         #[pallet::constant]
         type MinimumStatemintTransferAmount: Get<Self::Balance>;
 
@@ -639,6 +640,11 @@ pub mod pallet {
         /// Sets the statemint config.
         ///
         /// Callable by the admin origin
+        ///
+        /// *NOTE* It is assumed that the PINT parachain's local account on
+        /// the statemint parachain (sibling account:
+        /// `polkadot_parachain::primitives::Sibling`) has the permission to
+        /// modify the statemint PINT asset.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn set_statemint_config(
             origin: OriginFor<T>,
@@ -660,6 +666,9 @@ pub mod pallet {
         ///
         /// *NOTE* this currently assumes successful minting on statemint,
         ///  there is no response with the result: https://github.com/ChainSafe/PINT/issues/173
+        ///
+        /// *NOTE* to interact with `pallet_assets` on statemint, an account
+        /// must already exist for the sender with `ExistingDeposit`.
         #[pallet::weight(10_000)] // TODO: Set weights
         #[transactional]
         pub fn transfer_to_statemint(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {

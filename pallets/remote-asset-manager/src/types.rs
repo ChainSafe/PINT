@@ -19,7 +19,7 @@ pub struct StatemintConfig<AssetId> {
     pub parachain_id: u32,
     /// Whether interacting with the parachain is currently active
     pub enabled: bool,
-    /// The `pallet_assets` asset id of the pint token on statemint
+    /// The `pallet_assets` asset identifier of the pint token on statemint
     pub pint_asset_id: AssetId,
 }
 
