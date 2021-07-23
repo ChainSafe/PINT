@@ -14,13 +14,13 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
     pub end_block: BlockNumber,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Defines the location of an asset
 /// Liquid implies it exists on a chain somewhere in the network and
 /// can be moved around
 /// SAFT implies the asset is a Simple Agreement for Future Tokens and the
 /// promised tokens are not able to be transferred or traded until some time
 /// in the future.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum AssetAvailability {
     Liquid(MultiLocation),
     Saft,
