@@ -24,8 +24,8 @@ pub struct StatemintConfig<AssetId> {
 }
 
 impl<AssetId> StatemintConfig<AssetId> {
-    /// The direct path to the `statemint` parachain
+    /// The path to the `statemint` parachain
     pub fn location(&self) -> MultiLocation {
-        Junction::Parachain(self.parachain_id).into()
+        (Junction::Parent, Junction::Parachain(self.parachain_id)).into()
     }
 }

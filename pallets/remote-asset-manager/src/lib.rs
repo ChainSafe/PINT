@@ -67,7 +67,7 @@ pub mod pallet {
         ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
     // A `pallet_assets` dispatchable on another chain
-    type PalletAssetsCall<T> = AssetsCall<AssetIdFor<T>, LookupSourceFor<T>, BalanceFor<T>>;
+    pub type PalletAssetsCall<T> = AssetsCall<AssetIdFor<T>, LookupSourceFor<T>, BalanceFor<T>>;
 
     #[pallet::config]
     pub trait Config: frame_system::Config {
@@ -658,6 +658,9 @@ pub mod pallet {
         #[transactional]
         pub fn transfer_to_statemint(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
+            if amount.is_zero() {
+                return Ok(());
+            }
 
             let config =
                 StatemintParaConfig::<T>::get().ok_or(Error::<T>::NoStatemintConfigFound)?;
