@@ -1,7 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::pallet_prelude::*;
+use codec::{Decode, Encode};
+use frame_support::{sp_runtime::RuntimeDebug, sp_std::vec::Vec};
 use xcm::opaque::v0::MultiLocation;
 
 /// Abstraction over the lock of minted index token that are locked up for
