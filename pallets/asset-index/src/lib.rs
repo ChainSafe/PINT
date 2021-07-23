@@ -48,7 +48,6 @@ pub mod pallet {
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
     pub use crate::traits::AssetRecorder;
-    pub use crate::types::MultiAssetAdapter;
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetWithdrawal, IndexTokenLock, PendingRedemption,
         RedemptionState,
@@ -933,7 +932,7 @@ pub mod pallet {
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
             // mint PINT into caller's balance increasing the total issuance
-            T::IndexToken::deposit_creating(&caller, nav);
+            T::IndexToken::deposit_creating(caller, nav);
             Ok(())
         }
 
@@ -960,7 +959,7 @@ pub mod pallet {
             // mint SAFT into the treasury's account
             T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
             // mint PINT into caller's balance increasing the total issuance
-            T::IndexToken::deposit_creating(&caller, nav);
+            T::IndexToken::deposit_creating(caller, nav);
 
             Ok(())
         }
