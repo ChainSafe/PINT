@@ -252,6 +252,7 @@ fn pint_testnet_genesis(
                     weights: ProxyWeights::polkadot(),
                 },
             )],
+            statemint_config: None,
         },
     }
 }
