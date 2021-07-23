@@ -368,7 +368,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                             await api.query.priceFeed.assetFeeds(ASSET_ID_A)
                         ).toHuman()
                     ) === 0,
-                    "Create feed failed"
+                    "Track feed failed"
                 );
             },
         },
@@ -380,7 +380,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 assert(
                     ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
                         .isNone,
-                    "Create feed failed"
+                    "Untrack feed failed"
                 );
             },
         },
@@ -433,7 +433,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isNone,
-                    "assetIndex.addAsset failed"
+                    "assetIndex.removeAsset failed"
                 );
             },
         },

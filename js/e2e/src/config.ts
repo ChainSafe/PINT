@@ -43,3 +43,11 @@ export interface ExtrinsicConfig {
     dave: KeyringPair;
     ziggy: KeyringPair;
 }
+
+/**
+ * Item of ex queue
+ */
+export interface QueueItem {
+    ex: Extrinsic;
+    shared: any;
+}

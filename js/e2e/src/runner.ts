@@ -8,10 +8,10 @@ import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
-import { Config, Extrinsic, ExtrinsicConfig } from "./config";
+import { Config, Extrinsic, ExtrinsicConfig, QueueItem } from "./config";
 import { launch } from "./launch";
 import { ChildProcess } from "child_process";
-import { cryptoWaitReady } from "@polkadot/util-crypto";
+// import { cryptoWaitReady } from "@polkadot/util-crypto";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
 import OrmlTypes from "@open-web3/orml-types";
 
@@ -56,7 +56,7 @@ export default class Runner implements Config {
     public exs: Extrinsic[];
     public errors: string[];
     public finished: string[];
-    public queue: Extrinsic[];
+    public queue: QueueItem[];
     public nonce: number;
 
     /**
@@ -95,10 +95,6 @@ export default class Runner implements Config {
                     console.log("COMPLETE LAUNCH!");
                     const runner = await Runner.build(exs, ws, uri);
                     await runner.runTxs();
-
-                    // while (runner.exs.length > 0) {
-                    //     await runner.runTxs();
-                    // }
                 }
             });
         }
@@ -186,14 +182,9 @@ export default class Runner implements Config {
         this.queue = [];
     }
 
-    /**
-     * Batch extrinsics in queue
-     *
-     * @returns void
-     */
-    public async batch() {
+    public async queueTx(): Promise<void> {
         const runner = this;
-        let queue: Extrinsic[] = [];
+        const queue: QueueItem[] = [];
         for (const e of this.exs) {
             // check if executed
             if (runner.finished.includes(String(e.id))) {
@@ -214,30 +205,57 @@ export default class Runner implements Config {
             }
 
             // 1. Build shared data
+            console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
             if (typeof e.shared === "function") {
                 e.shared = await e.shared();
             }
 
             // 2. Pend transactions
-            queue.push(e);
-            for (const w of e.with) {
-                let withEx: Extrinsic = undefined;
-                if (typeof w === "function") {
-                    withEx = await w(e.shared);
+            queue.push({
+                ex: e,
+                shared: e.shared,
+            });
+            if (e.with) {
+                for (const w of e.with) {
+                    queue.push({
+                        ex: typeof w === "function" ? await w(e.shared) : w,
+                        shared: e.shared,
+                    });
                 }
-
-                queue.push(withEx);
             }
-
-            // 3. register transactions
-            queue.forEach((e) => this.finished.push(e.id));
-
-            // 4. build transactions
-            const txs = queue.map(async (t) => await this.buildTx(t));
-
-            // 5. batch txs
-            // let unsub = this.api.tx.utility.batch(txs as any).signAndSend();
         }
+
+        // 3. register transactions
+        const txs = [];
+        for (const qe of queue) {
+            this.finished.push(String(qe.ex.id));
+            if (qe.ex.signed && qe.ex.signed !== this.pair) {
+                // Run custom extrinsic directory
+                await this.runTx(qe.ex);
+            }
+            txs.push(await this.buildTx(qe.ex));
+        }
+
+        // 4. check result
+        const res = await this.batch(txs);
+        if (res && res.unsub) {
+            (await res.unsub)();
+        }
+    }
+
+    /**
+     * Batch extrinsics in queue
+     *
+     * @returns void
+     */
+    public async batch(txs: Transaction[]): Promise<TxResult> {
+        return new Promise((resolve, reject) => {
+            const unsub: any = this.api.tx.utility
+                .batch(txs as any)
+                .signAndSend(this.pair, {}, (sr: ISubmittableResult) =>
+                    this.checkError(false, unsub, sr, resolve, reject)
+                );
+        });
     }
 
     /**
@@ -246,16 +264,8 @@ export default class Runner implements Config {
      * @returns void
      */
     public async runTxs(): Promise<void> {
-        for (const ex of this.exs) {
-            if (typeof ex.shared === "function") {
-                ex.shared = await ex.shared();
-            }
+        await this.queueTx();
 
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            await this.runTx(ex);
-        }
-
-        // exit
         if (this.errors.length > 0) {
             console.log(`Failed tests: ${this.errors.length}`);
             for (const error of this.errors) {
@@ -357,6 +367,15 @@ export default class Runner implements Config {
         });
     }
 
+    /**
+     * Check and throw transaction errors
+     *
+     * @param {boolean} inblock
+     * @param {Promise<() => void>} unsub
+     * @param {ISubmittableResult} sr
+     * @param {(value: TxResult | PromiseLike<TxResult>) => void} resolve
+     * @param {(reason?: any) => void} reject
+     */
     private async checkError(
         inBlock: boolean,
         unsub: Promise<() => void>,
