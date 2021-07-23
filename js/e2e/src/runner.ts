@@ -223,6 +223,9 @@ export default class Runner implements Config {
                     });
                 }
             }
+
+            // reset exs
+            this.exs = this.exs.filter((i) => i !== e);
         }
 
         // 3. register transactions
@@ -232,6 +235,9 @@ export default class Runner implements Config {
             if (qe.ex.signed && qe.ex.signed !== this.pair) {
                 // Run custom extrinsic directory
                 await this.runTx(qe.ex);
+                if (qe.ex.verify) {
+                    await qe.ex.verify(qe.shared);
+                }
             }
             txs.push(await this.buildTx(qe.ex));
         }
@@ -264,7 +270,9 @@ export default class Runner implements Config {
      * @returns void
      */
     public async runTxs(): Promise<void> {
-        await this.queueTx();
+        while (this.exs.length > 0) {
+            await this.queueTx();
+        }
 
         if (this.errors.length > 0) {
             console.log(`Failed tests: ${this.errors.length}`);
