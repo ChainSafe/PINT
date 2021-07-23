@@ -769,6 +769,10 @@ impl PalletCallEncoder for PalletAssetsEncoder {
     }
 }
 
+parameter_types! {
+     pub const MinimumStatemintTransferAmount: Balance = 1;
+}
+
 impl pallet_remote_asset_manager::Config for Runtime {
     type Balance = Balance;
     type AssetId = AssetId;
@@ -781,6 +785,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
     // Encodes `pallet_assets` calls before transaction them to the statemint chain
     type PalletAssetsCallEncoder = PalletAssetsEncoder;
     type StatemintCustodian = StatemintCustodian;
+    type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
     type SelfAssetId = PINTAssetId;
     type SelfLocation = SelfLocation;
     type SelfParaId = parachain_info::Pallet<Runtime>;

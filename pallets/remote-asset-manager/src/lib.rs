@@ -121,6 +121,10 @@ pub mod pallet {
         #[pallet::constant]
         type StatemintCustodian: Get<Self::AccountId>;
 
+        /// Minimum amount that can be transferred via XCM to the statemint parachain
+        #[pallet::constant]
+        type MinimumStatemintTransferAmount: Get<Self::Balance>;
+
         /// The native asset id
         #[pallet::constant]
         type SelfAssetId: Get<Self::AssetId>;
@@ -374,6 +378,8 @@ pub mod pallet {
         InvalidChainLocation,
         /// Currency is not cross-chain transferable.
         NotCrossChainTransferableCurrency,
+        /// Thrown if the given amount of PINT to send to statemint is too low
+        MinimumStatemintTransfer,
     }
 
     #[pallet::hooks]
@@ -658,9 +664,10 @@ pub mod pallet {
         #[transactional]
         pub fn transfer_to_statemint(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
             let who = ensure_signed(origin)?;
-            if amount.is_zero() {
-                return Ok(());
-            }
+            ensure!(
+                amount >= T::MinimumStatemintTransferAmount::get(),
+                Error::<T>::MinimumStatemintTransfer
+            );
 
             let config =
                 StatemintParaConfig::<T>::get().ok_or(Error::<T>::NoStatemintConfigFound)?;

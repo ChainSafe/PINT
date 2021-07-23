@@ -432,6 +432,7 @@ pub mod para {
     parameter_types! {
         pub LockupPeriod: <Runtime as system::Config>::BlockNumber = 0;
         pub MinimumRedemption: u32 = 0;
+        pub MinimumStatemintTransferAmount: Balance = 1;
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
@@ -509,6 +510,7 @@ pub mod para {
         type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
         type PalletAssetsCallEncoder = PalletAssetsEncoder<CanEncodeAsset>;
         type StatemintCustodian = StatemintCustodian;
+        type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
         type SelfAssetId = PINTAssetId;
         type SelfLocation = SelfLocation;
         type SelfParaId = parachain_info::Pallet<Runtime>;
@@ -783,7 +785,7 @@ pub mod statemint {
     }
 
     parameter_types! {
-        pub const AssetDeposit: Balance = 1_000; // 100 DOLLARS deposit to create asset
+        pub const AssetDeposit: Balance = 1_000;
         pub const ApprovalDeposit: Balance = 1;
         pub const AssetsStringLimit: u32 = 50;
         pub const MetadataDepositBase: Balance = 1;
