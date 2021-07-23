@@ -40,7 +40,7 @@ fn non_admin_cannot_call_get_asset() {
             ),
             BadOrigin
         );
-        assert_eq!(pallet::Assets::<Test>::contains_key(ASSET_A_ID), false)
+        assert!(!pallet::Assets::<Test>::contains_key(ASSET_A_ID))
     });
 }
 
@@ -522,8 +522,7 @@ fn can_withdraw() {
             pending
                 .assets
                 .iter()
-                .filter(|x| x.asset == ASSET_B_ID)
-                .next()
+                .find(|x| x.asset == ASSET_B_ID)
                 .expect("asset should be present"),
             &AssetWithdrawal {
                 asset: ASSET_B_ID,
