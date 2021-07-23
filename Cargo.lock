@@ -4920,6 +4920,7 @@ dependencies = [
  "pallet-chainlink-feed",
  "pallet-price-feed",
  "parity-scale-codec",
+ "polkadot-parachain",
  "primitives",
  "serde",
  "sp-core",

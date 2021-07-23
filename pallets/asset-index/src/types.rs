@@ -2,21 +2,20 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::FullCodec;
-use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
-use frame_support::sp_runtime::SaturatedConversion;
-use frame_support::sp_std::{
-    self,
-    cmp::{Eq, PartialEq},
-    fmt::Debug,
-    marker::PhantomData,
-    prelude::*,
-    result,
+use frame_support::{
+    pallet_prelude::*,
+    sp_runtime::{traits::AtLeast32BitUnsigned, SaturatedConversion},
+    sp_std::{
+        self,
+        cmp::{Eq, PartialEq},
+        fmt::Debug,
+        marker::PhantomData,
+        prelude::*,
+        result,
+    },
 };
 use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
 use xcm::v0::{Error as XcmError, MultiAsset, MultiLocation, Result};
 use xcm_executor::{
     traits::{Convert, MatchesFungible, TransactAsset},
@@ -33,7 +32,6 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
     pub end_block: BlockNumber,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Defines the location of an asset
 /// Liquid implies it exists on a chain somewhere in the network and
 /// can be moved around
@@ -41,7 +39,6 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
 /// promised tokens are not able to be transferred or traded until some time
 /// in the future.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum AssetAvailability {
     Liquid(MultiLocation),
     Saft,
