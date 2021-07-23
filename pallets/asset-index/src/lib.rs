@@ -42,7 +42,8 @@ pub mod pallet {
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
-    use xcm::opaque::v0::MultiLocation;
+    use polkadot_parachain::primitives::Id as ParaId;
+    use xcm::v0::{Junction, MultiLocation};
 
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
@@ -97,7 +98,7 @@ pub mod pallet {
         /// Type that handles cross chain transfers
         type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
         /// Type used to identify assets
-        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy;
+        type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy + MaybeSerializeDeserialize;
 
         /// The native asset id
         #[pallet::constant]
@@ -181,6 +182,37 @@ pub mod pallet {
         GetDefault,
         ConstU32<300_000>,
     >;
+
+    #[pallet::genesis_config]
+    pub struct GenesisConfig<T: Config> {
+        pub liquid_assets: Vec<(T::AssetId, ParaId)>,
+        pub saft_assets: Vec<T::AssetId>,
+    }
+
+    #[cfg(feature = "std")]
+    impl<T: Config> Default for GenesisConfig<T> {
+        fn default() -> Self {
+            Self {
+                liquid_assets: Default::default(),
+                saft_assets: Default::default(),
+            }
+        }
+    }
+
+    #[pallet::genesis_build]
+    impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+        fn build(&self) {
+            for (asset, id) in self.liquid_assets.iter().cloned() {
+                let availability = AssetAvailability::Liquid(
+                    (Junction::Parent, Junction::Parachain(id.into())).into(),
+                );
+                Assets::<T>::insert(asset, availability)
+            }
+            for asset in self.saft_assets.iter().cloned() {
+                Assets::<T>::insert(asset, AssetAvailability::Saft)
+            }
+        }
+    }
 
     #[pallet::event]
     #[pallet::metadata(T::AssetId = "AccountId", AccountIdFor < T > = "AccountId", T::Balance = "Balance")]
