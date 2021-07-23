@@ -5,7 +5,9 @@ use crate as pallet;
 use crate::mock::*;
 use crate::SAFTRecord;
 use frame_support::{assert_noop, assert_ok};
+use primitives::traits::MultiAssetRegistry;
 use sp_runtime::traits::BadOrigin;
+use xcm::v0::{Junction, MultiLocation};
 
 const ASHLEY: AccountId = 0;
 const ASSET_A: u32 = 0;
@@ -25,6 +27,34 @@ fn non_admin_cannot_call_any_extrinsics() {
             SaftRegistry::report_nav(Origin::signed(ASHLEY), ASSET_A, 0, 0),
             BadOrigin
         );
+    });
+}
+
+#[test]
+fn native_asset_disallowed() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            SaftRegistry::add_saft(
+                Origin::signed(ADMIN_ACCOUNT_ID),
+                PINTAssetId::get(),
+                100,
+                100
+            ),
+            pallet_asset_index::Error::<Test>::NativeAssetDisallowed
+        );
+    });
+}
+
+#[test]
+fn empty_deposit_does_nothing() {
+    new_test_ext().execute_with(|| {
+        assert_ok!(SaftRegistry::add_saft(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A,
+            0,
+            0
+        ));
+        assert!(super::ActiveSAFTs::<Test>::get(ASSET_A).is_empty(),);
     });
 }
 
@@ -127,5 +157,27 @@ fn admin_cannot_update_or_remove_invalid_index() {
         );
 
         assert_eq!(super::ActiveSAFTs::<Test>::get(ASSET_A), expected_registry);
+    });
+}
+
+#[test]
+fn can_convert_to_liquid() {
+    new_test_ext().execute_with(|| {
+        // add
+        assert_ok!(SaftRegistry::add_saft(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A,
+            100,
+            20
+        ));
+        assert!(!AssetIndex::is_liquid_asset(&ASSET_A));
+
+        let location: MultiLocation = (Junction::Parent, Junction::Parachain(100)).into();
+        assert_ok!(SaftRegistry::convert_to_liquid(
+            Origin::signed(ADMIN_ACCOUNT_ID),
+            ASSET_A,
+            location.clone()
+        ));
+        assert_eq!(AssetIndex::native_asset_location(&ASSET_A), Some(location));
     });
 }

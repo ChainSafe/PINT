@@ -1,0 +1,18 @@
+[package]
+authors = ['ChainSafe Systems']
+edition = '2018'
+homepage = 'https://github.com/ChainSafe/PINT'
+license = 'LGPL-3.0-only'
+name = 'pint-runtime-common'
+repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
+version = '0.0.1'
+
+[dependencies]
+xcm-calls = { path = "../../primitives/xcm-calls", default-features = false }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+
+[features]
+default = ['std']
+std = [
+    "xcm-calls/std"
+]

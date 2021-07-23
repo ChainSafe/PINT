@@ -25,8 +25,9 @@ mod types;
 mod utils;
 
 #[frame_support::pallet]
-// requires unused_unit exception as the #[pallet::event] proc macro generates code that violates this lint
-// requires boxed_local exception as extrinsics must accept boxed calls but clippy only sees the local function
+// requires unused_unit exception as the #[pallet::event] proc macro generates code that violates
+// this lint requires boxed_local exception as extrinsics must accept boxed calls but clippy only
+// sees the local function
 #[allow(clippy::unused_unit, clippy::boxed_local)]
 pub mod pallet {
     pub use crate::types::*;
@@ -71,7 +72,8 @@ pub mod pallet {
         /// Duration (in blocks) of the voting period
         type VotingPeriod: Get<Self::BlockNumber>;
 
-        /// Minimum number of council members that must vote for a action to be passed
+        /// Minimum number of council members that must vote for a action to be
+        /// passed
         type MinCouncilVotes: Get<usize>;
 
         /// Origin that is permitted to create proposals
@@ -95,6 +97,7 @@ pub mod pallet {
         type WeightInfo: WeightInfo;
     }
 
+    #[pallet::origin]
     pub type Origin<T> = CommitteeOrigin<AccountIdFor<T>, BlockNumberFor<T>>;
 
     #[pallet::pallet]
@@ -104,11 +107,13 @@ pub mod pallet {
     // Storage defs
 
     #[pallet::storage]
-    /// Stores a vector of the hashes of currently active proposals for iteration
+    /// Stores a vector of the hashes of currently active proposals for
+    /// iteration
     pub type ActiveProposals<T: Config> = StorageValue<_, Vec<HashFor<T>>, ValueQuery>;
 
     #[pallet::storage]
-    /// Increments with each new proposal. Used to produce a unique nonce per proposal instance
+    /// Increments with each new proposal. Used to produce a unique nonce per
+    /// proposal instance
     pub type ProposalCount<T: Config> = StorageValue<_, T::ProposalNonce, ValueQuery>;
 
     #[pallet::storage]
@@ -177,8 +182,8 @@ pub mod pallet {
         /// A vote was cast
         /// \[voter_address, proposal_hash, vote\]
         VoteCast(CommitteeMember<AccountIdFor<T>>, T::Hash, Vote),
-        /// A proposal was closed and executed. Any errors for calling the proposal action
-        /// are included
+        /// A proposal was closed and executed. Any errors for calling the
+        /// proposal action are included
         /// \[proposal_hash, result\]
         ClosedAndExecutedProposal(T::Hash, DispatchResult),
         /// A new consituent has been added
@@ -188,13 +193,16 @@ pub mod pallet {
 
     #[pallet::error]
     pub enum Error<T> {
-        /// The origin making the call is not a member and it is a requirement that they are
+        /// The origin making the call is not a member and it is a requirement
+        /// that they are
         NotMember,
         /// Member has attempted to vote multiple times on a single proposal
         DuplicateVote,
-        /// Attempted to cast a vote outside the accepted voting period for a proposal
+        /// Attempted to cast a vote outside the accepted voting period for a
+        /// proposal
         NotInVotingPeriod,
-        /// Attempted to add a constituent that is already a member of the council
+        /// Attempted to add a constituent that is already a member of the
+        /// council
         AlreadyCouncilMember,
         /// Attempted to add a constituent that is already a constituent
         AlreadyConstituentMember,
@@ -202,7 +210,8 @@ pub mod pallet {
         VotingPeriodNotElapsed,
         /// Tried to close a proposal but not enough council members voted
         ProposalNotAcceptedInsufficientVotes,
-        /// Tried to close a proposal but the constituent members voted to veto proposal
+        /// Tried to close a proposal but the constituent members voted to veto
+        /// proposal
         ProposalNotAcceptedConstituentVeto,
         /// Tried to close a proposal but proposal was denied by council
         ProposalNotAcceptedCouncilDeny,
@@ -210,11 +219,11 @@ pub mod pallet {
         ProposalAlreadyExecuted,
         /// The hash provided does not have an associated proposal
         NoProposalWithHash,
-        /// The data type for enumerating the proposals has reached its upper bound.
-        /// No more proposals can be made
+        /// The data type for enumerating the proposals has reached its upper
+        /// bound. No more proposals can be made
         ProposalNonceExhausted,
-        /// There was a numerical overflow or underflow in calculating when the voting period
-        /// should end
+        /// There was a numerical overflow or underflow in calculating when the
+        /// voting period should end
         InvalidOperationInEndBlockComputation,
     }
 
@@ -237,13 +246,15 @@ pub mod pallet {
             {
                 Self::upkeep(n);
             }
-            0 // TODO: Calcualte the non-negotiable weight consumed by performing upkeep
+            0 // TODO: Calcualte the non-negotiable weight consumed by
+              // performing upkeep
         }
     }
 
     impl<T: Config> Pallet<T> {
-        /// Gets a new unused proposal nonce and increments the nonce in the store
-        /// Returns an error if the data type used for the nonce exceeds is maximum value
+        /// Gets a new unused proposal nonce and increments the nonce in the
+        /// store Returns an error if the data type used for the nonce
+        /// exceeds is maximum value
         fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
             let nonce = ProposalCount::<T>::get();
             match nonce.checked_add(&T::ProposalNonce::one()) {
@@ -292,7 +303,8 @@ pub mod pallet {
         }
 
         /// Function executed at the initialization of the first block in
-        /// a new voting period cycle. Used to maintain the active proposals store.
+        /// a new voting period cycle. Used to maintain the active proposals
+        /// store.
         fn upkeep(n: BlockNumberFor<T>) {
             // clear out proposals that are no longer active
             ActiveProposals::<T>::mutate(|proposals| {
@@ -323,8 +335,9 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         #[pallet::weight(T::WeightInfo::propose())] // TODO: Set weights
-        /// Extrinsic to propose a new action to be voted upon in the next voting period.
-        /// The provided action will be turned into a proposal and added to the list of current active proposals
+        /// Extrinsic to propose a new action to be voted upon in the next
+        /// voting period. The provided action will be turned into a
+        /// proposal and added to the list of current active proposals
         /// to be voted on in the next voting period.
         pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
             let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
@@ -367,7 +380,7 @@ pub mod pallet {
                 if let Some(votes) = votes {
                     // Can only vote within the allowed range of blocks for this proposal
                     ensure!(
-                        Self::within_voting_period(&votes),
+                        Self::within_voting_period(votes),
                         Error::<T>::NotInVotingPeriod
                     );
                     // members can vote only once

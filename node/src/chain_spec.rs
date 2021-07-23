@@ -3,7 +3,8 @@
 
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
-use parachain_runtime::{AccountId, AuraId, Signature};
+use pint_runtime::{AccountId, AuraId, Signature};
+use pint_runtime_common::traits::XcmRuntimeCallWeights;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -15,7 +16,7 @@ use xcm_calls::{
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<pint_runtime::GenesisConfig, Extensions>;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -26,7 +27,8 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 
 /// Generate collator keys from seed.
 ///
-/// This function's return type must always match the session keys of the chain in tuple format.
+/// This function's return type must always match the session keys of the chain
+/// in tuple format.
 pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_from_seed::<AuraId>(seed)
 }
@@ -161,32 +163,32 @@ fn pint_testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     council_members: Vec<AccountId>,
     id: ParaId,
-) -> parachain_runtime::GenesisConfig {
-    parachain_runtime::GenesisConfig {
-        system: parachain_runtime::SystemConfig {
-            code: parachain_runtime::WASM_BINARY
+) -> pint_runtime::GenesisConfig {
+    pint_runtime::GenesisConfig {
+        system: pint_runtime::SystemConfig {
+            code: pint_runtime::WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        balances: parachain_runtime::BalancesConfig {
+        balances: pint_runtime::BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        committee: parachain_runtime::CommitteeConfig {
+        committee: pint_runtime::CommitteeConfig {
             council_members: council_members.clone(),
             ..Default::default()
         },
-        chainlink_feed: parachain_runtime::ChainlinkFeedConfig {
+        chainlink_feed: pint_runtime::ChainlinkFeedConfig {
             pallet_admin: Some(root_key.clone()),
             feed_creators: council_members,
         },
-        sudo: parachain_runtime::SudoConfig { key: root_key },
-        parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
-        collator_selection: parachain_runtime::CollatorSelectionConfig {
+        sudo: pint_runtime::SudoConfig { key: root_key },
+        parachain_info: pint_runtime::ParachainInfoConfig { parachain_id: id },
+        collator_selection: pint_runtime::CollatorSelectionConfig {
             invulnerables: initial_authorities
                 .iter()
                 .cloned()
@@ -195,20 +197,20 @@ fn pint_testnet_genesis(
             candidacy_bond: Zero::zero(),
             ..Default::default()
         },
-        session: parachain_runtime::SessionConfig {
+        session: pint_runtime::SessionConfig {
             keys: initial_authorities
                 .iter()
                 .cloned()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),                                     // account id
-                        acc,                                             // validator id
-                        parachain_runtime::opaque::SessionKeys { aura }, // session keys
+                        acc.clone(),                                // account id
+                        acc,                                        // validator id
+                        pint_runtime::opaque::SessionKeys { aura }, // session keys
                     )
                 })
                 .collect(),
         },
-        tokens: parachain_runtime::TokensConfig {
+        tokens: pint_runtime::TokensConfig {
             // TODO:
             //
             // this config is only for tests for now
@@ -231,7 +233,7 @@ fn pint_testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        remote_asset_manager: parachain_runtime::RemoteAssetManagerConfig {
+        remote_asset_manager: pint_runtime::RemoteAssetManagerConfig {
             staking_configs: vec![(
                 42,
                 StakingConfig {
@@ -240,22 +242,14 @@ fn pint_testnet_genesis(
                     pending_unbond_calls: 42,
                     reward_destination: RewardDestination::Staked,
                     minimum_balance: 0,
-                    weights: StakingWeights {
-                        bond: 1000_u64,
-                        bond_extra: 1000_u64,
-                        unbond: 1000_u64,
-                        withdraw_unbonded: 1000_u64,
-                    },
+                    weights: StakingWeights::polkadot(),
                 },
             )],
             proxy_configs: vec![(
                 42,
                 ProxyConfig {
                     pallet_index: 29,
-                    weights: ProxyWeights {
-                        add_proxy: 1000_u64,
-                        remove_proxy: 1000_u64,
-                    },
+                    weights: ProxyWeights::polkadot(),
                 },
             )],
         },

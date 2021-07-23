@@ -68,6 +68,22 @@ fn admin_can_add_asset() {
 }
 
 #[test]
+fn native_asset_disallowed() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            AssetIndex::add_asset(
+                Origin::signed(ADMIN_ACCOUNT_ID),
+                PINT_ASSET_ID,
+                100,
+                MultiLocation::Null,
+                5
+            ),
+            pallet::Error::<Test>::NativeAssetDisallowed
+        );
+    });
+}
+
+#[test]
 fn admin_can_add_asset_twice_and_units_accumulate() {
     new_test_ext().execute_with(|| {
         assert_ok!(AssetIndex::add_asset(
@@ -164,6 +180,16 @@ fn deposit_only_works_for_added_liquid_assets() {
         assert_noop!(
             AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
             pallet::Error::<Test>::UnsupportedAsset
+        );
+    });
+}
+
+#[test]
+fn deposit_fail_for_native_asset() {
+    new_test_ext().execute_with(|| {
+        assert_noop!(
+            AssetIndex::deposit(Origin::signed(ASHLEY), PINT_ASSET_ID, 1_000),
+            pallet::Error::<Test>::NativeAssetDisallowed
         );
     });
 }
@@ -435,13 +461,32 @@ fn can_withdraw() {
 
         assert!(a_proportional_tokens + b_proportional_tokens <= user_pint);
 
-        // all SAFT holdings are ignored during withdrawal and don't have any effect on the payout
+        // all SAFT holdings are ignored during withdrawal and don't have any effect on
+        // the payout
         assert_ok!(AssetIndex::add_saft(
             &ADMIN_ACCOUNT_ID,
             SAFT_ASSET_ID,
             1_000,
             2_000
         ));
+
+        // try to withdraw all funds, but are locked
+        assert_noop!(
+            AssetIndex::withdraw(
+                Origin::signed(ASHLEY),
+                AssetIndex::index_token_balance(&ASHLEY)
+            ),
+            pallet_balances::Error::<Test>::LiquidityRestrictions
+        );
+
+        // all index token are currently locked
+        assert_eq!(
+            pallet::LockedIndexToken::<Test>::get(&ASHLEY),
+            AssetIndex::index_token_balance(&ASHLEY)
+        );
+
+        // advance the block number so that the lock expires
+        frame_system::Pallet::<Test>::set_block_number(LockupPeriod::get() + 1);
 
         // withdraw all funds
         assert_ok!(AssetIndex::withdraw(
@@ -464,8 +509,7 @@ fn can_withdraw() {
             pending
                 .assets
                 .iter()
-                .filter(|x| x.asset == ASSET_A_ID)
-                .next()
+                .find(|x| x.asset == ASSET_A_ID)
                 .expect("asset should be present"),
             &AssetWithdrawal {
                 asset: ASSET_A_ID,

@@ -13,17 +13,16 @@ codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = 
 serde = { version = "1.0.101", features = ["derive"], optional = true }
 
 # Substrate Dependencies
-frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
-frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false, optional = true }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false, optional = true }
 
 # Polkadot Dependencies
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.7', default-features = false }
-xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.7', default-features = false }
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8', default-features = false }
+xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8', default-features = false }
 
 # PINT dependencies
 pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
-pallet-remote-asset-manager = { path = "../remote-asset-manager", default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
@@ -31,11 +30,13 @@ primitives = { path = "../../primitives/primitives", default-features = false }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 [dev-dependencies]
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
-sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7', default-features = false }
+serde = { version = "1.0.101" }
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.7' }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
@@ -46,7 +47,6 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-remote-asset-manager/std',
     'pallet-price-feed/std',
     'primitives/std',
     'xcm/std',
@@ -57,7 +57,6 @@ std = [
 runtime-benchmarks = [
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
-    'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-chainlink-feed/runtime-benchmarks',
 ]

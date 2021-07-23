@@ -20,7 +20,8 @@ pub mod staking;
 pub struct RuntimeCall<Call> {
     /// The index of the call's pallet within the runtime.
     ///
-    /// This must be equivalent with the `#[codec(index = <pallet_index>)]` annotation.
+    /// This must be equivalent with the `#[codec(index = <pallet_index>)]`
+    /// annotation.
     pub pallet_index: u8,
 
     /// The actual that should be dispatched

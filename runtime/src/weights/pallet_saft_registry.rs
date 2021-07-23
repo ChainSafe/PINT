@@ -41,4 +41,9 @@ impl<T: frame_system::Config> pallet_saft_registry::WeightInfo for WeightInfo<T>
             .saturating_add(T::DbWeight::get().reads(1 as Weight))
             .saturating_add(T::DbWeight::get().writes(1 as Weight))
     }
+    fn convert_to_liquid() -> Weight {
+        (18_000_000 as Weight)
+            .saturating_add(T::DbWeight::get().reads(1 as Weight))
+            .saturating_add(T::DbWeight::get().writes(1 as Weight))
+    }
 }

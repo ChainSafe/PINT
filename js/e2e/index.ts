@@ -3,18 +3,29 @@
  */
 import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
 import { ApiPromise } from "@polkadot/api";
+import { Balance } from "@polkadot/types/interfaces/runtime";
+import BN from "bn.js";
 
 const ASSET_ID_A: number = 42;
+const ASSET_ID_A_UNITS: number = 1;
+const ASSET_ID_A_VALUE: number = 1;
+const ASSET_ID_A_DEPOSIT: BN = new BN(10000);
 const ASSET_ID_B: number = 43;
-const BALANCE_THOUSAND: number = 100000000000;
+const BALANCE_THOUSAND: BN = new BN(1000);
 const VOTING_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
-    const ROCOCO_AND_STATEMINT = api.createType("MultiLocation", {
-        // NOTE:
-        //
-        // The current XCMRouter in PINT only supports X1
-        X1: api.createType("Junction", { Parent: null }),
+    const PINT: Balance = api.createType("Balance", Math.pow(10, 12));
+    const PARENT_LOCATION = api.createType("MultiLocation", {
+        X2: [
+            api.createType("Junction", { Parent: null }),
+            api.createType("Junction", {
+                AccountId32: {
+                    network: "Any",
+                    id: config.alice.address,
+                },
+            }),
+        ],
     });
 
     return [
@@ -23,13 +34,19 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "balances",
             call: "transfer",
-            args: [config.charlie.address, BALANCE_THOUSAND],
+            args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
             post: [
                 {
                     signed: config.alice,
                     pallet: "balances",
                     call: "transfer",
-                    args: [config.dave.address, BALANCE_THOUSAND],
+                    args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
+                },
+                {
+                    signed: config.alice,
+                    pallet: "balances",
+                    call: "transfer",
+                    args: [config.dave.address, PINT.mul(BALANCE_THOUSAND)],
                 },
             ],
         },
@@ -37,20 +54,91 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             signed: config.alice,
             pallet: "assetIndex",
+            call: "setMetadata",
+            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.assetIndex.metadata(ASSET_ID_A)
+                        ).toHuman()
+                    ) ===
+                        JSON.stringify({
+                            name: "PINT_TEST",
+                            symbol: "P",
+                            decimals: "9",
+                        }),
+                    "assetIndex.setMetadata failed"
+                );
+            },
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
             call: "addAsset",
             args: [
                 ASSET_ID_A,
-                1000000,
-                api.createType("AssetAvailability" as any, {
-                    Liquid: ROCOCO_AND_STATEMINT,
-                }),
-                1000000,
+                ASSET_ID_A_UNITS,
+                PARENT_LOCATION,
+                ASSET_ID_A_VALUE,
             ],
             verify: async () => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isSome,
                     "assetIndex.addAsset failed"
+                );
+            },
+        },
+        {
+            shared: async () => {
+                return (await api.query.system.account(config.alice.address))
+                    .data.free;
+            },
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "deposit",
+            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
+
+                // cover weight fee
+                assert(
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
+                    "assetIndex.deposit failed"
+                );
+            },
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "withdraw",
+            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
+            verify: async () => {
+                assert(
+                    ((
+                        await api.query.assetIndex.pendingWithdrawals(
+                            config.alice.address
+                        )
+                    ).toHuman() as any).length === 1,
+                    "assetIndex.withdraw failed"
+                );
+            },
+        },
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "completeWithdraw",
+            args: [],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.pendingWithdrawals(
+                        config.alice.address
+                    )) as any).isNone,
+                    "assetIndex.completeWithdraw failed"
                 );
             },
         },
@@ -143,7 +231,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                             await api.derive.chain.bestNumber()
                         ).toNumber();
                         console.log(`\t | current block: ${currentBlock}`);
-
                         console.log("\t | waiting for the voting peirod...");
                         const end = ((
                             await api.query.committee.votes(hash)
@@ -336,9 +423,22 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
+        /* asset-index */
+        {
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "removeAsset",
+            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isNone,
+                    "assetIndex.addAsset failed"
+                );
+            },
+        },
     ];
 };
-
 // main
 (async () => {
     await Runner.run(TESTS);

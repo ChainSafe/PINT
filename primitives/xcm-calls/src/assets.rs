@@ -12,7 +12,8 @@ use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 /// The index of `pallet_assets` in the statemint runtime
 pub const STATEMINT_PALLET_ASSETS_INDEX: u8 = 50u8;
 
-/// Provides encoder types to encode the associated types of the  `pallet_assets::Config` trait depending on the configured Context.
+/// Provides encoder types to encode the associated types of the
+/// `pallet_assets::Config` trait depending on the configured Context.
 pub trait AssetsCallEncoder<AssetId, Source, Balance>: PalletCallEncoder {
     /// Encodes the `<pallet_assets::Config>::AssetId` depending on the context
     type CompactAssetIdEncoder: EncodeWith<AssetId, Self::Context>;
@@ -80,14 +81,17 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     ///
     /// Mint assets of a particular class.
     ///
-    /// The origin must be Signed and the sender must be the Issuer of the asset id.
+    /// The origin must be Signed and the sender must be the Issuer of the asset
+    /// id.
     // #[codec(index = 3)]
     Mint(AssetParams<AssetId, Source, Balance>),
     /// The [`burn`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.burn) extrinsic.
     ///
-    /// Reduce the balance of who by as much as possible up to amount assets of id.
+    /// Reduce the balance of who by as much as possible up to amount assets of
+    /// id.
     ///
-    /// Origin must be Signed and the sender should be the Manager of the asset id.
+    /// Origin must be Signed and the sender should be the Manager of the asset
+    /// id.
     // #[codec(index = 4)]
     Burn(AssetParams<AssetId, Source, Balance>),
     /// The [`transfer`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.transfer) extrinsic.
@@ -123,20 +127,20 @@ pub enum AssetsCall<AssetId, Source, Balance> {
     ThawAsset(AssetId),
     /// The [`approve_transfer`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.approve_transfer) extrinsic.
     ///
-    /// Approve an amount of asset for transfer by a delegated third-party account.
-    /// \[id, delegate, amount \]
+    /// Approve an amount of asset for transfer by a delegated third-party
+    /// account. \[id, delegate, amount \]
     // #[codec(index = 19)]
     ApproveTransfer(AssetParams<AssetId, Source, Balance>),
     /// The [`cancel_approval`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.cancel_approval) extrinsic.
     ///
-    /// Cancel all of some asset approved for delegated transfer by a third-party account.
-    /// \[id, delegate \]
+    /// Cancel all of some asset approved for delegated transfer by a
+    /// third-party account. \[id, delegate \]
     // #[codec(index = 20)]
     CancelApproval(AssetId, Source),
     /// The [`transfer_approved`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.transfer_approved) extrinsic.
     ///
-    /// Transfer some asset balance from a previously delegated account to some third-party account.
-    /// \[id, owner, destination, amount \]
+    /// Transfer some asset balance from a previously delegated account to some
+    /// third-party account. \[id, owner, destination, amount \]
     // #[codec(index = 22)]
     TransferApproved(AssetId, Source, Source, Balance),
 }

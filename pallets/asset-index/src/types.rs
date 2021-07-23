@@ -23,6 +23,17 @@ use xcm_executor::{
     Assets,
 };
 
+/// Abstraction over the lock of minted index token that are locked up for
+/// `LockupPeriod`
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct IndexTokenLock<BlockNumber, Balance> {
+    /// Locked amount of index token.
+    pub locked: Balance,
+    /// The block when the locked index token can be unlocked.
+    pub end_block: BlockNumber,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Defines the location of an asset
 /// Liquid implies it exists on a chain somewhere in the network and
 /// can be moved around
@@ -45,6 +56,12 @@ impl AssetAvailability {
     /// Whether this asset data represents a SAFT
     pub fn is_saft(&self) -> bool {
         matches!(self, AssetAvailability::Saft)
+    }
+}
+
+impl From<MultiLocation> for AssetAvailability {
+    fn from(location: MultiLocation) -> Self {
+        AssetAvailability::Liquid(location)
     }
 }
 
@@ -105,7 +122,8 @@ impl From<Error> for XcmError {
     }
 }
 
-/// The `TransactAsset` implementation, to handle deposit/withdraw for a `MultiAsset`.
+/// The `TransactAsset` implementation, to handle deposit/withdraw for a
+/// `MultiAsset`.
 #[allow(clippy::type_complexity)]
 pub struct MultiAssetAdapter<
     Balance: AtLeast32BitUnsigned,

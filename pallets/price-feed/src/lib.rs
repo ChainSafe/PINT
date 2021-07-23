@@ -56,9 +56,10 @@ pub mod pallet {
 
         /// The internal oracle that gives access to the asset's price feeds.
         ///
-        /// NOTE: this assumes all the feeds provide data in the same base currency.
-        /// When querying the price of an asset (`quote`/`asset`) from the oracle,
-        /// its price is given by means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
+        /// NOTE: this assumes all the feeds provide data in the same base
+        /// currency. When querying the price of an asset
+        /// (`quote`/`asset`) from the oracle, its price is given by
+        /// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
         type Oracle: FeedOracle<Self>;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -79,7 +80,8 @@ pub mod pallet {
     #[pallet::storage]
     /// (AssetId) -> AssetPricePair
     ///
-    /// This storage stores the initial price pair for quote assets based on `SelfAssetId`
+    /// This storage stores the initial price pair for quote assets based on
+    /// `SelfAssetId`
     ///
     /// * insert: adding a new asset with no price pair been set yet
     pub type InitialPricePairs<T: Config> =
@@ -187,10 +189,11 @@ pub mod pallet {
     pub enum Error<T> {
         /// Thrown if no price feed was found for an asset
         AssetPriceFeedNotFound,
-        /// Thrown when the underlying price feed does not yet contain a valid round.
+        /// Thrown when the underlying price feed does not yet contain a valid
+        /// round.
         InvalidFeedValue,
-        /// Thrown if the calculation of the price ratio fails due to exceeding the
-        /// accuracy of the configured price.
+        /// Thrown if the calculation of the price ratio fails due to exceeding
+        /// the accuracy of the configured price.
         ExceededAccuracy,
     }
 
@@ -203,8 +206,8 @@ pub mod pallet {
             AssetFeeds::<T>::get(asset_id)
         }
 
-        /// Returns the latest value in the feed together with the feed's decimals
-        /// or an error if no feed was found for the given
+        /// Returns the latest value in the feed together with the feed's
+        /// decimals or an error if no feed was found for the given
         /// or the feed doesn't contain any valid round yet.
         fn get_latest_valid_value(
             feed_id: FeedIdFor<T>,
@@ -235,7 +238,8 @@ pub mod pallet {
     where
         FeedValueFor<T>: TryInto<u128>,
     {
-        /// Returns a `AssetPricePair` where `base` is the configured `SelfAssetId`.
+        /// Returns a `AssetPricePair` where `base` is the configured
+        /// `SelfAssetId`.
         fn get_price(quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
             Self::get_price_pair(T::SelfAssetId::get(), quote)
         }
@@ -244,10 +248,15 @@ pub mod pallet {
             base: T::AssetId,
             quote: T::AssetId,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            let base_feed_id =
-                Self::get_asset_feed_id(&base).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
-            let quote_feed_id =
-                Self::get_asset_feed_id(&quote).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
+            let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) = (
+                Self::get_asset_feed_id(&base),
+                Self::get_asset_feed_id(&quote),
+            ) {
+                (b, q)
+            } else {
+                return <InitialPricePairs<T>>::get(&quote)
+                    .ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into());
+            };
 
             let (last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
             let (last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;

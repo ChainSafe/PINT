@@ -1,0 +1,16 @@
+[package]
+authors = ['ChainSafe Systems']
+description = 'PINT proc-macros'
+edition = "2018"
+license = 'LGPL-3.0-only'
+name = "derive"
+repository = 'https://github.com/ChainSafe/PINT/'
+version = "0.0.1"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.27"
+quote = "1.0.9"
+syn = { version = "1.0.73", features = ["full"] }

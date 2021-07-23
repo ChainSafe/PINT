@@ -4,11 +4,8 @@
 //! Xcm support for `pallet_staking` calls
 
 use codec::{Compact, Decode, Encode, Output};
-use frame_support::{
-    sp_std::vec::Vec,
-    weights::{constants::RocksDbWeight, Weight},
-    RuntimeDebug,
-};
+use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
+
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +16,8 @@ use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 /// The index of `pallet_staking` in the polkadot runtime
 pub const POLKADOT_PALLET_STAKING_INDEX: u8 = 7u8;
 
-/// Provides encoder types to encode the associated types of the  `pallet_staking::Config` trait depending on the configured Context.
+/// Provides encoder types to encode the associated types of the
+/// `pallet_staking::Config` trait depending on the configured Context.
 pub trait StakingCallEncoder<Source, Balance, AccountId>: PalletCallEncoder {
     /// Encodes the `<pallet_staking::Config>::Balance` depending on the context
     type CompactBalanceEncoder: EncodeWith<Balance, Self::Context>;
@@ -27,7 +25,8 @@ pub trait StakingCallEncoder<Source, Balance, AccountId>: PalletCallEncoder {
     /// Encodes the `<pallet_staking::Config>::Source` depending on the context
     type SourceEncoder: EncodeWith<Source, Self::Context>;
 
-    /// Encodes the `<pallet_staking::Config>::AccountId` depending on the context
+    /// Encodes the `<pallet_staking::Config>::AccountId` depending on the
+    /// context
     type AccountIdEncoder: EncodeWith<AccountId, Self::Context>;
 }
 
@@ -90,22 +89,26 @@ pub enum StakingCall<Source, Balance, AccountId> {
 
     /// The [`bond_extra`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.bond_extra) extrinsic.
     ///
-    /// The dispatch origin for this call must be _Signed_ by the stash, not the controller.
+    /// The dispatch origin for this call must be _Signed_ by the stash, not the
+    /// controller.
     // #[codec(index = 1)]
     BondExtra(Balance),
     /// The [`unbond`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.unbond) extrinsic.
     ///
-    /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
+    /// The dispatch origin for this call must be _Signed_ by the controller,
+    /// not the stash.
     // #[codec(index = 2)]
     Unbond(Balance),
     /// The [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.withdraw_unbonded) extrinsic.
     ///
-    /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
+    /// The dispatch origin for this call must be _Signed_ by the controller,
+    /// not the stash.
     // #[codec(index = 3)]
     WithdrawUnbonded(u32),
     /// The [`nominate`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.nominate) extrinsic.
     ///
-    /// The dispatch origin for this call must be _Signed_ by the controller, not the stash.
+    /// The dispatch origin for this call must be _Signed_ by the controller,
+    /// not the stash.
     // #[codec(index = 5)]
     Nominate(Vec<Source>),
 }
@@ -158,10 +161,11 @@ pub enum RewardDestination<AccountId> {
 pub struct StakingConfig<AccountId, Balance> {
     /// The index of `pallet_index` within the parachain's runtime
     pub pallet_index: u8,
-    /// The limitation to the number of fund-chunks that can be scheduled to be unlocked via `unbond`.
+    /// The limitation to the number of fund-chunks that can be scheduled to be
+    /// unlocked via `unbond`.
     ///
-    /// If this is reached, the bonded account _must_ first wait until successful call to
-    /// `withdraw_unbonded` to remove some of the chunks.
+    /// If this is reached, the bonded account _must_ first wait until
+    /// successful call to `withdraw_unbonded` to remove some of the chunks.
     pub max_unlocking_chunks: u32,
     /// Counter for the sent `unbond` calls.
     pub pending_unbond_calls: u32,
@@ -171,7 +175,6 @@ pub struct StakingConfig<AccountId, Balance> {
     pub minimum_balance: Balance,
     /// The configured weights for `pallet_staking`
     pub weights: StakingWeights,
-    // TODO add minumum (un)bond  that has to be met for executing XCM (un)bonding calls
 }
 
 /// Represents the bond state of the PINT's sovereign account on a chain
@@ -227,27 +230,4 @@ pub struct StakingWeights {
     pub unbond: Weight,
     /// Weight for `withdraw_unbonded` extrinsic
     pub withdraw_unbonded: Weight,
-}
-
-impl StakingWeights {
-    /// The weights as defined in `pallet_staking` on polkadot
-    // TODO: import pallet_staking weights directly?
-    pub fn polkadot() -> Self {
-        #![allow(clippy::unnecessary_cast)]
-        let weight = RocksDbWeight::get();
-        Self {
-            bond: (75_102_000 as Weight)
-                .saturating_add(weight.reads(5 as Weight))
-                .saturating_add(weight.writes(4 as Weight)),
-            bond_extra: (57_637_000 as Weight)
-                .saturating_add(weight.reads(3 as Weight))
-                .saturating_add(weight.writes(2 as Weight)),
-            unbond: (52_115_000 as Weight)
-                .saturating_add(weight.reads(4 as Weight))
-                .saturating_add(weight.writes(3 as Weight)),
-            withdraw_unbonded: (52_115_000 as Weight)
-                .saturating_add(weight.reads(4 as Weight))
-                .saturating_add(weight.writes(3 as Weight)),
-        }
-    }
 }

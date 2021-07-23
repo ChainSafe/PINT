@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 // Local Runtime Types
-use parachain_runtime::RuntimeApi;
+use pint_runtime::RuntimeApi;
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{
@@ -39,15 +39,15 @@ type Hash = sp_core::H256;
 // Native executor instance.
 native_executor_instance!(
     pub ParachainRuntimeExecutor,
-    parachain_runtime::api::dispatch,
-    parachain_runtime::native_version,
+    pint_runtime::api::dispatch,
+    pint_runtime::native_version,
     frame_benchmarking::benchmarking::HostFunctions,
 );
 
 /// Starts a `ServiceBuilder` for a full service.
 ///
-/// Use this macro if you don't actually need the full service, but just the builder in order to
-/// be able to perform chain operations.
+/// Use this macro if you don't actually need the full service, but just the
+/// builder in order to be able to perform chain operations.
 pub fn new_partial<RuntimeApi, Executor, BIQ>(
     config: &Configuration,
     build_import_queue: BIQ,
@@ -141,9 +141,11 @@ where
     Ok(params)
 }
 
-/// Start a node with the given parachain `Configuration` and relay chain `Configuration`.
+/// Start a node with the given parachain `Configuration` and relay chain
+/// `Configuration`.
 ///
-/// This is the actual implementation that is abstract over the executor and the runtime api.
+/// This is the actual implementation that is abstract over the executor and the
+/// runtime api.
 #[sc_tracing::logging::prefix_logs_with("Parachain")]
 async fn start_node_impl<RuntimeApi, Executor, RB, BIQ, BIC>(
     parachain_config: Configuration,
@@ -436,6 +438,8 @@ pub async fn start_node(
                 slot_duration,
                 // We got around 500ms for proposing
                 block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+                // And a maximum of 750ms if slots are skipped
+                max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
                 telemetry,
             }))
         },
