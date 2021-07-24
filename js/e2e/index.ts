@@ -91,6 +91,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             shared: async () => {
                 return (await api.query.system.account(config.alice.address))
                     .data.free;
@@ -113,6 +114,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
@@ -129,6 +131,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.withdraw"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "completeWithdraw",
@@ -144,6 +147,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* remote-asset-manager*/
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendAddProxy",
@@ -166,6 +170,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendBond",
@@ -214,42 +219,38 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["committee.propose"],
             shared: async () => {
-                await Runner.waitBlock(1);
-                const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                return new Promise(async (resolve) => {
+                    await Runner.waitBlock(1);
+                    const hash = ((await api.query.committee.activeProposals()) as any)[0];
 
-                return hash;
+                    const currentBlock = (
+                        await api.derive.chain.bestNumber()
+                    ).toNumber();
+                    console.log(`\t | current block: ${currentBlock}`);
+                    console.log("\t | waiting for the voting peirod...");
+                    const end = ((
+                        await api.query.committee.votes(hash)
+                    ).toJSON() as any).end as number;
+
+                    await Runner.waitBlock(
+                        end - currentBlock > VOTING_PERIOD
+                            ? end - currentBlock - VOTING_PERIOD
+                            : 0
+                    );
+                    console.log(
+                        `\t | current block: ${await api.derive.chain.bestNumber()}`
+                    );
+
+                    resolve(hash);
+                });
             },
             inBlock: true,
             signed: config.alice,
             pallet: "committee",
             call: "vote",
-            args: [
-                async (hash: string) => {
-                    return new Promise(async (resolve) => {
-                        const currentBlock = (
-                            await api.derive.chain.bestNumber()
-                        ).toNumber();
-                        console.log(`\t | current block: ${currentBlock}`);
-                        console.log("\t | waiting for the voting peirod...");
-                        const end = ((
-                            await api.query.committee.votes(hash)
-                        ).toJSON() as any).end as number;
-
-                        await Runner.waitBlock(
-                            end - currentBlock > VOTING_PERIOD
-                                ? end - currentBlock - VOTING_PERIOD
-                                : 0
-                        );
-                        console.log(
-                            `\t | current block: ${await api.derive.chain.bestNumber()}`
-                        );
-
-                        resolve(hash);
-                    });
-                },
-                api.createType("Vote" as any),
-            ],
+            args: [(hash: string) => hash, api.createType("Vote" as any)],
             // Post calls
             with: [
                 async (hash: string): Promise<Extrinsic> => {
@@ -358,6 +359,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
+            required: ["chainlinkFeed.createFeed"],
             pallet: "priceFeed",
             call: "trackAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -373,6 +375,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["priceFeed.trackAssetPriceFeed"],
             pallet: "priceFeed",
             call: "untrackAssetPriceFeed",
             args: [ASSET_ID_A],
@@ -399,6 +402,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["saftRegistry.addSaft"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "reportNav",
@@ -425,6 +429,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* asset-index */
         {
+            required: ["saftRegistry.reportNav"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "removeAsset",

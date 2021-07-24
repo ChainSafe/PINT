@@ -217,8 +217,10 @@ export default class Runner implements Config {
             });
             if (e.with) {
                 for (const w of e.with) {
+                    const ex = typeof w === "function" ? await w(e.shared) : w;
+                    console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
                     queue.push({
-                        ex: typeof w === "function" ? await w(e.shared) : w,
+                        ex,
                         shared: e.shared,
                     });
                 }
@@ -234,15 +236,15 @@ export default class Runner implements Config {
             this.finished.push(String(qe.ex.id));
             if (qe.ex.signed && qe.ex.signed !== this.pair) {
                 // Run custom extrinsic directory
-                await this.runTx(qe.ex);
-                if (qe.ex.verify) {
-                    await qe.ex.verify(qe.shared);
-                }
+                // console.log("---------- RUN TRANSACTIONs ------------");
+                // await this.runTx(qe.ex);
+            } else {
+                txs.push(this.buildTx(qe.ex));
             }
-            txs.push(await this.buildTx(qe.ex));
         }
 
         // 4. check result
+        console.log("---------- START BATCH ------------");
         const res = await this.batch(txs);
         if (res && res.unsub) {
             (await res.unsub)();
@@ -255,11 +257,15 @@ export default class Runner implements Config {
      * @returns void
      */
     public async batch(txs: Transaction[]): Promise<TxResult> {
+        console.log("start batch...");
         return new Promise((resolve, reject) => {
             const unsub: any = this.api.tx.utility
-                .batch(txs as any)
-                .signAndSend(this.pair, {}, (sr: ISubmittableResult) =>
-                    this.checkError(false, unsub, sr, resolve, reject)
+                .batchAll(txs as any)
+                .signAndSend(
+                    this.pair,
+                    {},
+                    async (sr: ISubmittableResult) =>
+                        await this.checkError(false, unsub, sr, resolve, reject)
                 );
         });
     }
@@ -291,16 +297,17 @@ export default class Runner implements Config {
      * @param {ex} Extrinsic
      * @returns {Transaction}
      */
-    public async buildTx(ex: Extrinsic): Promise<Transaction> {
+    public buildTx(ex: Extrinsic): Transaction {
         // flush arguments
         const args: any[] = [];
         for (const arg of ex.args) {
             if (typeof arg === "function") {
-                args.push(await arg(ex.shared));
+                args.push(arg(ex.shared));
             } else {
                 args.push(arg);
             }
         }
+        console.log(`\t | extrinsic: ${ex.pallet}.${ex.call}`);
         console.log(`\t | arguments: ${JSON.stringify(args)}`);
 
         // construct tx
@@ -318,7 +325,7 @@ export default class Runner implements Config {
      * @param {ex} Extrinsic
      */
     public async runTx(ex: Extrinsic): Promise<void | string> {
-        const tx = await this.buildTx(ex);
+        const tx = this.buildTx(ex);
 
         // get res
         const res = (await this.sendTx(tx, ex.signed, ex.inBlock).catch(
@@ -343,6 +350,7 @@ export default class Runner implements Config {
 
         // execute verify script
         if (ex.verify) {
+            console.log(`\t | verify: ${ex.pallet}.${ex.call}`);
             await ex.verify(ex.shared);
         }
 
@@ -393,6 +401,8 @@ export default class Runner implements Config {
     ) {
         const status = sr.status;
         const events = sr.events;
+
+        console.log(`\t | - status: ${status.type}`);
 
         if (status.isInBlock) {
             if (inBlock) {
