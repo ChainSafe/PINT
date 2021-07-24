@@ -244,7 +244,6 @@ export default class Runner implements Config {
         }
 
         // 4. check result
-        console.log("---------- START BATCH ------------");
         const res = await this.batch(txs);
         if (res && res.unsub) {
             (await res.unsub)();
@@ -257,7 +256,6 @@ export default class Runner implements Config {
      * @returns void
      */
     public async batch(txs: Transaction[]): Promise<TxResult> {
-        console.log("start batch...");
         return new Promise((resolve, reject) => {
             const unsub: any = this.api.tx.utility
                 .batchAll(txs as any)
@@ -277,7 +275,7 @@ export default class Runner implements Config {
      */
     public async runTxs(): Promise<void> {
         while (this.exs.length > 0) {
-            await this.queueTx();
+            await this.queueTx().catch(console.log);
         }
 
         if (this.errors.length > 0) {
@@ -377,8 +375,8 @@ export default class Runner implements Config {
                 {
                     nonce: this.nonce,
                 },
-                (sr: ISubmittableResult) =>
-                    this.checkError(inBlock, unsub, sr, resolve, reject)
+                async (sr: ISubmittableResult) =>
+                    await this.checkError(inBlock, unsub, sr, resolve, reject)
             );
         });
     }
@@ -402,8 +400,6 @@ export default class Runner implements Config {
         const status = sr.status;
         const events = sr.events;
 
-        console.log(`\t | - status: ${status.type}`);
-
         if (status.isInBlock) {
             if (inBlock) {
                 resolve({
@@ -414,7 +410,8 @@ export default class Runner implements Config {
 
             if (events) {
                 events.forEach((value: EventRecord): void => {
-                    if ((value.event.data[0] as DispatchError).isModule) {
+                    const maybeError = value.event.data[0];
+                    if (maybeError && (maybeError as DispatchError).isModule) {
                         const error = this.api.registry.findMetaError(
                             (value.event
                                 .data[0] as DispatchError).asModule.toU8a()

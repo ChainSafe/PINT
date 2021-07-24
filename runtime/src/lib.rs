@@ -264,6 +264,12 @@ impl pallet_sudo::Config for Runtime {
     type Call = Call;
 }
 
+impl pallet_utility::Config for Runtime {
+    type Event = Event;
+    type Call = Call;
+    type WeightInfo = pallet_utility::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -789,6 +795,7 @@ construct_runtime!(
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
         TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
         Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+        Utility: pallet_utility::{Pallet, Call, Event} = 5,
 
         // Parachain
         ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 20,
