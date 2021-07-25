@@ -44,7 +44,6 @@ export default class Runner implements Config {
     public exs: Extrinsic[];
     public errors: string[];
     public finished: string[];
-    public queue: Extrinsic[];
     public nonce: number;
 
     /**
@@ -167,7 +166,6 @@ export default class Runner implements Config {
         this.errors = [];
         this.nonce = -1;
         this.finished = [];
-        this.queue = [];
     }
 
     /**
@@ -177,7 +175,7 @@ export default class Runner implements Config {
      */
     public async runTxs(): Promise<void> {
         while (this.exs.length > 0) {
-            await this.queueTx().catch(console.log);
+            await this.queue().catch(console.error);
         }
 
         if (this.errors.length > 0) {
@@ -196,7 +194,7 @@ export default class Runner implements Config {
      *
      * @returns {Promise<void>}
      */
-    public async queueTx(): Promise<void> {
+    public async queue(): Promise<void> {
         const runner = this;
         const queue: Extrinsic[] = [];
         for (const e of this.exs) {
@@ -236,10 +234,19 @@ export default class Runner implements Config {
         }
 
         // 3. register transactions
-        for (const ex of queue) {
-            this.nonce += 1;
-            ex.run(this.errors, this.nonce, this.exs);
-            await Runner.waitBlock(1);
-        }
+        await this.batch(queue);
+
+        // 4. drop executed exs
+        this.nonce += queue.length;
+        this.exs = this.exs.filter((e) => !queue.includes(e));
+    }
+
+    /**
+     * Batch extrinsics
+     */
+    public async batch(exs: Extrinsic[]): Promise<any> {
+        return Promise.all(
+            exs.map((e, i) => e.run(this.errors, this.nonce + i))
+        );
     }
 }

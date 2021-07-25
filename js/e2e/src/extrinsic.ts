@@ -25,7 +25,6 @@ export class Extrinsic {
     pair: KeyringPair;
     // extrinsic id
     id?: string;
-    inBlock?: boolean;
     // use signed origin
     signed?: KeyringPair;
     pallet: string;
@@ -42,7 +41,6 @@ export class Extrinsic {
         this.api = api;
         this.pair = pair;
         this.id = e.id;
-        this.inBlock = e.inBlock;
         this.signed = e.signed;
         this.pallet = e.pallet;
         this.call = e.call;
@@ -91,15 +89,14 @@ export class Extrinsic {
     private async send(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
         nonce: number,
-        signed = this.pair,
-        inBlock = false
+        signed = this.pair
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             const unsub: any = se.signAndSend(
                 signed,
                 { nonce },
                 async (sr: ISubmittableResult) =>
-                    await this.checkError(inBlock, unsub, sr, resolve, reject)
+                    await this.checkError(unsub, sr, resolve, reject)
             );
         });
     }
@@ -114,7 +111,6 @@ export class Extrinsic {
      * @param {(reason?: any) => void} reject
      */
     private async checkError(
-        inBlock: boolean,
         unsub: Promise<() => void>,
         sr: ISubmittableResult,
         resolve: (value: TxResult | PromiseLike<TxResult>) => void,
@@ -123,16 +119,7 @@ export class Extrinsic {
         const status = sr.status;
         const events = sr.events;
 
-        console.log(`\t | - ${this.id} status: ${status.type}`);
-
         if (status.isInBlock) {
-            if (inBlock) {
-                resolve({
-                    unsub,
-                    blockHash: status.asInBlock.toHex().toString(),
-                });
-            }
-
             if (events) {
                 events.forEach((value: EventRecord): void => {
                     const maybeError = value.event.data[0];
@@ -166,33 +153,23 @@ export class Extrinsic {
      *
      * @param {ex} Extrinsic
      */
-    public async run(
-        errors: string[],
-        nonce: number,
-        exs: Extrinsic[]
-    ): Promise<void | string> {
+    public async run(errors: string[], nonce: number): Promise<void | string> {
         const tx = this.build();
 
         // get res
-        const res = (await this.send(
-            tx,
-            !this.signed || this.signed == this.pair ? nonce : -1,
-            this.signed,
-            this.inBlock
-        ).catch((err: any) => {
-            errors.push(
-                `====> Error: ${this.pallet}.${this.call} failed: ${err}`
-            );
-        })) as TxResult;
+        const res = (await this.send(tx, nonce, this.signed).catch(
+            (err: any) => {
+                errors.push(
+                    `====> Error: ${this.pallet}.${this.call} failed: ${err}`
+                );
+            }
+        )) as TxResult;
 
         // thisecute verify script
         if (this.verify) {
             console.log(`\t | verify: ${this.pallet}.${this.call}`);
             await this.verify(this.shared);
         }
-
-        // reset exs
-        exs = exs.filter((i) => i !== this);
 
         if (res && res.unsub) {
             (await res.unsub)();

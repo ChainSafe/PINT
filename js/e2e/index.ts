@@ -38,7 +38,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     return [
         /* balance */
         {
-            inBlock: false,
             signed: config.alice,
             pallet: "balances",
             call: "transfer",
@@ -248,7 +247,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     resolve(hash);
                 });
             },
-            inBlock: true,
             signed: config.alice,
             pallet: "committee",
             call: "vote",
@@ -257,7 +255,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             with: [
                 async (hash: string): Promise<IExtrinsic> => {
                     return {
-                        inBlock: true,
                         signed: config.bob,
                         pallet: "committee",
                         call: "vote",
@@ -266,7 +263,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 },
                 async (hash: string): Promise<IExtrinsic> => {
                     return {
-                        inBlock: true,
                         signed: config.charlie,
                         pallet: "committee",
                         call: "vote",

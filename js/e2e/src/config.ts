@@ -31,7 +31,6 @@ export interface ExtrinsicConfig {
 export interface IExtrinsic {
     // extrinsic id
     id?: string;
-    inBlock?: boolean;
     // use signed origin
     signed?: KeyringPair;
     pallet: string;
