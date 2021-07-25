@@ -166,13 +166,17 @@ export class Extrinsic {
      *
      * @param {ex} Extrinsic
      */
-    public async run(errors: string[], nonce: number): Promise<void | string> {
+    public async run(
+        errors: string[],
+        nonce: number,
+        exs: Extrinsic[]
+    ): Promise<void | string> {
         const tx = this.build();
 
         // get res
         const res = (await this.send(
             tx,
-            this.signed && this.signed != this.pair ? nonce : -1,
+            !this.signed || this.signed == this.pair ? nonce : -1,
             this.signed,
             this.inBlock
         ).catch((err: any) => {
@@ -186,6 +190,9 @@ export class Extrinsic {
             console.log(`\t | verify: ${this.pallet}.${this.call}`);
             await this.verify(this.shared);
         }
+
+        // reset exs
+        exs = exs.filter((i) => i !== this);
 
         if (res && res.unsub) {
             (await res.unsub)();

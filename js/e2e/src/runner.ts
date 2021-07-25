@@ -233,15 +233,12 @@ export default class Runner implements Config {
                     queue.push(new Extrinsic(ex, this.api, this.pair));
                 }
             }
-
-            // reset exs
-            this.exs = this.exs.filter((i) => i !== e);
         }
 
         // 3. register transactions
         for (const ex of queue) {
             this.nonce += 1;
-            ex.run(this.errors, this.nonce);
+            ex.run(this.errors, this.nonce, this.exs);
             await Runner.waitBlock(1);
         }
     }
