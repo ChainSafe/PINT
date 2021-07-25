@@ -363,11 +363,11 @@ export default class Runner implements Config {
         inBlock = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
-            this.nonce += 1;
+            // this.nonce += 1;
             const unsub: any = se.signAndSend(
                 signed,
                 {
-                    nonce: this.nonce,
+                    // nonce: this.nonce,
                 },
                 async (sr: ISubmittableResult) =>
                     await this.checkError(inBlock, unsub, sr, resolve, reject)

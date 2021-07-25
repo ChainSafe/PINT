@@ -31,6 +31,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     return [
         /* balance */
         {
+            inBlock: false,
             signed: config.alice,
             pallet: "balances",
             call: "transfer",
