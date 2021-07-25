@@ -90,13 +90,14 @@ export class Extrinsic {
      */
     private async send(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
+        nonce: number,
         signed = this.pair,
         inBlock = false
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             const unsub: any = se.signAndSend(
                 signed,
-                {},
+                { nonce },
                 async (sr: ISubmittableResult) =>
                     await this.checkError(inBlock, unsub, sr, resolve, reject)
             );
@@ -122,7 +123,7 @@ export class Extrinsic {
         const status = sr.status;
         const events = sr.events;
 
-        // console.log(`\t | - status: ${status.type}`);
+        console.log(`\t | - ${this.id} status: ${status.type}`);
 
         if (status.isInBlock) {
             if (inBlock) {
@@ -165,29 +166,20 @@ export class Extrinsic {
      *
      * @param {ex} Extrinsic
      */
-    public async run(errors: string[]): Promise<void | string> {
+    public async run(errors: string[], nonce: number): Promise<void | string> {
         const tx = this.build();
 
         // get res
-        const res = (await this.send(tx, this.signed, this.inBlock).catch(
-            (err: any) => {
-                errors.push(
-                    `====> Error: ${this.pallet}.${this.call} failed: ${err}`
-                );
-            }
-        )) as TxResult;
-
-        // run post calls
-        if (this.with) {
-            for (const post of this.with) {
-                let postThis: IExtrinsic = post as IExtrinsic;
-                if (typeof post === "function") {
-                    postThis = await post(this.shared);
-                }
-
-                await new Extrinsic(postThis, this.api, this.pair).run(errors);
-            }
-        }
+        const res = (await this.send(
+            tx,
+            this.signed && this.signed != this.pair ? nonce : -1,
+            this.signed,
+            this.inBlock
+        ).catch((err: any) => {
+            errors.push(
+                `====> Error: ${this.pallet}.${this.call} failed: ${err}`
+            );
+        })) as TxResult;
 
         // thisecute verify script
         if (this.verify) {

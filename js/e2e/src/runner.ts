@@ -171,6 +171,27 @@ export default class Runner implements Config {
     }
 
     /**
+     * Execute transactions
+     *
+     * @returns void
+     */
+    public async runTxs(): Promise<void> {
+        while (this.exs.length > 0) {
+            await this.queueTx().catch(console.log);
+        }
+
+        if (this.errors.length > 0) {
+            console.log(`Failed tests: ${this.errors.length}`);
+            for (const error of this.errors) {
+                console.log(error);
+            }
+            process.exit(1);
+        }
+        console.log("COMPLETE TESTS!");
+        process.exit(0);
+    }
+
+    /**
      * queue transactions
      *
      * @returns {Promise<void>}
@@ -204,7 +225,7 @@ export default class Runner implements Config {
             }
 
             // 2. Pend transactions
-            queue.push(new Extrinsic(e, this.api, this.pair));
+            queue.push(e);
             if (e.with) {
                 for (const w of e.with) {
                     const ex = typeof w === "function" ? await w(e.shared) : w;
@@ -219,29 +240,9 @@ export default class Runner implements Config {
 
         // 3. register transactions
         for (const ex of queue) {
-            ex.run(this.errors);
+            this.nonce += 1;
+            ex.run(this.errors, this.nonce);
             await Runner.waitBlock(1);
         }
-    }
-
-    /**
-     * Execute transactions
-     *
-     * @returns void
-     */
-    public async runTxs(): Promise<void> {
-        while (this.exs.length > 0) {
-            await this.queueTx().catch(console.log);
-        }
-
-        if (this.errors.length > 0) {
-            console.log(`Failed tests: ${this.errors.length}`);
-            for (const error of this.errors) {
-                console.log(error);
-            }
-            process.exit(1);
-        }
-        console.log("COMPLETE TESTS!");
-        process.exit(0);
     }
 }
