@@ -214,9 +214,8 @@ export default class Runner implements Config {
             }
 
             // 1. Build shared data
-            console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
             if (typeof e.shared === "function") {
-                e.shared = await e.shared();
+                e.shared = await e.shared.call(this);
             }
 
             // 2. Pend transactions
@@ -224,7 +223,6 @@ export default class Runner implements Config {
             if (e.with) {
                 for (const w of e.with) {
                     const ex = typeof w === "function" ? await w(e.shared) : w;
-                    console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
                     queue.push(new Extrinsic(ex, this.api, this.pair));
                 }
             }

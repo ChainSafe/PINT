@@ -156,6 +156,9 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      */
     public async run(errors: string[], nonce: number): Promise<void | string> {
+        console.log(
+            `-> queue extrinsic ${nonce}: ${this.pallet}.${this.call}...`
+        );
         const tx = this.build();
 
         // get res

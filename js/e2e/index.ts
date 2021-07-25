@@ -242,7 +242,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     console.log(
                         `\t | waiting for the voting peirod (around ${Math.floor(
                             (needsToWait * 12) / 60
-                        )}mins)...`
+                        )} mins)...`
                     );
 
                     await Runner.waitBlock(needsToWait);
