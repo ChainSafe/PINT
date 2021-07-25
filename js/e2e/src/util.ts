@@ -1,7 +1,7 @@
 /**
  * Utils
  */
-import { Extrinsic } from "./config";
+import { IExtrinsic } from "./config";
 
 export function assert(r: boolean, msg: string): string | void {
     if (!r) {
@@ -12,18 +12,14 @@ export function assert(r: boolean, msg: string): string | void {
 /**
  * Expand Id of extrinsic
  */
-export function expandId(e: Extrinsic): Extrinsic {
+export function expandId(e: IExtrinsic): IExtrinsic {
     if (!e.id) e.id = `${e.pallet}.${e.call}`;
 
-    for (const r in e.required) {
-        if (typeof r !== "string" && typeof r !== "function") {
-            expandId(r);
-        }
-    }
-
-    for (const r in e.with) {
-        if (typeof r !== "string" && typeof r !== "function") {
-            expandId(r);
+    if (e.with) {
+        for (const r of e.with) {
+            if (typeof r !== "function") {
+                expandId(r);
+            }
         }
     }
 

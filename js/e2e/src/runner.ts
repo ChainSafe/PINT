@@ -1,34 +1,22 @@
 /**
  * Runner extensions
  */
-import { ISubmittableResult } from "@polkadot/types/types";
-import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
-import { Config, Extrinsic, ExtrinsicConfig, QueueItem } from "./config";
+import { Config, ExtrinsicConfig } from "./config";
+import { Extrinsic } from "./extrinsic";
 import { launch } from "./launch";
 import { ChildProcess } from "child_process";
-// import { cryptoWaitReady } from "@polkadot/util-crypto";
-import { SubmittableExtrinsic } from "@polkadot/api/types";
 import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise, config: ExtrinsicConfig) => Extrinsic[];
 
-// runTx Result
-interface TxResult {
-    unsub: Promise<() => void>;
-    blockHash: string;
-}
-
 // Message of launching complete
 export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
-
-// Substrate transaction
-export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
 
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
@@ -56,7 +44,7 @@ export default class Runner implements Config {
     public exs: Extrinsic[];
     public errors: string[];
     public finished: string[];
-    public queue: QueueItem[];
+    public queue: Extrinsic[];
     public nonce: number;
 
     /**
@@ -177,14 +165,19 @@ export default class Runner implements Config {
         this.pair = config.pair;
         this.exs = config.exs;
         this.errors = [];
-        this.nonce = 0;
+        this.nonce = -1;
         this.finished = [];
         this.queue = [];
     }
 
+    /**
+     * queue transactions
+     *
+     * @returns {Promise<void>}
+     */
     public async queueTx(): Promise<void> {
         const runner = this;
-        const queue: QueueItem[] = [];
+        const queue: Extrinsic[] = [];
         for (const e of this.exs) {
             // check if executed
             if (runner.finished.includes(String(e.id))) {
@@ -205,24 +198,18 @@ export default class Runner implements Config {
             }
 
             // 1. Build shared data
-            // console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
+            console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
             if (typeof e.shared === "function") {
                 e.shared = await e.shared();
             }
 
             // 2. Pend transactions
-            queue.push({
-                ex: e,
-                shared: e.shared,
-            });
+            queue.push(new Extrinsic(e, this.api, this.pair));
             if (e.with) {
                 for (const w of e.with) {
                     const ex = typeof w === "function" ? await w(e.shared) : w;
-                    // console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
-                    queue.push({
-                        ex,
-                        shared: e.shared,
-                    });
+                    console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
+                    queue.push(new Extrinsic(ex, this.api, this.pair));
                 }
             }
 
@@ -231,34 +218,10 @@ export default class Runner implements Config {
         }
 
         // 3. register transactions
-        // const txs = [];
-        for (const qe of queue) {
-            await this.runTx(qe.ex);
+        for (const ex of queue) {
+            ex.run(this.errors);
+            await Runner.waitBlock(1);
         }
-
-        // // 4. check result
-        // const res = await this.batch(txs);
-        // if (res && res.unsub) {
-        //     (await res.unsub)();
-        // }
-    }
-
-    /**
-     * Batch extrinsics in queue
-     *
-     * @returns void
-     */
-    public async batch(txs: Transaction[]): Promise<TxResult> {
-        return new Promise((resolve, reject) => {
-            const unsub: any = this.api.tx.utility
-                .batchAll(txs as any)
-                .signAndSend(
-                    this.pair,
-                    {},
-                    async (sr: ISubmittableResult) =>
-                        await this.checkError(false, unsub, sr, resolve, reject)
-                );
-        });
     }
 
     /**
@@ -280,155 +243,5 @@ export default class Runner implements Config {
         }
         console.log("COMPLETE TESTS!");
         process.exit(0);
-    }
-
-    /**
-     * Build transaction from extrinsic
-     *
-     * @param {ex} Extrinsic
-     * @returns {Transaction}
-     */
-    public buildTx(ex: Extrinsic): Transaction {
-        // flush arguments
-        const args: any[] = [];
-        for (const arg of ex.args) {
-            if (typeof arg === "function") {
-                args.push(arg(ex.shared));
-            } else {
-                args.push(arg);
-            }
-        }
-        console.log(`\t | extrinsic: ${ex.pallet}.${ex.call}`);
-        console.log(`\t | arguments: ${JSON.stringify(args)}`);
-
-        // construct tx
-        let tx = this.api.tx[ex.pallet][ex.call](...args);
-        if (!ex.signed) {
-            console.log("\t | use sudo");
-            tx = this.api.tx.sudo.sudo(tx);
-        }
-
-        return tx;
-    }
-
-    /**
-     * Run Extrinsic
-     *
-     * @param {ex} Extrinsic
-     */
-    public async runTx(ex: Extrinsic): Promise<void | string> {
-        const tx = this.buildTx(ex);
-
-        // get res
-        const res = (await this.sendTx(tx, ex.signed, ex.inBlock).catch(
-            (err: any) => {
-                this.errors.push(
-                    `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`
-                );
-            }
-        )) as TxResult;
-
-        // run post calls
-        if (ex.with) {
-            for (const post of ex.with) {
-                let postEx: Extrinsic = post as Extrinsic;
-                if (typeof post === "function") {
-                    postEx = await post(ex.shared);
-                }
-
-                await this.runTx(postEx);
-            }
-        }
-
-        // execute verify script
-        if (ex.verify) {
-            console.log(`\t | verify: ${ex.pallet}.${ex.call}`);
-            await ex.verify(ex.shared);
-        }
-
-        if (res && res.unsub) {
-            (await res.unsub)();
-        }
-    }
-
-    /**
-     * Parse transaction errors
-     *
-     * @param {ISubmittableResult} sr
-     * @returns {Promise<T>}
-     */
-    private async sendTx(
-        se: SubmittableExtrinsic<"promise", ISubmittableResult>,
-        signed = this.pair,
-        inBlock = false
-    ): Promise<TxResult> {
-        return new Promise((resolve, reject) => {
-            // this.nonce += 1;
-            const unsub: any = se.signAndSend(
-                signed,
-                {
-                    // nonce: this.nonce,
-                },
-                async (sr: ISubmittableResult) =>
-                    await this.checkError(inBlock, unsub, sr, resolve, reject)
-            );
-        });
-    }
-
-    /**
-     * Check and throw transaction errors
-     *
-     * @param {boolean} inblock
-     * @param {Promise<() => void>} unsub
-     * @param {ISubmittableResult} sr
-     * @param {(value: TxResult | PromiseLike<TxResult>) => void} resolve
-     * @param {(reason?: any) => void} reject
-     */
-    private async checkError(
-        inBlock: boolean,
-        unsub: Promise<() => void>,
-        sr: ISubmittableResult,
-        resolve: (value: TxResult | PromiseLike<TxResult>) => void,
-        reject: (reason?: any) => void
-    ) {
-        const status = sr.status;
-        const events = sr.events;
-
-        console.log(`\t | - status: ${status.type}`);
-
-        if (status.isInBlock) {
-            if (inBlock) {
-                resolve({
-                    unsub,
-                    blockHash: status.asInBlock.toHex().toString(),
-                });
-            }
-
-            if (events) {
-                events.forEach((value: EventRecord): void => {
-                    const maybeError = value.event.data[0];
-                    if (maybeError && (maybeError as DispatchError).isModule) {
-                        const error = this.api.registry.findMetaError(
-                            (value.event
-                                .data[0] as DispatchError).asModule.toU8a()
-                        );
-                        reject(
-                            `${error.section}.${error.method}: ${error.documentation}`
-                        );
-                    }
-                });
-            }
-        } else if (status.isInvalid) {
-            reject("Invalid Extrinsic");
-        } else if (status.isRetracted) {
-            reject("Extrinsic Retracted");
-        } else if (status.isUsurped) {
-            reject("Extrinsic Usupred");
-        } else if (status.isFinalized) {
-            resolve({
-                unsub,
-                blockHash: status.asFinalized.toHex().toString(),
-            });
-        }
     }
 }

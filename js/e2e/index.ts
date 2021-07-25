@@ -1,7 +1,14 @@
 /**
  * E2E tests for PINT
  */
-import { assert, expandId, Runner, Extrinsic, ExtrinsicConfig } from "./src";
+import {
+    assert,
+    Runner,
+    expandId,
+    Extrinsic,
+    ExtrinsicConfig,
+    IExtrinsic,
+} from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
 import BN from "bn.js";
@@ -37,12 +44,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             call: "transfer",
             args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
             with: [
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-                },
                 {
                     signed: config.alice,
                     pallet: "balances",
@@ -254,7 +255,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [(hash: string) => hash, api.createType("Vote" as any)],
             // Post calls
             with: [
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
                         inBlock: true,
                         signed: config.bob,
@@ -263,7 +264,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
                         inBlock: true,
                         signed: config.charlie,
@@ -272,7 +273,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
                         signed: config.dave,
                         pallet: "committee",
@@ -280,7 +281,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
                         signed: config.alice,
                         pallet: "committee",
@@ -443,7 +444,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-    ].map(expandId);
+    ].map((e) => new Extrinsic(expandId(e), api, config.alice));
 };
 
 // main
