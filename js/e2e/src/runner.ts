@@ -198,17 +198,14 @@ export default class Runner implements Config {
         const runner = this;
         const queue: Extrinsic[] = [];
         for (const e of this.exs) {
-            // check if executed
-            if (runner.finished.includes(String(e.id))) {
-                continue;
-            }
-
             // 0. check if required ex with ids has finished
             let requiredFinished = true;
-            for (const r in e.required) {
-                if (!this.finished.includes(r)) {
-                    requiredFinished = false;
-                    break;
+            if (e.required) {
+                for (const r of e.required) {
+                    if (this.exs.map((e) => e.id).includes(r)) {
+                        requiredFinished = false;
+                        break;
+                    }
                 }
             }
 
@@ -234,6 +231,7 @@ export default class Runner implements Config {
         }
 
         // 3. register transactions
+        this.nonce += 1;
         await this.batch(queue);
 
         // 4. drop executed exs

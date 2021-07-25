@@ -119,6 +119,8 @@ export class Extrinsic {
         const status = sr.status;
         const events = sr.events;
 
+        console.log(`\t | - ${this.id} status: ${status.type}`);
+
         if (status.isInBlock) {
             if (events) {
                 events.forEach((value: EventRecord): void => {
