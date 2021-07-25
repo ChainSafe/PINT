@@ -8,6 +8,7 @@ import {
     Extrinsic,
     ExtrinsicConfig,
     IExtrinsic,
+    waitBlock,
 } from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
@@ -223,7 +224,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             required: ["committee.propose"],
             shared: async () => {
                 return new Promise(async (resolve) => {
-                    await Runner.waitBlock(1);
+                    await waitBlock(1);
                     const hash = ((await api.query.committee.activeProposals()) as any)[0];
 
                     const currentBlock = (
@@ -242,10 +243,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     console.log(
                         `\t | waiting for the voting peirod (around ${Math.floor(
                             (needsToWait * 12) / 60
-                        )}mins)...`
+                        )} mins)...`
                     );
 
-                    await Runner.waitBlock(needsToWait);
+                    (this as Extrinsic).wait = needsToWait;
                     resolve(hash);
                 });
             },

@@ -7,6 +7,7 @@ import { ISubmittableResult } from "@polkadot/types/types";
 import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
 import { ApiPromise } from "@polkadot/api";
+import { waitBlock } from "./util";
 
 // Substrate transaction
 export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
@@ -32,6 +33,7 @@ export class Extrinsic {
     args: any[];
     shared?: () => Promise<any>;
     verify?: (shared?: any) => Promise<void>;
+    wait?: number;
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
@@ -57,7 +59,10 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      * @returns {Transaction}
      */
-    public build(): Transaction {
+    public async build(): Promise<Transaction> {
+        // build shared
+        if (this.shared) this.shared = await this.shared.call(this);
+
         // flush arguments
         const args: any[] = [];
         for (const arg of this.args) {
@@ -67,9 +72,6 @@ export class Extrinsic {
                 args.push(arg);
             }
         }
-
-        // console.log(`\t | thistrinsic: ${this.pallet}.${this.call}`);
-        // console.log(`\t | arguments: ${JSON.stringify(args)}`);
 
         // construct tx
         let tx = this.api.tx[this.pallet][this.call](...args);
@@ -91,10 +93,11 @@ export class Extrinsic {
         nonce: number,
         signed = this.pair
     ): Promise<TxResult> {
+        this.wait && (await waitBlock(this.wait));
         return new Promise((resolve, reject) => {
             const unsub: any = se.signAndSend(
                 signed,
-                { nonce },
+                { nonce: signed === this.pair ? nonce : -1 },
                 async (sr: ISubmittableResult) =>
                     await this.checkError(unsub, sr, resolve, reject)
             );
@@ -156,7 +159,7 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      */
     public async run(errors: string[], nonce: number): Promise<void | string> {
-        const tx = this.build();
+        const tx = await this.build();
 
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
