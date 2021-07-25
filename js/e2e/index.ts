@@ -229,21 +229,23 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     const currentBlock = (
                         await api.derive.chain.bestNumber()
                     ).toNumber();
-                    console.log(`\t | current block: ${currentBlock}`);
-                    console.log("\t | waiting for the voting peirod...");
+
                     const end = ((
                         await api.query.committee.votes(hash)
                     ).toJSON() as any).end as number;
 
-                    await Runner.waitBlock(
+                    const needsToWait =
                         end - currentBlock > VOTING_PERIOD
                             ? end - currentBlock - VOTING_PERIOD
-                            : 0
-                    );
+                            : 0;
+
                     console.log(
-                        `\t | current block: ${await api.derive.chain.bestNumber()}`
+                        `\t | waiting for the voting peirod (around ${Math.floor(
+                            (needsToWait * 12) / 60
+                        )}mins)...`
                     );
 
+                    await Runner.waitBlock(needsToWait);
                     resolve(hash);
                 });
             },

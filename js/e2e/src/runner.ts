@@ -202,7 +202,7 @@ export default class Runner implements Config {
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
-                    if (this.exs.map((e) => e.id).includes(r)) {
+                    if (this.exs.map((i) => i.id).includes(r)) {
                         requiredFinished = false;
                         break;
                     }
