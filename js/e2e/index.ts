@@ -1,4 +1,4 @@
-/**OA
+/**
  * E2E tests for PINT
  */
 import { assert, expandId, Runner, Extrinsic, ExtrinsicConfig } from "./src";

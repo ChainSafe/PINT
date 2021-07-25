@@ -205,7 +205,7 @@ export default class Runner implements Config {
             }
 
             // 1. Build shared data
-            console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
+            // console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
             if (typeof e.shared === "function") {
                 e.shared = await e.shared();
             }
@@ -218,7 +218,7 @@ export default class Runner implements Config {
             if (e.with) {
                 for (const w of e.with) {
                     const ex = typeof w === "function" ? await w(e.shared) : w;
-                    console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
+                    // console.log(`-> queue extrinsic ${ex.pallet}.${w.call}...`);
                     queue.push({
                         ex,
                         shared: e.shared,
@@ -231,23 +231,16 @@ export default class Runner implements Config {
         }
 
         // 3. register transactions
-        const txs = [];
+        // const txs = [];
         for (const qe of queue) {
-            this.finished.push(String(qe.ex.id));
-            if (qe.ex.signed && qe.ex.signed !== this.pair) {
-                // Run custom extrinsic directory
-                // console.log("---------- RUN TRANSACTIONs ------------");
-                // await this.runTx(qe.ex);
-            } else {
-                txs.push(this.buildTx(qe.ex));
-            }
+            await this.runTx(qe.ex);
         }
 
-        // 4. check result
-        const res = await this.batch(txs);
-        if (res && res.unsub) {
-            (await res.unsub)();
-        }
+        // // 4. check result
+        // const res = await this.batch(txs);
+        // if (res && res.unsub) {
+        //     (await res.unsub)();
+        // }
     }
 
     /**
@@ -311,6 +304,7 @@ export default class Runner implements Config {
         // construct tx
         let tx = this.api.tx[ex.pallet][ex.call](...args);
         if (!ex.signed) {
+            console.log("\t | use sudo");
             tx = this.api.tx.sudo.sudo(tx);
         }
 
@@ -399,6 +393,8 @@ export default class Runner implements Config {
     ) {
         const status = sr.status;
         const events = sr.events;
+
+        console.log(`\t | - status: ${status.type}`);
 
         if (status.isInBlock) {
             if (inBlock) {
