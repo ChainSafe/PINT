@@ -47,6 +47,19 @@ export default class Runner implements Config {
     public nonce: number;
 
     /**
+     * Wait for n blocks
+     *
+     * The current gap of producing a block is 4s,
+     * we use 5s here.
+     *
+     * @param {number} block
+     * @returns {Promise<void>}
+     */
+    static async waitBlock(block: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, block * 12000));
+    }
+
+    /**
      * run E2E tests
      *
      * @param {Builder} exs - Extrinsic builder
@@ -60,7 +73,7 @@ export default class Runner implements Config {
         uri: string = "//Alice"
     ): Promise<void> {
         console.log("bootstrap e2e tests...");
-        console.log("establishing ws connections...");
+        console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
         if (ps.stdout) {
             ps.stdout.on("data", async (chunk: Buffer) => {
@@ -200,8 +213,13 @@ export default class Runner implements Config {
                 continue;
             }
 
-            // 2. Pend transactions
+            // 1. Build shared data
             console.log(`-> queue extrinsic ${e.pallet}.${e.call}...`);
+            if (typeof e.shared === "function") {
+                e.shared = await e.shared();
+            }
+
+            // 2. Pend transactions
             queue.push(e);
             if (e.with) {
                 for (const w of e.with) {
