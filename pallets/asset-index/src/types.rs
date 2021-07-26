@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
+use frame_support::sp_runtime::FixedU128;
 use frame_support::{sp_runtime::RuntimeDebug, sp_std::vec::Vec};
+use pallet_price_feed::AssetPricePair;
 use xcm::opaque::v0::MultiLocation;
 
 /// Abstraction over the lock of minted index token that are locked up for
@@ -74,4 +76,53 @@ pub struct AssetWithdrawal<AssetId, Balance> {
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
     pub initiated: BlockNumber,
     pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
+}
+
+/// Represents the total volume of all assets measured in index token based on
+/// the price and the total amount of asset units that are in the index and
+/// tracks the accumulated volume
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetsVolume<AssetId, Balance> {
+    /// All `AssetVolume`
+    pub volumes: Vec<AssetVolume<AssetId, Balance>>,
+    /// The accumulated volume of all `volumes`
+    pub total_volume: Balance,
+}
+
+/// Represents the total volume of an asset measured in index token based on the
+/// price and the total amount of asset units that are in the index
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetVolume<AssetId, Balance> {
+    /// The current price pair for `PINT/asset`
+    pub price: AssetPricePair<AssetId>,
+    /// The amount of `PINT` equivalent all `asset` units are worth based on the
+    /// `price`
+    pub pint_volume: Balance,
+}
+
+impl<AssetId, Balance> AssetVolume<AssetId, Balance> {
+    pub fn new(price: AssetPricePair<AssetId>, pint_volume: Balance) -> Self {
+        Self { price, pint_volume }
+    }
+}
+
+/// Represents the distribution of assets in the index. For each asset, the
+/// corresponding ratio was determined based on the total volume and the
+/// equivalent asset volume, which was determined by the price.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetsDistribution<AssetId, Balance> {
+    /// The total amount of index token
+    pub total_pint: Balance,
+    /// All assets and their share of total volume
+    pub asset_shares: Vec<(AssetVolume<AssetId, Balance>, FixedU128)>,
+}
+
+/// Represents the redemption of a given pint amount based on the
+/// `AssetDistribution`.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetRedemption<AssetId, Balance> {
+    /// All the assets together with their redeemed amount
+    pub asset_amounts: Vec<(AssetId, Balance)>,
+    /// The total amount of redeemed pint
+    pub redeemed_pint: Balance,
 }

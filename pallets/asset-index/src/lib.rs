@@ -49,11 +49,13 @@ pub mod pallet {
 
     pub use crate::traits::AssetRecorder;
     use crate::types::{
-        AssetAvailability, AssetMetadata, AssetWithdrawal, IndexTokenLock, PendingRedemption,
-        RedemptionState,
+        AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
+        AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
-    use primitives::fee::{BaseFee, FeeRate};
-    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+    use primitives::{
+        fee::{BaseFee, FeeRate},
+        traits::{MultiAssetRegistry, RemoteAssetManager},
+    };
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -184,7 +186,10 @@ pub mod pallet {
 
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config> {
+        /// All the liquid assets together with their parachain id known at
+        /// genesis
         pub liquid_assets: Vec<(T::AssetId, ParaId)>,
+        /// ALl safts to register at genesis
         pub saft_assets: Vec<T::AssetId>,
     }
 
@@ -530,45 +535,15 @@ pub mod pallet {
                 .ok_or(Error::<T>::InsufficientDeposit)?
                 .into();
 
-            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) /
-            // nav_a`
-            let mut liquid_assets_vol = T::Balance::zero();
-            let mut asset_prices = Vec::new();
-            for asset in Assets::<T>::iter()
-                .filter(|(_, availability)| availability.is_liquid())
-                .map(|(k, _)| k)
-            {
-                let price = T::PriceFeed::get_price(asset)?;
-                let vol = Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
-                liquid_assets_vol = liquid_assets_vol
-                    .checked_add(&vol)
-                    .ok_or(Error::<T>::NAVOverflow)?;
-                asset_prices.push((price, vol));
-            }
+            // calculate the distribution of all liquid assets
+            let distribution = Self::get_liquid_asset_distribution()?;
 
-            // keep track of the pint units that are actually redeemed, to account for
-            // rounding
-            let mut redeemed_pint = 0;
-            for (price, vol) in &mut asset_prices {
-                let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
-                    .ok_or(Error::<T>::NAVOverflow)?;
-                // overwrite the value with the units the user gets for that asset
-                *vol = ratio
-                    .checked_mul_int(redeem)
-                    .and_then(|pint_units| {
-                        redeemed_pint += pint_units;
-                        price.reciprocal_volume(pint_units)
-                    })
-                    .ok_or(Error::<T>::AssetVolumeOverflow)
-                    .and_then(|units| {
-                        units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
-                    })?;
-            }
+            // calculate the payout for each asset based on the redeem amount
+            let asset_redemption = Self::get_asset_redemption(distribution, redeem)?;
+
             // update the index balance by burning all of the redeemed tokens and the fee
-            let effectively_withdrawn = fee
-                + redeemed_pint
-                    .try_into()
-                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+            let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
+
             let burned = T::IndexToken::burn(effectively_withdrawn);
 
             T::IndexToken::settle(
@@ -584,10 +559,10 @@ pub mod pallet {
             let fee = T::IndexToken::issue(fee);
             T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
 
-            let mut assets = Vec::with_capacity(asset_prices.len());
+            let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
+
             // start bonding and locking
-            for (price, units) in asset_prices {
-                let asset = price.quote;
+            for (asset, units) in asset_redemption.asset_amounts {
                 // try to start the unbonding process
                 let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
                     // the XCM call was dispatched successfully, however, this is
@@ -796,6 +771,7 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
+        /// Calculates the volume of the given units with the provided price
         fn calculate_volume(
             units: T::Balance,
             price: &AssetPricePair<T::AssetId>,
@@ -823,6 +799,112 @@ pub mod pallet {
                 Error::<T>::UnsupportedAsset
             );
             Self::calculate_pint_equivalent(asset, Self::index_total_asset_balance(asset))
+        }
+
+        /// Iterates over all liquid assets
+        pub fn liquid_assets() -> impl Iterator<Item = T::AssetId> {
+            Assets::<T>::iter()
+                .filter(|(_, availability)| availability.is_liquid())
+                .map(|(id, _)| id)
+        }
+
+        /// Returns a Vec of the current prices of all active liquid assets
+        /// together with the derived volume of these assets residing in the
+        /// index
+        pub fn get_liquid_asset_volumes(
+        ) -> Result<AssetsVolume<T::AssetId, T::Balance>, DispatchError> {
+            // accumulated pint volume that the assets represent
+            let mut total_volume = T::Balance::zero();
+
+            let volumes = Self::liquid_assets()
+                .map(|asset| -> Result<_, DispatchError> {
+                    let volume = Self::get_liquid_asset_volume(asset)?;
+                    total_volume = total_volume
+                        .checked_add(&volume.pint_volume)
+                        .ok_or(Error::<T>::NAVOverflow)?;
+                    Ok(volume)
+                })
+                .collect::<Result<_, _>>()?;
+
+            Ok(AssetsVolume {
+                volumes,
+                total_volume,
+            })
+        }
+
+        /// Returns the current price and the volume of the given asset
+        pub fn get_liquid_asset_volume(
+            asset: T::AssetId,
+        ) -> Result<AssetVolume<T::AssetId, T::Balance>, DispatchError> {
+            let price = T::PriceFeed::get_price(asset)?;
+            let pint_volume =
+                Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
+            Ok(AssetVolume::new(price, pint_volume))
+        }
+
+        /// Returns the current distribution of all liquid assets
+        ///
+        /// For each plant the equivalent volume is determined and its share in
+        /// the total amount of pint, all these assets represent
+        pub fn get_liquid_asset_distribution(
+        ) -> Result<AssetsDistribution<T::AssetId, T::Balance>, DispatchError> {
+            let AssetsVolume {
+                volumes,
+                total_volume,
+            } = Self::get_liquid_asset_volumes()?;
+
+            // calculate the share of each asset in the total_pint
+            let asset_shares = volumes
+                .into_iter()
+                .map(|asset| -> Result<_, DispatchError> {
+                    let ratio =
+                        Ratio::checked_from_rational(asset.pint_volume.into(), total_volume.into())
+                            .ok_or(Error::<T>::NAVOverflow)?;
+                    Ok((asset, ratio))
+                })
+                .collect::<Result<_, _>>()?;
+
+            Ok(AssetsDistribution {
+                total_pint: total_volume,
+                asset_shares,
+            })
+        }
+
+        /// Calculates the asset redemption for the given amount of redemption
+        /// based on the provided distribution
+        pub fn get_asset_redemption(
+            distribution: AssetsDistribution<T::AssetId, T::Balance>,
+            redeem: u128,
+        ) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
+            // track the pint that effectively gets redeemed
+            let mut redeemed_pint = 0u128;
+
+            // calculate the the distribution of the assets
+            let asset_amounts = distribution
+                .asset_shares
+                .into_iter()
+                .map(|(asset, ratio)| -> Result<_, DispatchError> {
+                    let amount: T::Balance = ratio
+                        .checked_mul_int(redeem)
+                        .and_then(|pint_units| {
+                            redeemed_pint += pint_units;
+                            asset.price.reciprocal_volume(pint_units)
+                        })
+                        .ok_or(Error::<T>::AssetVolumeOverflow)
+                        .and_then(|units| {
+                            units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
+                        })?;
+
+                    Ok((asset.price.quote, amount))
+                })
+                .collect::<Result<_, _>>()?;
+
+            Ok(AssetRedemption {
+                asset_amounts,
+                redeemed_pint: redeemed_pint
+                    .try_into()
+                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?,
+            })
         }
 
         /// Ensures the given asset id is a liquid asset
