@@ -48,19 +48,6 @@ export default class Runner implements Config {
     public nonce: number;
 
     /**
-     * Wait for n blocks
-     *
-     * The current gap of producing a block is 4s,
-     * we use 5s here.
-     *
-     * @param {number} block
-     * @returns {Promise<void>}
-     */
-    static async waitBlock(block: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, block * 12000));
-    }
-
-    /**
      * run E2E tests
      *
      * @param {Builder} exs - Extrinsic builder
