@@ -253,13 +253,11 @@ export default class Runner implements Config {
         return Promise.all(
             exs.map((e, i) => {
                 let n = -1;
-                let order = false;
                 if (!e.signed || e.signed.address === this.pair.address) {
-                    n = currentNonce;
-                    order = true;
+                    n = Number(currentNonce);
+                    currentNonce += 1;
                 }
-                e.run(this.errors, n);
-                order && (currentNonce += 1);
+                return e.run(this.errors, n);
             })
         );
     }
