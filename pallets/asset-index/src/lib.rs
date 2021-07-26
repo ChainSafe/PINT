@@ -535,45 +535,15 @@ pub mod pallet {
                 .ok_or(Error::<T>::InsufficientDeposit)?
                 .into();
 
-            // NOTE: the ratio of a liquid asset `a` is determined by `sum(nav_asset) /
-            // nav_a`
-            let mut liquid_assets_vol = T::Balance::zero();
-            let mut asset_prices = Vec::new();
-            for asset in Assets::<T>::iter()
-                .filter(|(_, availability)| availability.is_liquid())
-                .map(|(k, _)| k)
-            {
-                let price = T::PriceFeed::get_price(asset)?;
-                let vol = Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
-                liquid_assets_vol = liquid_assets_vol
-                    .checked_add(&vol)
-                    .ok_or(Error::<T>::NAVOverflow)?;
-                asset_prices.push((price, vol));
-            }
+            // calculate the distribution of all liquid assets
+            let distribution = Self::get_liquid_asset_distribution()?;
 
-            // keep track of the pint units that are actually redeemed, to account for
-            // rounding
-            let mut redeemed_pint = 0;
-            for (price, vol) in &mut asset_prices {
-                let ratio = Ratio::checked_from_rational((*vol).into(), liquid_assets_vol.into())
-                    .ok_or(Error::<T>::NAVOverflow)?;
-                // overwrite the value with the units the user gets for that asset
-                *vol = ratio
-                    .checked_mul_int(redeem)
-                    .and_then(|pint_units| {
-                        redeemed_pint += pint_units;
-                        price.reciprocal_volume(pint_units)
-                    })
-                    .ok_or(Error::<T>::AssetVolumeOverflow)
-                    .and_then(|units| {
-                        units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)
-                    })?;
-            }
+            // calculate the payout for each asset based on the redeem amount
+            let asset_redemption = Self::get_asset_redemption(distribution, redeem)?;
+
             // update the index balance by burning all of the redeemed tokens and the fee
-            let effectively_withdrawn = fee
-                + redeemed_pint
-                    .try_into()
-                    .map_err(|_| Error::<T>::AssetUnitsOverflow)?;
+            let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
+
             let burned = T::IndexToken::burn(effectively_withdrawn);
 
             T::IndexToken::settle(
@@ -589,10 +559,10 @@ pub mod pallet {
             let fee = T::IndexToken::issue(fee);
             T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
 
-            let mut assets = Vec::with_capacity(asset_prices.len());
+            let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
+
             // start bonding and locking
-            for (price, units) in asset_prices {
-                let asset = price.quote;
+            for (asset, units) in asset_redemption.asset_amounts {
                 // try to start the unbonding process
                 let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
                     // the XCM call was dispatched successfully, however, this is
