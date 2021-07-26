@@ -78,6 +78,17 @@ pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
     pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
 
+/// Represents the total volume of all assets measured in index token based on
+/// the price and the total amount of asset units that are in the index and
+/// tracks the accumulated volume
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetsVolume<AssetId, Balance> {
+    /// All `AssetVolume`
+    pub volumes: Vec<AssetVolume<AssetId, Balance>>,
+    /// The accumulated volume of all `volumes`
+    pub total_volume: Balance,
+}
+
 /// Represents the total volume of an asset measured in index token based on the
 /// price and the total amount of asset units that are in the index
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

@@ -50,7 +50,7 @@ pub mod pallet {
     pub use crate::traits::AssetRecorder;
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
-        AssetsDistribution, IndexTokenLock, PendingRedemption, RedemptionState,
+        AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
     use primitives::{
         fee::{BaseFee, FeeRate},
@@ -812,10 +812,24 @@ pub mod pallet {
         /// together with the derived volume of these assets residing in the
         /// index
         pub fn get_liquid_asset_volumes(
-        ) -> Result<Vec<AssetVolume<T::AssetId, T::Balance>>, DispatchError> {
-            Self::liquid_assets()
-                .map(Self::get_liquid_asset_volume)
-                .collect()
+        ) -> Result<AssetsVolume<T::AssetId, T::Balance>, DispatchError> {
+            // accumulated pint volume that the assets represent
+            let mut total_volume = T::Balance::zero();
+
+            let volumes = Self::liquid_assets()
+                .map(|asset| -> Result<_, DispatchError> {
+                    let volume = Self::get_liquid_asset_volume(asset)?;
+                    total_volume = total_volume
+                        .checked_add(&volume.pint_volume)
+                        .ok_or(Error::<T>::NAVOverflow)?;
+                    Ok(volume)
+                })
+                .collect::<Result<_, _>>()?;
+
+            Ok(AssetsVolume {
+                volumes,
+                total_volume,
+            })
         }
 
         /// Returns the current price and the volume of the given asset
@@ -834,28 +848,24 @@ pub mod pallet {
         /// the total amount of pint, all these assets represent
         pub fn get_liquid_asset_distribution(
         ) -> Result<AssetsDistribution<T::AssetId, T::Balance>, DispatchError> {
-            let assets = Self::get_liquid_asset_volumes()?;
-            // accumulated pint volume that the assets represent
-            let total_pint = assets
-                .iter()
-                .try_fold(T::Balance::zero(), |vol, asset| {
-                    asset.pint_volume.checked_add(&vol)
-                })
-                .ok_or(Error::<T>::NAVOverflow)?;
+            let AssetsVolume {
+                volumes,
+                total_volume,
+            } = Self::get_liquid_asset_volumes()?;
 
             // calculate the share of each asset in the total_pint
-            let asset_shares = assets
+            let asset_shares = volumes
                 .into_iter()
                 .map(|asset| -> Result<_, DispatchError> {
                     let ratio =
-                        Ratio::checked_from_rational(asset.pint_volume.into(), total_pint.into())
+                        Ratio::checked_from_rational(asset.pint_volume.into(), total_volume.into())
                             .ok_or(Error::<T>::NAVOverflow)?;
                     Ok((asset, ratio))
                 })
                 .collect::<Result<_, _>>()?;
 
             Ok(AssetsDistribution {
-                total_pint,
+                total_pint: total_volume,
                 asset_shares,
             })
         }
