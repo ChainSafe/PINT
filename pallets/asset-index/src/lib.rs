@@ -870,6 +870,8 @@ pub mod pallet {
             })
         }
 
+        /// Calculates the asset redemption for the given amount of redemption
+        /// based on the provided distribution
         pub fn get_asset_redemption(
             distribution: AssetsDistribution<T::AssetId, T::Balance>,
             redeem: u128,
