@@ -236,7 +236,6 @@ export default class Runner implements Config {
         await this.batch(queue);
 
         // 4. drop executed exs
-        this.nonce += queue.length;
         this.exs = this.exs.filter((e) => !queue.includes(e));
 
         // 5. log pending txs
@@ -259,6 +258,8 @@ export default class Runner implements Config {
                 }
                 return e.run(this.errors, n);
             })
-        );
+        ).then(() => {
+            this.nonce = currentNonce;
+        });
     }
 }
