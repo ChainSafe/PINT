@@ -9,6 +9,7 @@ import { definitions } from "@pint/types";
 import { Config, ExtrinsicConfig } from "./config";
 import { Extrinsic } from "./extrinsic";
 import { launch } from "./launch";
+import { expandId } from "./util";
 import { ChildProcess } from "child_process";
 import OrmlTypes from "@open-web3/orml-types";
 
@@ -164,7 +165,7 @@ export default class Runner implements Config {
         this.pair = config.pair;
         this.exs = config.exs;
         this.errors = [];
-        this.nonce = -1;
+        this.nonce = 0;
         this.finished = [];
     }
 
@@ -222,27 +223,44 @@ export default class Runner implements Config {
             queue.push(e);
             if (e.with) {
                 for (const w of e.with) {
-                    const ex = typeof w === "function" ? await w(e.shared) : w;
+                    const ex =
+                        typeof w === "function"
+                            ? expandId(await w(e.shared))
+                            : w;
                     queue.push(new Extrinsic(ex, this.api, this.pair));
                 }
             }
         }
 
         // 3. register transactions
-        this.nonce += 1;
         await this.batch(queue);
 
         // 4. drop executed exs
         this.nonce += queue.length;
         this.exs = this.exs.filter((e) => !queue.includes(e));
+
+        // 5. log pending txs
+        for (const ex of this.exs) {
+            console.log(`--> ${ex.id} is pending...`);
+        }
     }
 
     /**
      * Batch extrinsics
      */
     public async batch(exs: Extrinsic[]): Promise<any> {
+        let currentNonce = Number(this.nonce);
         return Promise.all(
-            exs.map((e, i) => e.run(this.errors, this.nonce + i))
+            exs.map((e, i) => {
+                let n = -1;
+                let order = false;
+                if (!e.signed || e.signed.address === this.pair.address) {
+                    n = currentNonce;
+                    order = true;
+                }
+                e.run(this.errors, n);
+                order && (currentNonce += 1);
+            })
         );
     }
 }

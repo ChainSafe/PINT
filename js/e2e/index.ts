@@ -225,7 +225,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 return new Promise(async (resolve) => {
                     await Runner.waitBlock(1);
                     const hash = ((await api.query.committee.activeProposals()) as any)[0];
-
                     const currentBlock = (
                         await api.derive.chain.bestNumber()
                     ).toNumber();
@@ -253,7 +252,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "committee",
             call: "vote",
             args: [(hash: string) => hash, api.createType("Vote" as any)],
-            // Post calls
             with: [
                 async (hash: string): Promise<IExtrinsic> => {
                     return {
@@ -279,29 +277,32 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.alice,
-                        pallet: "committee",
-                        call: "close",
-                        args: [hash],
-                        verify: async () => {
-                            const proposals = await api.query.committee.executedProposals(
-                                hash
-                            );
-                            assert(
-                                (proposals as any).isSome,
-                                "no proposal executed after committe.close"
-                            );
-                        },
-                    };
-                },
             ],
             verify: async (hash: string) => {
                 assert(
                     ((await api.query.committee.votes(hash)).toJSON() as any)
                         .votes[0].vote === "Aye",
                     "committee.vote failed"
+                );
+            },
+        },
+        {
+            required: ["committee.vote"],
+            shared: async () => {
+                const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                return hash;
+            },
+            signed: config.alice,
+            pallet: "committee",
+            call: "close",
+            args: [(hash: string) => hash],
+            verify: async (hash: string) => {
+                const proposals = await api.query.committee.executedProposals(
+                    hash
+                );
+                assert(
+                    (proposals as any).isSome,
+                    "no proposal executed after committe.close"
                 );
             },
         },

@@ -68,9 +68,6 @@ export class Extrinsic {
             }
         }
 
-        // console.log(`\t | thistrinsic: ${this.pallet}.${this.call}`);
-        // console.log(`\t | arguments: ${JSON.stringify(args)}`);
-
         // construct tx
         let tx = this.api.tx[this.pallet][this.call](...args);
         if (!this.signed) {
