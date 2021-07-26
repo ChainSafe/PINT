@@ -757,15 +757,17 @@ pub mod pallet {
             if total_issuance.is_zero() {
                 return Ok(T::Balance::zero());
             }
-            let mut nav = T::Balance::zero();
-            for asset in iter {
-                nav = nav
-                    .checked_add(&Self::calculate_pint_equivalent(
+            let nav = iter.into_iter().try_fold(
+                T::Balance::zero(),
+                |nav, asset| -> Result<_, DispatchError> {
+                    nav.checked_add(&Self::calculate_pint_equivalent(
                         asset,
                         Self::index_total_asset_balance(asset),
                     )?)
-                    .ok_or(Error::<T>::NAVOverflow)?;
-            }
+                    .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
+            )?;
+
             Ok(nav
                 .checked_div(&total_issuance)
                 .ok_or(Error::<T>::NAVOverflow)?)
