@@ -1,7 +1,15 @@
-/**OA
+/**
  * E2E tests for PINT
  */
-import { assert, Runner, Extrinsic, ExtrinsicConfig } from "./src";
+import {
+    assert,
+    Runner,
+    expandId,
+    Extrinsic,
+    ExtrinsicConfig,
+    IExtrinsic,
+    waitBlock,
+} from "./src";
 import { ApiPromise } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
 import BN from "bn.js";
@@ -35,13 +43,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "balances",
             call: "transfer",
             args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-            post: [
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-                },
+            with: [
                 {
                     signed: config.alice,
                     pallet: "balances",
@@ -91,6 +93,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             shared: async () => {
                 return (await api.query.system.account(config.alice.address))
                     .data.free;
@@ -113,6 +116,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
@@ -129,6 +133,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.withdraw"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "completeWithdraw",
@@ -144,6 +149,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* remote-asset-manager*/
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendAddProxy",
@@ -157,7 +163,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                                 config.alice.address
                             )
                         ).toJSON()
-                    ) ==
+                    ) ===
                         JSON.stringify({
                             added: ["Any"],
                         }),
@@ -166,6 +172,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["assetIndex.addAsset"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendBond",
@@ -214,63 +221,56 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["committee.propose"],
             shared: async () => {
-                await Runner.waitBlock(1);
-                const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                return new Promise(async (resolve) => {
+                    await waitBlock(1);
+                    const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                    const currentBlock = (
+                        await api.derive.chain.bestNumber()
+                    ).toNumber();
 
-                return hash;
+                    const end = ((
+                        await api.query.committee.votes(hash)
+                    ).toJSON() as any).end as number;
+
+                    const needsToWait =
+                        end - currentBlock > VOTING_PERIOD
+                            ? end - currentBlock - VOTING_PERIOD
+                            : 0;
+
+                    console.log(
+                        `\t | waiting for the voting peirod (around ${Math.floor(
+                            (needsToWait * 12) / 60
+                        )} mins)...`
+                    );
+
+                    await waitBlock(needsToWait);
+                    resolve(hash);
+                });
             },
-            inBlock: true,
             signed: config.alice,
             pallet: "committee",
             call: "vote",
-            args: [
-                async (hash: string) => {
-                    return new Promise(async (resolve) => {
-                        const currentBlock = (
-                            await api.derive.chain.bestNumber()
-                        ).toNumber();
-                        console.log(`\t | current block: ${currentBlock}`);
-                        console.log("\t | waiting for the voting peirod...");
-                        const end = ((
-                            await api.query.committee.votes(hash)
-                        ).toJSON() as any).end as number;
-
-                        await Runner.waitBlock(
-                            end - currentBlock > VOTING_PERIOD
-                                ? end - currentBlock - VOTING_PERIOD
-                                : 0
-                        );
-                        console.log(
-                            `\t | current block: ${await api.derive.chain.bestNumber()}`
-                        );
-
-                        resolve(hash);
-                    });
-                },
-                api.createType("Vote" as any),
-            ],
-            // Post calls
-            post: [
-                async (hash: string): Promise<Extrinsic> => {
+            args: [(hash: string) => hash, api.createType("Vote" as any)],
+            with: [
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
-                        inBlock: true,
                         signed: config.bob,
                         pallet: "committee",
                         call: "vote",
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
-                        inBlock: true,
                         signed: config.charlie,
                         pallet: "committee",
                         call: "vote",
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
+                async (hash: string): Promise<IExtrinsic> => {
                     return {
                         signed: config.dave,
                         pallet: "committee",
@@ -278,29 +278,32 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         args: [hash, api.createType("Vote" as any)],
                     };
                 },
-                async (hash: string): Promise<Extrinsic> => {
-                    return {
-                        signed: config.alice,
-                        pallet: "committee",
-                        call: "close",
-                        args: [hash],
-                        verify: async () => {
-                            const proposals = await api.query.committee.executedProposals(
-                                hash
-                            );
-                            assert(
-                                (proposals as any).isSome,
-                                "no proposal executed after committe.close"
-                            );
-                        },
-                    };
-                },
             ],
             verify: async (hash: string) => {
                 assert(
                     ((await api.query.committee.votes(hash)).toJSON() as any)
-                        .votes[0]["vote"] == "Aye",
+                        .votes[0].vote === "Aye",
                     "committee.vote failed"
+                );
+            },
+        },
+        {
+            required: ["committee.vote"],
+            shared: async () => {
+                const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                return hash;
+            },
+            signed: config.alice,
+            pallet: "committee",
+            call: "close",
+            args: [(hash: string) => hash],
+            verify: async (hash: string) => {
+                const proposals = await api.query.committee.executedProposals(
+                    hash
+                );
+                assert(
+                    (proposals as any).isSome,
+                    "no proposal executed after committe.close"
                 );
             },
         },
@@ -358,6 +361,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
+            required: ["chainlinkFeed.createFeed"],
             pallet: "priceFeed",
             call: "trackAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -368,11 +372,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                             await api.query.priceFeed.assetFeeds(ASSET_ID_A)
                         ).toHuman()
                     ) === 0,
-                    "Create feed failed"
+                    "Track feed failed"
                 );
             },
         },
         {
+            required: ["priceFeed.trackAssetPriceFeed"],
             pallet: "priceFeed",
             call: "untrackAssetPriceFeed",
             args: [ASSET_ID_A],
@@ -380,7 +385,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 assert(
                     ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
                         .isNone,
-                    "Create feed failed"
+                    "Untrack feed failed"
                 );
             },
         },
@@ -399,6 +404,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["saftRegistry.addSaft"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "reportNav",
@@ -412,7 +418,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     units: 42,
                 };
                 assert(
-                    JSON.stringify(saft[0]) ==
+                    JSON.stringify(saft[0]) ===
                         JSON.stringify({
                             nav: 336,
                             units: 42,
@@ -425,6 +431,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* asset-index */
         {
+            required: ["saftRegistry.reportNav"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "removeAsset",
@@ -433,12 +440,13 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isNone,
-                    "assetIndex.addAsset failed"
+                    "assetIndex.removeAsset failed"
                 );
             },
         },
-    ];
+    ].map((e) => new Extrinsic(expandId(e), api, config.alice));
 };
+
 // main
 (async () => {
     await Runner.run(TESTS);
