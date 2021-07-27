@@ -523,7 +523,7 @@ pub mod pallet {
             T::IndexToken::ensure_can_withdraw(
                 &caller,
                 amount,
-                WithdrawReasons::TRANSFER,
+                WithdrawReasons::all(),
                 free_balance.saturating_sub(amount),
             )?;
 
@@ -544,16 +544,13 @@ pub mod pallet {
             // update the index balance by burning all of the redeemed tokens and the fee
             let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
 
-            let burned = T::IndexToken::burn(effectively_withdrawn);
-
-            T::IndexToken::settle(
+            // withdraw from caller balance
+            T::IndexToken::withdraw(
                 &caller,
-                burned,
-                WithdrawReasons::TRANSFER,
-                ExistenceRequirement::KeepAlive,
-            )
-            .map_err(|_| ())
-            .expect("ensured can withdraw; qed");
+                effectively_withdrawn,
+                WithdrawReasons::all(),
+                ExistenceRequirement::AllowDeath,
+            )?;
 
             // issue new tokens to compensate the fee and put it into the treasury
             let fee = T::IndexToken::issue(fee);
