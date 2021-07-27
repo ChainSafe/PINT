@@ -38,7 +38,7 @@ pub mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
         },
-        PalletId,
+        transactional, PalletId,
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -509,6 +509,7 @@ pub mod pallet {
         /// The distribution of the underlying assets will be equivalent to the
         /// ratio of the liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
+        #[transactional]
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
             ensure!(
@@ -527,6 +528,7 @@ pub mod pallet {
                 free_balance.saturating_sub(amount),
             )?;
 
+            // amount = fee + redeem
             let fee = amount
                 .fee(T::BaseWithdrawalFee::get())
                 .ok_or(Error::<T>::AssetUnitsOverflow)?;
@@ -542,6 +544,7 @@ pub mod pallet {
             let asset_redemption = Self::get_asset_redemption(distribution, redeem)?;
 
             // update the index balance by burning all of the redeemed tokens and the fee
+            // SAFETY: this is guaranteed to be lower than `amount`
             let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
 
             // withdraw from caller balance
@@ -554,7 +557,7 @@ pub mod pallet {
 
             // issue new tokens to compensate the fee and put it into the treasury
             let fee = T::IndexToken::issue(fee);
-            T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
+            T::IndexToken::resolve_creating(&Self::treasury_account(), fee);
 
             let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
 
@@ -573,7 +576,8 @@ pub mod pallet {
                     RedemptionState::Initiated
                 };
 
-                // transfer the funds from the index to the user's but reserve it
+                // transfer the funds from the index to the user's but reserve it immediately
+                // NOTE: this should always succeed due to the way the distribution is calculated
                 T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
                 T::Currency::reserve(asset, &caller, units)?;
 
@@ -705,19 +709,24 @@ pub mod pallet {
             T::IndexToken::total_issuance()
         }
 
-        // The free balance of the given account for the given asset.
+        /// The free balance of the given account for the given asset.
         pub fn free_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
             T::Currency::free_balance(asset, account)
         }
 
-        // The combined balance of the given account fo the given asset.
+        /// The combined balance of the given account for the given asset.
         pub fn total_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
             T::Currency::total_balance(asset, account)
         }
 
-        // The combined balance of the treasury account fo the given asset.
+        /// The combined balance of the treasury account for the given asset.
         pub fn index_total_asset_balance(asset: T::AssetId) -> T::Balance {
             T::Currency::total_balance(asset, &Self::treasury_account())
+        }
+
+        /// The free balance of the treasury account for the given asset.
+        pub fn index_free_asset_balance(asset: T::AssetId) -> T::Balance {
+            T::Currency::free_balance(asset, &Self::treasury_account())
         }
 
         /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total
@@ -729,21 +738,13 @@ pub mod pallet {
         /// Calculates the NAV of all liquid assets the Index token:
         /// `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(
-                Assets::<T>::iter()
-                    .filter(|(_, holding)| holding.is_liquid())
-                    .map(|(k, _)| k),
-            )
+            Self::calculate_nav(Self::liquid_assets())
         }
 
         /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) /
         /// total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(
-                Assets::<T>::iter()
-                    .filter(|(_, holding)| holding.is_saft())
-                    .map(|(k, _)| k),
-            )
+            Self::calculate_nav(Self::saft_assets())
         }
 
         /// Calculates the total NAV of all holdings
@@ -759,7 +760,7 @@ pub mod pallet {
                 |nav, asset| -> Result<_, DispatchError> {
                     nav.checked_add(&Self::calculate_pint_equivalent(
                         asset,
-                        Self::index_total_asset_balance(asset),
+                        Self::index_free_asset_balance(asset),
                     )?)
                     .ok_or_else(|| Error::<T>::NAVOverflow.into())
                 },
@@ -805,6 +806,13 @@ pub mod pallet {
             Assets::<T>::iter()
                 .filter(|(_, availability)| availability.is_liquid())
                 .map(|(id, _)| id)
+        }
+
+        /// Iterates over all SAFT assets
+        pub fn saft_assets() -> impl Iterator<Item = T::AssetId> {
+            Assets::<T>::iter()
+                .filter(|(_, holding)| holding.is_saft())
+                .map(|(k, _)| k)
         }
 
         /// Returns a Vec of the current prices of all active liquid assets
@@ -869,12 +877,18 @@ pub mod pallet {
             })
         }
 
-        /// Calculates the asset redemption for the given amount of redemption
-        /// based on the provided distribution
+        /// Calculates the pure asset redemption for the given amount of the index token to be redeemed based on the given distribution
+        ///
+        /// *NOTE*:
+        ///   - This does not account for fees
+        ///   - This is a noop for `redeem == 0`
         pub fn get_asset_redemption(
             distribution: AssetsDistribution<T::AssetId, T::Balance>,
             redeem: u128,
         ) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
+            if redeem.is_zero() {
+                return Ok(Default::default());
+            }
             // track the pint that effectively gets redeemed
             let mut redeemed_pint = 0u128;
 

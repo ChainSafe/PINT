@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
+use frame_support::sp_runtime::traits::Zero;
 use frame_support::sp_runtime::FixedU128;
 use frame_support::{sp_runtime::RuntimeDebug, sp_std::vec::Vec};
 use pallet_price_feed::AssetPricePair;
@@ -125,4 +126,13 @@ pub struct AssetRedemption<AssetId, Balance> {
     pub asset_amounts: Vec<(AssetId, Balance)>,
     /// The total amount of redeemed pint
     pub redeemed_pint: Balance,
+}
+
+impl<AssetId, Balance: Zero> Default for AssetRedemption<AssetId, Balance> {
+    fn default() -> Self {
+        Self {
+            asset_amounts: Vec::new(),
+            redeemed_pint: Balance::zero(),
+        }
+    }
 }
