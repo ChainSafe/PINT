@@ -436,7 +436,7 @@ pub mod para {
         pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
         pub DOTContributionLimit: Balance = 999;
         pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
-        pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
+        pub PINTLockIdentifier: LockIdentifier = *b"pintlock";
         pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
         pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
         pub StringLimit: u32 = 4;
@@ -458,8 +458,8 @@ pub mod para {
         type Event = Event;
         type AssetId = AssetId;
         type SelfAssetId = PINTAssetId;
-        type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
-        type IndexToken = Balances;
+        type PINTLockIdentifier = PINTLockIdentifier;
+        type PINT = Balances;
         type Balance = Balance;
         type LockupPeriod = LockupPeriod;
         type MinimumRedemption = MinimumRedemption;

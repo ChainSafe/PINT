@@ -101,7 +101,7 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Callable by the governance committee to add new SAFT to the index
-        /// and mint the given amount of IndexToken. The amount of PINT
+        /// and mint the given amount of PINT. The amount of PINT
         /// minted and awarded to the LP is specified as part of the
         /// associated proposal
         /// If the asset does not exist yet, it will get created.

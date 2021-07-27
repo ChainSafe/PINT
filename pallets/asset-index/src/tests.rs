@@ -481,7 +481,7 @@ fn can_withdraw() {
 
         // all index token are currently locked
         assert_eq!(
-            pallet::LockedIndexToken::<Test>::get(&ASHLEY),
+            pallet::LockedPINT::<Test>::get(&ASHLEY),
             AssetIndex::index_token_balance(&ASHLEY)
         );
 

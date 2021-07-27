@@ -14,7 +14,7 @@ benchmarks! {
         let asset_id = 42_u32.into();
         let caller: T::AccountId = whitelisted_caller();
         let million = 1_000_000u32.into();
-        T::IndexToken::deposit_creating(&caller, million);
+        T::PINT::deposit_creating(&caller, million);
     }: _(
         RawOrigin::Signed(caller.clone()),
         asset_id,
