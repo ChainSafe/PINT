@@ -580,7 +580,7 @@ parameter_types! {
     pub const WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
     pub const DOTContributionLimit: Balance = 999;
     pub const PalletIndexStringLimit: u32 = 50;
-    pub const IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
+    pub const PINTLockIdentifier: LockIdentifier = *b"pintlock";
     // TODO: use actual fees
     pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
@@ -588,10 +588,10 @@ parameter_types! {
 impl pallet_asset_index::Config for Runtime {
     // Using signed as the admin origin for testing now
     type AdminOrigin = frame_system::EnsureSigned<AccountId>;
-    type IndexToken = Balances;
+    type PINT = Balances;
     type Balance = Balance;
     type LockupPeriod = LockupPeriod;
-    type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
+    type PINTLockIdentifier = PINTLockIdentifier;
     type MinimumRedemption = MinimumRedemption;
     type WithdrawalPeriod = WithdrawalPeriod;
     type DOTContributionLimit = DOTContributionLimit;

@@ -50,7 +50,7 @@ pub mod pallet {
     pub use crate::traits::AssetRecorder;
     use crate::types::{
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
-        AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
+        AssetsDistribution, AssetsVolume, PINTLock, PendingRedemption, RedemptionState,
     };
     use primitives::{
         fee::{BaseFee, FeeRate},
@@ -66,7 +66,7 @@ pub mod pallet {
         /// Origin that is allowed to administer the index
         type AdminOrigin: EnsureOrigin<Self::Origin>;
         /// Currency implementation to use as the index token
-        type IndexToken: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
+        type PINT: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
         /// The balance type used within this pallet
         type Balance: Parameter
             + Member
@@ -84,7 +84,7 @@ pub mod pallet {
         /// The identifier for the index token lock.
         /// Used to lock up deposits for `T::LockupPeriod`.
         #[pallet::constant]
-        type IndexTokenLockIdentifier: Get<LockIdentifier>;
+        type PINTLockIdentifier: Get<LockIdentifier>;
         /// The minimum amount of the index token that can be redeemed for the
         /// underlying asset in the index
         #[pallet::constant]
@@ -156,20 +156,20 @@ pub mod pallet {
 
     #[pallet::storage]
     /// Tracks the locks of the minted index token that are locked up until
-    /// their `LockupPeriod` is over  (AccountId) -> Vec<IndexTokenLockInfo>
-    pub type IndexTokenLocks<T: Config> = StorageMap<
+    /// their `LockupPeriod` is over  (AccountId) -> Vec<PINTLockInfo>
+    pub type PINTLocks<T: Config> = StorageMap<
         _,
         Blake2_128Concat,
         T::AccountId,
-        Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
+        Vec<PINTLock<T::BlockNumber, T::Balance>>,
         ValueQuery,
     >;
 
     #[pallet::storage]
     /// Tracks the amount of the currently locked index token per user.
-    /// This is equal to the sum(IndexTokenLocks[AccountId])
+    /// This is equal to the sum(PINTLocks[AccountId])
     ///  (AccountId) -> Balance
-    pub type LockedIndexToken<T: Config> =
+    pub type LockedPINT<T: Config> =
         StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
     #[pallet::storage]
@@ -223,11 +223,11 @@ pub mod pallet {
     #[pallet::generate_deposit(pub (super) fn deposit_event)]
     pub enum Event<T: Config> {
         /// A new asset was added to the index and some index token paid out
-        /// \[AssetIndex, AssetUnits, IndexTokenRecipient, IndexTokenPayout\]
+        /// \[AssetIndex, AssetUnits, PINTRecipient, PINTPayout\]
         AssetAdded(T::AssetId, T::Balance, AccountIdFor<T>, T::Balance),
         /// An asset was removed from the index and some index token transferred
         /// or burned \[AssetId, AssetUnits, Account, Recipient,
-        /// IndexTokenNAV\]
+        /// PINTNAV\]
         AssetRemoved(
             T::AssetId,
             T::Balance,
@@ -303,11 +303,11 @@ pub mod pallet {
     #[pallet::call]
     impl<T: Config> Pallet<T> {
         /// Callable by the governance committee to add new liquid assets to the
-        /// index and mint the given amount IndexToken.
+        /// index and mint the given amount PINT.
         /// The amount of PINT minted and awarded to the LP is specified as part
         /// of the associated proposal
         /// Caller's balance is updated to allocate the correct amount of the
-        /// IndexToken. If the asset does not exist yet, it will get
+        /// PINT. If the asset does not exist yet, it will get
         /// created with the given location.
         #[pallet::weight(T::WeightInfo::add_asset())]
         pub fn add_asset(
@@ -519,8 +519,8 @@ pub mod pallet {
             // update the locks of prior deposits
             Self::do_update_index_token_locks(&caller);
 
-            let free_balance = T::IndexToken::free_balance(&caller);
-            T::IndexToken::ensure_can_withdraw(
+            let free_balance = T::PINT::free_balance(&caller);
+            T::PINT::ensure_can_withdraw(
                 &caller,
                 amount,
                 WithdrawReasons::TRANSFER,
@@ -544,9 +544,9 @@ pub mod pallet {
             // update the index balance by burning all of the redeemed tokens and the fee
             let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
 
-            let burned = T::IndexToken::burn(effectively_withdrawn);
+            let burned = T::PINT::burn(effectively_withdrawn);
 
-            T::IndexToken::settle(
+            T::PINT::settle(
                 &caller,
                 burned,
                 WithdrawReasons::TRANSFER,
@@ -556,8 +556,8 @@ pub mod pallet {
             .expect("ensured can withdraw; qed");
 
             // issue new tokens to compensate the fee and put it into the treasury
-            let fee = T::IndexToken::issue(fee);
-            T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
+            let fee = T::PINT::issue(fee);
+            T::PINT::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
 
             let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
 
@@ -700,12 +700,12 @@ pub mod pallet {
 
         /// The amount of index tokens held by the given user
         pub fn index_token_balance(account: &T::AccountId) -> T::Balance {
-            T::IndexToken::total_balance(account)
+            T::PINT::total_balance(account)
         }
 
         /// The amount of index tokens
         pub fn index_token_issuance() -> T::Balance {
-            T::IndexToken::total_issuance()
+            T::PINT::total_issuance()
         }
 
         // The free balance of the given account for the given asset.
@@ -753,7 +753,7 @@ pub mod pallet {
         fn calculate_nav(
             iter: impl Iterator<Item = T::AssetId>,
         ) -> Result<T::Balance, DispatchError> {
-            let total_issuance = T::IndexToken::total_issuance();
+            let total_issuance = T::PINT::total_issuance();
             if total_issuance.is_zero() {
                 return Ok(T::Balance::zero());
             }
@@ -928,9 +928,9 @@ pub mod pallet {
         /// updates the lock accordingly
         fn do_mint_index_token(user: &T::AccountId, amount: T::Balance) {
             // increase the total issuance
-            let issued = T::IndexToken::issue(amount);
+            let issued = T::PINT::issue(amount);
             // add minted PINT to user's free balance
-            T::IndexToken::resolve_creating(user, issued);
+            T::PINT::resolve_creating(user, issued);
 
             Self::do_add_index_token_lock(user, amount);
         }
@@ -939,8 +939,8 @@ pub mod pallet {
         /// `LockupPeriod` and updates the existing locks
         fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
             let current_block = frame_system::Pallet::<T>::block_number();
-            let mut locks = IndexTokenLocks::<T>::get(user);
-            locks.push(IndexTokenLock {
+            let mut locks = PINTLocks::<T>::get(user);
+            locks.push(PINTLock {
                 locked: amount,
                 end_block: current_block + T::LockupPeriod::get(),
             });
@@ -950,7 +950,7 @@ pub mod pallet {
         /// inserts the given locks and filters expired locks.
         fn do_insert_index_token_locks(
             user: &T::AccountId,
-            locks: Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
+            locks: Vec<PINTLock<T::BlockNumber, T::Balance>>,
         ) {
             let current_block = frame_system::Pallet::<T>::block_number();
             let mut locked = T::Balance::zero();
@@ -971,28 +971,28 @@ pub mod pallet {
 
             if locks.is_empty() {
                 // remove the lock entirely
-                T::IndexToken::remove_lock(T::IndexTokenLockIdentifier::get(), user);
-                IndexTokenLocks::<T>::remove(user);
-                LockedIndexToken::<T>::remove(user);
+                T::PINT::remove_lock(T::PINTLockIdentifier::get(), user);
+                PINTLocks::<T>::remove(user);
+                LockedPINT::<T>::remove(user);
             } else {
                 // set the lock, if it already exists, this will update it
-                T::IndexToken::set_lock(
-                    T::IndexTokenLockIdentifier::get(),
+                T::PINT::set_lock(
+                    T::PINTLockIdentifier::get(),
                     user,
                     locked,
                     WithdrawReasons::all(),
                 );
 
-                IndexTokenLocks::<T>::insert(user, locks);
-                LockedIndexToken::<T>::insert(user, locked);
+                PINTLocks::<T>::insert(user, locks);
+                LockedPINT::<T>::insert(user, locked);
             }
         }
 
         /// Updates the index token locks for the given user.
         fn do_update_index_token_locks(user: &T::AccountId) {
-            let locks = IndexTokenLocks::<T>::get(user);
+            let locks = PINTLocks::<T>::get(user);
             if !locks.is_empty() {
-                Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
+                Self::do_insert_index_token_locks(user, PINTLocks::<T>::get(user))
             }
         }
     }
@@ -1014,7 +1014,7 @@ pub mod pallet {
             // transfer the given units of asset from the caller into the treasury account
             T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
             // mint PINT into caller's balance increasing the total issuance
-            T::IndexToken::deposit_creating(caller, nav);
+            T::PINT::deposit_creating(caller, nav);
             Ok(())
         }
 
@@ -1041,7 +1041,7 @@ pub mod pallet {
             // mint SAFT into the treasury's account
             T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
             // mint PINT into caller's balance increasing the total issuance
-            T::IndexToken::deposit_creating(caller, nav);
+            T::PINT::deposit_creating(caller, nav);
 
             Ok(())
         }
@@ -1067,7 +1067,7 @@ pub mod pallet {
             }
             ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
             ensure!(
-                T::IndexToken::can_slash(&who, nav),
+                T::PINT::can_slash(&who, nav),
                 Error::<T>::InsufficientDeposit
             );
 
@@ -1077,7 +1077,7 @@ pub mod pallet {
             T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
 
             // burn index token accordingly, no index token changes in the meantime
-            T::IndexToken::slash(&who, nav);
+            T::PINT::slash(&who, nav);
 
             Ok(())
         }
@@ -1096,14 +1096,14 @@ pub mod pallet {
 
             ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
             ensure!(
-                T::IndexToken::can_slash(&who, nav),
+                T::PINT::can_slash(&who, nav),
                 Error::<T>::InsufficientDeposit
             );
 
             // burn SAFT by withdrawing from the index
             T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
             // burn index token accordingly, no index token changes in the meantime
-            T::IndexToken::slash(&who, nav);
+            T::PINT::slash(&who, nav);
 
             Ok(())
         }

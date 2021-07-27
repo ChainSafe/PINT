@@ -10,7 +10,7 @@ use xcm::opaque::v0::MultiLocation;
 /// Abstraction over the lock of minted index token that are locked up for
 /// `LockupPeriod`
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct IndexTokenLock<BlockNumber, Balance> {
+pub struct PINTLock<BlockNumber, Balance> {
     /// Locked amount of index token.
     pub locked: Balance,
     /// The block when the locked index token can be unlocked.
