@@ -33,7 +33,7 @@ futures = { version = "0.3.1", features = ["compat"] }
 jsonrpc-core = '15.1.0'
 
 # Local Dependencies
-pint-runtime = { path = '../runtime' }
+pint-runtime = { path = '../runtime/dev' }
 pint-runtime-common = { path = '../runtime/common' }
 xcm-calls = { path = '../primitives/xcm-calls' }
 
