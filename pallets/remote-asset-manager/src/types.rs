@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
-use frame_support::pallet_prelude::RuntimeDebug;
-use xcm::v0::{Junction, MultiLocation};
+use frame_support::RuntimeDebug;
+use xcm::v0::{Junction, MultiLocation, Outcome};
 use xcm_calls::assets::AssetsConfig;
 
 /// Represents the config for the statemint parachain
@@ -28,4 +28,16 @@ impl<AssetId> StatemintConfig<AssetId> {
     pub fn location(&self) -> MultiLocation {
         (Junction::Parent, Junction::Parachain(self.parachain_id)).into()
     }
+}
+
+/// Outcome of an XCM unbonding api call
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+pub enum UnBondingOutcome {
+    /// Staking is not supported, therefore nothing to unbond
+    NotSupported,
+    /// Staking is supported, but the parachain's reserve account currently
+    /// holds enough units as stash so that no unbonding procedure is necessary
+    SufficientReserve,
+    /// The outcome of the XCM unbond call
+    Outcome(Outcome),
 }

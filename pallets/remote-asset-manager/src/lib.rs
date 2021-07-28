@@ -946,6 +946,8 @@ pub mod pallet {
         }
 
         fn unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            // TODO this will check the balance meter for the asset, if unbonding is
+            // supported it will check the current stash
             Self::do_send_unbond(asset, amount)
         }
     }

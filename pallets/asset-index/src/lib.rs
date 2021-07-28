@@ -561,7 +561,7 @@ pub mod pallet {
 
             let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
 
-            // start bonding and locking
+            // start the redemption procedure
             for (asset, units) in asset_redemption.asset_amounts {
                 // try to start the unbonding process
                 let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
