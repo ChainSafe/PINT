@@ -83,6 +83,7 @@ orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-modu
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 # PINT dependencies
+pint-runtime-common = {path = '../common', default-features = false }
 pallet-committee = {path = '../../pallets/committee', default-features = false }
 pallet-local-treasury = {path = '../../pallets/local-treasury', default-features = false }
 pallet-asset-index = {path = '../../pallets/asset-index', default-features = false }
@@ -171,6 +172,7 @@ std = [
 	'xcm-builder/std',
 	'xcm-executor/std',
 
+    'pint-runtime-common/std',
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',

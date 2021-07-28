@@ -8,11 +8,16 @@ repository = 'https://github.com/substrate-developer-hub/substrate-parachain-tem
 version = '0.0.1'
 
 [dependencies]
-xcm-calls = { path = "../../primitives/xcm-calls", default-features = false }
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+primitives = { path = '../../primitives/primitives', default-features = false }
+xcm-calls = { path = "../../primitives/xcm-calls", default-features = false }
 
 [features]
 default = ['std']
 std = [
+    "frame-support/std",
+    'frame-system/std',
+    "primitives/std",
     "xcm-calls/std"
 ]

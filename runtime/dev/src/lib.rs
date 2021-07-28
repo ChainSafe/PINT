@@ -58,9 +58,9 @@ use xcm_builder::{
 };
 use xcm_executor::XcmExecutor;
 
-use constants::{fee::*, time::*};
 use pallet_committee::EnsureMember;
 pub use primitives::*;
+pub use pint_runtime_common::{types::*, constants::*};
 use primitives::{fee::FeeRate, traits::MultiAssetRegistry};
 use xcm_calls::assets::AssetsCallEncoder;
 use xcm_calls::{
@@ -73,8 +73,6 @@ use xcm_calls::{
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-/// Additional chain specific constants
-mod constants;
 /// Weights of pallets
 mod weights;
 

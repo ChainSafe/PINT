@@ -6329,6 +6329,7 @@ dependencies = [
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
+ "pint-runtime-common",
  "polkadot-parachain",
  "primitives",
  "serde",
@@ -6356,6 +6357,8 @@ name = "pint-runtime-common"
 version = "0.0.1"
 dependencies = [
  "frame-support",
+ "frame-system",
+ "primitives",
  "xcm-calls",
 ]
 
