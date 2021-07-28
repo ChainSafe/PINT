@@ -13,17 +13,15 @@ use codec::Decode;
 use cumulus_primitives_core::ParaId;
 pub use frame_support::{
     construct_runtime, match_type, ord_parameter_types, parameter_types,
-    traits::{All, IsInVec, LockIdentifier, Randomness},
+    traits::{All, IsInVec, Randomness},
     weights::{
         constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
         DispatchClass, IdentityFee, Weight,
     },
     PalletId, StorageValue,
 };
-use frame_system::{
-    limits::{BlockLength, BlockWeights},
-    EnsureSigned,
-};
+use frame_system::EnsureSigned;
+
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
 use orml_traits::parameter_type_with_key;
@@ -39,7 +37,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 pub use sp_runtime::BuildStorage;
 use sp_runtime::{
     create_runtime_str, generic, impl_opaque_keys,
-    traits::{AccountIdConversion, AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, Zero},
+    traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, Zero},
     transaction_validity::{TransactionSource, TransactionValidity},
     ApplyExtrinsicResult,
 };
@@ -59,8 +57,8 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use pallet_committee::EnsureMember;
+pub use pint_runtime_common::{constants::*, types::*};
 pub use primitives::*;
-pub use pint_runtime_common::{types::*, constants::*};
 use primitives::{fee::FeeRate, traits::MultiAssetRegistry};
 use xcm_calls::assets::AssetsCallEncoder;
 use xcm_calls::{
@@ -108,10 +106,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     transaction_version: 1,
 };
 
-// 1 in 4 blocks (on average, not counting collisions) will be primary babe
-// blocks.
-pub const PRIMARY_PROBABILITY: (u64, u64) = (1, 4);
-
 /// The version information used to identify this runtime when compiled
 /// natively.
 #[cfg(feature = "std")]
@@ -122,39 +116,14 @@ pub fn native_version() -> NativeVersion {
     }
 }
 
-/// We assume that ~10% of the block weight is consumed by `on_initalize`
-/// handlers. This is used to limit the maximal weight of a single extrinsic.
-const AVERAGE_ON_INITIALIZE_RATIO: Perbill = Perbill::from_percent(10);
-/// We allow `Normal` extrinsics to fill up the block up to 75%, the rest can be
-/// used by  Operational  extrinsics.
-const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
-/// We allow for 0.5 seconds of compute with a 6 second average block time.
-const MAXIMUM_BLOCK_WEIGHT: Weight = WEIGHT_PER_SECOND / 2;
-
 parameter_types! {
-    pub const BlockHashCount: BlockNumber = 250;
+    pub Ancestry: MultiLocation = Junction::Parachain(
+        ParachainInfo::parachain_id().into()
+    ).into();
+    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
+    pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
+    pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
     pub const Version: RuntimeVersion = VERSION;
-    pub RuntimeBlockLength: BlockLength =
-        BlockLength::max_with_normal_ratio(5 * 1024 * 1024, NORMAL_DISPATCH_RATIO);
-    pub RuntimeBlockWeights: BlockWeights = BlockWeights::builder()
-        .base_block(BlockExecutionWeight::get())
-        .for_class(DispatchClass::all(), |weights| {
-            weights.base_extrinsic = ExtrinsicBaseWeight::get();
-        })
-        .for_class(DispatchClass::Normal, |weights| {
-            weights.max_total = Some(NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT);
-        })
-        .for_class(DispatchClass::Operational, |weights| {
-            weights.max_total = Some(MAXIMUM_BLOCK_WEIGHT);
-            // Operational transactions have some extra reserved space, so that they
-            // are included even if block reached `MAXIMUM_BLOCK_WEIGHT`.
-            weights.reserved = Some(
-                MAXIMUM_BLOCK_WEIGHT - NORMAL_DISPATCH_RATIO * MAXIMUM_BLOCK_WEIGHT
-            );
-        })
-        .avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
-        .build_or_panic();
-    pub const SS58Prefix: u8 = 0;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -213,24 +182,12 @@ impl frame_system::Config for Runtime {
     type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
-parameter_types! {
-    pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
-}
-
 impl pallet_timestamp::Config for Runtime {
     /// A timestamp: milliseconds since the unix epoch.
     type Moment = u64;
     type OnTimestampSet = ();
     type MinimumPeriod = MinimumPeriod;
     type WeightInfo = ();
-}
-
-parameter_types! {
-    /// Same as Polkadot Relay Chain.
-    pub const ExistentialDeposit: Balance = 500;
-    // For weight estimation, we assume that the most locks on an individual account will be 50.
-    // This number may need to be adjusted in the future if this assumption no longer holds true.
-    pub const MaxLocks: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
@@ -247,10 +204,6 @@ impl pallet_balances::Config for Runtime {
     type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
-parameter_types! {
-    pub const TransactionByteFee: Balance = 1 ;
-}
-
 impl pallet_transaction_payment::Config for Runtime {
     type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
     type TransactionByteFee = TransactionByteFee;
@@ -261,11 +214,6 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
     type Event = Event;
     type Call = Call;
-}
-
-parameter_types! {
-    pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
-    pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -282,15 +230,6 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 impl cumulus_pallet_aura_ext::Config for Runtime {}
-
-parameter_types! {
-    pub const RelayLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
-    pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-    pub Ancestry: MultiLocation = Junction::Parachain(
-        ParachainInfo::parachain_id().into()
-    ).into();
-}
 
 /// Type for specifying how a `MultiLocation` can be converted into an
 /// `AccountId`. This is used when determining ownership of accounts for asset
@@ -340,18 +279,6 @@ pub type XcmOriginToTransactDispatchOrigin = (
     // Xcm origins can be represented natively under the Xcm pallet's Xcm origin.
     XcmPassthrough<Origin>,
 );
-
-parameter_types! {
-    // One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
-    pub const UnitWeightCost: Weight = 200_000_000;
-    // One UNIT buys 1 second of weight.
-    pub const UnitPerSecond: (MultiLocation, u128) = (X1(Parent), UNIT);
-
-    // The base weight for an XCM message
-    // The actual weight for an XCM message will determined by
-    // `T::BaseXcmWeight  + T::Weigher::weight(&msg)`
-    pub const BaseXcmWeight: Weight = 100_000_000;
-}
 
 match_type! {
     pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
@@ -425,21 +352,11 @@ impl pallet_aura::Config for Runtime {
     type AuthorityId = AuraId;
 }
 
-parameter_types! {
-    pub const UncleGenerations: u32 = 0;
-}
-
 impl pallet_authorship::Config for Runtime {
     type FindAuthor = pallet_session::FindAccountFromAuthorIndex<Self, Aura>;
     type UncleGenerations = UncleGenerations;
     type FilterUncle = ();
     type EventHandler = CollatorSelection;
-}
-
-parameter_types! {
-    pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
-    pub const Period: u32 = 6 * HOURS;
-    pub const Offset: BlockNumber = 0;
 }
 
 impl pallet_session::Config for Runtime {
@@ -458,13 +375,6 @@ impl pallet_session::Config for Runtime {
     type WeightInfo = ();
 }
 
-parameter_types! {
-    pub const PotId: PalletId = PalletId(*b"PotStake");
-    pub const MaxCandidates: u32 = 200;
-    pub const MinCandidates: u32 = 1;
-    pub const MaxInvulnerables: u32 = 50;
-}
-
 impl pallet_collator_selection::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
@@ -479,12 +389,6 @@ impl pallet_collator_selection::Config for Runtime {
     type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
     type ValidatorRegistration = Session;
     type WeightInfo = ();
-}
-
-parameter_types! {
-    pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
-    pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
-    pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
 }
 
 impl pallet_local_treasury::Config for Runtime {
@@ -504,15 +408,6 @@ impl pallet_saft_registry::Config for Runtime {
     type AssetId = AssetId;
     type Event = Event;
     type WeightInfo = weights::pallet_saft_registry::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-    pub const ProposalSubmissionPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-    pub const VotingPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-}
-
-ord_parameter_types! {
-     pub const MinCouncilVotes: usize = 4;
 }
 
 type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
@@ -545,19 +440,6 @@ impl pallet_price_feed::Config for Runtime {
     type WeightInfo = weights::pallet_price_feed::WeightInfo<Runtime>;
 }
 
-parameter_types! {
-    // Used to determine the account for storing the funds used to pay the oracles.
-    pub const FeedPalletId: PalletId = PalletId(*b"linkfeed");
-    // Minimum amount of funds that need to be present in the fund account
-    pub const MinimumReserve: Balance = 100;
-    // Maximum allowed string length for feed names
-    pub const StringLimit: u32 = 15;
-    // Maximum number of oracles per feed
-    pub const OracleLimit: u32 = 10;
-    // Maximum number of feeds
-    pub const FeedLimit: u16 = 10;
-}
-
 impl pallet_chainlink_feed::Config for Runtime {
     type Event = Event;
     type FeedId = FeedId;
@@ -570,17 +452,6 @@ impl pallet_chainlink_feed::Config for Runtime {
     type FeedLimit = FeedLimit;
     type OnAnswerHandler = ();
     type WeightInfo = weights::pallet_chainlink_feed::WeightInfo<Runtime>;
-}
-
-parameter_types! {
-    pub const LockupPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-    pub const MinimumRedemption: u32 = 0;
-    pub const WithdrawalPeriod: <Runtime as frame_system::Config>::BlockNumber = 10;
-    pub const DOTContributionLimit: Balance = 999;
-    pub const PalletIndexStringLimit: u32 = 50;
-    pub const IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
-    // TODO: use actual fees
-    pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
 impl pallet_asset_index::Config for Runtime {
@@ -603,27 +474,6 @@ impl pallet_asset_index::Config for Runtime {
     type Event = Event;
     type StringLimit = PalletIndexStringLimit;
     type WeightInfo = weights::pallet_asset_index::WeightInfo<Self>;
-}
-
-parameter_types! {
-    pub const RelayChainAssetId: AssetId = 0;
-    pub const PINTAssetId: AssetId = 1;
-    pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
-}
-
-// --- ORML configurations
-parameter_type_with_key! {
-    pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
-        Zero::zero()
-    };
-}
-
-// The minimum amount of assets that should remain unbonded.
-parameter_type_with_key! {
-    pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
-        // Same as relaychain existential deposit
-        ExistentialDeposit::get()
-    };
 }
 
 impl orml_tokens::Config for Runtime {
@@ -765,10 +615,6 @@ impl PalletCallEncoder for PalletAssetsEncoder {
         // only allow to interact with pint related token on statemint
         *ctx == PINTAssetId::get()
     }
-}
-
-parameter_types! {
-     pub const MinimumStatemintTransferAmount: Balance = 1;
 }
 
 impl pallet_remote_asset_manager::Config for Runtime {

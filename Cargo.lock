@@ -6356,9 +6356,12 @@ dependencies = [
 name = "pint-runtime-common"
 version = "0.0.1"
 dependencies = [
+ "cumulus-pallet-xcm",
  "frame-support",
  "frame-system",
+ "orml-traits",
  "primitives",
+ "xcm",
  "xcm-calls",
 ]
 
