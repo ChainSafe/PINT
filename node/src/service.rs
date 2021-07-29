@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 // Local Runtime Types
-use pint_runtime::RuntimeApi;
+use crate::pint_runtime::{self, RuntimeApi};
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{
@@ -44,7 +44,7 @@ native_executor_instance!(
     frame_benchmarking::benchmarking::HostFunctions,
 );
 
-/// Starts a `ServiceBuilder` for a full service.
+/// Starts a `ServiceBuilder` for a full service.p
 ///
 /// Use this macro if you don't actually need the full service, but just the
 /// builder in order to be able to perform chain operations.

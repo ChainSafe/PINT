@@ -16,11 +16,14 @@ targets = ['x86_64-unknown-linux-gnu']
 substrate-build-script-utils = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
 [features]
-default = []
+default = [ ]
+kusama = [ 'pint-runtime-kusama' ]
+polkadot = [ 'pint-runtime-polkadot' ]
 runtime-benchmarks = [
-    'pint-runtime/runtime-benchmarks',
+    'pint-runtime-dev/runtime-benchmarks',
     'polkadot-service/runtime-benchmarks'
 ]
+
 [dependencies]
 derive_more = '0.15.0'
 log = '0.4.14'
@@ -29,11 +32,14 @@ structopt = '0.3.8'
 serde = { version = '1.0.119', features = ['derive'] }
 hex-literal = '0.2.1'
 futures = { version = "0.3.1", features = ["compat"] }
+
 # RPC related Dependencies
 jsonrpc-core = '15.1.0'
 
 # Local Dependencies
-pint-runtime = { path = '../runtime/dev' }
+pint-runtime-dev = { path = '../runtime/dev' }
+pint-runtime-kusama = { path = '../runtime/kusama', optional = true }
+pint-runtime-polkadot = { path = '../runtime/polkadot', optional = true }
 pint-runtime-common = { path = '../runtime/common' }
 xcm-calls = { path = '../primitives/xcm-calls' }
 
@@ -89,7 +95,6 @@ cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branc
 cumulus-primitives-parachain-inherent = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.8' }
 cumulus-client-consensus-relay-chain = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.8' }
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.8" }
-
 
 # Polkadot dependencies
 polkadot-primitives = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8'}
