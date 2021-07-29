@@ -1,7 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::pint_runtime::{Block, RuntimeApi};
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
@@ -11,6 +10,7 @@ use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
+use pint_runtime::{Block, RuntimeApi};
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
@@ -70,7 +70,7 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &crate::pint_runtime::VERSION
+        &pint_runtime::VERSION
     }
 }
 

@@ -1,0 +1,30 @@
+[package]
+authors = ['ChainSafe Systems']
+edition = '2018'
+homepage = 'https://substrate.dev'
+license = 'LGPL-3.0-only'
+name = 'pint-runtime'
+repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
+description = "Gather the runtimes of PINT"
+version = "2.0.0"
+
+[dependencies]
+pint-runtime-dev = { path = "../dev", optional = true }
+pint-runtime-kusama = { path = "../kusama", optional = true }
+pint-runtime-polkadot = { path = "../polkadot", optional = true }
+
+[features]
+default = [ "std", "dev" ]
+dev = ["pint-runtime-dev"]
+kusama = ["pint-runtime-kusama"]
+polkadot = ["pint-runtime-polkadot"]
+std = [
+    "pint-runtime-dev/std",
+    "pint-runtime-kusama/std",
+    "pint-runtime-polkadot/std"
+]
+runtime-benchmarks = [
+    "pint-runtime-dev/runtime-benchmarks",
+    "pint-runtime-kusama/runtime-benchmarks",
+    "pint-runtime-polkadot/runtime-benchmarks"
+]

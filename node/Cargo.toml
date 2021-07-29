@@ -17,12 +17,10 @@ substrate-build-script-utils = { git = 'https://github.com/paritytech/substrate'
 
 [features]
 default = [ ]
-kusama = [ 'pint-runtime-kusama' ]
-polkadot = [ 'pint-runtime-polkadot' ]
+kusama = [ 'pint-runtime/kusama' ]
+polkadot = [ 'pint-runtime/polkadot' ]
 runtime-benchmarks = [
-    'pint-runtime-dev/runtime-benchmarks',
-    'pint-runtime-kusama/runtime-benchmarks',
-    'pint-runtime-polkadot/runtime-benchmarks',
+    'pint-runtime/runtime-benchmarks',
     'polkadot-service/runtime-benchmarks'
 ]
 
@@ -39,9 +37,7 @@ futures = { version = "0.3.1", features = ["compat"] }
 jsonrpc-core = '15.1.0'
 
 # Local Dependencies
-pint-runtime-dev = { path = '../runtime/dev' }
-pint-runtime-kusama = { path = '../runtime/kusama', optional = true }
-pint-runtime-polkadot = { path = '../runtime/polkadot', optional = true }
+pint-runtime = { path = '../runtime/pint' }
 pint-runtime-common = { path = '../runtime/common' }
 xcm-calls = { path = '../primitives/xcm-calls' }
 

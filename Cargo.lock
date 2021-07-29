@@ -6238,10 +6238,8 @@ dependencies = [
  "log",
  "pallet-transaction-payment-rpc",
  "parity-scale-codec",
+ "pint-runtime",
  "pint-runtime-common",
- "pint-runtime-dev",
- "pint-runtime-kusama",
- "pint-runtime-polkadot",
  "polkadot-cli",
  "polkadot-parachain",
  "polkadot-primitives",
@@ -6280,6 +6278,15 @@ dependencies = [
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
  "xcm-calls",
+]
+
+[[package]]
+name = "pint-runtime"
+version = "2.0.0"
+dependencies = [
+ "pint-runtime-dev",
+ "pint-runtime-kusama",
+ "pint-runtime-polkadot",
 ]
 
 [[package]]

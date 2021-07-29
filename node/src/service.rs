@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 // Local Runtime Types
-use crate::pint_runtime::{self, RuntimeApi};
+use pint_runtime::RuntimeApi;
 
 // Cumulus Imports
 use cumulus_client_consensus_aura::{
