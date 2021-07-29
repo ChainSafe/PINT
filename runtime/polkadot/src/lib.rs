@@ -56,7 +56,7 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*};
+pub use pint_runtime_common::{constants::*, types::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::assets::AssetsCallEncoder;
@@ -69,9 +69,6 @@ use xcm_calls::{
 // Make the WASM binary available.
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
-
-/// Weights of pallets
-mod weights;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't
 /// need to know the specifics of the runtime. They can then be made to be

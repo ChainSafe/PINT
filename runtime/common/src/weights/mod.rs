@@ -1,6 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-//! Custom XCM call weights
+pub mod pallet_asset_index;
+pub mod pallet_chainlink_feed;
+pub mod pallet_committee;
+pub mod pallet_local_treasury;
+pub mod pallet_price_feed;
+pub mod pallet_remote_asset_manager;
+pub mod pallet_saft_registry;
+
 use crate::traits::XcmRuntimeCallWeights;
 use frame_support::weights::{constants::RocksDbWeight, Weight};
 use xcm_calls::{proxy::ProxyWeights, staking::StakingWeights};
