@@ -21,6 +21,8 @@ kusama = [ 'pint-runtime-kusama' ]
 polkadot = [ 'pint-runtime-polkadot' ]
 runtime-benchmarks = [
     'pint-runtime-dev/runtime-benchmarks',
+    'pint-runtime-kusama/runtime-benchmarks',
+    'pint-runtime-polkadot/runtime-benchmarks',
     'polkadot-service/runtime-benchmarks'
 ]
 

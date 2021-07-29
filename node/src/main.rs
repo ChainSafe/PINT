@@ -11,6 +11,13 @@ mod service;
 mod cli;
 mod command;
 
+#[cfg(not(any(feature = "kusama", feature = "polkadot")))]
+pub use pint_runtime_dev as pint_runtime;
+#[cfg(feature = "kusama")]
+pub use pint_runtime_kusama as pint_runtime;
+#[cfg(feature = "polkadot")]
+pub use pint_runtime_polkadot as pint_runtime;
+
 fn main() -> sc_cli::Result<()> {
     command::run()
 }
