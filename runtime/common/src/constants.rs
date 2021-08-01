@@ -1,6 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-use crate::types::{AccountId, AssetId, Balance, BlockNumber};
+use cumulus_pallet_xcm::Origin;
 use frame_support::{
     // pallet_predule::Weight,
     parameter_types,
@@ -14,7 +14,7 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
-use primitives::fee::FeeRate;
+use primitives::{fee::FeeRate, AccountId, AssetId, Balance, BlockNumber};
 use xcm::v0::{Junction, MultiLocation};
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
@@ -78,6 +78,7 @@ parameter_types! {
     pub const ProposalSubmissionPeriod: BlockNumber = 10;
     pub const PotId: PalletId = PalletId(*b"PotStake");
     pub const RelayChainAssetId: AssetId = 0;
+    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
     pub const RelayLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
     pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;

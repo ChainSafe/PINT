@@ -116,7 +116,6 @@ parameter_types! {
     pub Ancestry: MultiLocation = Junction::Parachain(
         ParachainInfo::parachain_id().into()
     ).into();
-    pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
     pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
     pub const Version: RuntimeVersion = VERSION;

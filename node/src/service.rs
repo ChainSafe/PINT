@@ -501,7 +501,7 @@ pub fn new_chain_ops(
     sc_service::Error,
 > {
     config.keystore = sc_service::config::KeystoreConfig::InMemory;
-    if &config.chain_spec.is_kusama() {
+    if config.chain_spec.is_kusama() {
         #[cfg(feature = "kusama")]
         {
             let PartialComponents {
@@ -523,7 +523,7 @@ pub fn new_chain_ops(
 
         #[cfg(not(feature = "kusama"))]
         Err(KUSAMA_RUNTIME_NOT_AVAILABLE.into())
-    } else if &config.chain_spec.is_polkadot() {
+    } else if config.chain_spec.is_polkadot() {
         #[cfg(feature = "polkadot")]
         {
             let PartialComponents {
