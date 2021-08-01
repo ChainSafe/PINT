@@ -483,8 +483,10 @@ where
 	.await
 }
 
+#[allow(dead_code)]
 pub const KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
 	"pint-kusama runtime is not available. Please compile the node with `--features kusama` to enable it.";
+#[allow(dead_code)]
 pub const POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
 	"pint-polkadot runtime is not available. Please compile the node with `--features polkadot` to enable it.";
 

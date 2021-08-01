@@ -75,7 +75,6 @@ parameter_types! {
     pub const Period: u32 = 6 * HOURS;
     pub const PINTAssetId: AssetId = 1;
     pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
-    pub const ProposalSubmissionPeriod: BlockNumber = 10;
     pub const PotId: PalletId = PalletId(*b"PotStake");
     pub const RelayChainAssetId: AssetId = 0;
     pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
@@ -126,7 +125,6 @@ parameter_types! {
     pub const UnitPerSecond: (MultiLocation, u128) = (MultiLocation::X1(Junction::Parent), UNIT);
     // One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
     pub const UnitWeightCost: Weight = 200_000_000;
-    pub const VotingPeriod: BlockNumber = 10;
     pub const WithdrawalPeriod: BlockNumber = 10;
 }
 

@@ -119,6 +119,8 @@ parameter_types! {
     pub const RelayNetwork: NetworkId = NetworkId::Kusama;
     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
     pub const Version: RuntimeVersion = VERSION;
+    pub const ProposalSubmissionPeriod: BlockNumber = 10;
+    pub const VotingPeriod: BlockNumber = 10;
 }
 
 // Configure FRAME pallets to include in runtime.

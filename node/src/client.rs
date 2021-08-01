@@ -1,6 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-use pint_runtime_common::types::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
+use primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
 use sc_service::{TFullBackend, TFullClient};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};

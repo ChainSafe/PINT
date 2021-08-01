@@ -113,12 +113,16 @@ pub fn native_version() -> NativeVersion {
 }
 
 parameter_types! {
+    // network
     pub Ancestry: MultiLocation = Junction::Parachain(
         ParachainInfo::parachain_id().into()
     ).into();
     pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
     pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
     pub const Version: RuntimeVersion = VERSION;
+    // pallet-committee
+    pub const ProposalSubmissionPeriod: BlockNumber = 10;
+    pub const VotingPeriod: BlockNumber = 10;
 }
 
 // Configure FRAME pallets to include in runtime.
