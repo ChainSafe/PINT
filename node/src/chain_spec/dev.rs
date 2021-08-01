@@ -3,8 +3,8 @@
 
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
-use pint_runtime::{AccountId, AuraId, Signature};
 use pint_runtime_common::traits::XcmRuntimeCallWeights;
+use pint_runtime_dev::*;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,8 @@ use xcm_calls::{
     staking::{RewardDestination, StakingConfig, StakingWeights},
 };
 
-/// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<pint_runtime::GenesisConfig, Extensions>;
+/// Specialized `DevChainSpec` for the normal parachain runtime.
+pub type DevChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 /// Helper function to generate a crypto pair from seed
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -33,7 +33,7 @@ pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
     get_from_seed::<AuraId>(seed)
 }
 
-/// The extensions for the [`ChainSpec`].
+/// The extensions for the [`DevChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
 #[serde(deny_unknown_fields)]
 pub struct Extensions {
@@ -44,7 +44,7 @@ pub struct Extensions {
 }
 
 impl Extensions {
-    /// Try to get the extension from the given `ChainSpec`.
+    /// Try to get the extension from the given `DevChainSpec`.
     pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
         sc_chain_spec::get_extension(chain_spec.extensions())
     }
@@ -60,8 +60,8 @@ where
     AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-pub fn pint_development_config(id: ParaId) -> ChainSpec {
-    ChainSpec::from_genesis(
+pub fn pint_development_config(id: ParaId) -> DevChainSpec {
+    DevChainSpec::from_genesis(
         // Name
         "PINT Development",
         // ID
@@ -102,8 +102,8 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
     )
 }
 
-pub fn pint_local_config(id: ParaId) -> ChainSpec {
-    ChainSpec::from_genesis(
+pub fn pint_local_config(id: ParaId) -> DevChainSpec {
+    DevChainSpec::from_genesis(
         // Name
         "Local Testnet",
         // ID
@@ -163,32 +163,32 @@ fn pint_testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     council_members: Vec<AccountId>,
     id: ParaId,
-) -> pint_runtime::GenesisConfig {
-    pint_runtime::GenesisConfig {
-        system: pint_runtime::SystemConfig {
-            code: pint_runtime::WASM_BINARY
+) -> GenesisConfig {
+    GenesisConfig {
+        system: SystemConfig {
+            code: WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        balances: pint_runtime::BalancesConfig {
+        balances: BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        committee: pint_runtime::CommitteeConfig {
+        committee: CommitteeConfig {
             council_members: council_members.clone(),
             ..Default::default()
         },
-        chainlink_feed: pint_runtime::ChainlinkFeedConfig {
+        chainlink_feed: ChainlinkFeedConfig {
             pallet_admin: Some(root_key.clone()),
             feed_creators: council_members,
         },
-        sudo: pint_runtime::SudoConfig { key: root_key },
-        parachain_info: pint_runtime::ParachainInfoConfig { parachain_id: id },
-        collator_selection: pint_runtime::CollatorSelectionConfig {
+        sudo: SudoConfig { key: root_key },
+        parachain_info: ParachainInfoConfig { parachain_id: id },
+        collator_selection: CollatorSelectionConfig {
             invulnerables: initial_authorities
                 .iter()
                 .cloned()
@@ -197,20 +197,20 @@ fn pint_testnet_genesis(
             candidacy_bond: Zero::zero(),
             ..Default::default()
         },
-        session: pint_runtime::SessionConfig {
+        session: SessionConfig {
             keys: initial_authorities
                 .iter()
                 .cloned()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),                                // account id
-                        acc,                                        // validator id
-                        pint_runtime::opaque::SessionKeys { aura }, // session keys
+                        acc.clone(),                  // account id
+                        acc,                          // validator id
+                        opaque::SessionKeys { aura }, // session keys
                     )
                 })
                 .collect(),
         },
-        tokens: pint_runtime::TokensConfig {
+        tokens: TokensConfig {
             // TODO:
             //
             // this config is only for tests for now
@@ -233,7 +233,7 @@ fn pint_testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        remote_asset_manager: pint_runtime::RemoteAssetManagerConfig {
+        remote_asset_manager: RemoteAssetManagerConfig {
             staking_configs: vec![(
                 42,
                 StakingConfig {
