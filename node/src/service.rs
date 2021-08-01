@@ -20,7 +20,7 @@ use sc_consensus_aura::ImportQueueParams;
 pub use sc_executor::NativeExecutor;
 use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_service::{Configuration, PartialComponents, Role, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
@@ -396,56 +396,6 @@ where
     Ok((task_manager, client))
 }
 
-/// Build the import queue for the the parachain runtime.
-pub fn parachain_build_import_queue<RuntimeApi, Executor>(
-    client: Arc<TFullClient<Block, RuntimeApi, Executor>>,
-    config: &Configuration,
-    telemetry: Option<TelemetryHandle>,
-    task_manager: &TaskManager,
-) -> Result<
-    sp_consensus::DefaultImportQueue<Block, TFullClient<Block, RuntimeApi, Executor>>,
-    sc_service::Error,
->
-where
-    RuntimeApi:
-        ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
-    RuntimeApi::RuntimeApi:
-        RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
-    RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-    Executor: NativeExecutionDispatch + 'static,
-{
-    let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
-
-    cumulus_client_consensus_aura::import_queue::<
-        sp_consensus_aura::sr25519::AuthorityPair,
-        _,
-        _,
-        _,
-        _,
-        _,
-        _,
-    >(cumulus_client_consensus_aura::ImportQueueParams {
-        block_import: client.clone(),
-        client: client.clone(),
-        create_inherent_data_providers: move |_, _| async move {
-            let time = sp_timestamp::InherentDataProvider::from_system_time();
-
-            let slot =
-                sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-                    *time,
-                    slot_duration.slot_duration(),
-                );
-
-            Ok((time, slot))
-        },
-        registry: config.prometheus_registry().clone(),
-        can_author_with: sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone()),
-        spawner: &task_manager.spawn_essential_handle(),
-        telemetry,
-    })
-    .map_err(Into::into)
-}
-
 /// Start a normal parachain node.
 pub async fn start_node<RuntimeApi, Executor>(
     parachain_config: Configuration,
@@ -534,9 +484,9 @@ where
 }
 
 pub const KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
-	"pint-kusama runtime is not available. Please compile the node with `--features with-mandala-runtime` to enable it.";
+	"pint-kusama runtime is not available. Please compile the node with `--features kusama` to enable it.";
 pub const POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
-	"pint-polkadot runtime is not available. Please compile the node with `--features with-karura-runtime` to enable it.";
+	"pint-polkadot runtime is not available. Please compile the node with `--features polkadot` to enable it.";
 
 /// Builds a new object suitable for chain operations.
 pub fn new_chain_ops(
@@ -551,49 +501,63 @@ pub fn new_chain_ops(
     sc_service::Error,
 > {
     config.keystore = sc_service::config::KeystoreConfig::InMemory;
-    cfg_if::cfg_if! {
-        if #[cfg(feature = "kusama")] {
+    if &config.chain_spec.is_kusama() {
+        #[cfg(feature = "kusama")]
+        {
             let PartialComponents {
                 client,
                 backend,
                 import_queue,
                 task_manager,
                 ..
-            } = new_partial::<pint_runtime_kusama::RuntimeApi, KusamaExecutor>(config, false, false)?;
+            } = new_partial::<pint_runtime_kusama::RuntimeApi, KusamaExecutor>(
+                config, false, false,
+            )?;
             Ok((
                 Arc::new(Client::Kusama(client)),
                 backend,
                 import_queue,
                 task_manager,
             ))
-        } else if #[cfg(feature = "polkadot")] {
+        }
+
+        #[cfg(not(feature = "kusama"))]
+        Err(KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+    } else if &config.chain_spec.is_polkadot() {
+        #[cfg(feature = "polkadot")]
+        {
             let PartialComponents {
                 client,
                 backend,
                 import_queue,
                 task_manager,
                 ..
-            } = new_partial::<pint_runtime_polkadot::RuntimeApi, PolkadotExecutor>(config, false, false)?;
+            } = new_partial::<pint_runtime_polkadot::RuntimeApi, PolkadotExecutor>(
+                config, false, false,
+            )?;
             Ok((
                 Arc::new(Client::Polkadot(client)),
                 backend,
                 import_queue,
                 task_manager,
             ))
-        } else {
-            let PartialComponents {
-                client,
-                backend,
-                import_queue,
-                task_manager,
-                ..
-            } = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(config, false, false)?;
-            Ok((
-                Arc::new(Client::Dev(client)),
-                backend,
-                import_queue,
-                task_manager,
-            ))
         }
+
+        #[cfg(not(feature = "polkadot"))]
+        Err(KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+    } else {
+        let PartialComponents {
+            client,
+            backend,
+            import_queue,
+            task_manager,
+            ..
+        } = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(config, false, false)?;
+        Ok((
+            Arc::new(Client::Dev(client)),
+            backend,
+            import_queue,
+            task_manager,
+        ))
     }
 }

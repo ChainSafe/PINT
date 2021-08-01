@@ -8,9 +8,9 @@ use sp_core::{Pair, Public};
 use sp_runtime::traits::IdentifyAccount;
 
 pub mod dev;
-#[cfg(featre = "kusama")]
+#[cfg(feature = "kusama")]
 pub mod kusama;
-#[cfg(featre = "polkadot")]
+#[cfg(feature = "polkadot")]
 pub mod polkadot;
 
 /// The extensions for the [`DevChainSpec`].
@@ -24,7 +24,7 @@ pub struct Extensions {
 }
 
 impl Extensions {
-    /// Try to get the extension from the given `DevChainSpec`.
+    /// Try to get the extension from the given `ChainSpec`.
     pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
         sc_chain_spec::get_extension(chain_spec.extensions())
     }

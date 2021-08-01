@@ -1,26 +1,24 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use super::{get_account_id_from_seed, get_collator_keys_from_seed, get_from_seed, Extensions};
+use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
 use pint_runtime_common::traits::XcmRuntimeCallWeights;
 use pint_runtime_dev::*;
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
-use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify, Zero};
+use sp_core::sr25519;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use xcm_calls::{
     proxy::{ProxyConfig, ProxyWeights},
     staking::{RewardDestination, StakingConfig, StakingWeights},
 };
 
-/// Specialized `DevChainSpec` for the normal parachain runtime.
-pub type DevChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
+/// Specialized `ChainSpec` for the normal parachain runtime.
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-pub fn pint_development_config(id: ParaId) -> DevChainSpec {
-    DevChainSpec::from_genesis(
+pub fn pint_development_config(id: ParaId) -> ChainSpec {
+    ChainSpec::from_genesis(
         // Name
         "PINT Development",
         // ID
@@ -61,8 +59,8 @@ pub fn pint_development_config(id: ParaId) -> DevChainSpec {
     )
 }
 
-pub fn pint_local_config(id: ParaId) -> DevChainSpec {
-    DevChainSpec::from_genesis(
+pub fn pint_local_config(id: ParaId) -> ChainSpec {
+    ChainSpec::from_genesis(
         // Name
         "Local Testnet",
         // ID

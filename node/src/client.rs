@@ -88,7 +88,7 @@ where
 
 /// Execute something with the client instance.
 ///
-/// As there exist multiple chains inside Polkadot, like Polkadot itself, Karura,
+/// As there exist multiple chains inside Polkadot, like Polkadot itself, Kusama,
 /// Dev etc, there can exist different kinds of client types. As these
 /// client types differ in the generics that are being used, we can not easily
 /// return them from a function. For returning them from a function there exists
@@ -115,7 +115,7 @@ pub trait ExecuteWithClient {
 
 /// A handle to a Polkadot client instance.
 ///
-/// The Polkadot service supports multiple different runtimes (Karura, Polkadot
+/// The Polkadot service supports multiple different runtimes (Kusama, Polkadot
 /// itself, etc). As each runtime has a specialized client, we need to hide them
 /// behind a trait. This is this trait.
 ///
@@ -140,7 +140,7 @@ impl ClientHandle for Client {
         match self {
             Self::Dev(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
+            Self::Kusama(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => {
                 T::execute_with_client::<_, _, FullBackend>(t, client.clone())
@@ -154,7 +154,7 @@ impl sc_client_api::UsageProvider<Block> for Client {
         match self {
             Self::Dev(client) => client.usage_info(),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.usage_info(),
+            Self::Kusama(client) => client.usage_info(),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.usage_info(),
         }
@@ -169,7 +169,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.block_body(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.block_body(id),
+            Self::Kusama(client) => client.block_body(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.block_body(id),
         }
@@ -179,7 +179,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.block(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.block(id),
+            Self::Kusama(client) => client.block(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.block(id),
         }
@@ -189,7 +189,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.block_status(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.block_status(id),
+            Self::Kusama(client) => client.block_status(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.block_status(id),
         }
@@ -199,7 +199,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.justifications(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.justifications(id),
+            Self::Kusama(client) => client.justifications(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.justifications(id),
         }
@@ -212,7 +212,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.block_hash(number),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.block_hash(number),
+            Self::Kusama(client) => client.block_hash(number),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.block_hash(number),
         }
@@ -225,7 +225,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.indexed_transaction(hash),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.indexed_transaction(hash),
+            Self::Kusama(client) => client.indexed_transaction(hash),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.indexed_transaction(hash),
         }
@@ -238,7 +238,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.has_indexed_transaction(hash),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.has_indexed_transaction(hash),
+            Self::Kusama(client) => client.has_indexed_transaction(hash),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.has_indexed_transaction(hash),
         }
@@ -251,7 +251,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.block_indexed_body(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.block_indexed_body(id),
+            Self::Kusama(client) => client.block_indexed_body(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.block_indexed_body(id),
         }
@@ -267,7 +267,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.storage(id, key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.storage(id, key),
+            Self::Kusama(client) => client.storage(id, key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.storage(id, key),
         }
@@ -281,7 +281,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.storage_keys(id, key_prefix),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.storage_keys(id, key_prefix),
+            Self::Kusama(client) => client.storage_keys(id, key_prefix),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.storage_keys(id, key_prefix),
         }
@@ -295,7 +295,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.storage_hash(id, key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.storage_hash(id, key),
+            Self::Kusama(client) => client.storage_hash(id, key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.storage_hash(id, key),
         }
@@ -309,7 +309,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.storage_pairs(id, key_prefix),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.storage_pairs(id, key_prefix),
+            Self::Kusama(client) => client.storage_pairs(id, key_prefix),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.storage_pairs(id, key_prefix),
         }
@@ -326,7 +326,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.storage_keys_iter(id, prefix, start_key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.storage_keys_iter(id, prefix, start_key),
+            Self::Kusama(client) => client.storage_keys_iter(id, prefix, start_key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.storage_keys_iter(id, prefix, start_key),
         }
@@ -341,7 +341,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.child_storage(id, child_info, key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.child_storage(id, child_info, key),
+            Self::Kusama(client) => client.child_storage(id, child_info, key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.child_storage(id, child_info, key),
         }
@@ -356,7 +356,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.child_storage_keys(id, child_info, key_prefix),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.child_storage_keys(id, child_info, key_prefix),
+            Self::Kusama(client) => client.child_storage_keys(id, child_info, key_prefix),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.child_storage_keys(id, child_info, key_prefix),
         }
@@ -371,7 +371,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.child_storage_hash(id, child_info, key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.child_storage_hash(id, child_info, key),
+            Self::Kusama(client) => client.child_storage_hash(id, child_info, key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.child_storage_hash(id, child_info, key),
         }
@@ -385,7 +385,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.max_key_changes_range(first, last),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.max_key_changes_range(first, last),
+            Self::Kusama(client) => client.max_key_changes_range(first, last),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.max_key_changes_range(first, last),
         }
@@ -401,7 +401,7 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
         match self {
             Self::Dev(client) => client.key_changes(first, last, storage_key, key),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.key_changes(first, last, storage_key, key),
+            Self::Kusama(client) => client.key_changes(first, last, storage_key, key),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.key_changes(first, last, storage_key, key),
         }
@@ -413,7 +413,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.header(&id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.header(&id),
+            Self::Kusama(client) => client.header(&id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.header(&id),
         }
@@ -423,7 +423,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.info(),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.info(),
+            Self::Kusama(client) => client.info(),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.info(),
         }
@@ -433,7 +433,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.status(id),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.status(id),
+            Self::Kusama(client) => client.status(id),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.status(id),
         }
@@ -443,7 +443,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.number(hash),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.number(hash),
+            Self::Kusama(client) => client.number(hash),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.number(hash),
         }
@@ -453,7 +453,7 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
         match self {
             Self::Dev(client) => client.hash(number),
             #[cfg(feature = "kusama")]
-            Self::Karura(client) => client.hash(number),
+            Self::Kusama(client) => client.hash(number),
             #[cfg(feature = "polkadot")]
             Self::Polkadot(client) => client.hash(number),
         }

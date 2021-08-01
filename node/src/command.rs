@@ -4,8 +4,7 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    client::*,
-    service::{self, new_partial, IdentifyVariant},
+    service::{self, IdentifyVariant},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
@@ -29,9 +28,40 @@ fn load_spec(
     Ok(match id {
         "pint-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
         "pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
+        #[cfg(feature = "kusama")]
+        "pint-kusama-local" => Box::new(chain_spec::kusama::pint_local_config(para_id)),
+        #[cfg(feature = "kusama")]
+        "pint-kusama-dev" => Box::new(chain_spec::kusama::pint_development_config(para_id)),
+        #[cfg(feature = "polkadot")]
+        "pint-polkadot-local" => Box::new(chain_spec::polkadot::pint_local_config(para_id)),
+        #[cfg(feature = "polkadot")]
+        "pint-polkadot-dev" => Box::new(chain_spec::polkadot::pint_development_config(para_id)),
         path => {
-            let f = std::path::PathBuf::from(path);
-            Box::new(chain_spec::dev::DevChainSpec::from_json_file(f)?)
+            let path = std::path::PathBuf::from(path);
+            let starts_with = |prefix: &str| {
+                path.file_name()
+                    .map(|f| f.to_str().map(|s| s.starts_with(&prefix)))
+                    .flatten()
+                    .unwrap_or(false)
+            };
+
+            if starts_with("pint_kusama") {
+                #[cfg(feature = "kusama")]
+                {
+                    Box::new(chain_spec::kusama::ChainSpec::from_json_file(path)?)
+                }
+                #[cfg(not(feature = "kusama"))]
+                return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
+            } else if starts_with("pint_polkadot") {
+                #[cfg(feature = "polkadot")]
+                {
+                    Box::new(chain_spec::polkadot::ChainSpec::from_json_file(path)?)
+                }
+                #[cfg(not(feature = "polkadot"))]
+                return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+            } else {
+                Box::new(chain_spec::dev::ChainSpec::from_json_file(path)?)
+            }
         }
     })
 }
@@ -71,15 +101,19 @@ impl SubstrateCli for Cli {
         load_spec(id, self.run.parachain_id.unwrap_or(200).into())
     }
 
-    fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "kusama")] {
-                &pint_runtime_kusama::VERSION,
-            } else if #[cfg(feature = "polkadot")] {
-                &pint_runtime_polkadot::VERSION,
-            } else {
-                &pint_runtime_dev::VERSION
-            }
+    fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+        if chain_spec.is_kusama() {
+            #[cfg(feature = "kusama")]
+            return &pint_runtime_kusama::VERSION;
+            #[cfg(not(feature = "kusama"))]
+            panic!("{}", service::KUSAMA_RUNTIME_NOT_AVAILABLE);
+        } else if chain_spec.is_polkadot() {
+            #[cfg(feature = "polkadot")]
+            return &pint_runtime_polkadot::VERSION;
+            #[cfg(not(feature = "polkadot"))]
+            panic!("{}", service::POLKADOT_RUNTIME_NOT_AVAILABLE);
+        } else {
+            return &pint_runtime_dev::VERSION;
         }
     }
 }
@@ -143,6 +177,7 @@ macro_rules! with_runtime {
             #[cfg(feature = "kusama")]
             $( $code )*
 
+            #[cfg(not(feature = "kusama"))]
             return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_polkadot() {
 			#[allow(unused_imports)]
@@ -153,6 +188,7 @@ macro_rules! with_runtime {
             #[cfg(feature = "polkadot")]
             $( $code )*
 
+            #[cfg(not(feature = "polkadot"))]
             return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 		} else {
 			#[allow(unused_imports)]
