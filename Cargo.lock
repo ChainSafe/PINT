@@ -6250,6 +6250,7 @@ dependencies = [
  "polkadot-primitives",
  "polkadot-service",
  "polkadot-test-service",
+ "primitives",
  "sc-basic-authorship",
  "sc-chain-spec",
  "sc-cli",

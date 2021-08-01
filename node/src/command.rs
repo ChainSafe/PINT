@@ -4,15 +4,15 @@
 use crate::{
     chain_spec,
     cli::{Cli, RelayChainCli, Subcommand},
-    client::Client,
     client::*,
-    service::new_partial,
+    service::{self, new_partial, IdentifyVariant},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
 use polkadot_parachain::primitives::AccountIdConversion;
+use primitives::Block;
 use sc_cli::{
     ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
     NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
@@ -27,11 +27,12 @@ fn load_spec(
     para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
     Ok(match id {
-        "pint-local" => Box::new(chain_spec::pint_local_config(para_id)),
-        "pint-dev" => Box::new(chain_spec::pint_development_config(para_id)),
-        path => Box::new(chain_spec::ChainSpec::from_json_file(
-            std::path::PathBuf::from(path),
-        )?),
+        "pint-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
+        "pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
+        path => {
+            let f = std::path::PathBuf::from(path);
+            Box::new(chain_spec::dev::DevChainSpec::from_json_file(f)?)
+        }
     })
 }
 
@@ -71,7 +72,15 @@ impl SubstrateCli for Cli {
     }
 
     fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-        &VERSION
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "kusama")] {
+                &pint_runtime_kusama::VERSION,
+            } else if #[cfg(feature = "polkadot")] {
+                &pint_runtime_polkadot::VERSION,
+            } else {
+                &pint_runtime_dev::VERSION
+            }
+        }
     }
 }
 
@@ -123,22 +132,35 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
         .ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
-macro_rules! construct_async_run {
-	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
-		let runner = $cli.create_runner($cmd)?;
-		runner.async_run(|$config| {
-			let $components = new_partial::<
-				RuntimeApi,
-                Client,
-				_
-			>(
-				&$config,
-				crate::service::parachain_build_import_queue,
-			)?;
-			let task_manager = $components.task_manager;
-			{ $( $code )* }.map(|v| (v, task_manager))
-		})
-	}}
+macro_rules! with_runtime {
+	($chain_spec:expr, { $( $code:tt )* }) => {
+		if $chain_spec.is_kusama() {
+            #[allow(unused_imports)]
+            #[cfg(feature = "kusama")]
+            use pint_runtime_kusama::{Block, RuntimeApi};
+            #[cfg(feature = "kusama")]
+            use service::{KusamaExecutor as Executor};
+            #[cfg(feature = "kusama")]
+            $( $code )*
+
+            return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
+		} else if $chain_spec.is_polkadot() {
+			#[allow(unused_imports)]
+            #[cfg(feature = "polkadot")]
+            use pint_runtime_polkadot::{Block, RuntimeApi};
+            #[cfg(feature = "polkadot")]
+            use service::{PolkadotExecutor as Executor};
+            #[cfg(feature = "polkadot")]
+            $( $code )*
+
+            return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+		} else {
+			#[allow(unused_imports)]
+            use pint_runtime_dev::{Block, RuntimeApi};
+            use service::{DevExecutor as Executor};
+            $( $code )*
+		}
+    }
 }
 
 /// Parse command line arguments into service configuration.
@@ -150,26 +172,22 @@ pub fn run() -> Result<()> {
             let runner = cli.create_runner(cmd)?;
             runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
         }
-        Some(Subcommand::CheckBlock(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.import_queue))
-            })
-        }
-        Some(Subcommand::ExportBlocks(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, config.database))
-            })
-        }
-        Some(Subcommand::ExportState(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, config.chain_spec))
-            })
-        }
-        Some(Subcommand::ImportBlocks(cmd)) => {
-            construct_async_run!(|components, cli, cmd, config| {
-                Ok(cmd.run(components.client, components.import_queue))
-            })
-        }
+        Some(Subcommand::CheckBlock(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
+            let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
+            Ok((cmd.run(client, import_queue), task_manager))
+        }),
+        Some(Subcommand::ExportBlocks(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
+            let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
+            Ok((cmd.run(client, config.database), task_manager))
+        }),
+        Some(Subcommand::ExportState(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
+            let (client, _, _, task_manager) = service::new_chain_ops(&mut config)?;
+            Ok((cmd.run(client, config.chain_spec), task_manager))
+        }),
+        Some(Subcommand::ImportBlocks(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
+            let (client, _, import_queue, task_manager) = service::new_chain_ops(&mut config)?;
+            Ok((cmd.run(client, import_queue), task_manager))
+        }),
         Some(Subcommand::PurgeChain(cmd)) => {
             let runner = cli.create_runner(cmd)?;
 
@@ -191,8 +209,9 @@ pub fn run() -> Result<()> {
                 cmd.run(config, polkadot_config)
             })
         }
-        Some(Subcommand::Revert(cmd)) => construct_async_run!(|components, cli, cmd, config| {
-            Ok(cmd.run(components.client, components.backend))
+        Some(Subcommand::Revert(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
+            let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
+            Ok((cmd.run(client, backend), task_manager))
         }),
         Some(Subcommand::ExportGenesisState(params)) => {
             let mut builder = sc_cli::LoggerBuilder::new("");
@@ -242,8 +261,10 @@ pub fn run() -> Result<()> {
         Some(Subcommand::Benchmark(cmd)) => {
             if cfg!(feature = "runtime-benchmarks") {
                 let runner = cli.create_runner(cmd)?;
-
-                runner.sync_run(|config| cmd.run::<Block, ParachainRuntimeExecutor>(config))
+                let chain_spec = &runner.config().chain_spec;
+                with_runtime!(chain_spec, {
+                    return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+                })
             } else {
                 Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."
@@ -290,10 +311,14 @@ pub fn run() -> Result<()> {
                     }
                 );
 
-                crate::service::start_node(config, polkadot_config, id)
-                    .await
-                    .map(|r| r.0)
-                    .map_err(Into::into)
+                with_runtime!(config.chain_spec, {
+                    {
+                        service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+                            .await
+                            .map(|r| r.0)
+                            .map_err(Into::into)
+                    }
+                })
             })
         }
     }

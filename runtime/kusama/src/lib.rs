@@ -56,7 +56,7 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*, weights};
+pub use pint_runtime_common::{constants::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::assets::AssetsCallEncoder;

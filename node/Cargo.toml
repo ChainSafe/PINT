@@ -44,6 +44,7 @@ pint-runtime-dev = { path = '../runtime/dev' }
 pint-runtime-kusama = { path = '../runtime/kusama', optional = true }
 pint-runtime-polkadot = { path = '../runtime/polkadot', optional = true }
 pint-runtime-common = { path = '../runtime/common' }
+primitives = { path = "../primitives/primitives" }
 xcm-calls = { path = '../primitives/xcm-calls' }
 
 # Substrate Dependencies

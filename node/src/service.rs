@@ -1,6 +1,5 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-
 // Cumulus Imports
 use cumulus_client_consensus_aura::{
     build_aura_consensus, BuildAuraConsensusParams, SlotProportion,
@@ -14,6 +13,7 @@ use cumulus_primitives_core::ParaId;
 
 // Substrate Imports
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
+use sc_chain_spec::ChainSpec;
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_consensus_aura::ImportQueueParams;
@@ -61,6 +61,26 @@ native_executor_instance!(
     pint_runtime_polkadot::native_version,
     frame_benchmarking::benchmarking::HostFunctions,
 );
+
+pub trait IdentifyVariant {
+    fn is_kusama(&self) -> bool;
+    fn is_polkadot(&self) -> bool;
+    fn is_dev(&self) -> bool;
+}
+
+impl IdentifyVariant for Box<dyn ChainSpec> {
+    fn is_kusama(&self) -> bool {
+        self.id().starts_with("kusama")
+    }
+
+    fn is_polkadot(&self) -> bool {
+        self.id().starts_with("polkadot")
+    }
+
+    fn is_dev(&self) -> bool {
+        self.id().starts_with("dev")
+    }
+}
 
 /// Maybe Mandala Dev full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
@@ -512,6 +532,11 @@ where
 	)
 	.await
 }
+
+pub const KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
+	"pint-kusama runtime is not available. Please compile the node with `--features with-mandala-runtime` to enable it.";
+pub const POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
+	"pint-polkadot runtime is not available. Please compile the node with `--features with-karura-runtime` to enable it.";
 
 /// Builds a new object suitable for chain operations.
 pub fn new_chain_ops(

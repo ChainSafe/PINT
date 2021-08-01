@@ -1,6 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+use super::Extensions;
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
 use pint_runtime_common::traits::XcmRuntimeCallWeights;
@@ -18,54 +19,12 @@ use xcm_calls::{
 /// Specialized `PolkadotChainSpec` for the normal parachain runtime.
 pub type PolkadotChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
-/// Helper function to generate a crypto pair from seed
-pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-/// Generate collator keys from seed.
-///
-/// This function's return type must always match the session keys of the chain
-/// in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-    get_from_seed::<AuraId>(seed)
-}
-
-/// The extensions for the [`PolkadotChainSpec`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
-#[serde(deny_unknown_fields)]
-pub struct Extensions {
-    /// The relay chain of the Parachain.
-    pub relay_chain: String,
-    /// The id of the Parachain.
-    pub para_id: u32,
-}
-
-impl Extensions {
-    /// Try to get the extension from the given `PolkadotChainSpec`.
-    pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
-        sc_chain_spec::get_extension(chain_spec.extensions())
-    }
-}
-
-type AccountPublic = <Signature as Verify>::Signer;
-
-/// Helper function to generate an account ID from seed
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
-
 pub fn pint_development_config(id: ParaId) -> PolkadotChainSpec {
     PolkadotChainSpec::from_genesis(
         // Name
         "PINT Development",
         // ID
-        "pint_dev",
+        "pint_polkadot_dev",
         ChainType::Local,
         move || {
             pint_testnet_genesis(
@@ -107,7 +66,7 @@ pub fn pint_local_config(id: ParaId) -> PolkadotChainSpec {
         // Name
         "Local Testnet",
         // ID
-        "local_testnet",
+        "pint_polkadot_local_testnet",
         ChainType::Local,
         move || {
             pint_testnet_genesis(
