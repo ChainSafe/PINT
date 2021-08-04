@@ -16,6 +16,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
@@ -51,6 +52,7 @@ pub mod pallet {
         PalletCall, PalletCallEncoder,
     };
 
+    use crate::traits::BalanceMeter;
     use crate::types::StatemintConfig;
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -143,8 +145,9 @@ pub mod pallet {
         type RelayChainAssetId: Get<Self::AssetId>;
 
         /// The minimum amount that should be held in stash (must remain
-        /// unbonded) Withdrawals are only authorized if the updated
-        /// stash balance does exceeds this.
+        /// unbonded).
+        /// Withdrawals are only authorized if the updated stash balance does
+        /// exceeds this.
         ///
         /// This must be at least the `ExistentialDeposit` as configured on the
         /// asset's native chain (e.g. DOT/Polkadot)
@@ -427,7 +430,7 @@ pub mod pallet {
                 PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
             // ensures enough balance is available to bond
-            Self::ensure_stash(asset, value)?;
+            Self::ensure_free_stash(asset, value)?;
 
             let call = PalletStakingCall::<T>::Bond(Bond {
                 controller: controller.clone(),
@@ -730,27 +733,6 @@ pub mod pallet {
             )
         }
 
-        /// Ensures that the given amount can be removed from PINT's sovereign
-        /// account without falling below the configured
-        /// `MinimumRemoteStashBalance`
-        pub fn ensure_stash(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-            let min_stash = T::MinimumRemoteStashBalance::get(&asset);
-            ensure!(
-                Self::stash_balance(asset).saturating_sub(amount) > min_stash,
-                Error::<T>::InusufficientStash
-            );
-            Ok(())
-        }
-
-        /// The assumed balance of the PINT's parachain sovereign account on the
-        /// asset's native chain that is not bonded
-        pub fn stash_balance(asset: T::AssetId) -> T::Balance {
-            let contributed = PalletStakingBondState::<T>::get(&asset)
-                .map(|state| state.total_balance())
-                .unwrap_or_else(Zero::zero);
-            T::Assets::total_issuance(asset).saturating_sub(contributed)
-        }
-
         /// Sends an XCM [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) call
         pub fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
             if amount.is_zero() {
@@ -774,7 +756,7 @@ pub mod pallet {
                 PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
             // ensures enough balance is available to bond extra
-            Self::ensure_stash(asset, amount)?;
+            Self::ensure_free_stash(asset, amount)?;
 
             let call = PalletStakingCall::<T>::BondExtra(amount);
             let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
@@ -937,7 +919,7 @@ pub mod pallet {
                 .ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
 
             // ensures the min stash is still available after the transfer
-            Self::ensure_stash(asset, amount)?;
+            Self::ensure_free_stash(asset, amount)?;
             T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
         }
 
@@ -947,6 +929,34 @@ pub mod pallet {
 
         fn unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
             Self::do_send_unbond(asset, amount)
+        }
+    }
+
+    impl<T: Config> BalanceMeter<T::Balance, T::AssetId> for Pallet<T> {
+        /// This will return the total issuance of the given `asset` minus the
+        /// amount that is currently unvavailable due to staking
+        fn free_stash_balance(asset: T::AssetId) -> T::Balance {
+            // this is the amount that is currently reserved by staking, either `bonded` or
+            // `unbonded` but not yet withdrawn
+            let contributed = PalletStakingBondState::<T>::get(&asset)
+                .map(|state| state.total_balance())
+                .unwrap_or_else(Zero::zero);
+            // The total issuance is equal to the inflow of the remote asset via xcm which
+            // is locked in the parachain's sovereign account on the asset's native chain
+            T::Assets::total_issuance(asset).saturating_sub(contributed)
+        }
+
+        fn ensure_free_stash(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+            let min_stash = Self::minimum_free_stash_balance(&asset);
+            ensure!(
+                Self::free_stash_balance(asset).saturating_sub(amount) > min_stash,
+                Error::<T>::InusufficientStash
+            );
+            Ok(())
+        }
+
+        fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
+            T::MinimumRemoteStashBalance::get(asset)
         }
     }
 
