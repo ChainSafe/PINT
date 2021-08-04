@@ -93,7 +93,7 @@ pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', def
 primitives = { path = '../../primitives/primitives', default-features = false }
 xcm-calls = {path = '../../primitives/xcm-calls', default-features = false }
 
-pallet-chainlink-feed = { git = 'https://github.com/ChainSafe/chainlink-polkadot', branch = 'upgrade-substrate-master', default-features = false }
+pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
 
 [dev-dependencies]
 hex-literal = '0.3.1'

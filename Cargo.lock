@@ -4917,7 +4917,7 @@ dependencies = [
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/ChainSafe/chainlink-polkadot?branch=upgrade-substrate-master)",
  "pallet-price-feed",
  "parity-scale-codec",
  "polkadot-parachain",
@@ -5080,13 +5080,28 @@ dependencies = [
 [[package]]
 name = "pallet-chainlink-feed"
 version = "0.1.0"
-source = "git+https://github.com/ChainSafe/chainlink-polkadot?branch=upgrade-substrate-master#486bf0780ca7224de0062c71092bf4009bcec565"
+source = "git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master#94c79b054c2070f833882b9a05be12ca0e30c8ef"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
  "parity-scale-codec",
  "serde",
+ "sp-arithmetic",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-chainlink-feed"
+version = "0.1.0"
+source = "git+https://github.com/ChainSafe/chainlink-polkadot?branch=upgrade-substrate-master#486bf0780ca7224de0062c71092bf4009bcec565"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
  "sp-arithmetic",
  "sp-core",
  "sp-runtime",
@@ -5432,7 +5447,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-balances",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master)",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -6298,7 +6313,7 @@ dependencies = [
  "frame-system",
  "orml-traits",
  "pallet-asset-index",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master)",
  "pallet-committee",
  "pallet-local-treasury",
  "pallet-price-feed",
@@ -6342,7 +6357,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master)",
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-committee",
@@ -6414,7 +6429,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master)",
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-committee",
@@ -6486,7 +6501,7 @@ dependencies = [
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
- "pallet-chainlink-feed",
+ "pallet-chainlink-feed 0.1.0 (git+https://github.com/smartcontractkit/chainlink-polkadot?branch=master)",
  "pallet-collator-selection",
  "pallet-collective",
  "pallet-committee",
