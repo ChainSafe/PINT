@@ -52,6 +52,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
+    use primitives::traits::UnbondingOutcome;
     use primitives::{
         fee::{BaseFee, FeeRate},
         traits::{MultiAssetRegistry, RemoteAssetManager},
@@ -561,26 +562,37 @@ pub mod pallet {
 
             let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
 
-            // start the redemption procedure
+            // start the redemption process for each withdrawal
             for (asset, units) in asset_redemption.asset_amounts {
-                // try to start the unbonding process
-                let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
-                    // the XCM call was dispatched successfully, however, this is
-                    //  *NOT* synonymous with a successful completion of the unbonding process.
-                    //  instead, this state implies that XCM is now being processed on a different
-                    // parachain
-                    RedemptionState::Unbonding
-                } else {
-                    // the manager encountered an error before being able to send the XCM call,
-                    //  nothing was dispatched to another parachain
-                    RedemptionState::Initiated
+                // start the unbonding routine
+                let state = match T::RemoteAssetManager::unbond(asset, units) {
+                    UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
+                        // nothing to unbond, the funds are assumed to be available after the
+                        // redemption period is over
+                        RedemptionState::Unbonding
+                    }
+                    UnbondingOutcome::Outcome(outcome) => {
+                        // the outcome of the dispatched xcm call
+                        if outcome.ensure_complete().is_ok() {
+                            // the XCM call was dispatched successfully, however, this is  *NOT*
+                            // synonymous with a successful completion of the unbonding process.
+                            // instead, this state implies that XCM is now being processed on a
+                            // different parachain
+                            RedemptionState::Unbonding
+                        } else {
+                            // failed to send the unbond xcm
+                            RedemptionState::Initiated
+                        }
+                    }
                 };
 
-                // transfer the funds from the index to the user's but reserve it immediately
-                // NOTE: this should always succeed due to the way the distribution is calculated
-                T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
-                T::Currency::reserve(asset, &caller, units)?;
+                // reserve the funds in the treasury's account until the redemption period is over
+                // after which they can be transferred to the user account
+                // NOTE: this should always succeed due to the way the distribution is
+                // calculated
+                T::Currency::reserve(asset, &Self::treasury_account(), units)?;
 
+                // T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
                 assets.push(AssetWithdrawal {
                     asset,
                     state,
@@ -596,6 +608,7 @@ pub mod pallet {
                     assets,
                 })
             });
+
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
@@ -877,7 +890,8 @@ pub mod pallet {
             })
         }
 
-        /// Calculates the pure asset redemption for the given amount of the index token to be redeemed based on the given distribution
+        /// Calculates the pure asset redemption for the given amount of the
+        /// index token to be redeemed based on the given distribution
         ///
         /// *NOTE*:
         ///   - This does not account for fees

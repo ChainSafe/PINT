@@ -56,26 +56,42 @@ pub struct AssetMetadata<BoundedString> {
     pub decimals: u8,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// State of a single asset withdrawal on some parachain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum RedemptionState {
+    /// Requested, but unbonding failed, either because the corresponding xcm
+    /// unbonding failed to execute or because there is nothing to unbond and
+    /// the minimum remote stash balance is exhausted.
     Initiated,
+    /// Unbonding was successful due to:
+    ///   - the asset does not support staking.
+    ///   - the current parachain's stash account is liquid enough to cover the
+    ///     withdrawal after the redemption period without falling below the
+    ///     configured minimum stash balance threshold.
+    ///   - xcm unbonding call was sent successfully.
     Unbonding,
+    /// Transfer to LP balance was successful, the redemption has thus been
+    /// completed.
     Transferred,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Represents a single asset being withdrawn
 pub struct AssetWithdrawal<AssetId, Balance> {
+    /// The identifier of the asset
     pub asset: AssetId,
+    /// The state in which the redemption process currently is.
     pub state: RedemptionState,
+    /// The amount of asset units about to be transferred to the LP.
     pub units: Balance,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
+    /// When the redemption process was started
     pub initiated: BlockNumber,
+    /// All the withdrawals resulted from the redemption
     pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
 
