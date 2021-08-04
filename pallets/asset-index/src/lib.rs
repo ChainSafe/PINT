@@ -27,6 +27,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
+        require_transactional,
         sp_runtime::{
             traits::{
                 AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub,
@@ -38,7 +39,7 @@ pub mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
         },
-        transactional, PalletId, require_transactional
+        transactional, PalletId,
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -613,16 +614,21 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Completes the unbonding process on other parachains and
-        /// transfers the redeemed assets into the sovereign account of the
-        /// owner.
+        /// Attempts to complete all currently pending redemption processes started by `withdraw`.
         ///
-        /// Only pending withdrawals that have completed their lockup period
-        /// will be withdrawn.
+        /// This checks every pending withdrawal within `PendingWithdrawal` and tries to close it.
+        /// Completing a withdrawal will succeed if following conditions are met:
+        ///   - the `LockupPeriod` has passed since the withdrawal was initiated
+        ///   - the unbonding process on other parachains was successful
+        ///   - the treasury can cover the asset transfer to the caller's account, from which the caller then can initiate an `Xcm::Withdraw` to remove the assets from the PINT parachain entirely.
+        ///
+        /// *NOTE*: All individual withdrawals that resulted from "Withdraw" will be completed separately, however, the entire record of pending withdrawals will not be fully closed until the last withdrawal is completed. This means that a single `AssetWithdrawal` will be closed as soon as the aforementioned conditions are met, regardless of whether the other `AssetWithdrawal` of the same `PendingWithdrawal` entry can also be closed successfully.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
+            let pending =
+                PendingWithdrawals::<T>::get(&caller).ok_or(<Error<T>>::NoPendingWithdrawals)?;
             let current_block = frame_system::Pallet::<T>::block_number();
 
             PendingWithdrawals::<T>::try_mutate_exists(
@@ -660,10 +666,10 @@ pub mod pallet {
                                             if asset.units.is_zero() {
                                                 // assets are now transferred completely into the
                                                 // user's sovereign account
-                                                asset.state = RedemptionState::Transferred;
+                                                asset.state = RedemptionState::Withdrawn;
                                             }
                                         }
-                                        RedemptionState::Transferred => {}
+                                        RedemptionState::Withdrawn => {}
                                     }
                                 }
 
@@ -1026,10 +1032,72 @@ pub mod pallet {
             }
         }
 
-
+        /// checks every pending withdrawal
         #[require_transactional]
-        fn do_complete_withdraw() {
+        fn do_complete_withdraw(
+            caller: T::AccountId,
+            mut pending: Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
+        ) {
+        }
 
+        /// Tries to complete every single `AssetWithdrawal` by advancing their states towards the `Withdrawn` state.
+        ///
+        /// Returns `true` if all entries are completed (the have been transferred to the caller's account)
+        #[require_transactional]
+        fn do_complete_redemption(
+            caller: &T::AccountId,
+            assets: &mut Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
+        ) -> bool {
+            // whether all assets reached state `Withdrawn`
+            let mut all_withdrawn = true;
+
+            for asset in assets {
+                match asset.state {
+                    RedemptionState::Initiated => {
+                        // unbonding processes failed
+                        // TODO retry or handle this separately?
+                        all_withdrawn = false;
+                    }
+                    RedemptionState::Unbonding => {
+                        // funds are unbonded and can be transferred to the caller's account
+
+                        // `unreserve` only moves up to `units` from the reserved balance to free.
+                        // if this returns `>0` then the treasury's reserved balance is empty, in which case we simply proceed with attempting to transfer
+                        T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.units);
+
+                        if T::Currency::transfer(
+                            asset.asset,
+                            &Self::treasury_account(),
+                            &caller,
+                            asset.units,
+                        )
+                        .is_ok()
+                        {
+                            asset.state = RedemptionState::Withdrawn;
+                        } else {
+                            asset.state = RedemptionState::Transferring;
+                            all_withdrawn = false;
+                        }
+                    }
+                    RedemptionState::Transferring => {
+                        // try to transfer again
+                        if T::Currency::transfer(
+                            asset.asset,
+                            &Self::treasury_account(),
+                            &caller,
+                            asset.units,
+                        )
+                        .is_ok()
+                        {
+                            asset.state = RedemptionState::Withdrawn;
+                        } else {
+                            all_withdrawn = false;
+                        }
+                    }
+                    RedemptionState::Withdrawn => {}
+                }
+            }
+            all_withdrawn
         }
     }
 
