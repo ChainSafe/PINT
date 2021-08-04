@@ -600,13 +600,13 @@ pub mod pallet {
                 });
             }
 
+            // after this block an asset withdrawal is allowed to advance to the transfer state
+            let end_block = frame_system::Pallet::<T>::block_number()
+                .saturating_add(T::WithdrawalPeriod::get());
             // lock the assets for the withdrawal period starting at current block
             PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
                 let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
-                redemption.push(PendingRedemption {
-                    initiated: frame_system::Pallet::<T>::block_number(),
-                    assets,
-                })
+                redemption.push(PendingRedemption { end_block, assets })
             });
 
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
@@ -624,7 +624,6 @@ pub mod pallet {
             let caller = ensure_signed(origin)?;
 
             let current_block = frame_system::Pallet::<T>::block_number();
-            let period = T::WithdrawalPeriod::get();
 
             PendingWithdrawals::<T>::try_mutate_exists(
                 &caller,
@@ -639,7 +638,7 @@ pub mod pallet {
                         .into_iter()
                         .filter_map(|mut redemption| {
                             // only try to close if the lockup period is over
-                            if redemption.initiated + period > current_block {
+                            if redemption.end_block >= current_block {
                                 // whether all assets reached state `Transferred`
                                 let mut all_withdrawn = true;
                                 for asset in &mut redemption.assets {

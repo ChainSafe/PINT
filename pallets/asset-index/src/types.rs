@@ -89,8 +89,8 @@ pub struct AssetWithdrawal<AssetId, Balance> {
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
-    /// When the redemption process was started
-    pub initiated: BlockNumber,
+    /// When the redemption process is over
+    pub end_block: BlockNumber,
     /// All the withdrawals resulted from the redemption
     pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
