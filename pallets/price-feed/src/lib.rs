@@ -25,25 +25,31 @@ mod types;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
     pub use crate::traits::PriceFeed;
-    pub use crate::types::{AssetPricePair, Price};
-    use frame_support::sp_runtime::FixedPointNumber;
-    use frame_support::sp_std::cmp::Ordering;
-    use frame_support::sp_std::convert::TryInto;
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
-    use frame_support::{pallet_prelude::*, traits::Get};
+    pub use crate::types::{AssetPricePair, Price, TimestampedValue};
+    use frame_support::{
+        pallet_prelude::*,
+        sp_runtime::FixedPointNumber,
+        sp_std::{cmp::Ordering, convert::TryInto},
+        traits::{GenesisBuild, Get, Time},
+    };
     use frame_system::pallet_prelude::*;
-    use pallet_chainlink_feed::{FeedInterface, FeedOracle};
+    use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 
-    type FeedIdFor<T> = <<T as Config>::Oracle as FeedOracle<T>>::FeedId;
-
-    type FeedValueFor<T> =
-        <<<T as Config>::Oracle as FeedOracle<T>>::Feed as FeedInterface<T>>::Value;
+    type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
+    pub type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
+    type FeedValueFor<T> = <T as pallet_chainlink_feed::Config>::Value;
 
     /// Provides access to all the price feeds
     /// This is used to determine the equivalent amount of PINT for assets
+    ///
+    /// The internal chainlink oracle type `FeedOracle` gives access to the asset's price feeds.
+    ///
+    /// NOTE: this assumes all the feeds provide data in the same base
+    /// currency. When querying the price of an asset
+    /// (`quote`/`asset`) from the oracle, its price is given by
+    /// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
     #[pallet::config]
-    pub trait Config: frame_system::Config {
+    pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
         /// The origin that is allowed to insert asset -> feed mappings
         type AdminOrigin: EnsureOrigin<Self::Origin>;
 
@@ -54,13 +60,8 @@ pub mod pallet {
         /// Type used to identify the assets.
         type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
-        /// The internal oracle that gives access to the asset's price feeds.
-        ///
-        /// NOTE: this assumes all the feeds provide data in the same base
-        /// currency. When querying the price of an asset
-        /// (`quote`/`asset`) from the oracle, its price is given by
-        /// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
-        type Oracle: FeedOracle<Self>;
+        /// Type to keep track of time
+        type Time: Time;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -78,6 +79,12 @@ pub mod pallet {
         StorageMap<_, Blake2_128Concat, T::AssetId, FeedIdFor<T>, OptionQuery>;
 
     #[pallet::storage]
+    #[pallet::getter(fn latest_answer_timestamp)]
+    /// Stores the timestamp of the latest answer of each feed (feed) -> Timestamp
+    pub type LatestAnswerTimestamp<T: Config> =
+        StorageMap<_, Twox64Concat, FeedIdFor<T>, MomentOf<T>, ValueQuery>;
+
+    #[pallet::storage]
     /// (AssetId) -> AssetPricePair
     ///
     /// This storage stores the initial price pair for quote assets based on
@@ -90,7 +97,7 @@ pub mod pallet {
     #[pallet::genesis_config]
     pub struct GenesisConfig<T: Config>
     where
-        <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize,
+        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
     {
         /// The mappings to insert at genesis
         pub asset_feeds: Vec<(T::AssetId, FeedIdFor<T>)>,
@@ -99,7 +106,7 @@ pub mod pallet {
     #[cfg(feature = "std")]
     impl<T: Config> Default for GenesisConfig<T>
     where
-        <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize,
+        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
     {
         fn default() -> Self {
             Self {
@@ -111,7 +118,7 @@ pub mod pallet {
     #[pallet::genesis_build]
     impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
     where
-        <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize,
+        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
     {
         fn build(&self) {
             for (asset, feed) in &self.asset_feeds {
@@ -123,7 +130,7 @@ pub mod pallet {
     #[cfg(feature = "std")]
     impl<T: Config> GenesisConfig<T>
     where
-        <<T as Config>::Oracle as FeedOracle<T>>::FeedId: MaybeSerializeDeserialize,
+        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
     {
         /// Direct implementation of `GenesisBuild::build_storage`.
         ///
@@ -212,7 +219,8 @@ pub mod pallet {
         fn get_latest_valid_value(
             feed_id: FeedIdFor<T>,
         ) -> Result<(FeedValueFor<T>, u8), DispatchError> {
-            let feed = T::Oracle::feed(feed_id).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
+            let feed = pallet_chainlink_feed::Pallet::<T>::feed(feed_id)
+                .ok_or(Error::<T>::AssetPriceFeedNotFound)?;
             ensure!(
                 feed.first_valid_round().is_some(),
                 Error::<T>::InvalidFeedValue
@@ -309,6 +317,12 @@ pub mod pallet {
             }
 
             Ok(pair)
+        }
+    }
+
+    impl<T: Config> pallet_chainlink_feed::traits::OnAnswerHandler<T> for Pallet<T> {
+        fn on_answer(feed_id: FeedIdFor<T>, _: RoundData<T::BlockNumber, FeedValueFor<T>>) {
+            LatestAnswerTimestamp::<T>::insert(feed_id, T::Time::now());
         }
     }
 
