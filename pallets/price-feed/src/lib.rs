@@ -26,18 +26,21 @@ mod types;
 pub mod pallet {
     pub use crate::traits::PriceFeed;
     pub use crate::types::{AssetPricePair, Price, TimestampedValue};
+    #[cfg(feature = "std")]
+    use frame_support::traits::GenesisBuild;
     use frame_support::{
         pallet_prelude::*,
         sp_runtime::FixedPointNumber,
         sp_std::{cmp::Ordering, convert::TryInto},
-        traits::{GenesisBuild, Get, Time},
+        traits::{Get, Time},
     };
     use frame_system::pallet_prelude::*;
     use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 
-    type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
+    pub type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
     pub type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
-    type FeedValueFor<T> = <T as pallet_chainlink_feed::Config>::Value;
+    pub type FeedValueFor<T> = <T as pallet_chainlink_feed::Config>::Value;
+    pub type TimestampedFeedValue<T> = TimestampedValue<(FeedValueFor<T>, u8), MomentOf<T>>;
 
     /// Provides access to all the price feeds
     /// This is used to determine the equivalent amount of PINT for assets
@@ -60,7 +63,7 @@ pub mod pallet {
         /// Type used to identify the assets.
         type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
-        /// Type to keep track of time
+        /// Type to keep track of timestamped values
         type Time: Time;
 
         type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -122,7 +125,7 @@ pub mod pallet {
     {
         fn build(&self) {
             for (asset, feed) in &self.asset_feeds {
-                AssetFeeds::<T>::insert(asset.clone(), feed.clone())
+                AssetFeeds::<T>::insert(asset.clone(), *feed)
             }
         }
     }
@@ -173,7 +176,7 @@ pub mod pallet {
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
             let old_feed_id = AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| {
-                maybe_feed_id.replace(feed_id.clone())
+                maybe_feed_id.replace(feed_id)
             });
             Self::deposit_event(Event::UpdateAssetPriceFeed(asset_id, feed_id, old_feed_id));
             Ok(().into())
@@ -208,15 +211,15 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     impl<T: Config> Pallet<T> {
-        /// Returns the corresponding identifier for the asset's price feed
-        pub fn get_asset_feed_id(asset_id: &T::AssetId) -> Option<FeedIdFor<T>> {
+        /// Returns the corresponding identifier for the asset's price feed according to the internal mapping
+        pub fn asset_feed_id(asset_id: &T::AssetId) -> Option<FeedIdFor<T>> {
             AssetFeeds::<T>::get(asset_id)
         }
 
         /// Returns the latest value in the feed together with the feed's
         /// decimals or an error if no feed was found for the given
         /// or the feed doesn't contain any valid round yet.
-        fn get_latest_valid_value(
+        pub fn latest_valid_value(
             feed_id: FeedIdFor<T>,
         ) -> Result<(FeedValueFor<T>, u8), DispatchError> {
             let feed = pallet_chainlink_feed::Pallet::<T>::feed(feed_id)
@@ -227,7 +230,17 @@ pub mod pallet {
             );
             Ok((feed.latest_data().answer, feed.decimals()))
         }
+
+        /// Same as `latest_value` but with the time the answer was emitted
+        pub fn latest_timestamped_value(
+            feed_id: FeedIdFor<T>,
+        ) -> Result<TimestampedFeedValue<T>, DispatchError> {
+            let moment = LatestAnswerTimestamp::<T>::get(&feed_id);
+            let value = Self::latest_valid_value(feed_id)?;
+            Ok(TimestampedValue { value, moment })
+        }
     }
+
     impl<T: Config> Pallet<T>
     where
         FeedValueFor<T>: TryInto<u128>,
@@ -256,18 +269,17 @@ pub mod pallet {
             base: T::AssetId,
             quote: T::AssetId,
         ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) = (
-                Self::get_asset_feed_id(&base),
-                Self::get_asset_feed_id(&quote),
-            ) {
+            let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) =
+                (Self::asset_feed_id(&base), Self::asset_feed_id(&quote))
+            {
                 (b, q)
             } else {
                 return <InitialPricePairs<T>>::get(&quote)
                     .ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into());
             };
 
-            let (last_base_value, base_decimals) = Self::get_latest_valid_value(base_feed_id)?;
-            let (last_quote_value, quote_decimals) = Self::get_latest_valid_value(quote_feed_id)?;
+            let (last_base_value, base_decimals) = Self::latest_valid_value(base_feed_id)?;
+            let (last_quote_value, quote_decimals) = Self::latest_valid_value(quote_feed_id)?;
 
             let mut last_base_value = last_base_value
                 .try_into()

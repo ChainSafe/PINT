@@ -9,8 +9,8 @@ use frame_support::{
 /// Represents an answer of a feed at a certain point of time
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct TimestampedValue<Value, Moment> {
-    /// The answer as emitted by the feed
-    pub answer: Value,
+    /// The timestamped value
+    pub value: Value,
     /// Timestamp when the answer was first received
     pub moment: Moment,
 }
