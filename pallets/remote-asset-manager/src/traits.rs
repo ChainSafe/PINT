@@ -21,7 +21,7 @@ use frame_support::dispatch::DispatchResult;
 ///
 /// Staking rewards are not tracked since it is intended that the generated
 /// staking rewards are routinely exchanged via an AMM for PINT. Some of the
-/// resulting PINT will be allocated to the Treasury and StakerDAO, with the
+/// resulting PINT will be allocated to the Treasury, with the
 /// remainder being burned. This does not affect the staked funds itself, so we
 /// only consider two states the funds can have: either free (not bonded), or
 /// not free (bonded or unbonded but not withdrawn yet.)
