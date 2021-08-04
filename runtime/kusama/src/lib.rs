@@ -432,7 +432,7 @@ impl pallet_price_feed::Config for Runtime {
     type AdminOrigin = frame_system::EnsureRoot<AccountId>;
     type SelfAssetId = PINTAssetId;
     type AssetId = AssetId;
-    type Oracle = ChainlinkFeed;
+    type Time = Timestamp;
     type Event = Event;
     type WeightInfo = weights::pallet_price_feed::WeightInfo<Runtime>;
 }
