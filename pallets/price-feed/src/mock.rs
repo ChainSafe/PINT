@@ -86,7 +86,7 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_types! {
-	pub const MinimumPeriod: u64 = 1000;
+    pub const MinimumPeriod: u64 = 1000;
 }
 
 impl pallet_timestamp::Config for Test {
