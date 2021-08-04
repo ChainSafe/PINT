@@ -447,8 +447,8 @@ impl pallet_chainlink_feed::Config for Runtime {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type OnAnswerHandler = ();
-    type WeightInfo = weights::pallet_chainlink_feed::WeightInfo<Runtime>;
+    type OnAnswerHandler = PriceFeed;
+    type WeightInfo = ();
 }
 
 impl pallet_asset_index::Config for Runtime {

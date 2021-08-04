@@ -27,7 +27,7 @@ sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = 'polkadot-v0.9.8' }
 
 [features]
 default = ['std']
