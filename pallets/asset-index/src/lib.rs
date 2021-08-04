@@ -38,7 +38,7 @@ pub mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
         },
-        transactional, PalletId,
+        transactional, PalletId, require_transactional
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -952,6 +952,7 @@ pub mod pallet {
 
         /// Mints the given amount of index token into the user's account and
         /// updates the lock accordingly
+        #[require_transactional]
         fn do_mint_index_token(user: &T::AccountId, amount: T::Balance) {
             // increase the total issuance
             let issued = T::IndexToken::issue(amount);
@@ -963,6 +964,7 @@ pub mod pallet {
 
         /// Locks up the given amount of index token according to the
         /// `LockupPeriod` and updates the existing locks
+        #[require_transactional]
         fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
             let current_block = frame_system::Pallet::<T>::block_number();
             let mut locks = IndexTokenLocks::<T>::get(user);
@@ -974,6 +976,7 @@ pub mod pallet {
         }
 
         /// inserts the given locks and filters expired locks.
+        #[require_transactional]
         fn do_insert_index_token_locks(
             user: &T::AccountId,
             locks: Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
@@ -1015,11 +1018,18 @@ pub mod pallet {
         }
 
         /// Updates the index token locks for the given user.
+        #[require_transactional]
         fn do_update_index_token_locks(user: &T::AccountId) {
             let locks = IndexTokenLocks::<T>::get(user);
             if !locks.is_empty() {
                 Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
             }
+        }
+
+
+        #[require_transactional]
+        fn do_complete_withdraw() {
+
         }
     }
 
