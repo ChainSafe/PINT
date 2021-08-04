@@ -6,8 +6,7 @@ members = [
     'node',
     'pallets/*',
     'primitives/*',
-    'runtime',
-    'runtime/common',
+    'runtime/*',
 ]
 exclude = ["test-utils/xcm-test-support"]
 
