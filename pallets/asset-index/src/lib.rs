@@ -1045,7 +1045,7 @@ pub mod pallet {
                         if T::Currency::transfer(
                             asset.asset,
                             &Self::treasury_account(),
-                            &caller,
+                            caller,
                             asset.units,
                         )
                         .is_ok()
@@ -1061,7 +1061,7 @@ pub mod pallet {
                         if T::Currency::transfer(
                             asset.asset,
                             &Self::treasury_account(),
-                            &caller,
+                            caller,
                             asset.units,
                         )
                         .is_ok()
