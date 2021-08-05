@@ -29,5 +29,3 @@ impl<AssetId> StatemintConfig<AssetId> {
         (Junction::Parent, Junction::Parachain(self.parachain_id)).into()
     }
 }
-
-

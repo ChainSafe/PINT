@@ -963,34 +963,6 @@ pub mod pallet {
         }
     }
 
-    impl<T: Config> BalanceMeter<T::Balance, T::AssetId> for Pallet<T> {
-        /// This will return the total issuance of the given `asset` minus the
-        /// amount that is currently unvavailable due to staking
-        fn free_stash_balance(asset: T::AssetId) -> T::Balance {
-            // this is the amount that is currently reserved by staking, either `bonded` or
-            // `unbonded` but not yet withdrawn
-            let contributed = PalletStakingBondState::<T>::get(&asset)
-                .map(|state| state.total_balance())
-                .unwrap_or_else(Zero::zero);
-            // The total issuance is equal to the inflow of the remote asset via xcm which
-            // is locked in the parachain's sovereign account on the asset's native chain
-            T::Assets::total_issuance(asset).saturating_sub(contributed)
-        }
-
-        fn ensure_free_stash(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-            let min_stash = Self::minimum_free_stash_balance(&asset);
-            ensure!(
-                Self::free_stash_balance(asset).saturating_sub(amount) > min_stash,
-                Error::<T>::InusufficientStash
-            );
-            Ok(())
-        }
-
-        fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
-            T::MinimumRemoteStashBalance::get(asset)
-        }
-    }
-
     /// Trait for the asset-index pallet extrinsic weights.
     pub trait WeightInfo {
         fn transfer() -> Weight;
