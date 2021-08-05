@@ -175,9 +175,8 @@ pub mod pallet {
             feed_id: FeedIdFor<T>,
         ) -> DispatchResultWithPostInfo {
             T::AdminOrigin::ensure_origin(origin)?;
-            let old_feed_id = AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| {
-                maybe_feed_id.replace(feed_id)
-            });
+            let old_feed_id =
+                AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| maybe_feed_id.replace(feed_id));
             Self::deposit_event(Event::UpdateAssetPriceFeed(asset_id, feed_id, old_feed_id));
             Ok(().into())
         }
