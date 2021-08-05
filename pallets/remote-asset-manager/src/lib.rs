@@ -38,7 +38,7 @@ pub mod pallet {
     use orml_traits::{location::Parse, GetByKey, MultiCurrency, XcmTransfer};
     use xcm::v0::{ExecuteXcm, MultiLocation, OriginKind, Outcome, SendXcm, Xcm};
 
-    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+    use primitives::traits::{MultiAssetRegistry, RemoteAssetManager, UnbondingOutcome};
     use xcm_calls::assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights};
     use xcm_calls::{
         proxy::{
@@ -927,8 +927,11 @@ pub mod pallet {
             Self::do_send_bond_extra(asset, amount)
         }
 
-        fn unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-            Self::do_send_unbond(asset, amount)
+        fn unbond(_asset: T::AssetId, _amount: T::Balance) -> UnbondingOutcome {
+            // TODO this will check the balance meter for the asset, if unbonding is
+            // supported it will check the current stash
+            // Self::do_send_unbond(asset, amount)
+            UnbondingOutcome::NotSupported
         }
     }
 

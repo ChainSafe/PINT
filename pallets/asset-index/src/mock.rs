@@ -16,6 +16,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+use primitives::traits::UnbondingOutcome;
 use primitives::{fee::FeeRate, traits::RemoteAssetManager};
 use sp_core::H256;
 use sp_runtime::{
@@ -176,8 +177,8 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
         Ok(())
     }
 
-    fn unbond(_: AssetId, _: Balance) -> DispatchResult {
-        Ok(())
+    fn unbond(_: AssetId, _: Balance) -> UnbondingOutcome {
+        UnbondingOutcome::NotSupported
     }
 }
 

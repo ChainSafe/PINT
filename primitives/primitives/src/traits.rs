@@ -1,8 +1,10 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::dispatch::DispatchError;
-use frame_support::sp_runtime::DispatchResult;
+use codec::{Decode, Encode};
+use frame_support::{
+    dispatch::DispatchError, sp_runtime::DispatchResult, sp_std::boxed::Box, RuntimeDebug,
+};
 use xcm::v0::{MultiLocation, Outcome};
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
@@ -39,5 +41,17 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
     fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
 
     /// Dispatch XCM to unbond assets
-    fn unbond(asset: AssetId, amount: Balance) -> DispatchResult;
+    fn unbond(asset: AssetId, amount: Balance) -> UnbondingOutcome;
+}
+
+/// Outcome of an XCM unbonding api call
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+pub enum UnbondingOutcome {
+    /// Staking is not supported, therefore nothing to unbond
+    NotSupported,
+    /// Staking is supported, but the parachain's reserve account currently
+    /// holds enough units as stash so that no unbonding procedure is necessary
+    SufficientReserve,
+    /// The outcome of the XCM unbond call
+    Outcome(Box<Outcome>),
 }

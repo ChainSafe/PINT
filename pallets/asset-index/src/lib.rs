@@ -27,6 +27,7 @@ pub mod pallet {
     use frame_support::{
         dispatch::DispatchResultWithPostInfo,
         pallet_prelude::*,
+        require_transactional,
         sp_runtime::{
             traits::{
                 AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub,
@@ -38,7 +39,7 @@ pub mod pallet {
         traits::{
             Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons,
         },
-        PalletId,
+        transactional, PalletId,
     };
     use frame_system::pallet_prelude::*;
     use orml_traits::{MultiCurrency, MultiReservableCurrency};
@@ -52,6 +53,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
+    use primitives::traits::UnbondingOutcome;
     use primitives::{
         fee::{BaseFee, FeeRate},
         traits::{MultiAssetRegistry, RemoteAssetManager},
@@ -509,6 +511,7 @@ pub mod pallet {
         /// The distribution of the underlying assets will be equivalent to the
         /// ratio of the liquid assets in the index.
         #[pallet::weight(10_000)] // TODO: Set weights
+        #[transactional]
         pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
             ensure!(
@@ -523,10 +526,11 @@ pub mod pallet {
             T::IndexToken::ensure_can_withdraw(
                 &caller,
                 amount,
-                WithdrawReasons::TRANSFER,
+                WithdrawReasons::all(),
                 free_balance.saturating_sub(amount),
             )?;
 
+            // amount = fee + redeem
             let fee = amount
                 .fee(T::BaseWithdrawalFee::get())
                 .ok_or(Error::<T>::AssetUnitsOverflow)?;
@@ -542,44 +546,54 @@ pub mod pallet {
             let asset_redemption = Self::get_asset_redemption(distribution, redeem)?;
 
             // update the index balance by burning all of the redeemed tokens and the fee
+            // SAFETY: this is guaranteed to be lower than `amount`
             let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
 
-            let burned = T::IndexToken::burn(effectively_withdrawn);
-
-            T::IndexToken::settle(
+            // withdraw from caller balance
+            T::IndexToken::withdraw(
                 &caller,
-                burned,
-                WithdrawReasons::TRANSFER,
-                ExistenceRequirement::KeepAlive,
-            )
-            .map_err(|_| ())
-            .expect("ensured can withdraw; qed");
+                effectively_withdrawn,
+                WithdrawReasons::all(),
+                ExistenceRequirement::AllowDeath,
+            )?;
 
             // issue new tokens to compensate the fee and put it into the treasury
             let fee = T::IndexToken::issue(fee);
-            T::IndexToken::resolve_creating(&T::TreasuryPalletId::get().into_account(), fee);
+            T::IndexToken::resolve_creating(&Self::treasury_account(), fee);
 
             let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
 
-            // start bonding and locking
+            // start the redemption process for each withdrawal
             for (asset, units) in asset_redemption.asset_amounts {
-                // try to start the unbonding process
-                let state = if T::RemoteAssetManager::unbond(asset, units).is_ok() {
-                    // the XCM call was dispatched successfully, however, this is
-                    //  *NOT* synonymous with a successful completion of the unbonding process.
-                    //  instead, this state implies that XCM is now being processed on a different
-                    // parachain
-                    RedemptionState::Unbonding
-                } else {
-                    // the manager encountered an error before being able to send the XCM call,
-                    //  nothing was dispatched to another parachain
-                    RedemptionState::Initiated
+                // start the unbonding routine
+                let state = match T::RemoteAssetManager::unbond(asset, units) {
+                    UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
+                        // nothing to unbond, the funds are assumed to be available after the
+                        // redemption period is over
+                        RedemptionState::Unbonding
+                    }
+                    UnbondingOutcome::Outcome(outcome) => {
+                        // the outcome of the dispatched xcm call
+                        if outcome.ensure_complete().is_ok() {
+                            // the XCM call was dispatched successfully, however, this is  *NOT*
+                            // synonymous with a successful completion of the unbonding process.
+                            // instead, this state implies that XCM is now being processed on a
+                            // different parachain
+                            RedemptionState::Unbonding
+                        } else {
+                            // failed to send the unbond xcm
+                            RedemptionState::Initiated
+                        }
+                    }
                 };
 
-                // transfer the funds from the index to the user's but reserve it
-                T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
-                T::Currency::reserve(asset, &caller, units)?;
+                // reserve the funds in the treasury's account until the redemption period is
+                // over after which they can be transferred to the user account
+                // NOTE: this should always succeed due to the way the distribution is
+                // calculated
+                T::Currency::reserve(asset, &Self::treasury_account(), units)?;
 
+                // T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
                 assets.push(AssetWithdrawal {
                     asset,
                     state,
@@ -587,30 +601,45 @@ pub mod pallet {
                 });
             }
 
+            // after this block an asset withdrawal is allowed to advance to the transfer
+            // state
+            let end_block = frame_system::Pallet::<T>::block_number()
+                .saturating_add(T::WithdrawalPeriod::get());
             // lock the assets for the withdrawal period starting at current block
             PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
                 let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
-                redemption.push(PendingRedemption {
-                    initiated: frame_system::Pallet::<T>::block_number(),
-                    assets,
-                })
+                redemption.push(PendingRedemption { end_block, assets })
             });
+
             Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
             Ok(().into())
         }
 
-        /// Completes the unbonding process on other parachains and
-        /// transfers the redeemed assets into the sovereign account of the
-        /// owner.
+        /// Attempts to complete all currently pending redemption processes
+        /// started by `withdraw`.
         ///
-        /// Only pending withdrawals that have completed their lockup period
-        /// will be withdrawn.
+        /// This checks every pending withdrawal within `PendingWithdrawal` and
+        /// tries to close it. Completing a withdrawal will succeed if
+        /// following conditions are met:
+        ///   - the `LockupPeriod` has passed since the withdrawal was initiated
+        ///   - the unbonding process on other parachains was successful
+        ///   - the treasury can cover the asset transfer to the caller's
+        ///     account, from which the caller then can initiate an
+        ///     `Xcm::Withdraw` to remove the assets from the PINT parachain
+        ///     entirely.
+        ///
+        /// *NOTE*: All individual withdrawals that resulted from "Withdraw"
+        /// will be completed separately, however, the entire record of pending
+        /// withdrawals will not be fully closed until the last withdrawal is
+        /// completed. This means that a single `AssetWithdrawal` will be closed
+        /// as soon as the aforementioned conditions are met, regardless of
+        /// whether the other `AssetWithdrawal` of the same `PendingWithdrawal`
+        /// entry can also be closed successfully.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
             let current_block = frame_system::Pallet::<T>::block_number();
-            let period = T::WithdrawalPeriod::get();
 
             PendingWithdrawals::<T>::try_mutate_exists(
                 &caller,
@@ -625,36 +654,8 @@ pub mod pallet {
                         .into_iter()
                         .filter_map(|mut redemption| {
                             // only try to close if the lockup period is over
-                            if redemption.initiated + period > current_block {
-                                // whether all assets reached state `Transferred`
-                                let mut all_withdrawn = true;
-                                for asset in &mut redemption.assets {
-                                    match asset.state {
-                                        RedemptionState::Initiated => {
-                                            // unbonding processes failed
-                                            // TODO retry or handle this separately?
-                                            all_withdrawn = false;
-                                        }
-                                        RedemptionState::Unbonding => {
-                                            // redemption period over and funds are unbonded;
-                                            // move to free balance
-                                            asset.units = T::Currency::unreserve(
-                                                asset.asset,
-                                                &caller,
-                                                asset.units,
-                                            );
-
-                                            if asset.units.is_zero() {
-                                                // assets are now transferred completely into the
-                                                // user's sovereign account
-                                                asset.state = RedemptionState::Transferred;
-                                            }
-                                        }
-                                        RedemptionState::Transferred => {}
-                                    }
-                                }
-
-                                if all_withdrawn {
+                            if redemption.end_block >= current_block {
+                                if Self::do_complete_redemption(&caller, &mut redemption.assets) {
                                     // all redemptions completed, remove from storage
                                     Self::deposit_event(Event::WithdrawalCompleted(
                                         caller.clone(),
@@ -708,19 +709,24 @@ pub mod pallet {
             T::IndexToken::total_issuance()
         }
 
-        // The free balance of the given account for the given asset.
+        /// The free balance of the given account for the given asset.
         pub fn free_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
             T::Currency::free_balance(asset, account)
         }
 
-        // The combined balance of the given account fo the given asset.
+        /// The combined balance of the given account for the given asset.
         pub fn total_asset_balance(asset: T::AssetId, account: &T::AccountId) -> T::Balance {
             T::Currency::total_balance(asset, account)
         }
 
-        // The combined balance of the treasury account fo the given asset.
+        /// The combined balance of the treasury account for the given asset.
         pub fn index_total_asset_balance(asset: T::AssetId) -> T::Balance {
             T::Currency::total_balance(asset, &Self::treasury_account())
+        }
+
+        /// The free balance of the treasury account for the given asset.
+        pub fn index_free_asset_balance(asset: T::AssetId) -> T::Balance {
+            T::Currency::free_balance(asset, &Self::treasury_account())
         }
 
         /// Calculates the total NAV of the Index token: `sum(NAV_asset) / total
@@ -732,21 +738,13 @@ pub mod pallet {
         /// Calculates the NAV of all liquid assets the Index token:
         /// `sum(NAV_liquid) / total pint`
         pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(
-                Assets::<T>::iter()
-                    .filter(|(_, holding)| holding.is_liquid())
-                    .map(|(k, _)| k),
-            )
+            Self::calculate_nav(Self::liquid_assets())
         }
 
         /// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) /
         /// total pint`
         pub fn saft_nav() -> Result<T::Balance, DispatchError> {
-            Self::calculate_nav(
-                Assets::<T>::iter()
-                    .filter(|(_, holding)| holding.is_saft())
-                    .map(|(k, _)| k),
-            )
+            Self::calculate_nav(Self::saft_assets())
         }
 
         /// Calculates the total NAV of all holdings
@@ -757,15 +755,17 @@ pub mod pallet {
             if total_issuance.is_zero() {
                 return Ok(T::Balance::zero());
             }
-            let mut nav = T::Balance::zero();
-            for asset in iter {
-                nav = nav
-                    .checked_add(&Self::calculate_pint_equivalent(
+            let nav = iter.into_iter().try_fold(
+                T::Balance::zero(),
+                |nav, asset| -> Result<_, DispatchError> {
+                    nav.checked_add(&Self::calculate_pint_equivalent(
                         asset,
-                        Self::index_total_asset_balance(asset),
+                        Self::index_free_asset_balance(asset),
                     )?)
-                    .ok_or(Error::<T>::NAVOverflow)?;
-            }
+                    .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
+            )?;
+
             Ok(nav
                 .checked_div(&total_issuance)
                 .ok_or(Error::<T>::NAVOverflow)?)
@@ -798,7 +798,7 @@ pub mod pallet {
                 Assets::<T>::contains_key(&asset),
                 Error::<T>::UnsupportedAsset
             );
-            Self::calculate_pint_equivalent(asset, Self::index_total_asset_balance(asset))
+            Self::calculate_pint_equivalent(asset, Self::index_free_asset_balance(asset))
         }
 
         /// Iterates over all liquid assets
@@ -806,6 +806,13 @@ pub mod pallet {
             Assets::<T>::iter()
                 .filter(|(_, availability)| availability.is_liquid())
                 .map(|(id, _)| id)
+        }
+
+        /// Iterates over all SAFT assets
+        pub fn saft_assets() -> impl Iterator<Item = T::AssetId> {
+            Assets::<T>::iter()
+                .filter(|(_, holding)| holding.is_saft())
+                .map(|(k, _)| k)
         }
 
         /// Returns a Vec of the current prices of all active liquid assets
@@ -833,12 +840,15 @@ pub mod pallet {
         }
 
         /// Returns the current price and the volume of the given asset
+        ///
+        /// This current volume of the index is equal to the free balance of the
+        /// treasury account.
         pub fn get_liquid_asset_volume(
             asset: T::AssetId,
         ) -> Result<AssetVolume<T::AssetId, T::Balance>, DispatchError> {
             let price = T::PriceFeed::get_price(asset)?;
             let pint_volume =
-                Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
+                Self::calculate_volume(Self::index_free_asset_balance(asset), &price)?;
             Ok(AssetVolume::new(price, pint_volume))
         }
 
@@ -870,12 +880,19 @@ pub mod pallet {
             })
         }
 
-        /// Calculates the asset redemption for the given amount of redemption
-        /// based on the provided distribution
+        /// Calculates the pure asset redemption for the given amount of the
+        /// index token to be redeemed based on the given distribution
+        ///
+        /// *NOTE*:
+        ///   - This does not account for fees
+        ///   - This is a noop for `redeem == 0`
         pub fn get_asset_redemption(
             distribution: AssetsDistribution<T::AssetId, T::Balance>,
             redeem: u128,
         ) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
+            if redeem.is_zero() {
+                return Ok(Default::default());
+            }
             // track the pint that effectively gets redeemed
             let mut redeemed_pint = 0u128;
 
@@ -994,6 +1011,69 @@ pub mod pallet {
             if !locks.is_empty() {
                 Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
             }
+        }
+
+        /// Tries to complete every single `AssetWithdrawal` by advancing their
+        /// states towards the `Withdrawn` state.
+        ///
+        /// Returns `true` if all entries are completed (the have been
+        /// transferred to the caller's account)
+        #[require_transactional]
+        fn do_complete_redemption(
+            caller: &T::AccountId,
+            assets: &mut Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
+        ) -> bool {
+            // whether all assets reached state `Withdrawn`
+            let mut all_withdrawn = true;
+
+            for asset in assets {
+                match asset.state {
+                    RedemptionState::Initiated => {
+                        // unbonding processes failed
+                        // TODO retry or handle this separately?
+                        all_withdrawn = false;
+                    }
+                    RedemptionState::Unbonding => {
+                        // funds are unbonded and can be transferred to the caller's account
+
+                        // `unreserve` only moves up to `units` from the reserved balance to free.
+                        // if this returns `>0` then the treasury's reserved balance is empty, in
+                        // which case we simply proceed with attempting to transfer
+                        T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.units);
+
+                        if T::Currency::transfer(
+                            asset.asset,
+                            &Self::treasury_account(),
+                            &caller,
+                            asset.units,
+                        )
+                        .is_ok()
+                        {
+                            asset.state = RedemptionState::Withdrawn;
+                        } else {
+                            asset.state = RedemptionState::Transferring;
+                            all_withdrawn = false;
+                        }
+                    }
+                    RedemptionState::Transferring => {
+                        // try to transfer again
+                        if T::Currency::transfer(
+                            asset.asset,
+                            &Self::treasury_account(),
+                            &caller,
+                            asset.units,
+                        )
+                        .is_ok()
+                        {
+                            asset.state = RedemptionState::Withdrawn;
+                        } else {
+                            all_withdrawn = false;
+                        }
+                    }
+                    RedemptionState::Withdrawn => {}
+                }
+            }
+            all_withdrawn
         }
     }
 

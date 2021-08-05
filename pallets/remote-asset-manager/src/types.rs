@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
-use frame_support::pallet_prelude::RuntimeDebug;
+use frame_support::RuntimeDebug;
 use xcm::v0::{Junction, MultiLocation};
 use xcm_calls::assets::AssetsConfig;
 
