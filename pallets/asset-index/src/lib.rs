@@ -587,8 +587,8 @@ pub mod pallet {
                     }
                 };
 
-                // reserve the funds in the treasury's account until the redemption period is over
-                // after which they can be transferred to the user account
+                // reserve the funds in the treasury's account until the redemption period is
+                // over after which they can be transferred to the user account
                 // NOTE: this should always succeed due to the way the distribution is
                 // calculated
                 T::Currency::reserve(asset, &Self::treasury_account(), units)?;
@@ -601,7 +601,8 @@ pub mod pallet {
                 });
             }
 
-            // after this block an asset withdrawal is allowed to advance to the transfer state
+            // after this block an asset withdrawal is allowed to advance to the transfer
+            // state
             let end_block = frame_system::Pallet::<T>::block_number()
                 .saturating_add(T::WithdrawalPeriod::get());
             // lock the assets for the withdrawal period starting at current block
@@ -614,15 +615,26 @@ pub mod pallet {
             Ok(().into())
         }
 
-        /// Attempts to complete all currently pending redemption processes started by `withdraw`.
+        /// Attempts to complete all currently pending redemption processes
+        /// started by `withdraw`.
         ///
-        /// This checks every pending withdrawal within `PendingWithdrawal` and tries to close it.
-        /// Completing a withdrawal will succeed if following conditions are met:
+        /// This checks every pending withdrawal within `PendingWithdrawal` and
+        /// tries to close it. Completing a withdrawal will succeed if
+        /// following conditions are met:
         ///   - the `LockupPeriod` has passed since the withdrawal was initiated
         ///   - the unbonding process on other parachains was successful
-        ///   - the treasury can cover the asset transfer to the caller's account, from which the caller then can initiate an `Xcm::Withdraw` to remove the assets from the PINT parachain entirely.
+        ///   - the treasury can cover the asset transfer to the caller's
+        ///     account, from which the caller then can initiate an
+        ///     `Xcm::Withdraw` to remove the assets from the PINT parachain
+        ///     entirely.
         ///
-        /// *NOTE*: All individual withdrawals that resulted from "Withdraw" will be completed separately, however, the entire record of pending withdrawals will not be fully closed until the last withdrawal is completed. This means that a single `AssetWithdrawal` will be closed as soon as the aforementioned conditions are met, regardless of whether the other `AssetWithdrawal` of the same `PendingWithdrawal` entry can also be closed successfully.
+        /// *NOTE*: All individual withdrawals that resulted from "Withdraw"
+        /// will be completed separately, however, the entire record of pending
+        /// withdrawals will not be fully closed until the last withdrawal is
+        /// completed. This means that a single `AssetWithdrawal` will be closed
+        /// as soon as the aforementioned conditions are met, regardless of
+        /// whether the other `AssetWithdrawal` of the same `PendingWithdrawal`
+        /// entry can also be closed successfully.
         #[pallet::weight(10_000)] // TODO: Set weights
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
@@ -998,9 +1010,11 @@ pub mod pallet {
             }
         }
 
-        /// Tries to complete every single `AssetWithdrawal` by advancing their states towards the `Withdrawn` state.
+        /// Tries to complete every single `AssetWithdrawal` by advancing their
+        /// states towards the `Withdrawn` state.
         ///
-        /// Returns `true` if all entries are completed (the have been transferred to the caller's account)
+        /// Returns `true` if all entries are completed (the have been
+        /// transferred to the caller's account)
         #[require_transactional]
         fn do_complete_redemption(
             caller: &T::AccountId,
@@ -1020,7 +1034,8 @@ pub mod pallet {
                         // funds are unbonded and can be transferred to the caller's account
 
                         // `unreserve` only moves up to `units` from the reserved balance to free.
-                        // if this returns `>0` then the treasury's reserved balance is empty, in which case we simply proceed with attempting to transfer
+                        // if this returns `>0` then the treasury's reserved balance is empty, in
+                        // which case we simply proceed with attempting to transfer
                         T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.units);
 
                         if T::Currency::transfer(

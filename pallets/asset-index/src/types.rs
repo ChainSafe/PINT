@@ -71,9 +71,11 @@ pub enum RedemptionState {
     ///     configured minimum stash balance threshold.
     ///   - xcm unbonding call was sent successfully.
     Unbonding,
-    /// This is a intermediary state in which the it's attempted to transfer the units to the LP's account
+    /// This is a intermediary state in which the it's attempted to transfer the
+    /// units to the LP's account
     Transferring,
-    /// Successfully transferred the units to LP's account, the `AssetWithdrawal` has thus been completed.
+    /// Successfully transferred the units to LP's account, the
+    /// `AssetWithdrawal` has thus been completed.
     Withdrawn,
 }
 
