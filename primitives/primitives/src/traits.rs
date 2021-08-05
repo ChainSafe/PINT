@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
-use frame_support::{dispatch::DispatchError, sp_runtime::DispatchResult, RuntimeDebug};
-use sp_std::boxed::Box;
+use frame_support::{
+    dispatch::DispatchError, sp_runtime::DispatchResult, sp_std::boxed::Box, RuntimeDebug,
+};
 use xcm::v0::{MultiLocation, Outcome};
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
