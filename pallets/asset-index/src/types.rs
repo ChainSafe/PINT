@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
-use frame_support::sp_runtime::traits::Zero;
-use frame_support::sp_runtime::FixedU128;
-use frame_support::{sp_runtime::RuntimeDebug, sp_std::vec::Vec};
+use frame_support::{
+    sp_runtime::{traits::Zero, FixedU128, RuntimeDebug},
+    sp_std::vec::Vec,
+};
 use pallet_price_feed::AssetPricePair;
 use xcm::opaque::v0::MultiLocation;
 

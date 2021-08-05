@@ -627,8 +627,6 @@ pub mod pallet {
         pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
             let caller = ensure_signed(origin)?;
 
-            let pending =
-                PendingWithdrawals::<T>::get(&caller).ok_or(<Error<T>>::NoPendingWithdrawals)?;
             let current_block = frame_system::Pallet::<T>::block_number();
 
             PendingWithdrawals::<T>::try_mutate_exists(
@@ -645,35 +643,7 @@ pub mod pallet {
                         .filter_map(|mut redemption| {
                             // only try to close if the lockup period is over
                             if redemption.end_block >= current_block {
-                                // whether all assets reached state `Transferred`
-                                let mut all_withdrawn = true;
-                                for asset in &mut redemption.assets {
-                                    match asset.state {
-                                        RedemptionState::Initiated => {
-                                            // unbonding processes failed
-                                            // TODO retry or handle this separately?
-                                            all_withdrawn = false;
-                                        }
-                                        RedemptionState::Unbonding => {
-                                            // redemption period over and funds are unbonded;
-                                            // move to free balance
-                                            asset.units = T::Currency::unreserve(
-                                                asset.asset,
-                                                &caller,
-                                                asset.units,
-                                            );
-
-                                            if asset.units.is_zero() {
-                                                // assets are now transferred completely into the
-                                                // user's sovereign account
-                                                asset.state = RedemptionState::Withdrawn;
-                                            }
-                                        }
-                                        RedemptionState::Withdrawn => {}
-                                    }
-                                }
-
-                                if all_withdrawn {
+                                if Self::do_complete_redemption(&caller, &mut redemption.assets) {
                                     // all redemptions completed, remove from storage
                                     Self::deposit_event(Event::WithdrawalCompleted(
                                         caller.clone(),
@@ -816,7 +786,7 @@ pub mod pallet {
                 Assets::<T>::contains_key(&asset),
                 Error::<T>::UnsupportedAsset
             );
-            Self::calculate_pint_equivalent(asset, Self::index_total_asset_balance(asset))
+            Self::calculate_pint_equivalent(asset, Self::index_free_asset_balance(asset))
         }
 
         /// Iterates over all liquid assets
@@ -863,7 +833,7 @@ pub mod pallet {
         ) -> Result<AssetVolume<T::AssetId, T::Balance>, DispatchError> {
             let price = T::PriceFeed::get_price(asset)?;
             let pint_volume =
-                Self::calculate_volume(Self::index_total_asset_balance(asset), &price)?;
+                Self::calculate_volume(Self::index_free_asset_balance(asset), &price)?;
             Ok(AssetVolume::new(price, pint_volume))
         }
 
@@ -958,7 +928,6 @@ pub mod pallet {
 
         /// Mints the given amount of index token into the user's account and
         /// updates the lock accordingly
-        #[require_transactional]
         fn do_mint_index_token(user: &T::AccountId, amount: T::Balance) {
             // increase the total issuance
             let issued = T::IndexToken::issue(amount);
@@ -970,7 +939,6 @@ pub mod pallet {
 
         /// Locks up the given amount of index token according to the
         /// `LockupPeriod` and updates the existing locks
-        #[require_transactional]
         fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
             let current_block = frame_system::Pallet::<T>::block_number();
             let mut locks = IndexTokenLocks::<T>::get(user);
@@ -982,7 +950,6 @@ pub mod pallet {
         }
 
         /// inserts the given locks and filters expired locks.
-        #[require_transactional]
         fn do_insert_index_token_locks(
             user: &T::AccountId,
             locks: Vec<IndexTokenLock<T::BlockNumber, T::Balance>>,
@@ -1024,20 +991,11 @@ pub mod pallet {
         }
 
         /// Updates the index token locks for the given user.
-        #[require_transactional]
         fn do_update_index_token_locks(user: &T::AccountId) {
             let locks = IndexTokenLocks::<T>::get(user);
             if !locks.is_empty() {
                 Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
             }
-        }
-
-        /// checks every pending withdrawal
-        #[require_transactional]
-        fn do_complete_withdraw(
-            caller: T::AccountId,
-            mut pending: Vec<PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>>,
-        ) {
         }
 
         /// Tries to complete every single `AssetWithdrawal` by advancing their states towards the `Withdrawn` state.
