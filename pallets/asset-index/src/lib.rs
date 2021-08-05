@@ -840,6 +840,9 @@ pub mod pallet {
         }
 
         /// Returns the current price and the volume of the given asset
+        ///
+        /// This current volume of the index is equal to the free balance of the
+        /// treasury account.
         pub fn get_liquid_asset_volume(
             asset: T::AssetId,
         ) -> Result<AssetVolume<T::AssetId, T::Balance>, DispatchError> {
