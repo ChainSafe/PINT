@@ -3,6 +3,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{dispatch::DispatchError, sp_runtime::DispatchResult, RuntimeDebug};
+use sp_std::boxed::Box;
 use xcm::v0::{MultiLocation, Outcome};
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
