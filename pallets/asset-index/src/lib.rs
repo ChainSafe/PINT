@@ -53,7 +53,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
-    use primitives::traits::{UnbondingOutcome, NavProvider};
+    use primitives::traits::{NavProvider, UnbondingOutcome};
     use primitives::{
         fee::{BaseFee, FeeRate},
         traits::{MultiAssetRegistry, RemoteAssetManager},
@@ -778,9 +778,10 @@ pub mod pallet {
             iter.into_iter().try_fold(
                 T::Balance::zero(),
                 |worth, asset| -> Result<_, DispatchError> {
-                    worth.checked_add(&Self::asset_net_worth(asset)?)
+                    worth
+                        .checked_add(&Self::asset_net_worth(asset)?)
                         .ok_or_else(|| Error::<T>::NAVOverflow.into())
-                }
+                },
             )
         }
 
@@ -1221,41 +1222,73 @@ pub mod pallet {
     }
 
     impl<T: Config> NavProvider<T::AssetId, T::Balance> for Pallet<T> {
-        fn index_token_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+        fn index_token_equivalent(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
             todo!()
         }
 
-        fn calculate_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+        fn calculate_asset_net_worth(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
             // the asset net worth depends on whether the asset is liquid or SAFT
             if Self::is_liquid_asset(&asset) {
-              Self::calculate_liquid_asset_net_worth(asset, units)
+                Self::calculate_liquid_asset_net_worth(asset, units)
             } else {
                 Self::calculate_saft_net_worth(asset, units)
             }
         }
 
-        fn calculate_liquid_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+        fn calculate_liquid_asset_net_worth(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
             let price = T::PriceFeed::get_price(asset)?;
             Self::calculate_volume(units, &price)
         }
 
-        fn calculate_saft_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
-            todo!("access the ")
+        fn calculate_saft_net_worth(
+            asset: T::AssetId,
+            units: T::Balance,
+        ) -> Result<T::Balance, DispatchError> {
+            todo!("access the SAFT records")
         }
 
         fn total_asset_net_worth() -> Result<T::Balance, DispatchError> {
-            todo!()
+            Assets::<T>::iter().try_fold(
+                T::Balance::zero(),
+                |worth, (asset, availability)| -> Result<_, DispatchError> {
+                    if availability.is_liquid() {
+                        worth.checked_add(&Self::liquid_net_worth(asset)?)
+                    } else {
+                        worth.checked_add(&Self::saft_net_worth(asset)?)
+                    }
+                    .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
+            )
         }
 
-        fn liquid_net_worth() -> Result<T::Balance, DispatchError> {
-           Self::calculate_combined_net_worth(
-               Self::liquid_assets()
-           )
+        fn total_liquid_net_worth() -> Result<T::Balance, DispatchError> {
+            Self::liquid_assets().into_iter().try_fold(
+                T::Balance::zero(),
+                |worth, asset| -> Result<_, DispatchError> {
+                    worth
+                        .checked_add(&Self::liquid_net_worth(asset)?)
+                        .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
+            )
         }
 
-        fn saft_net_worth() -> Result<T::Balance, DispatchError> {
-            Self::calculate_combined_net_worth(
-                Self::saft_assets()
+        fn total_saft_net_worth() -> Result<T::Balance, DispatchError> {
+            Self::saft_assets().into_iter().try_fold(
+                T::Balance::zero(),
+                |worth, asset| -> Result<_, DispatchError> {
+                    worth
+                        .checked_add(&Self::saft_net_worth(asset)?)
+                        .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
             )
         }
 

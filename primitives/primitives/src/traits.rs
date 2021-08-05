@@ -91,10 +91,30 @@ pub trait NavProvider<AssetId: Clone, Balance> {
     fn total_asset_net_worth() -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of all liquid assets combined.
-    fn liquid_net_worth() -> Result<Balance, DispatchError>;
+    fn total_liquid_net_worth() -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of all SAFT combined.
-    fn saft_net_worth() -> Result<Balance, DispatchError>;
+    fn total_saft_net_worth() -> Result<Balance, DispatchError>;
+
+    /// Calculates the net worth of the given liquid asset.
+    ///
+    /// In contrast to `asset_net_worth`, here it is not checked whether the specified asset is liquid.
+    fn liquid_net_worth(asset: AssetId) -> Result<Balance, DispatchError> {
+        Self::calculate_liquid_asset_net_worth(
+            asset.clone(),
+            Self::asset_balance(asset)
+        )
+    }
+
+    /// Calculates the net worth of the given SAFT.
+    ///
+    /// In contrast to `asset_net_worth`, here it is not checked whether the specified asset is a SAFT.
+    fn saft_net_worth(asset: AssetId) -> Result<Balance, DispatchError> {
+        Self::calculate_saft_net_worth(
+            asset.clone(),
+            Self::asset_balance(asset)
+        )
+    }
 
     /// Calculates the total NAV of the index token, consiting of liquid assets and SAFT
     ///
