@@ -1,70 +1,28 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
-use pint_runtime::{AccountId, AuraId, Signature};
 use pint_runtime_common::traits::XcmRuntimeCallWeights;
-use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
+use pint_runtime_kusama::*;
 use sc_service::ChainType;
-use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
-use sp_runtime::traits::{AccountIdConversion, IdentifyAccount, Verify, Zero};
+use sp_core::sr25519;
+use sp_runtime::traits::{AccountIdConversion, Zero};
 use xcm_calls::{
     proxy::{ProxyConfig, ProxyWeights},
     staking::{RewardDestination, StakingConfig, StakingWeights},
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<pint_runtime::GenesisConfig, Extensions>;
-
-/// Helper function to generate a crypto pair from seed
-pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-    TPublic::Pair::from_string(&format!("//{}", seed), None)
-        .expect("static values are valid; qed")
-        .public()
-}
-
-/// Generate collator keys from seed.
-///
-/// This function's return type must always match the session keys of the chain in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-    get_from_seed::<AuraId>(seed)
-}
-
-/// The extensions for the [`ChainSpec`].
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
-#[serde(deny_unknown_fields)]
-pub struct Extensions {
-    /// The relay chain of the Parachain.
-    pub relay_chain: String,
-    /// The id of the Parachain.
-    pub para_id: u32,
-}
-
-impl Extensions {
-    /// Try to get the extension from the given `ChainSpec`.
-    pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
-        sc_chain_spec::get_extension(chain_spec.extensions())
-    }
-}
-
-type AccountPublic = <Signature as Verify>::Signer;
-
-/// Helper function to generate an account ID from seed
-pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
-where
-    AccountPublic: From<<TPublic::Pair as Pair>::Public>,
-{
-    AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
-}
+pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 
 pub fn pint_development_config(id: ParaId) -> ChainSpec {
     ChainSpec::from_genesis(
         // Name
         "PINT Development",
         // ID
-        "pint_dev",
+        "pint_kusama_dev",
         ChainType::Local,
         move || {
             pint_testnet_genesis(
@@ -106,7 +64,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
         // Name
         "Local Testnet",
         // ID
-        "local_testnet",
+        "pint_kusama_local_testnet",
         ChainType::Local,
         move || {
             pint_testnet_genesis(
@@ -162,32 +120,32 @@ fn pint_testnet_genesis(
     endowed_accounts: Vec<AccountId>,
     council_members: Vec<AccountId>,
     id: ParaId,
-) -> pint_runtime::GenesisConfig {
-    pint_runtime::GenesisConfig {
-        system: pint_runtime::SystemConfig {
-            code: pint_runtime::WASM_BINARY
+) -> GenesisConfig {
+    GenesisConfig {
+        system: SystemConfig {
+            code: WASM_BINARY
                 .expect("WASM binary was not build, please build it!")
                 .to_vec(),
             changes_trie_config: Default::default(),
         },
-        balances: pint_runtime::BalancesConfig {
+        balances: BalancesConfig {
             balances: endowed_accounts
                 .iter()
                 .cloned()
                 .map(|k| (k, 1 << 60))
                 .collect(),
         },
-        committee: pint_runtime::CommitteeConfig {
+        committee: CommitteeConfig {
             council_members: council_members.clone(),
             ..Default::default()
         },
-        chainlink_feed: pint_runtime::ChainlinkFeedConfig {
+        chainlink_feed: ChainlinkFeedConfig {
             pallet_admin: Some(root_key.clone()),
             feed_creators: council_members,
         },
-        sudo: pint_runtime::SudoConfig { key: root_key },
-        parachain_info: pint_runtime::ParachainInfoConfig { parachain_id: id },
-        collator_selection: pint_runtime::CollatorSelectionConfig {
+        sudo: SudoConfig { key: root_key },
+        parachain_info: ParachainInfoConfig { parachain_id: id },
+        collator_selection: CollatorSelectionConfig {
             invulnerables: initial_authorities
                 .iter()
                 .cloned()
@@ -196,20 +154,20 @@ fn pint_testnet_genesis(
             candidacy_bond: Zero::zero(),
             ..Default::default()
         },
-        session: pint_runtime::SessionConfig {
+        session: SessionConfig {
             keys: initial_authorities
                 .iter()
                 .cloned()
                 .map(|(acc, aura)| {
                     (
-                        acc.clone(),                                // account id
-                        acc,                                        // validator id
-                        pint_runtime::opaque::SessionKeys { aura }, // session keys
+                        acc.clone(),                  // account id
+                        acc,                          // validator id
+                        opaque::SessionKeys { aura }, // session keys
                     )
                 })
                 .collect(),
         },
-        tokens: pint_runtime::TokensConfig {
+        tokens: TokensConfig {
             // TODO:
             //
             // this config is only for tests for now
@@ -232,7 +190,7 @@ fn pint_testnet_genesis(
         aura: Default::default(),
         aura_ext: Default::default(),
         parachain_system: Default::default(),
-        remote_asset_manager: pint_runtime::RemoteAssetManagerConfig {
+        remote_asset_manager: RemoteAssetManagerConfig {
             staking_configs: vec![(
                 42,
                 StakingConfig {
@@ -251,6 +209,7 @@ fn pint_testnet_genesis(
                     weights: ProxyWeights::polkadot(),
                 },
             )],
+            statemint_config: None,
         },
     }
 }

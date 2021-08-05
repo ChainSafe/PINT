@@ -73,8 +73,10 @@ pub mod calls {
     };
 
     use super::types::*;
+    use xcm_calls::assets::AssetsCallEncoder;
 
-    // A type that states that all calls to the asset's native location can be encoded
+    // A type that states that all calls to the asset's native location can be
+    // encoded
     parameter_type_with_key! {
         pub CanEncodeAll: |_asset_id: AssetId| -> bool {
            true
@@ -109,6 +111,23 @@ pub mod calls {
     }
 
     impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletStakingEncoder<T> {
+        type Context = AssetId;
+        fn can_encode(ctx: &Self::Context) -> bool {
+            T::get(ctx)
+        }
+    }
+
+    /// The encoder to use when transacting `pallet_assets` calls
+    pub struct PalletAssetsEncoder<T>(PhantomData<T>);
+    impl<T: GetByKey<AssetId, bool>> AssetsCallEncoder<AssetId, AccountLookupSource, Balance>
+        for PalletAssetsEncoder<T>
+    {
+        type CompactAssetIdEncoder = PassthroughCompactEncoder<AssetId, AssetId>;
+        type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
+        type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+    }
+
+    impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletAssetsEncoder<T> {
         type Context = AssetId;
         fn can_encode(ctx: &Self::Context) -> bool {
             T::get(ctx)

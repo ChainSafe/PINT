@@ -13,8 +13,8 @@ use frame_system::RawOrigin;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
 /// It has been proposed and has an assigned nonce.
-/// This extra abstraction is required since it may be desirable construct multiple
-/// proposal instances out of a single proposal
+/// This extra abstraction is required since it may be desirable construct
+/// multiple proposal instances out of a single proposal
 pub struct Proposal<T: Config>(pub T::ProposalNonce, pub T::Action);
 
 impl<T: Config> Proposal<T> {
@@ -30,7 +30,8 @@ impl<T: Config> Proposal<T> {
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
-/// Constituent members are unbounded in number but can only veto council proposals
+/// Constituent members are unbounded in number but can only veto council
+/// proposals
 pub enum MemberType {
     Council,
     Constituent,
@@ -72,7 +73,8 @@ impl<AccountId> MemberVote<AccountId> {
 /// Origin for the committee pallet.
 #[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
-    /// Action is executed by the committee. Contains the closer account and the members that voted Aye
+    /// Action is executed by the committee. Contains the closer account and the
+    /// members that voted Aye
     ApprovedByCommittee(AccountId, VoteAggregate<AccountId, BlockNumber>),
     /// It has been condoned by a single member of the committee.
     CommitteeMember(AccountId),
@@ -116,7 +118,8 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
         }
     }
 
-    // This does not check if a vote is a duplicate, This must be done before calling this function
+    // This does not check if a vote is a duplicate, This must be done before
+    // calling this function
     pub fn cast_vote(&mut self, vote: MemberVote<AccountId>) {
         self.votes.push(vote)
     }
@@ -131,7 +134,8 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
     }
 
     /// produce a tuple of the vote totals: (ayes, nays, abstentions)
-    /// Can optionally filter by membership type to only tally council or constituent votes
+    /// Can optionally filter by membership type to only tally council or
+    /// constituent votes
     pub fn tally(&self, member_type: Option<&MemberType>) -> (usize, usize, usize) {
         self.votes
             .iter()
@@ -151,7 +155,8 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 
     /// For a vote to be accepted all of the following must be true:
     ///  - At least min_council_votes must be cast by the council
-    ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) > count(nays))
+    ///  - A simple majority of council Ayes vs Nays (e.g. count(ayes) >
+    ///    count(nays))
     ///  - There is NOT a majority of Nay votes by the constituent members
     pub fn is_accepted(&self, min_council_votes: usize) -> Result<(), VoteRejectionReason> {
         // council votes
@@ -180,7 +185,6 @@ pub enum Vote {
 }
 
 /// An implementation of EnsureOrigin
-///
 //  This is for the extrinsics only can be called after the
 /// approval of the committee
 pub struct EnsureApprovedByCommittee<T>(sp_std::marker::PhantomData<T>);

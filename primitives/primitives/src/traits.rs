@@ -23,10 +23,12 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
     /// This performs the following steps:
     /// - Ensure the account has enough free balance of the given asset
     /// - Depending on the asset's location this will execute
-    ///     - an XCM InitiateReserveWithdraw followed by XCM Deposit order,
-    ///       if the location of the asset is a reserve location of PINT (Relay Chain)
-    ///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset order will be
-    ///       dispatched as XCM ReserveAssetDeposit with an Xcm Deposit order
+    ///     - an XCM InitiateReserveWithdraw followed by XCM Deposit order, if
+    ///       the location of the asset is a reserve location of PINT (Relay
+    ///       Chain)
+    ///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset
+    ///       order will be dispatched as XCM ReserveAssetDeposit with an Xcm
+    ///       Deposit order
     fn transfer_asset(
         who: AccountId,
         asset: AssetId,

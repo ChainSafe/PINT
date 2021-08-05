@@ -40,7 +40,7 @@ fn non_admin_cannot_call_get_asset() {
             ),
             BadOrigin
         );
-        assert_eq!(pallet::Assets::<Test>::contains_key(ASSET_A_ID), false)
+        assert!(!pallet::Assets::<Test>::contains_key(ASSET_A_ID))
     });
 }
 
@@ -461,7 +461,8 @@ fn can_withdraw() {
 
         assert!(a_proportional_tokens + b_proportional_tokens <= user_pint);
 
-        // all SAFT holdings are ignored during withdrawal and don't have any effect on the payout
+        // all SAFT holdings are ignored during withdrawal and don't have any effect on
+        // the payout
         assert_ok!(AssetIndex::add_saft(
             &ADMIN_ACCOUNT_ID,
             SAFT_ASSET_ID,
@@ -521,8 +522,7 @@ fn can_withdraw() {
             pending
                 .assets
                 .iter()
-                .filter(|x| x.asset == ASSET_B_ID)
-                .next()
+                .find(|x| x.asset == ASSET_B_ID)
                 .expect("asset should be present"),
             &AssetWithdrawal {
                 asset: ASSET_B_ID,

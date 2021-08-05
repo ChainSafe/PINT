@@ -230,9 +230,9 @@ impl Default for ExtBuilder {
     fn default() -> Self {
         Self {
             balances: vec![
-                (ADMIN_ACCOUNT_ID, ASSET_A_ID, 1000_000_000_000_000u128),
-                (ADMIN_ACCOUNT_ID, ASSET_B_ID, 1000_000_000_000_000u128),
-                (ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1000_000_000_000_000u128),
+                (ADMIN_ACCOUNT_ID, ASSET_A_ID, 1_000_000_000_000_000_u128),
+                (ADMIN_ACCOUNT_ID, ASSET_B_ID, 1_000_000_000_000_000_u128),
+                (ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1_000_000_000_000_000_u128),
             ],
         }
     }

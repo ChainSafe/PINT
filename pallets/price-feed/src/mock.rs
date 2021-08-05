@@ -5,8 +5,9 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_price_feed;
-use frame_support::dispatch::DispatchResultWithPostInfo;
-use frame_support::{ord_parameter_types, parameter_types, PalletId};
+use frame_support::{
+    dispatch::DispatchResultWithPostInfo, ord_parameter_types, parameter_types, PalletId,
+};
 use frame_system as system;
 use pallet_chainlink_feed::RoundId;
 use sp_core::H256;
@@ -28,6 +29,7 @@ frame_support::construct_runtime!(
         System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
         PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+        Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
         ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>},
     }
 );
@@ -83,6 +85,17 @@ impl pallet_balances::Config for Test {
     type WeightInfo = ();
 }
 
+parameter_types! {
+    pub const MinimumPeriod: u64 = 1000;
+}
+
+impl pallet_timestamp::Config for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = MinimumPeriod;
+    type WeightInfo = ();
+}
+
 pub(crate) const MIN_RESERVE: u64 = 100;
 
 parameter_types! {
@@ -106,8 +119,8 @@ impl pallet_chainlink_feed::Config for Test {
     type StringLimit = StringLimit;
     type OracleCountLimit = OracleLimit;
     type FeedLimit = FeedLimit;
-    type OnAnswerHandler = ();
-    type WeightInfo = pallet_chainlink_feed::default_weights::WeightInfo<Test>;
+    type OnAnswerHandler = PriceFeed;
+    type WeightInfo = ();
 }
 
 pub(crate) type AssetId = u64;
@@ -125,7 +138,7 @@ impl pallet_price_feed::Config for Test {
     type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
     type SelfAssetId = PINTAssetId;
     type AssetId = AssetId;
-    type Oracle = ChainlinkFeed;
+    type Time = Timestamp;
     type Event = Event;
     type WeightInfo = ();
 }
@@ -195,8 +208,8 @@ impl FeedBuilder {
         let value_bounds = self.value_bounds.unwrap_or((1, 1_000));
         let min_submissions = self.min_submissions.unwrap_or(2);
         let decimals = 5;
-        let description = self.description.unwrap_or(b"desc".to_vec());
-        let oracles = self.oracles.unwrap_or(vec![(2, 4), (3, 4), (4, 4)]);
+        let description = self.description.unwrap_or_else(|| b"desc".to_vec());
+        let oracles = self.oracles.unwrap_or_else(|| vec![(2, 4), (3, 4), (4, 4)]);
         let restart_delay = self
             .restart_delay
             .unwrap_or(oracles.len().saturating_sub(1) as u32);

@@ -1,8 +1,19 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128};
+use frame_support::{
+    pallet_prelude::*,
+    sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128},
+};
+
+/// Represents an answer of a feed at a certain point of time
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct TimestampedValue<Value, Moment> {
+    /// The timestamped value
+    pub value: Value,
+    /// Timestamp when the answer was first received
+    pub moment: Moment,
+}
 
 /// The type to represent asset prices
 pub type Price = FixedU128;
@@ -49,12 +60,14 @@ where
         self.price.reciprocal()
     }
 
-    /// Calculates the total volume of the provided units of the `quote` assetId w.r.t. price pair
+    /// Calculates the total volume of the provided units of the `quote` assetId
+    /// w.r.t. price pair
     pub fn volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
         self.price.checked_mul_int(units)
     }
 
-    /// Calculates the total volume of the provided units of the `base` assetId w.r.t. price pair
+    /// Calculates the total volume of the provided units of the `base` assetId
+    /// w.r.t. price pair
     pub fn reciprocal_volume<N: FixedPointOperand>(&self, units: N) -> Option<N> {
         self.reciprocal_price()?.checked_mul_int(units)
     }

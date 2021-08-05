@@ -1,28 +1,20 @@
 /**
  * Runner extensions
  */
-import { ISubmittableResult } from "@polkadot/types/types";
-import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Keyring } from "@polkadot/keyring";
 import { KeyringPair } from "@polkadot/keyring/types";
 import ChainlinkTypes from "@pint/types/chainlink.json";
 import { definitions } from "@pint/types";
-import { Config, Extrinsic, ExtrinsicConfig } from "./config";
+import { Config, ExtrinsicConfig } from "./config";
+import { Extrinsic } from "./extrinsic";
 import { launch } from "./launch";
+import { expandId } from "./util";
 import { ChildProcess } from "child_process";
-import { cryptoWaitReady } from "@polkadot/util-crypto";
-import { SubmittableExtrinsic } from "@polkadot/api/types";
 import OrmlTypes from "@open-web3/orml-types";
 
 // Extrinsics builder
 type Builder = (api: ApiPromise, config: ExtrinsicConfig) => Extrinsic[];
-
-// runTx Result
-interface TxResult {
-    unsub: Promise<() => void>;
-    blockHash: string;
-}
 
 // Message of launching complete
 export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
@@ -30,7 +22,9 @@ export const LAUNCH_COMPLETE: string = "POLKADOT LAUNCH COMPLETE";
 // Kill subprocesses
 function killAll(ps: ChildProcess, exitCode: number) {
     try {
-        ps.send && !ps.killed && ps.send("exit");
+        if (ps.send && !ps.killed) {
+            ps.send("exit");
+        }
         ps.kill("SIGINT");
     } catch (e) {
         if (e.code !== "EPERM") {
@@ -50,38 +44,8 @@ export default class Runner implements Config {
     public pair: KeyringPair;
     public exs: Extrinsic[];
     public errors: string[];
-
-    /**
-     * Wait for n blocks
-     *
-     * The current gap of producing a block is 4s,
-     * we use 5s here.
-     *
-     * @param {number} block
-     * @returns {Promise<void>}
-     */
-    static async waitBlock(block: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, block * 12000));
-    }
-
-    /**
-     * run E2E tests without launch
-     *
-     * @param {Builder} exs - Extrinsic builder
-     * @param {string} ws - "ws://0.0.0.0:9988" by default
-     * @param {string} uri - "//Alice" by default
-     * @returns {Promise<Runner>}
-     */
-    static async run_without_launch(
-        exs: Builder,
-        ws: string = "ws://127.0.0.1:9988",
-        uri: string = "//Alice"
-    ): Promise<void> {
-        console.log("bootstrap e2e tests...");
-        await cryptoWaitReady();
-        const runner = await Runner.build(exs, ws, uri);
-        await runner.runTxs();
-    }
+    public finished: string[];
+    public nonce: number;
 
     /**
      * run E2E tests
@@ -99,24 +63,28 @@ export default class Runner implements Config {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
-        ps.stdout.on("data", async (chunk: Buffer) => {
-            process.stdout.write(chunk.toString());
-            if (chunk.includes(LAUNCH_COMPLETE)) {
-                console.log("COMPLETE LAUNCH!");
-                const runner = await Runner.build(exs, ws, uri);
-                await runner.runTxs();
-            }
-        });
+        if (ps.stdout) {
+            ps.stdout.on("data", async (chunk: Buffer) => {
+                process.stdout.write(chunk.toString());
+                if (chunk.includes(LAUNCH_COMPLETE)) {
+                    console.log("COMPLETE LAUNCH!");
+                    const runner = await Runner.build(exs, ws, uri);
+                    await runner.runTxs();
+                }
+            });
+        }
 
         // Log errors
-        ps.stderr.on("data", (chunk: Buffer) =>
-            process.stderr.write(chunk.toString())
-        );
+        if (ps.stderr) {
+            ps.stderr.on("data", (chunk: Buffer) =>
+                process.stderr.write(chunk.toString())
+            );
+        }
 
         // Kill all processes when exiting.
         process.on("exit", () => {
             console.log("-> exit polkadot-launch...");
-            killAll(ps, process.exitCode);
+            killAll(ps, Number(process.exitCode));
         });
 
         // Handle ctrl+c to trigger `exit`.
@@ -184,6 +152,8 @@ export default class Runner implements Config {
         this.pair = config.pair;
         this.exs = config.exs;
         this.errors = [];
+        this.nonce = 0;
+        this.finished = [];
     }
 
     /**
@@ -192,31 +162,10 @@ export default class Runner implements Config {
      * @returns void
      */
     public async runTxs(): Promise<void> {
-        for (const ex of this.exs) {
-            if (typeof ex.shared === "function") {
-                ex.shared = await ex.shared();
-            }
-
-            if (ex.required) {
-                for (const required of ex.required) {
-                    let requiredEx: Extrinsic = required as Extrinsic;
-                    if (typeof required === "function") {
-                        requiredEx = await required(ex.shared);
-                    }
-
-                    console.log(
-                        `----> run required extrinsic ${requiredEx.pallet}.${requiredEx.call}...`
-                    );
-
-                    await this.runTx(requiredEx);
-                }
-            }
-
-            console.log(`-> run extrinsic ${ex.pallet}.${ex.call}...`);
-            await this.runTx(ex);
+        while (this.exs.length > 0) {
+            await this.queue().catch(console.error);
         }
 
-        // exit
         if (this.errors.length > 0) {
             console.log(`Failed tests: ${this.errors.length}`);
             for (const error of this.errors) {
@@ -229,147 +178,75 @@ export default class Runner implements Config {
     }
 
     /**
-     * Run Extrinsic
+     * queue transactions
      *
-     * @param {ex} Extrinsic
+     * @returns {Promise<void>}
      */
-    public async runTx(ex: Extrinsic): Promise<void | string> {
-        // flush arguments
-        const args: any[] = [];
-        for (const arg of ex.args) {
-            if (typeof arg === "function") {
-                args.push(await arg(ex.shared));
-            } else {
-                args.push(arg);
-            }
-        }
-        console.log(`\t | arguments: ${JSON.stringify(args)}`);
-
-        if (ex.block) await Runner.waitBlock(ex.block);
-
-        // construct tx
-        let tx = this.api.tx[ex.pallet][ex.call](...args);
-        if (!ex.signed) {
-            tx = this.api.tx.sudo.sudo(tx);
-        }
-
-        // get res
-        const res = (await this.timeout(
-            this.sendTx(tx, ex.signed, ex.inBlock),
-            ex.timeout
-        ).catch((err: any) => {
-            const fmt = `====> Error: ${ex.pallet}.${ex.call} failed: ${err}`;
-            console.log(fmt);
-            this.errors.push(fmt);
-        })) as TxResult;
-
-        // run post calls
-        if (ex.post) {
-            for (const post of ex.post) {
-                let postEx: Extrinsic = post as Extrinsic;
-                if (typeof post === "function") {
-                    postEx = await post(ex.shared);
-                }
-
-                console.log(
-                    `----> run post extrinsic ${postEx.pallet}.${postEx.call}...`
-                );
-                await this.runTx(postEx);
-            }
-        }
-
-        // execute verify script
-        if (ex.verify) {
-            await ex.verify(ex.shared);
-        }
-
-        if (res && res.unsub) {
-            (await res.unsub)();
-            console.log(`\t | block hash: ${res.blockHash}`);
-        }
-    }
-
-    /**
-     * Timeout for promise
-     *
-     * @param {Promise<T>} fn
-     * @param {number} ms
-     * @returns {Promise<T>}
-     */
-    private async timeout<T>(
-        fn: Promise<T>,
-        ms?: number
-    ): Promise<T | unknown> {
-        if (!ms) {
-            return fn;
-        }
-
-        return Promise.race([
-            fn,
-            new Promise((_, reject) => {
-                setTimeout(() => reject("Extrinsic timeout"), ms);
-            }),
-        ]);
-    }
-
-    /**
-     * Parse transaction errors
-     *
-     * @param {ISubmittableResult} sr
-     * @returns {Promise<T>}
-     */
-    private async sendTx(
-        se: SubmittableExtrinsic<"promise", ISubmittableResult>,
-        signed = this.pair,
-        inBlock = false
-    ): Promise<TxResult> {
-        return new Promise((resolve, reject) => {
-            const unsub = se.signAndSend(
-                signed,
-                {},
-                (sr: ISubmittableResult) => {
-                    const status = sr.status;
-                    const events = sr.events;
-
-                    console.log(`\t | - status: ${status.type}`);
-
-                    if (status.isInBlock) {
-                        if (inBlock)
-                            resolve({
-                                unsub,
-                                blockHash: status.asInBlock.toHex().toString(),
-                            });
-
-                        if (events) {
-                            events.forEach((value: EventRecord): void => {
-                                if (
-                                    (value.event.data[0] as DispatchError)
-                                        .isModule
-                                ) {
-                                    const error = this.api.registry.findMetaError(
-                                        (value.event
-                                            .data[0] as DispatchError).asModule.toU8a()
-                                    );
-                                    reject(
-                                        `${error.section}.${error.method}: ${error.documentation}`
-                                    );
-                                }
-                            });
-                        }
-                    } else if (status.isInvalid) {
-                        reject("Invalid Extrinsic");
-                    } else if (status.isRetracted) {
-                        reject("Extrinsic Retracted");
-                    } else if (status.isUsurped) {
-                        reject("Extrinsic Usupred");
-                    } else if (status.isFinalized) {
-                        resolve({
-                            unsub,
-                            blockHash: status.asFinalized.toHex().toString(),
-                        });
+    public async queue(): Promise<void> {
+        const runner = this;
+        const queue: Extrinsic[] = [];
+        for (const e of this.exs) {
+            // 0. check if required ex with ids has finished
+            let requiredFinished = true;
+            if (e.required) {
+                for (const r of e.required) {
+                    if (this.exs.map((i) => i.id).includes(r)) {
+                        requiredFinished = false;
+                        break;
                     }
                 }
-            );
+            }
+
+            if (!requiredFinished) {
+                continue;
+            }
+
+            // 1. Build shared data
+            if (typeof e.shared === "function") {
+                e.shared = await e.shared.call(this);
+            }
+
+            // 2. Pend transactions
+            queue.push(e);
+            if (e.with) {
+                for (const w of e.with) {
+                    const ex =
+                        typeof w === "function"
+                            ? expandId(await w(e.shared))
+                            : w;
+                    queue.push(new Extrinsic(ex, this.api, this.pair));
+                }
+            }
+        }
+
+        // 3. register transactions
+        await this.batch(queue);
+
+        // 4. drop executed exs
+        this.exs = this.exs.filter((e) => !queue.includes(e));
+
+        // 5. log pending txs
+        for (const ex of this.exs) {
+            console.log(`--> ${ex.id} is pending...`);
+        }
+    }
+
+    /**
+     * Batch extrinsics
+     */
+    public async batch(exs: Extrinsic[]): Promise<any> {
+        let currentNonce = Number(this.nonce);
+        return Promise.all(
+            exs.map((e, i) => {
+                let n = -1;
+                if (!e.signed || e.signed.address === this.pair.address) {
+                    n = Number(currentNonce);
+                    currentNonce += 1;
+                }
+                return e.run(this.errors, n);
+            })
+        ).then(() => {
+            this.nonce = currentNonce;
         });
     }
 }
