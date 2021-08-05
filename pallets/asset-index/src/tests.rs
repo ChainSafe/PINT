@@ -316,7 +316,7 @@ fn deposit_fails_on_overflowing() {
 }
 
 #[test]
-fn can_calculates_nav() {
+fn can_calculate_nav() {
     new_test_ext().execute_with(|| {
         let a_units = 100;
         let b_units = 3000;
@@ -533,11 +533,11 @@ fn can_withdraw() {
 
         // make sure the holding balance is updated
         assert_eq!(
-            AssetIndex::index_total_asset_balance(ASSET_A_ID),
+            AssetIndex::index_free_asset_balance(ASSET_A_ID),
             asset_a_units - a_redeemed_units
         );
         assert_eq!(
-            AssetIndex::index_total_asset_balance(ASSET_B_ID),
+            AssetIndex::index_free_asset_balance(ASSET_B_ID),
             asset_b_units - b_redeemed_units
         );
     })
