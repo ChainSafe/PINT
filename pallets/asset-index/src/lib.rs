@@ -53,7 +53,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
-    use primitives::traits::UnbondingOutcome;
+    use primitives::traits::{UnbondingOutcome, NavProvider};
     use primitives::{
         fee::{BaseFee, FeeRate},
         traits::{MultiAssetRegistry, RemoteAssetManager},
@@ -771,6 +771,19 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
+        /// Calculates the combined net worth of all the given assets
+        fn calculate_combined_net_worth(
+            iter: impl Iterator<Item = T::AssetId>,
+        ) -> Result<T::Balance, DispatchError> {
+            iter.into_iter().try_fold(
+                T::Balance::zero(),
+                |worth, asset| -> Result<_, DispatchError> {
+                    worth.checked_add(&Self::asset_net_worth(asset)?)
+                        .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                }
+            )
+        }
+
         /// Calculates the volume of the given units with the provided price
         fn calculate_volume(
             units: T::Balance,
@@ -1204,6 +1217,67 @@ pub mod pallet {
             Assets::<T>::get(asset)
                 .map(|availability| availability.is_liquid())
                 .unwrap_or_default()
+        }
+    }
+
+    impl<T: Config> NavProvider<T::AssetId, T::Balance> for Pallet<T> {
+        fn index_token_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+            todo!()
+        }
+
+        fn calculate_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+            // the asset net worth depends on whether the asset is liquid or SAFT
+            if Self::is_liquid_asset(&asset) {
+              Self::calculate_liquid_asset_net_worth(asset, units)
+            } else {
+                Self::calculate_saft_net_worth(asset, units)
+            }
+        }
+
+        fn calculate_liquid_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+            let price = T::PriceFeed::get_price(asset)?;
+            Self::calculate_volume(units, &price)
+        }
+
+        fn calculate_saft_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+            todo!("access the ")
+        }
+
+        fn total_asset_net_worth() -> Result<T::Balance, DispatchError> {
+            todo!()
+        }
+
+        fn liquid_net_worth() -> Result<T::Balance, DispatchError> {
+           Self::calculate_combined_net_worth(
+               Self::liquid_assets()
+           )
+        }
+
+        fn saft_net_worth() -> Result<T::Balance, DispatchError> {
+            Self::calculate_combined_net_worth(
+                Self::saft_assets()
+            )
+        }
+
+        fn total_nav() -> Result<T::Balance, DispatchError> {
+            todo!()
+        }
+
+        fn liquid_nav() -> Result<T::Balance, DispatchError> {
+            todo!()
+        }
+
+        fn saft_nav() -> Result<T::Balance, DispatchError> {
+            todo!()
+        }
+
+        fn index_token_issuance() -> T::Balance {
+            T::IndexToken::total_issuance()
+        }
+
+        fn asset_balance(asset: T::AssetId) -> T::Balance {
+            // the free balance constitutes the funds held by the index
+            T::Currency::free_balance(asset, &Self::treasury_account())
         }
     }
 
