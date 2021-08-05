@@ -50,9 +50,9 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
     fn unbond(asset: AssetId, amount: Balance) -> UnbondingOutcome;
 }
 
-/// Abstracts net asset value (NAV) related calculations
+/// Abstracts net asset value (`NAV`) related calculations
 pub trait NavProvider<AssetId: Clone, Balance> {
-    /// Calculates the amount of index tokens that the given amount of the asset
+    /// Calculates the amount of index tokens that the given units of the asset
     /// are worth.
     ///
     /// This is achieved by dividing the worth of the given units by the NAV.
@@ -61,21 +61,40 @@ pub trait NavProvider<AssetId: Clone, Balance> {
     /// the equivalent number of index token is `vol_asset / NAV`.
     fn index_token_equivalent(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
+    /// Calculates the units of the given asset that the given number of
+    /// index_tokens are worth.
+    ///
+    /// This is calculated by determine the net worth of the given
+    /// `index_tokens` and dividing it by the price of the `asset`.
+    /// (`NAV * index_tokens) / Price_asset`
+    fn asset_equivalent(index_tokens: Balance, asset: AssetId) -> Result<Balance, DispatchError>;
+
     /// Calculates the net worth of the given units of the given asset.
     /// .
-    /// If the asset is liquid then the net worth of an asset is determined by multiplying the share price of the asset by the given amount.: `units * Price_asset`.
+    /// If the asset is liquid then the net worth of an asset is determined by
+    /// multiplying the share price of the asset by the given amount.: `units *
+    /// Price_asset`.
     ///
-    /// If the asset is liquid then the net worth is determined by the net worth of the associated `SAFTRecords`.
+    /// If the asset is liquid then the net worth is determined by the net worth
+    /// of the associated `SAFTRecords`.
     fn calculate_asset_net_worth(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of the given units of the given *liquid* asset.
     ///
-    /// In contrast to `calculate_asset_net_worth`, here it is not checked whether the specified asset is liquid, but it is expected that this is the case and it attempts to determine the net worth using the asset's price feed.
-    fn calculate_liquid_asset_net_worth(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
+    /// In contrast to `calculate_asset_net_worth`, here it is not checked
+    /// whether the specified asset is liquid, but it is expected that this is
+    /// the case and it attempts to determine the net worth using the asset's
+    /// price feed.
+    fn calculate_liquid_asset_net_worth(
+        asset: AssetId,
+        units: Balance,
+    ) -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of the given units of the given SAFT.
     ///
-    /// In contrast to `calculate_asset_net_worth`, here it is not checked whether the specified asset is SAFT. The net worth is then determined by the tracked `SAFTRecords`
+    /// In contrast to `calculate_asset_net_worth`, here it is not checked
+    /// whether the specified asset is SAFT. The net worth is then determined by
+    /// the tracked `SAFTRecords`
     fn calculate_saft_net_worth(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of the given asset contributed to the index.
@@ -87,58 +106,72 @@ pub trait NavProvider<AssetId: Clone, Balance> {
         Self::calculate_asset_net_worth(asset.clone(), Self::asset_balance(asset))
     }
 
-    /// Calculates the net worth of all assets combined.
-    fn total_asset_net_worth() -> Result<Balance, DispatchError>;
-
     /// Calculates the net worth of all liquid assets combined.
     fn total_liquid_net_worth() -> Result<Balance, DispatchError>;
 
     /// Calculates the net worth of all SAFT combined.
     fn total_saft_net_worth() -> Result<Balance, DispatchError>;
 
+    /// Calculates the net worth of all the index tokens which is equal to the
+    /// sum of all assets.
+    ///
+    /// Since the `NAV` represents the per index token value, net worth of all
+    /// index tokens is the product of the `NAV` and the total supply of index
+    /// tokens: `NAV * index_token_issuance`.
+    /// Or Simplified:
+    /// `total_liquid_net_worth + total_saft_net_worth`.
+    fn total_net_worth() -> Result<Balance, DispatchError>;
+
     /// Calculates the net worth of the given liquid asset.
     ///
-    /// In contrast to `asset_net_worth`, here it is not checked whether the specified asset is liquid.
+    /// In contrast to `asset_net_worth`, here it is not checked whether the
+    /// specified asset is liquid.
     fn liquid_net_worth(asset: AssetId) -> Result<Balance, DispatchError> {
-        Self::calculate_liquid_asset_net_worth(
-            asset.clone(),
-            Self::asset_balance(asset)
-        )
+        Self::calculate_liquid_asset_net_worth(asset.clone(), Self::asset_balance(asset))
     }
 
     /// Calculates the net worth of the given SAFT.
     ///
-    /// In contrast to `asset_net_worth`, here it is not checked whether the specified asset is a SAFT.
+    /// In contrast to `asset_net_worth`, here it is not checked whether the
+    /// specified asset is a SAFT.
     fn saft_net_worth(asset: AssetId) -> Result<Balance, DispatchError> {
-        Self::calculate_saft_net_worth(
-            asset.clone(),
-            Self::asset_balance(asset)
-        )
+        Self::calculate_saft_net_worth(asset.clone(), Self::asset_balance(asset))
     }
 
-    /// Calculates the total NAV of the index token, consiting of liquid assets and SAFT
+    /// Calculates the total NAV of the index token, consisting of liquid assets
+    /// and SAFT
     ///
     /// The NAV represents the fund's per token value.
     /// The the NAV is calculated by dividing the total value of all the
     /// contributed assets by the total supply of index token:
     /// `NAV = (Asset_0 + Asset_1+ ... + Asset_n) / Total Supply`. where
     /// `Asset_n` is the net worth of all shares of the specific asset that were
-    /// contributed to the index. And the sum of all of them is the `total_asset_net_worth`
+    /// contributed to the index. And the sum of all of them is the
+    /// `total_asset_net_worth`
     ///
-    /// To determine the net value of the assets, and then ultimately the `NAV`,
-    /// the prices of the assets are required.
+    /// This can be simplified to
+    /// `NAV = (Liquid_net_worth + SAFT_net_worth) / Total Supply`,
+    /// which is also `NAV = NAV_liquids + NAV_saft`.
     fn total_nav() -> Result<Balance, DispatchError>;
 
-    /// Calculates the NAV of the index token solely based on the liquid assets
+    /// Calculates the NAV of the index token solely for the liquid assets
+    ///
+    /// Following the `total_nav` calculation, the `NAV_liquids` is determined
+    /// by `NAV_liquids = NAV - (SAFT_net_worth / Total Supply)`
+    /// Or simplified
+    /// `NAV - NAV_saft`, which is  `Liquid_net_worth / Total Supply`
     fn liquid_nav() -> Result<Balance, DispatchError>;
 
-    /// Calculates the NAV of the index token solely based on the SAFT
+    /// Calculates the NAV of the index token solely for the SAFT
+    ///
+    /// Following `liquid_nav` calculation, this is determined by:
+    /// `SAFT_net_worth / Total Supply`
     fn saft_nav() -> Result<Balance, DispatchError>;
 
     /// The total supply of index tokens currently in circulation.
     fn index_token_issuance() -> Balance;
 
-    /// The amount of the specified asset currently held in the index.
+    /// The amount of the given asset currently held in the index.
     fn asset_balance(asset: AssetId) -> Balance;
 }
 

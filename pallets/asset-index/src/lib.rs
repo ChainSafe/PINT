@@ -53,6 +53,7 @@ pub mod pallet {
         AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal,
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
+    use frame_support::sp_runtime::traits::CheckedMul;
     use primitives::traits::{NavProvider, UnbondingOutcome};
     use primitives::{
         fee::{BaseFee, FeeRate},
@@ -771,20 +772,6 @@ pub mod pallet {
                 .ok_or(Error::<T>::NAVOverflow)?)
         }
 
-        /// Calculates the combined net worth of all the given assets
-        fn calculate_combined_net_worth(
-            iter: impl Iterator<Item = T::AssetId>,
-        ) -> Result<T::Balance, DispatchError> {
-            iter.into_iter().try_fold(
-                T::Balance::zero(),
-                |worth, asset| -> Result<_, DispatchError> {
-                    worth
-                        .checked_add(&Self::asset_net_worth(asset)?)
-                        .ok_or_else(|| Error::<T>::NAVOverflow.into())
-                },
-            )
-        }
-
         /// Calculates the volume of the given units with the provided price
         fn calculate_volume(
             units: T::Balance,
@@ -1226,7 +1213,28 @@ pub mod pallet {
             asset: T::AssetId,
             units: T::Balance,
         ) -> Result<T::Balance, DispatchError> {
-            todo!()
+            let nav = Self::total_nav()?;
+            if nav.is_zero() {
+                return Ok(T::Balance::zero());
+            }
+            let assets = Self::calculate_asset_net_worth(asset, units)?;
+            Ok(assets.checked_div(&nav).ok_or(Error::<T>::NAVOverflow)?)
+        }
+
+        fn asset_equivalent(
+            index_tokens: T::Balance,
+            asset: T::AssetId,
+        ) -> Result<T::Balance, DispatchError> {
+            let nav = Self::total_nav()?;
+            let vol = index_tokens
+                .checked_mul(&nav)
+                .ok_or(Error::<T>::NAVOverflow)?;
+            let price = T::PriceFeed::get_price(asset)?;
+            price
+                .reciprocal_volume(vol.into())
+                .ok_or(Error::<T>::NAVOverflow)?
+                .try_into()
+                .map_err(|_| Error::<T>::AssetUnitsOverflow.into())
         }
 
         fn calculate_asset_net_worth(
@@ -1250,24 +1258,11 @@ pub mod pallet {
         }
 
         fn calculate_saft_net_worth(
-            asset: T::AssetId,
-            units: T::Balance,
+            _asset: T::AssetId,
+            _units: T::Balance,
         ) -> Result<T::Balance, DispatchError> {
+            // needs https://github.com/ChainSafe/PINT/issues/250
             todo!("access the SAFT records")
-        }
-
-        fn total_asset_net_worth() -> Result<T::Balance, DispatchError> {
-            Assets::<T>::iter().try_fold(
-                T::Balance::zero(),
-                |worth, (asset, availability)| -> Result<_, DispatchError> {
-                    if availability.is_liquid() {
-                        worth.checked_add(&Self::liquid_net_worth(asset)?)
-                    } else {
-                        worth.checked_add(&Self::saft_net_worth(asset)?)
-                    }
-                    .ok_or_else(|| Error::<T>::NAVOverflow.into())
-                },
-            )
         }
 
         fn total_liquid_net_worth() -> Result<T::Balance, DispatchError> {
@@ -1292,16 +1287,51 @@ pub mod pallet {
             )
         }
 
+        fn total_net_worth() -> Result<T::Balance, DispatchError> {
+            Assets::<T>::iter().try_fold(
+                T::Balance::zero(),
+                |worth, (asset, availability)| -> Result<_, DispatchError> {
+                    if availability.is_liquid() {
+                        worth.checked_add(&Self::liquid_net_worth(asset)?)
+                    } else {
+                        worth.checked_add(&Self::saft_net_worth(asset)?)
+                    }
+                    .ok_or_else(|| Error::<T>::NAVOverflow.into())
+                },
+            )
+        }
+
         fn total_nav() -> Result<T::Balance, DispatchError> {
-            todo!()
+            let total_issuance = T::IndexToken::total_issuance();
+            if total_issuance.is_zero() {
+                return Ok(T::Balance::zero());
+            }
+            let assets = Self::total_net_worth()?;
+            assets
+                .checked_div(&total_issuance)
+                .ok_or_else(|| Error::<T>::NAVOverflow.into())
         }
 
         fn liquid_nav() -> Result<T::Balance, DispatchError> {
-            todo!()
+            let total_issuance = T::IndexToken::total_issuance();
+            if total_issuance.is_zero() {
+                return Ok(T::Balance::zero());
+            }
+            let assets = Self::total_liquid_net_worth()?;
+            assets
+                .checked_div(&total_issuance)
+                .ok_or_else(|| Error::<T>::NAVOverflow.into())
         }
 
         fn saft_nav() -> Result<T::Balance, DispatchError> {
-            todo!()
+            let total_issuance = T::IndexToken::total_issuance();
+            if total_issuance.is_zero() {
+                return Ok(T::Balance::zero());
+            }
+            let assets = Self::total_saft_net_worth()?;
+            assets
+                .checked_div(&total_issuance)
+                .ok_or_else(|| Error::<T>::NAVOverflow.into())
         }
 
         fn index_token_issuance() -> T::Balance {
