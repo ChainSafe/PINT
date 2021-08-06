@@ -31,12 +31,12 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_price_feed.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_price_feed::WeightInfo for WeightInfo<T> {
-    fn track_asset_price_feed() -> Weight {
-        (18_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
-    fn untrack_asset_price_feed() -> Weight {
-        (15_000_000 as Weight).saturating_add(T::DbWeight::get().reads(1 as Weight))
-    }
+	fn track_asset_price_feed() -> Weight {
+		(18_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+	fn untrack_asset_price_feed() -> Weight {
+		(15_000_000 as Weight).saturating_add(T::DbWeight::get().reads(1 as Weight))
+	}
 }

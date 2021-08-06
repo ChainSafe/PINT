@@ -34,14 +34,14 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_asset_index.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_asset_index::WeightInfo for WeightInfo<T> {
-    fn add_asset() -> Weight {
-        (38_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(2 as Weight))
-            .saturating_add(T::DbWeight::get().writes(2 as Weight))
-    }
-    fn set_metadata() -> Weight {
-        (18_000_000 as Weight)
-            .saturating_add(T::DbWeight::get().reads(1 as Weight))
-            .saturating_add(T::DbWeight::get().writes(1 as Weight))
-    }
+	fn add_asset() -> Weight {
+		(38_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	fn set_metadata() -> Weight {
+		(18_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }

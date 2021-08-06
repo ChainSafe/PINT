@@ -31,7 +31,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions for pallet_remote_asset_manager.
 pub struct WeightInfo<T>(PhantomData<T>);
 impl<T: frame_system::Config> pallet_remote_asset_manager::WeightInfo for WeightInfo<T> {
-    fn transfer() -> Weight {
-        (2_000_000 as Weight)
-    }
+	fn transfer() -> Weight {
+		(2_000_000 as Weight)
+	}
 }
