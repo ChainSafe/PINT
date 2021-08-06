@@ -37,7 +37,7 @@ benchmarks! {
 		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), 0.into(), 100u32.into(), 20u32.into()));
 		let call = Call::<T>::remove_saft(
 				asset,
-				0u32.into()
+				0u32
 		);
 	}:  { call.dispatch_bypass_filter(origin)? }
 		verify {
