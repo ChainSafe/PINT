@@ -47,7 +47,8 @@ pub mod pallet {
     /// Provides access to all the price feeds
     /// This is used to determine the equivalent amount of PINT for assets
     ///
-    /// The internal chainlink oracle type `FeedOracle` gives access to the asset's price feeds.
+    /// The internal chainlink oracle type `FeedOracle` gives access to the
+    /// asset's price feeds.
     ///
     /// NOTE: this assumes all the feeds provide data in the same base
     /// currency. When querying the price of an asset
@@ -85,7 +86,8 @@ pub mod pallet {
 
     #[pallet::storage]
     #[pallet::getter(fn latest_answer_timestamp)]
-    /// Stores the timestamp of the latest answer of each feed (feed) -> Timestamp
+    /// Stores the timestamp of the latest answer of each feed (feed) ->
+    /// Timestamp
     pub type LatestAnswerTimestamp<T: Config> =
         StorageMap<_, Twox64Concat, FeedIdFor<T>, MomentOf<T>, ValueQuery>;
 
@@ -212,7 +214,8 @@ pub mod pallet {
     impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
     impl<T: Config> Pallet<T> {
-        /// Returns the corresponding identifier for the asset's price feed according to the internal mapping
+        /// Returns the corresponding identifier for the asset's price feed
+        /// according to the internal mapping
         pub fn asset_feed_id(asset_id: &T::AssetId) -> Option<FeedIdFor<T>> {
             AssetFeeds::<T>::get(asset_id)
         }
