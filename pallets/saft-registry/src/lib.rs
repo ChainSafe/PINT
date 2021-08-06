@@ -141,6 +141,8 @@ pub mod pallet {
 		/// added with `add_saft`
 		///
 		/// Callable by the governance committee.
+		///
+		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::add_saft())]
 		#[transactional]
 		pub fn add_saft(
@@ -155,7 +157,7 @@ pub mod pallet {
 				return Ok(());
 			}
 			// mint SAFT units into the index and credit the caller's account with PINT
-			<T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;
+			T::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;
 
 			// keep track of total nav
 			SAFTNetAssetValue::<T>::try_mutate(asset_id, |val| -> Result<_, DispatchError> {
@@ -186,7 +188,9 @@ pub mod pallet {
 		///   - `saft_id`: The id that was assigned to the SAFT when it was added with `add_saft`
 		///
 		/// Callable by the governance committee.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		///
+		/// Weight: `O(1)`
+		#[pallet::weight(T::WeightInfo::remove_saft())]
 		#[transactional]
 		pub fn remove_saft(origin: OriginFor<T>, asset_id: T::AssetId, saft_id: SAFTId) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin.clone())?;
@@ -218,6 +222,8 @@ pub mod pallet {
 		///   - `latest_nav`: The NAV for the `SaftRecord` identified by the `index`
 		///
 		/// Callable by the governance committee.
+		///
+		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::report_nav())]
 		#[transactional]
 		pub fn report_nav(
@@ -252,7 +258,10 @@ pub mod pallet {
 		/// location
 		///
 		/// Callable by the governance committee.
-		#[pallet::weight(T::WeightInfo::convert_to_liquid())]
+		///
+		/// Weight: `O(C)` where C is the number of SAFTs for the asset as tracked by the
+		/// `SAFTCounter`.
+		#[pallet::weight(T::WeightInfo::convert_to_liquid(SAFTCounter::<T>::get(asset_id).saturating_sub(1)))]
 		#[transactional]
 		pub fn convert_to_liquid(
 			origin: OriginFor<T>,
@@ -280,13 +289,9 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_saft() -> Weight;
-		// TODO: (incompleted)
-		//
-		// https://github.com/ChainSafe/PINT/pull/73
-		//
-		// fn remove_saft() -> Weight;
+		fn remove_saft() -> Weight;
 		fn report_nav() -> Weight;
-		fn convert_to_liquid() -> Weight;
+		fn convert_to_liquid(_: u32) -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -295,11 +300,15 @@ pub mod pallet {
 			Default::default()
 		}
 
+		fn remove_saft() -> Weight {
+			Default::default()
+		}
+
 		fn report_nav() -> Weight {
 			Default::default()
 		}
 
-		fn convert_to_liquid() -> Weight {
+		fn convert_to_liquid(_: u32) -> Weight {
 			Default::default()
 		}
 	}
