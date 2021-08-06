@@ -113,7 +113,7 @@ jobs:
       - rust_setup
       - run:
           name: Format check
-          command: cargo +nightly fmt -- --check
+          command: cargo +"$RUSTC_TOOLCHAIN" fmt -- --check
   lint:
     executor: test-executor
     description: Lint Code
