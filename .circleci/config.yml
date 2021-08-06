@@ -113,7 +113,7 @@ jobs:
       - rust_setup
       - run:
           name: Format check
-          command: cargo fmt -- --check
+          command: cargo +nightly fmt -- --check
   lint:
     executor: test-executor
     description: Lint Code
