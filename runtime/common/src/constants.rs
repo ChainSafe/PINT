@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 use cumulus_pallet_xcm::Origin;
 use frame_support::{
-    // pallet_predule::Weight,
     parameter_types,
     sp_runtime::{traits::AccountIdConversion, Perbill},
     traits::LockIdentifier,

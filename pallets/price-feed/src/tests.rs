@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::types::{AssetPricePair, Price};
-use crate::{mock::*, Error};
+use crate::{
+    mock::*,
+    types::{AssetPricePair, Price},
+    Error,
+};
 use frame_support::{assert_noop, assert_ok};
 use pallet::PriceFeed as _;
-use sp_runtime::traits::BadOrigin;
-use sp_runtime::FixedPointNumber;
+use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 
 const ASSET_X_ID: AssetId = 2;
 

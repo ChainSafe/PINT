@@ -45,8 +45,9 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use xcm::v0::{BodyId, Junction, MultiAsset, MultiLocation, NetworkId, Xcm};
-use xcm::v0::{Junction::*, MultiLocation::*};
+use xcm::v0::{
+    BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId, Xcm,
+};
 use xcm_builder::{
     AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin,
     FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter, ParentIsDefault,
@@ -59,8 +60,8 @@ use pallet_committee::EnsureMember;
 pub use pint_runtime_common::{constants::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
-use xcm_calls::assets::AssetsCallEncoder;
 use xcm_calls::{
+    assets::AssetsCallEncoder,
     proxy::{ProxyCallEncoder, ProxyType},
     staking::StakingCallEncoder,
     PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,

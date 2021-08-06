@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::mock::*;
-use crate::{CommitteeMember, MemberType, Vote, VoteAggregate};
+use crate::{mock::*, CommitteeMember, MemberType, Vote, VoteAggregate};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};

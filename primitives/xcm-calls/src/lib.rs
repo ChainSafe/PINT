@@ -116,9 +116,11 @@ mod tests {
     };
     use xcm::DoubleEncoded;
 
-    use crate::proxy::{ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX};
-    use crate::staking::{Bond, StakingCall, StakingCallEncoder, POLKADOT_PALLET_STAKING_INDEX};
-    use crate::{PassthroughCompactEncoder, PassthroughEncoder};
+    use crate::{
+        proxy::{ProxyCall, ProxyCallEncoder, ProxyParams, POLKADOT_PALLET_PROXY_INDEX},
+        staking::{Bond, StakingCall, StakingCallEncoder, POLKADOT_PALLET_STAKING_INDEX},
+        PassthroughCompactEncoder, PassthroughEncoder,
+    };
 
     use super::*;
     use crate::assets::{

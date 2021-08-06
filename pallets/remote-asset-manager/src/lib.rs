@@ -39,8 +39,8 @@ pub mod pallet {
     use xcm::v0::{ExecuteXcm, MultiLocation, OriginKind, Outcome, SendXcm, Xcm};
 
     use primitives::traits::{MultiAssetRegistry, RemoteAssetManager, UnbondingOutcome};
-    use xcm_calls::assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights};
     use xcm_calls::{
+        assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights},
         proxy::{
             ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType,
             ProxyWeights,
@@ -52,8 +52,7 @@ pub mod pallet {
         PalletCall, PalletCallEncoder,
     };
 
-    use crate::traits::BalanceMeter;
-    use crate::types::StatemintConfig;
+    use crate::{traits::BalanceMeter, types::StatemintConfig};
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
     type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
