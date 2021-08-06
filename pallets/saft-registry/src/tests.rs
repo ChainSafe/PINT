@@ -85,7 +85,7 @@ fn admin_cannot_update_or_remove_invalid_index() {
 				1, // index
 				1000
 			),
-			pallet::Error::<Test>::AssetIndexOutOfBounds
+			pallet::Error::<Test>::SAFTNotFound
 		);
 
 		assert_eq!(super::ActiveSAFTs::<Test>::get(ASSET_A), expected_registry);
@@ -97,7 +97,7 @@ fn admin_cannot_update_or_remove_invalid_index() {
 				ASSET_A,
 				1, // index
 			),
-			pallet::Error::<Test>::AssetIndexOutOfBounds
+			pallet::Error::<Test>::SAFTNotFound
 		);
 
 		assert_eq!(super::ActiveSAFTs::<Test>::get(ASSET_A), expected_registry);

@@ -56,4 +56,7 @@ pub type Signature = MultiSignature;
 /// Value type for price feeds.
 pub type Value = u128;
 
+/// Identifier for a SAFT
+pub type SAFTId = u32;
+
 pub type AccountPublic = <Signature as Verify>::Signer;
