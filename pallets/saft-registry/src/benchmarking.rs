@@ -5,8 +5,8 @@
 
 use super::*;
 use frame_benchmarking::{account, benchmarks, whitelisted_caller};
-use frame_support::assert_ok;
 use frame_support::{
+	assert_ok,
 	dispatch::UnfilteredDispatchable,
 	traits::{EnsureOrigin, Get},
 };
