@@ -37,8 +37,8 @@ pub mod pallet {
 		// Origin that is allowed to manage the SAFTs
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
-		type Balance: Parameter + AtLeast32BitUnsigned + Default + Copy;
-		type AssetId: Parameter + From<u32> + Copy;
+		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
+		type AssetId: Parameter + Member + From<u32> + Copy;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
@@ -70,6 +70,7 @@ pub mod pallet {
 	/// `SAFTCounter`. If this maps stores a `None` value for a `SAFTId` lower
 	/// than the counter, then this means the record was removed entirely.
 	#[pallet::storage]
+	#[pallet::getter(fn active_safts)]
 	pub type ActiveSAFTs<T: Config> = StorageDoubleMap<
 		_,
 		Blake2_128Concat,
@@ -82,6 +83,7 @@ pub mod pallet {
 
 	/// A running counter used to determine the next SAFT id.
 	#[pallet::storage]
+	#[pallet::getter(fn saft_counter)]
 	pub type SAFTCounter<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, SAFTId, ValueQuery>;
 
 	/// Store a mapping (AssetId) -> NAV for each SAFT
@@ -89,6 +91,7 @@ pub mod pallet {
 	/// Stores the aggregated NAV of all SAFTs, which is the sum the `nav` of
 	/// all `SAFTRecord`s for each asset
 	#[pallet::storage]
+	#[pallet::getter(fn saft_nav)]
 	pub type SAFTNetAssetValue<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, T::Balance, ValueQuery>;
 
 	#[pallet::event]
@@ -155,7 +158,10 @@ pub mod pallet {
 			<T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;
 
 			// keep track of total nav
-			SAFTNetAssetValue::<T>::try_mutate(asset_id, |val| val.checked_add(&nav).ok_or(ArithmeticError::Overflow))?;
+			SAFTNetAssetValue::<T>::try_mutate(asset_id, |val| -> Result<_, DispatchError> {
+				*val = val.checked_add(&nav).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
 
 			// Determine the next id for the SAFT
 			let saft_id = SAFTCounter::<T>::try_mutate(asset_id, |counter| -> Result<_, DispatchError> {
@@ -167,7 +173,6 @@ pub mod pallet {
 			// insert the new record
 			ActiveSAFTs::<T>::insert(asset_id, saft_id, SAFTRecord::new(nav, units));
 			Self::deposit_event(Event::<T>::SAFTAdded(asset_id, saft_id));
-
 			Ok(())
 		}
 
@@ -192,7 +197,7 @@ pub mod pallet {
 
 			// reflect the change in NAV
 			T::AssetRecorder::remove_saft(who, asset_id, saft.units, saft.nav)?;
-			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| nav.saturating_sub(saft.nav));
+			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| *nav = nav.saturating_sub(saft.nav));
 
 			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id));
 
@@ -233,10 +238,9 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			// TODO: mint / burn accordingly?
-
-			SAFTNetAssetValue::<T>::try_mutate(asset_id, |nav| {
-				nav.saturating_sub(old_nav).checked_add(&latest_nav).ok_or(ArithmeticError::Overflow)
+			SAFTNetAssetValue::<T>::try_mutate(asset_id, |nav| -> Result<_, DispatchError> {
+				*nav = nav.saturating_sub(old_nav).checked_add(&latest_nav).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
 			})?;
 
 			Self::deposit_event(Event::<T>::NavUpdated(asset_id, saft_id, old_nav, latest_nav));
