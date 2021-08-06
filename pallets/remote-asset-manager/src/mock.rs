@@ -6,11 +6,11 @@
 
 use cumulus_primitives_core::ParaId;
 use frame_support::{
-    construct_runtime,
-    traits::{All, LockIdentifier},
+    construct_runtime, ord_parameter_types, parameter_types,
+    traits::{All, GenesisBuild, LockIdentifier},
     weights::{constants::WEIGHT_PER_SECOND, Weight},
+    PalletId,
 };
-use frame_support::{ord_parameter_types, parameter_types, traits::GenesisBuild, PalletId};
 use frame_system as system;
 use frame_system::EnsureRoot;
 use orml_traits::parameter_type_with_key;
@@ -220,16 +220,17 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 
 pub mod para {
-    use super::xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder};
-    use super::*;
+    use super::{
+        xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder},
+        *,
+    };
     use crate::mock::xcm_test_support::calls::PalletAssetsEncoder;
     use codec::Decode;
     use frame_support::dispatch::DispatchError;
     use orml_currencies::BasicCurrencyAdapter;
     use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
     use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-    use sp_runtime::traits::Convert;
-    use sp_runtime::FixedPointNumber;
+    use sp_runtime::{traits::Convert, FixedPointNumber};
 
     parameter_types! {
         pub const BlockHashCount: u64 = 250;

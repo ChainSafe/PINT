@@ -25,8 +25,7 @@ pub mod pallet {
         transactional,
     };
     use frame_system::pallet_prelude::*;
-    use pallet_asset_index::traits::AssetRecorder;
-    use pallet_asset_index::types::AssetAvailability;
+    use pallet_asset_index::{traits::AssetRecorder, types::AssetAvailability};
     use xcm::v0::MultiLocation;
 
     #[pallet::config]

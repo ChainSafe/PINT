@@ -24,8 +24,10 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    pub use crate::traits::PriceFeed;
-    pub use crate::types::{AssetPricePair, Price, TimestampedValue};
+    pub use crate::{
+        traits::PriceFeed,
+        types::{AssetPricePair, Price, TimestampedValue},
+    };
     #[cfg(feature = "std")]
     use frame_support::traits::GenesisBuild;
     use frame_support::{

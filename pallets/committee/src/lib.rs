@@ -32,12 +32,11 @@ mod utils;
 pub mod pallet {
     pub use crate::types::*;
     use crate::utils;
-    use frame_support::sp_std::prelude::*;
     use frame_support::{
         dispatch::{Codec, DispatchResultWithPostInfo},
         pallet_prelude::*,
         sp_runtime::traits::{CheckedAdd, Dispatchable, One, Zero},
-        sp_std::{boxed::Box, vec::Vec},
+        sp_std::{boxed::Box, prelude::*, vec::Vec},
         weights::{GetDispatchInfo, PostDispatchInfo},
     };
     use frame_system::pallet_prelude::*;

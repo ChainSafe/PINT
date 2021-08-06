@@ -9,15 +9,16 @@ use frame_support::{
     dispatch::DispatchResult,
     ord_parameter_types, parameter_types,
     sp_runtime::FixedPointNumber,
-    traits::LockIdentifier,
-    traits::{GenesisBuild, StorageMapShim},
+    traits::{GenesisBuild, LockIdentifier, StorageMapShim},
     PalletId,
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::traits::UnbondingOutcome;
-use primitives::{fee::FeeRate, traits::RemoteAssetManager};
+use primitives::{
+    fee::FeeRate,
+    traits::{RemoteAssetManager, UnbondingOutcome},
+};
 use sp_core::H256;
 use sp_runtime::{
     testing::Header,

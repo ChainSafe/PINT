@@ -54,10 +54,9 @@ pub mod pallet {
         AssetsDistribution, AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
     };
     use frame_support::sp_runtime::traits::CheckedMul;
-    use primitives::traits::{NavProvider, UnbondingOutcome};
     use primitives::{
         fee::{BaseFee, FeeRate},
-        traits::{MultiAssetRegistry, RemoteAssetManager},
+        traits::{MultiAssetRegistry, NavProvider, RemoteAssetManager, UnbondingOutcome},
     };
 
     type AccountIdFor<T> = <T as frame_system::Config>::AccountId;

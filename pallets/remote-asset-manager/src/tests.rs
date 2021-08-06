@@ -17,10 +17,11 @@ use xcm_simulator::TestExt;
 
 use pallet_asset_index::types::AssetAvailability;
 use primitives::traits::MultiAssetRegistry;
-use xcm_calls::assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX};
-use xcm_calls::proxy::ProxyType as ParaProxyType;
+use xcm_calls::{
+    assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX},
+    proxy::ProxyType as ParaProxyType,
+};
 
-use crate::types::StatemintConfig;
 use crate::{
     mock::{
         para::{ParaTreasuryAccount, RELAY_PRICE_MULTIPLIER},
@@ -28,6 +29,7 @@ use crate::{
         *,
     },
     pallet as pallet_remote_asset_manager,
+    types::StatemintConfig,
 };
 
 #[allow(unused)]

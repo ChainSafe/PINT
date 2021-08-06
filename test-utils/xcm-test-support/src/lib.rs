@@ -20,8 +20,7 @@ decl_test_relay_chain! {
 
 /// Common types used for tests
 pub mod types {
-    use sp_runtime::traits::IdentityLookup;
-    use sp_runtime::AccountId32;
+    use sp_runtime::{traits::IdentityLookup, AccountId32};
 
     pub type AccountId = AccountId32;
 

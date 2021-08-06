@@ -9,8 +9,7 @@ use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 
-use crate::PalletCallEncoder;
-use crate::{CallEncoder, EncodeWith, PalletCall};
+use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 use frame_support::sp_runtime::traits::AtLeast32BitUnsigned;
 
 /// The index of `pallet_staking` in the polkadot runtime

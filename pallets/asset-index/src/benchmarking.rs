@@ -3,8 +3,10 @@
 use super::*;
 use crate::types::AssetAvailability;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
-use frame_support::sp_runtime::traits::AccountIdConversion;
-use frame_support::traits::{Currency, Get};
+use frame_support::{
+    sp_runtime::traits::AccountIdConversion,
+    traits::{Currency, Get},
+};
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use xcm::v0::MultiLocation;

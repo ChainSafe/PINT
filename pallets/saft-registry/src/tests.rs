@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::mock::*;
-use crate::SAFTRecord;
+use crate::{mock::*, SAFTRecord};
 use frame_support::{assert_noop, assert_ok};
 use primitives::traits::MultiAssetRegistry;
 use sp_runtime::traits::BadOrigin;
