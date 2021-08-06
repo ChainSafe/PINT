@@ -518,7 +518,7 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 				if let Ok(asset_id) = AssetId::decode(&mut &key[..]) {
 					// check `asset_id` is supported
 					if AssetIndex::is_liquid_asset(&asset_id) {
-						return Some(asset_id)
+						return Some(asset_id);
 					}
 				}
 			}

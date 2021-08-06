@@ -372,7 +372,7 @@ pub mod pallet {
 			let _ = ensure_signed(origin.clone())?;
 			T::AdminOrigin::ensure_origin(origin)?;
 			if value.is_zero() {
-				return Ok(().into())
+				return Ok(().into());
 			}
 
 			let dest = T::AssetRegistry::native_asset_location(&asset)
@@ -645,7 +645,7 @@ pub mod pallet {
 		/// Sends an XCM [`bond_extra`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond_extra) call
 		pub fn do_send_bond_extra(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
 			if amount.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 
 			let dest = T::AssetRegistry::native_asset_location(&asset)
@@ -687,7 +687,7 @@ pub mod pallet {
 		/// An `unbond` call must be signed by the controller account.
 		pub fn do_send_unbond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
 			if amount.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 
 			let dest = T::AssetRegistry::native_asset_location(&asset)

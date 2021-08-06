@@ -110,7 +110,7 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin.clone())?;
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 			// mint SAFT units into the index and credit the caller's account with PINT
 			<T as Config>::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;

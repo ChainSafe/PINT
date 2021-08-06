@@ -7,6 +7,5 @@ comment_width = 100
 wrap_comments = true
 binop_separator = "Back"
 trailing_comma = "Vertical"
-trailing_semicolon = false
 use_field_init_shorthand = true
 license_template_path = "HEADER-LICENSE"

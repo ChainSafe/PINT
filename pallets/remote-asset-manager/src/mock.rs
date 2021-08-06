@@ -505,7 +505,7 @@ pub mod para {
 				{
 					if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
 						if AssetIndex::is_liquid_asset(&asset_id) {
-							return Some(asset_id)
+							return Some(asset_id);
 						}
 					}
 				}

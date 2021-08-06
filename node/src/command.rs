@@ -45,14 +45,14 @@ fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_servic
 					Box::new(chain_spec::kusama::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "kusama"))]
-				return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+				return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
 			} else if starts_with("pint_polkadot") {
 				#[cfg(feature = "polkadot")]
 				{
 					Box::new(chain_spec::polkadot::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "polkadot"))]
-				return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into())
+				return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				Box::new(chain_spec::dev::ChainSpec::from_json_file(path)?)
 			}
@@ -98,16 +98,16 @@ impl SubstrateCli for Cli {
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if chain_spec.is_kusama() {
 			#[cfg(feature = "kusama")]
-			return &pint_runtime_kusama::VERSION
+			return &pint_runtime_kusama::VERSION;
 			#[cfg(not(feature = "kusama"))]
 			panic!("{}", service::KUSAMA_RUNTIME_NOT_AVAILABLE);
 		} else if chain_spec.is_polkadot() {
 			#[cfg(feature = "polkadot")]
-			return &pint_runtime_polkadot::VERSION
+			return &pint_runtime_polkadot::VERSION;
 			#[cfg(not(feature = "polkadot"))]
 			panic!("{}", service::POLKADOT_RUNTIME_NOT_AVAILABLE);
 		} else {
-			return &pint_runtime_dev::VERSION
+			return &pint_runtime_dev::VERSION;
 		}
 	}
 }
@@ -285,7 +285,9 @@ pub fn run() -> Result<()> {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 				let chain_spec = &runner.config().chain_spec;
-				with_runtime!(chain_spec, { return runner.sync_run(|config| cmd.run::<Block, Executor>(config)) })
+				with_runtime!(chain_spec, {
+					return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+				})
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
 				You can enable it with `--features runtime-benchmarks`."

@@ -292,7 +292,7 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin.clone())?;
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
-				return Ok(().into())
+				return Ok(().into());
 			}
 
 			let availability = AssetAvailability::Liquid(location);
@@ -344,7 +344,7 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin.clone())?;
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
-				return Ok(().into())
+				return Ok(().into());
 			}
 			Self::ensure_not_native_asset(&asset_id)?;
 
@@ -428,7 +428,7 @@ pub mod pallet {
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
-				return Ok(().into())
+				return Ok(().into());
 			}
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
@@ -678,7 +678,7 @@ pub mod pallet {
 		fn calculate_nav(iter: impl Iterator<Item = T::AssetId>) -> Result<T::Balance, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero())
+				return Ok(T::Balance::zero());
 			}
 			let nav = iter.into_iter().try_fold(T::Balance::zero(), |nav, asset| -> Result<_, DispatchError> {
 				nav.checked_add(&Self::calculate_pint_equivalent(asset, Self::index_free_asset_balance(asset))?)
@@ -783,7 +783,7 @@ pub mod pallet {
 			redeem: u128,
 		) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
 			if redeem.is_zero() {
-				return Ok(Default::default())
+				return Ok(Default::default());
 			}
 			// track the pint that effectively gets redeemed
 			let mut redeemed_pint = 0u128;
@@ -947,7 +947,7 @@ pub mod pallet {
 			nav: T::Balance,
 		) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
@@ -960,7 +960,7 @@ pub mod pallet {
 
 		fn add_saft(caller: &T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 			// native asset can't be added as saft
 			Self::ensure_not_native_asset(&asset_id)?;
@@ -996,7 +996,7 @@ pub mod pallet {
 			recipient: Option<T::AccountId>,
 		) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 			ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
 			ensure!(T::IndexToken::can_slash(&who, nav), Error::<T>::InsufficientDeposit);
@@ -1014,7 +1014,7 @@ pub mod pallet {
 
 		fn remove_saft(who: T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(())
+				return Ok(());
 			}
 			// native asset can't be processed here
 			Self::ensure_not_native_asset(&asset_id)?;
@@ -1051,7 +1051,7 @@ pub mod pallet {
 		fn index_token_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
 			let nav = Self::total_nav()?;
 			if nav.is_zero() {
-				return Ok(T::Balance::zero())
+				return Ok(T::Balance::zero());
 			}
 			let assets = Self::calculate_asset_net_worth(asset, units)?;
 			Ok(assets.checked_div(&nav).ok_or(Error::<T>::NAVOverflow)?)
@@ -1116,7 +1116,7 @@ pub mod pallet {
 		fn total_nav() -> Result<T::Balance, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero())
+				return Ok(T::Balance::zero());
 			}
 			let assets = Self::total_net_worth()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
@@ -1125,7 +1125,7 @@ pub mod pallet {
 		fn liquid_nav() -> Result<T::Balance, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero())
+				return Ok(T::Balance::zero());
 			}
 			let assets = Self::total_liquid_net_worth()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
@@ -1134,7 +1134,7 @@ pub mod pallet {
 		fn saft_nav() -> Result<T::Balance, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero())
+				return Ok(T::Balance::zero());
 			}
 			let assets = Self::total_saft_net_worth()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())

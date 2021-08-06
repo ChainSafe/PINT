@@ -251,7 +251,7 @@ pub mod pallet {
 				if let (Some(b), Some(q)) = (Self::asset_feed_id(&base), Self::asset_feed_id(&quote)) {
 					(b, q)
 				} else {
-					return <InitialPricePairs<T>>::get(&quote).ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into())
+					return <InitialPricePairs<T>>::get(&quote).ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into());
 				};
 
 			let (last_base_value, base_decimals) = Self::latest_valid_value(base_feed_id)?;
