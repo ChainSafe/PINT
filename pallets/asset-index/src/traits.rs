@@ -11,7 +11,8 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	fn add_liquid(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 
 	/// Mints the SAFT into the index and awards the caller with given amount of
-	/// PINT token. If an asset with the given AssetId does not already
+	/// PINT token.
+	/// If an asset with the given AssetId does not already
 	/// exist, it will be registered as SAFT. Fails if the availability of
 	/// the asset is liquid.
 	fn add_saft(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
