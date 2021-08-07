@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::sp_runtime::{
-    app_crypto::sp_core,
-    generic,
-    traits::{BlakeTwo256, IdentifyAccount, Verify},
-    MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
+	app_crypto::sp_core,
+	generic,
+	traits::{BlakeTwo256, IdentifyAccount, Verify},
+	MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
 };
 
 /// Some way of identifying an account on the chain. We intentionally make it

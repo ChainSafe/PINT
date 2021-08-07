@@ -10,7 +10,7 @@ executors:
       IMAGE_NAME: chainsafe/pint
       CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
-      RUSTC_TOOLCHAIN: nightly-2021-04-18
+      RUSTC_TOOLCHAIN: nightly-2021-08-01
       SCCACHE_CACHE_SIZE: 5G
 
 commands:
@@ -113,7 +113,7 @@ jobs:
       - rust_setup
       - run:
           name: Format check
-          command: cargo fmt -- --check
+          command: cargo +"$RUSTC_TOOLCHAIN" fmt -- --check
   lint:
     executor: test-executor
     description: Lint Code

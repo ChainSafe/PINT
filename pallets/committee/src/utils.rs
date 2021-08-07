@@ -19,72 +19,61 @@ use frame_support::sp_runtime::traits::{CheckedAdd, CheckedDiv, CheckedMul, One}
 // overflow/underflow
 //
 pub fn get_vote_end<T: CheckedAdd + CheckedMul + CheckedDiv + One>(
-    current_block: &T,
-    voting_period: &T,
-    proposal_period: &T,
+	current_block: &T,
+	voting_period: &T,
+	proposal_period: &T,
 ) -> Option<T> {
-    let epoch_period = voting_period.checked_add(proposal_period)?;
+	let epoch_period = voting_period.checked_add(proposal_period)?;
 
-    // [(current_block // period) + 1] * period + voting_period
-    // return the block at the end of the next voting period after the current one
-    current_block
-        .checked_div(&epoch_period)?
-        .checked_add(&T::one())?
-        .checked_mul(&epoch_period)?
-        .checked_add(voting_period)
+	// [(current_block // period) + 1] * period + voting_period
+	// return the block at the end of the next voting period after the current one
+	current_block
+		.checked_div(&epoch_period)?
+		.checked_add(&T::one())?
+		.checked_mul(&epoch_period)?
+		.checked_add(voting_period)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::iter;
+	use super::*;
+	use std::iter;
 
-    const VOTE_P: i32 = 2;
-    const PROPOSAL_P: i32 = 3;
+	const VOTE_P: i32 = 2;
+	const PROPOSAL_P: i32 = 3;
 
-    #[test]
-    // A proposal made during the start dummpy period must have votes submitted
-    // before the end of v1
-    fn test_proposal_in_v0() {
-        assert_eq!(
-            get_vote_end(&0, &VOTE_P, &PROPOSAL_P),
-            Some(VOTE_P + PROPOSAL_P + VOTE_P)
-        )
-    }
+	#[test]
+	// A proposal made during the start dummpy period must have votes submitted
+	// before the end of v1
+	fn test_proposal_in_v0() {
+		assert_eq!(get_vote_end(&0, &VOTE_P, &PROPOSAL_P), Some(VOTE_P + PROPOSAL_P + VOTE_P))
+	}
 
-    #[test]
-    // A proposal made during s1 must have votes submitted before
-    // the end of v1
-    fn test_proposal_in_s1() {
-        assert_eq!(
-            get_vote_end(&4, &VOTE_P, &PROPOSAL_P),
-            Some(VOTE_P + PROPOSAL_P + VOTE_P)
-        )
-    }
+	#[test]
+	// A proposal made during s1 must have votes submitted before
+	// the end of v1
+	fn test_proposal_in_s1() {
+		assert_eq!(get_vote_end(&4, &VOTE_P, &PROPOSAL_P), Some(VOTE_P + PROPOSAL_P + VOTE_P))
+	}
 
-    #[test]
-    // A proposal made during v1 must have votes submitted before
-    // the end of v2
-    fn test_proposal_in_v1() {
-        assert_eq!(
-            get_vote_end(&9, &VOTE_P, &PROPOSAL_P),
-            Some(VOTE_P + 2 * (PROPOSAL_P + VOTE_P))
-        )
-    }
+	#[test]
+	// A proposal made during v1 must have votes submitted before
+	// the end of v2
+	fn test_proposal_in_v1() {
+		assert_eq!(get_vote_end(&9, &VOTE_P, &PROPOSAL_P), Some(VOTE_P + 2 * (PROPOSAL_P + VOTE_P)))
+	}
 
-    #[test]
-    // Check a range of blocks are as expected
-    fn test_proposal_range() {
-        let result: Vec<i32> = (0..15)
-            .map(|i| get_vote_end(&i, &VOTE_P, &PROPOSAL_P).unwrap())
-            .collect();
+	#[test]
+	// Check a range of blocks are as expected
+	fn test_proposal_range() {
+		let result: Vec<i32> = (0..15).map(|i| get_vote_end(&i, &VOTE_P, &PROPOSAL_P).unwrap()).collect();
 
-        let expected: Vec<i32> = iter::empty()
-            .chain(iter::repeat(VOTE_P + PROPOSAL_P + VOTE_P).take(5))
-            .chain(iter::repeat(VOTE_P + 2 * (PROPOSAL_P + VOTE_P)).take(5))
-            .chain(iter::repeat(VOTE_P + 3 * (PROPOSAL_P + VOTE_P)).take(5))
-            .collect();
+		let expected: Vec<i32> = iter::empty()
+			.chain(iter::repeat(VOTE_P + PROPOSAL_P + VOTE_P).take(5))
+			.chain(iter::repeat(VOTE_P + 2 * (PROPOSAL_P + VOTE_P)).take(5))
+			.chain(iter::repeat(VOTE_P + 3 * (PROPOSAL_P + VOTE_P)).take(5))
+			.collect();
 
-        assert_eq!(result, expected)
-    }
+		assert_eq!(result, expected)
+	}
 }

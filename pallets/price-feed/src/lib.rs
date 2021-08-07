@@ -24,338 +24,294 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-    pub use crate::{
-        traits::PriceFeed,
-        types::{AssetPricePair, Price, TimestampedValue},
-    };
-    #[cfg(feature = "std")]
-    use frame_support::traits::GenesisBuild;
-    use frame_support::{
-        pallet_prelude::*,
-        sp_runtime::FixedPointNumber,
-        sp_std::{cmp::Ordering, convert::TryInto},
-        traits::{Get, Time},
-    };
-    use frame_system::pallet_prelude::*;
-    use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
+	pub use crate::{
+		traits::PriceFeed,
+		types::{AssetPricePair, Price, TimestampedValue},
+	};
+	#[cfg(feature = "std")]
+	use frame_support::traits::GenesisBuild;
+	use frame_support::{
+		pallet_prelude::*,
+		sp_runtime::FixedPointNumber,
+		sp_std::{cmp::Ordering, convert::TryInto},
+		traits::{Get, Time},
+	};
+	use frame_system::pallet_prelude::*;
+	use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
 
-    pub type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
-    pub type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
-    pub type FeedValueFor<T> = <T as pallet_chainlink_feed::Config>::Value;
-    pub type TimestampedFeedValue<T> = TimestampedValue<(FeedValueFor<T>, u8), MomentOf<T>>;
+	pub type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
+	pub type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
+	pub type FeedValueFor<T> = <T as pallet_chainlink_feed::Config>::Value;
+	pub type TimestampedFeedValue<T> = TimestampedValue<(FeedValueFor<T>, u8), MomentOf<T>>;
 
-    /// Provides access to all the price feeds
-    /// This is used to determine the equivalent amount of PINT for assets
-    ///
-    /// The internal chainlink oracle type `FeedOracle` gives access to the
-    /// asset's price feeds.
-    ///
-    /// NOTE: this assumes all the feeds provide data in the same base
-    /// currency. When querying the price of an asset
-    /// (`quote`/`asset`) from the oracle, its price is given by
-    /// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
-    #[pallet::config]
-    pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
-        /// The origin that is allowed to insert asset -> feed mappings
-        type AdminOrigin: EnsureOrigin<Self::Origin>;
+	/// Provides access to all the price feeds
+	/// This is used to determine the equivalent amount of PINT for assets
+	///
+	/// The internal chainlink oracle type `FeedOracle` gives access to the
+	/// asset's price feeds.
+	///
+	/// NOTE: this assumes all the feeds provide data in the same base
+	/// currency. When querying the price of an asset
+	/// (`quote`/`asset`) from the oracle, its price is given by
+	/// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
+	#[pallet::config]
+	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
+		/// The origin that is allowed to insert asset -> feed mappings
+		type AdminOrigin: EnsureOrigin<Self::Origin>;
 
-        /// The asset identifier for the native asset (PINT).
-        #[pallet::constant]
-        type SelfAssetId: Get<Self::AssetId>;
+		/// The asset identifier for the native asset (PINT).
+		#[pallet::constant]
+		type SelfAssetId: Get<Self::AssetId>;
 
-        /// Type used to identify the assets.
-        type AssetId: Parameter + Member + MaybeSerializeDeserialize;
+		/// Type used to identify the assets.
+		type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
-        /// Type to keep track of timestamped values
-        type Time: Time;
+		/// Type to keep track of timestamped values
+		type Time: Time;
 
-        type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
-        /// The weight for this pallet's extrinsics.
-        type WeightInfo: WeightInfo;
-    }
+		/// The weight for this pallet's extrinsics.
+		type WeightInfo: WeightInfo;
+	}
 
-    #[pallet::pallet]
-    #[pallet::generate_store(pub(super) trait Store)]
-    pub struct Pallet<T>(_);
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-    #[pallet::storage]
-    /// Store a mapping (AssetId) -> FeedId for all active assets
-    pub type AssetFeeds<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AssetId, FeedIdFor<T>, OptionQuery>;
+	#[pallet::storage]
+	/// Store a mapping (AssetId) -> FeedId for all active assets
+	pub type AssetFeeds<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, FeedIdFor<T>, OptionQuery>;
 
-    #[pallet::storage]
-    #[pallet::getter(fn latest_answer_timestamp)]
-    /// Stores the timestamp of the latest answer of each feed (feed) ->
-    /// Timestamp
-    pub type LatestAnswerTimestamp<T: Config> =
-        StorageMap<_, Twox64Concat, FeedIdFor<T>, MomentOf<T>, ValueQuery>;
+	#[pallet::storage]
+	#[pallet::getter(fn latest_answer_timestamp)]
+	/// Stores the timestamp of the latest answer of each feed (feed) ->
+	/// Timestamp
+	pub type LatestAnswerTimestamp<T: Config> = StorageMap<_, Twox64Concat, FeedIdFor<T>, MomentOf<T>, ValueQuery>;
 
-    #[pallet::storage]
-    /// (AssetId) -> AssetPricePair
-    ///
-    /// This storage stores the initial price pair for quote assets based on
-    /// `SelfAssetId`
-    ///
-    /// * insert: adding a new asset with no price pair been set yet
-    pub type InitialPricePairs<T: Config> =
-        StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
+	#[pallet::storage]
+	/// (AssetId) -> AssetPricePair
+	///
+	/// This storage stores the initial price pair for quote assets based on
+	/// `SelfAssetId`
+	///
+	/// * insert: adding a new asset with no price pair been set yet
+	pub type InitialPricePairs<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
 
-    #[pallet::genesis_config]
-    pub struct GenesisConfig<T: Config>
-    where
-        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
-    {
-        /// The mappings to insert at genesis
-        pub asset_feeds: Vec<(T::AssetId, FeedIdFor<T>)>,
-    }
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config>
+	where
+		<T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
+	{
+		/// The mappings to insert at genesis
+		pub asset_feeds: Vec<(T::AssetId, FeedIdFor<T>)>,
+	}
 
-    #[cfg(feature = "std")]
-    impl<T: Config> Default for GenesisConfig<T>
-    where
-        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
-    {
-        fn default() -> Self {
-            Self {
-                asset_feeds: Default::default(),
-            }
-        }
-    }
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T>
+	where
+		<T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
+	{
+		fn default() -> Self {
+			Self { asset_feeds: Default::default() }
+		}
+	}
 
-    #[pallet::genesis_build]
-    impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
-    where
-        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
-    {
-        fn build(&self) {
-            for (asset, feed) in &self.asset_feeds {
-                AssetFeeds::<T>::insert(asset.clone(), *feed)
-            }
-        }
-    }
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
+	where
+		<T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
+	{
+		fn build(&self) {
+			for (asset, feed) in &self.asset_feeds {
+				AssetFeeds::<T>::insert(asset.clone(), *feed)
+			}
+		}
+	}
 
-    #[cfg(feature = "std")]
-    impl<T: Config> GenesisConfig<T>
-    where
-        <T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
-    {
-        /// Direct implementation of `GenesisBuild::build_storage`.
-        ///
-        /// Kept in order not to break dependency.
-        pub fn build_storage(&self) -> Result<frame_support::sp_runtime::Storage, String> {
-            <Self as GenesisBuild<T>>::build_storage(self)
-        }
+	#[cfg(feature = "std")]
+	impl<T: Config> GenesisConfig<T>
+	where
+		<T as pallet_chainlink_feed::Config>::FeedId: MaybeSerializeDeserialize,
+	{
+		/// Direct implementation of `GenesisBuild::build_storage`.
+		///
+		/// Kept in order not to break dependency.
+		pub fn build_storage(&self) -> Result<frame_support::sp_runtime::Storage, String> {
+			<Self as GenesisBuild<T>>::build_storage(self)
+		}
 
-        /// Direct implementation of `GenesisBuild::assimilate_storage`.
-        ///
-        /// Kept in order not to break dependency.
-        pub fn assimilate_storage(
-            &self,
-            storage: &mut frame_support::sp_runtime::Storage,
-        ) -> Result<(), String> {
-            <Self as GenesisBuild<T>>::assimilate_storage(self, storage)
-        }
-    }
+		/// Direct implementation of `GenesisBuild::assimilate_storage`.
+		///
+		/// Kept in order not to break dependency.
+		pub fn assimilate_storage(&self, storage: &mut frame_support::sp_runtime::Storage) -> Result<(), String> {
+			<Self as GenesisBuild<T>>::assimilate_storage(self, storage)
+		}
+	}
 
-    #[pallet::event]
-    #[pallet::metadata(T::AssetId = "AssetId", FeedIdFor<T> = "FeedId")]
-    #[pallet::generate_deposit(pub(super) fn deposit_event)]
-    pub enum Event<T: Config> {
-        /// A new assetId -> feedId mapping was inserted
-        /// \[AssetId, NewFeedId, OldFeedId\]
-        UpdateAssetPriceFeed(T::AssetId, FeedIdFor<T>, Option<FeedIdFor<T>>),
-        /// An assetId -> feedId was removed
-        /// \[AssetId, FeedId\]
-        RemoveAssetPriceFeed(T::AssetId, Option<FeedIdFor<T>>),
-    }
+	#[pallet::event]
+	#[pallet::metadata(T::AssetId = "AssetId", FeedIdFor<T> = "FeedId")]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// A new assetId -> feedId mapping was inserted
+		/// \[AssetId, NewFeedId, OldFeedId\]
+		UpdateAssetPriceFeed(T::AssetId, FeedIdFor<T>, Option<FeedIdFor<T>>),
+		/// An assetId -> feedId was removed
+		/// \[AssetId, FeedId\]
+		RemoveAssetPriceFeed(T::AssetId, Option<FeedIdFor<T>>),
+	}
 
-    #[pallet::call]
-    impl<T: Config> Pallet<T> {
-        /// Callable by an admin to track a price feed identifier for the asset
-        #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn track_asset_price_feed(
-            origin: OriginFor<T>,
-            asset_id: T::AssetId,
-            feed_id: FeedIdFor<T>,
-        ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
-            let old_feed_id =
-                AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| maybe_feed_id.replace(feed_id));
-            Self::deposit_event(Event::UpdateAssetPriceFeed(asset_id, feed_id, old_feed_id));
-            Ok(().into())
-        }
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
+		/// Callable by an admin to track a price feed identifier for the asset
+		#[pallet::weight(10_000)] // TODO: Set weights
+		pub fn track_asset_price_feed(
+			origin: OriginFor<T>,
+			asset_id: T::AssetId,
+			feed_id: FeedIdFor<T>,
+		) -> DispatchResultWithPostInfo {
+			T::AdminOrigin::ensure_origin(origin)?;
+			let old_feed_id = AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| maybe_feed_id.replace(feed_id));
+			Self::deposit_event(Event::UpdateAssetPriceFeed(asset_id, feed_id, old_feed_id));
+			Ok(().into())
+		}
 
-        /// Callable by an admin to untrack the asset's price feed.
-        #[pallet::weight(10_000)] // TODO: Set weights
-        pub fn untrack_asset_price_feed(
-            origin: OriginFor<T>,
-            asset_id: T::AssetId,
-        ) -> DispatchResultWithPostInfo {
-            T::AdminOrigin::ensure_origin(origin)?;
-            let feed_id = AssetFeeds::<T>::take(&asset_id);
-            Self::deposit_event(Event::RemoveAssetPriceFeed(asset_id, feed_id));
-            Ok(().into())
-        }
-    }
+		/// Callable by an admin to untrack the asset's price feed.
+		#[pallet::weight(10_000)] // TODO: Set weights
+		pub fn untrack_asset_price_feed(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResultWithPostInfo {
+			T::AdminOrigin::ensure_origin(origin)?;
+			let feed_id = AssetFeeds::<T>::take(&asset_id);
+			Self::deposit_event(Event::RemoveAssetPriceFeed(asset_id, feed_id));
+			Ok(().into())
+		}
+	}
 
-    #[pallet::error]
-    pub enum Error<T> {
-        /// Thrown if no price feed was found for an asset
-        AssetPriceFeedNotFound,
-        /// Thrown when the underlying price feed does not yet contain a valid
-        /// round.
-        InvalidFeedValue,
-        /// Thrown if the calculation of the price ratio fails due to exceeding
-        /// the accuracy of the configured price.
-        ExceededAccuracy,
-    }
+	#[pallet::error]
+	pub enum Error<T> {
+		/// Thrown if no price feed was found for an asset
+		AssetPriceFeedNotFound,
+		/// Thrown when the underlying price feed does not yet contain a valid
+		/// round.
+		InvalidFeedValue,
+		/// Thrown if the calculation of the price ratio fails due to exceeding
+		/// the accuracy of the configured price.
+		ExceededAccuracy,
+	}
 
-    #[pallet::hooks]
-    impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
-    impl<T: Config> Pallet<T> {
-        /// Returns the corresponding identifier for the asset's price feed
-        /// according to the internal mapping
-        pub fn asset_feed_id(asset_id: &T::AssetId) -> Option<FeedIdFor<T>> {
-            AssetFeeds::<T>::get(asset_id)
-        }
+	impl<T: Config> Pallet<T> {
+		/// Returns the corresponding identifier for the asset's price feed
+		/// according to the internal mapping
+		pub fn asset_feed_id(asset_id: &T::AssetId) -> Option<FeedIdFor<T>> {
+			AssetFeeds::<T>::get(asset_id)
+		}
 
-        /// Returns the latest value in the feed together with the feed's
-        /// decimals or an error if no feed was found for the given
-        /// or the feed doesn't contain any valid round yet.
-        pub fn latest_valid_value(
-            feed_id: FeedIdFor<T>,
-        ) -> Result<(FeedValueFor<T>, u8), DispatchError> {
-            let feed = pallet_chainlink_feed::Pallet::<T>::feed(feed_id)
-                .ok_or(Error::<T>::AssetPriceFeedNotFound)?;
-            ensure!(
-                feed.first_valid_round().is_some(),
-                Error::<T>::InvalidFeedValue
-            );
-            Ok((feed.latest_data().answer, feed.decimals()))
-        }
+		/// Returns the latest value in the feed together with the feed's
+		/// decimals or an error if no feed was found for the given
+		/// or the feed doesn't contain any valid round yet.
+		pub fn latest_valid_value(feed_id: FeedIdFor<T>) -> Result<(FeedValueFor<T>, u8), DispatchError> {
+			let feed = pallet_chainlink_feed::Pallet::<T>::feed(feed_id).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
+			ensure!(feed.first_valid_round().is_some(), Error::<T>::InvalidFeedValue);
+			Ok((feed.latest_data().answer, feed.decimals()))
+		}
 
-        /// Same as `latest_value` but with the time the answer was emitted
-        pub fn latest_timestamped_value(
-            feed_id: FeedIdFor<T>,
-        ) -> Result<TimestampedFeedValue<T>, DispatchError> {
-            let moment = LatestAnswerTimestamp::<T>::get(&feed_id);
-            let value = Self::latest_valid_value(feed_id)?;
-            Ok(TimestampedValue { value, moment })
-        }
-    }
+		/// Same as `latest_value` but with the time the answer was emitted
+		pub fn latest_timestamped_value(feed_id: FeedIdFor<T>) -> Result<TimestampedFeedValue<T>, DispatchError> {
+			let moment = LatestAnswerTimestamp::<T>::get(&feed_id);
+			let value = Self::latest_valid_value(feed_id)?;
+			Ok(TimestampedValue { value, moment })
+		}
+	}
 
-    impl<T: Config> Pallet<T>
-    where
-        FeedValueFor<T>: TryInto<u128>,
-    {
-        fn adjust_with_multiplier(value: u128, exp: u8) -> Result<u128, DispatchError> {
-            let multiplier = 10u128
-                .checked_pow(exp.into())
-                .ok_or(Error::<T>::ExceededAccuracy)?;
-            Ok(value
-                .checked_mul(multiplier)
-                .ok_or(Error::<T>::ExceededAccuracy)?)
-        }
-    }
+	impl<T: Config> Pallet<T>
+	where
+		FeedValueFor<T>: TryInto<u128>,
+	{
+		fn adjust_with_multiplier(value: u128, exp: u8) -> Result<u128, DispatchError> {
+			let multiplier = 10u128.checked_pow(exp.into()).ok_or(Error::<T>::ExceededAccuracy)?;
+			Ok(value.checked_mul(multiplier).ok_or(Error::<T>::ExceededAccuracy)?)
+		}
+	}
 
-    impl<T: Config> PriceFeed<T::AssetId> for Pallet<T>
-    where
-        FeedValueFor<T>: TryInto<u128>,
-    {
-        /// Returns a `AssetPricePair` where `base` is the configured
-        /// `SelfAssetId`.
-        fn get_price(quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            Self::get_price_pair(T::SelfAssetId::get(), quote)
-        }
+	impl<T: Config> PriceFeed<T::AssetId> for Pallet<T>
+	where
+		FeedValueFor<T>: TryInto<u128>,
+	{
+		/// Returns a `AssetPricePair` where `base` is the configured
+		/// `SelfAssetId`.
+		fn get_price(quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+			Self::get_price_pair(T::SelfAssetId::get(), quote)
+		}
 
-        fn get_price_pair(
-            base: T::AssetId,
-            quote: T::AssetId,
-        ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) =
-                (Self::asset_feed_id(&base), Self::asset_feed_id(&quote))
-            {
-                (b, q)
-            } else {
-                return <InitialPricePairs<T>>::get(&quote)
-                    .ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into());
-            };
+		fn get_price_pair(base: T::AssetId, quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+			let (base_feed_id, quote_feed_id) = if let (Some(b), Some(q)) =
+				(Self::asset_feed_id(&base), Self::asset_feed_id(&quote))
+			{
+				(b, q)
+			} else {
+				return <InitialPricePairs<T>>::get(&quote).ok_or_else(|| Error::<T>::AssetPriceFeedNotFound.into());
+			};
 
-            let (last_base_value, base_decimals) = Self::latest_valid_value(base_feed_id)?;
-            let (last_quote_value, quote_decimals) = Self::latest_valid_value(quote_feed_id)?;
+			let (last_base_value, base_decimals) = Self::latest_valid_value(base_feed_id)?;
+			let (last_quote_value, quote_decimals) = Self::latest_valid_value(quote_feed_id)?;
 
-            let mut last_base_value = last_base_value
-                .try_into()
-                .map_err(|_| Error::<T>::ExceededAccuracy)?;
-            let mut last_quote_value = last_quote_value
-                .try_into()
-                .map_err(|_| Error::<T>::ExceededAccuracy)?;
+			let mut last_base_value = last_base_value.try_into().map_err(|_| Error::<T>::ExceededAccuracy)?;
+			let mut last_quote_value = last_quote_value.try_into().map_err(|_| Error::<T>::ExceededAccuracy)?;
 
-            // upscale the precision of the feed, which measures in fewer decimals
-            match base_decimals.cmp(&quote_decimals) {
-                Ordering::Less => {
-                    last_base_value = Self::adjust_with_multiplier(
-                        last_base_value,
-                        quote_decimals - base_decimals,
-                    )?;
-                }
-                Ordering::Greater => {
-                    last_quote_value = Self::adjust_with_multiplier(
-                        last_quote_value,
-                        base_decimals - quote_decimals,
-                    )?;
-                }
-                _ => {}
-            }
+			// upscale the precision of the feed, which measures in fewer decimals
+			match base_decimals.cmp(&quote_decimals) {
+				Ordering::Less => {
+					last_base_value = Self::adjust_with_multiplier(last_base_value, quote_decimals - base_decimals)?;
+				}
+				Ordering::Greater => {
+					last_quote_value = Self::adjust_with_multiplier(last_quote_value, base_decimals - quote_decimals)?;
+				}
+				_ => {}
+			}
 
-            let price = Price::checked_from_rational(last_base_value, last_quote_value)
-                .ok_or(Error::<T>::ExceededAccuracy)?;
+			let price =
+				Price::checked_from_rational(last_base_value, last_quote_value).ok_or(Error::<T>::ExceededAccuracy)?;
 
-            Ok(AssetPricePair { base, quote, price })
-        }
+			Ok(AssetPricePair { base, quote, price })
+		}
 
-        /// Ensure quote asset has an initial price pair
-        ///
-        /// * Set initial price pair if feed not exists
-        fn ensure_price(
-            quote: T::AssetId,
-            price: Price,
-        ) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-            let pair = AssetPricePair {
-                base: T::SelfAssetId::get(),
-                quote: quote.clone(),
-                price,
-            };
+		/// Ensure quote asset has an initial price pair
+		///
+		/// * Set initial price pair if feed not exists
+		fn ensure_price(quote: T::AssetId, price: Price) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+			let pair = AssetPricePair { base: T::SelfAssetId::get(), quote: quote.clone(), price };
 
-            if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_err() {
-                <InitialPricePairs<T>>::insert(quote, pair.clone());
-            }
+			if Self::get_price_pair(T::SelfAssetId::get(), quote.clone()).is_err() {
+				<InitialPricePairs<T>>::insert(quote, pair.clone());
+			}
 
-            Ok(pair)
-        }
-    }
+			Ok(pair)
+		}
+	}
 
-    impl<T: Config> pallet_chainlink_feed::traits::OnAnswerHandler<T> for Pallet<T> {
-        fn on_answer(feed_id: FeedIdFor<T>, _: RoundData<T::BlockNumber, FeedValueFor<T>>) {
-            LatestAnswerTimestamp::<T>::insert(feed_id, T::Time::now());
-        }
-    }
+	impl<T: Config> pallet_chainlink_feed::traits::OnAnswerHandler<T> for Pallet<T> {
+		fn on_answer(feed_id: FeedIdFor<T>, _: RoundData<T::BlockNumber, FeedValueFor<T>>) {
+			LatestAnswerTimestamp::<T>::insert(feed_id, T::Time::now());
+		}
+	}
 
-    /// Trait for the asset-index pallet extrinsic weights.
-    pub trait WeightInfo {
-        fn track_asset_price_feed() -> Weight;
-        fn untrack_asset_price_feed() -> Weight;
-    }
+	/// Trait for the asset-index pallet extrinsic weights.
+	pub trait WeightInfo {
+		fn track_asset_price_feed() -> Weight;
+		fn untrack_asset_price_feed() -> Weight;
+	}
 
-    /// For backwards compatibility and tests
-    impl WeightInfo for () {
-        fn track_asset_price_feed() -> Weight {
-            Default::default()
-        }
+	/// For backwards compatibility and tests
+	impl WeightInfo for () {
+		fn track_asset_price_feed() -> Weight {
+			Default::default()
+		}
 
-        fn untrack_asset_price_feed() -> Weight {
-            Default::default()
-        }
-    }
+		fn untrack_asset_price_feed() -> Weight {
+			Default::default()
+		}
+	}
 }
