@@ -1087,18 +1087,21 @@ pub mod pallet {
 			todo!("access the SAFT records")
 		}
 
+		// TODO this should be U256
 		fn total_net_liquid_value() -> Result<T::Balance, DispatchError> {
 			Self::liquid_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth.checked_add(&Self::net_liquid_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
 		}
 
+		// TODO this should be U256
 		fn total_net_saft_value() -> Result<T::Balance, DispatchError> {
 			Self::saft_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth.checked_add(&Self::net_saft_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
 		}
 
+		// TODO this should be U256
 		fn total_net_asset_value() -> Result<T::Balance, DispatchError> {
 			Assets::<T>::iter().try_fold(
 				T::Balance::zero(),
@@ -1118,6 +1121,7 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
+			// TODO calculate this iteratively
 			let assets = Self::total_net_asset_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
@@ -1127,6 +1131,7 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
+			// TODO calculate this iteratively
 			let assets = Self::total_net_liquid_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
@@ -1136,6 +1141,7 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
+			// TODO calculate this iteratively with fixedu128 NAV / TOTAL shares
 			let assets = Self::total_net_saft_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
