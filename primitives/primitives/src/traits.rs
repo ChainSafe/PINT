@@ -188,6 +188,12 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	fn asset_balance(asset: AssetId) -> Balance;
 }
 
+/// Abstracts SAFT related information
+pub trait SaftRegistry<AssetId, Balance> {
+	/// Returns the value of the assets currently secured by the SAFTS
+	fn net_asset_value(asset: AssetId) -> Balance;
+}
+
 /// Outcome of an XCM unbonding api call
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 pub enum UnbondingOutcome {
