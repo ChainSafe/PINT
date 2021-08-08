@@ -4,9 +4,9 @@
 use crate as pallet;
 use crate::{
 	mock::*,
-	types::{AssetPricePair, Price},
 	Error,
 };
+use primitives::{AssetPricePair, Price};
 use frame_support::{assert_noop, assert_ok};
 use pallet::PriceFeed as _;
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};

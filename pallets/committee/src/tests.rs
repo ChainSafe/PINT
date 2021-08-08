@@ -251,8 +251,8 @@ fn add_constituents<I>(accounts: I)
 where
 	I: IntoIterator<Item = AccountId>,
 {
-	let members: Vec<u64> = accounts.into_iter().collect();
-	for m in members.into_iter() {
+	
+	for m in accounts.into_iter() {
 		<pallet::Members<Test>>::insert(m, MemberType::Constituent);
 	}
 }
@@ -375,7 +375,7 @@ fn cannot_execute_proposal_twice() {
 fn cannot_add_constituent_if_already_is_council() {
 	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
 		assert_noop!(
-			Committee::add_constituent(Origin::root().into(), PROPOSER_ACCOUNT_ID),
+			Committee::add_constituent(Origin::root(), PROPOSER_ACCOUNT_ID),
 			<pallet::Error<Test>>::AlreadyCouncilMember
 		);
 	});
@@ -384,10 +384,10 @@ fn cannot_add_constituent_if_already_is_council() {
 #[test]
 fn cannot_add_constituent_if_already_is_constituent() {
 	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
-		assert_ok!(Committee::add_constituent(Origin::root().into(), 42));
+		assert_ok!(Committee::add_constituent(Origin::root(), 42));
 
 		assert_noop!(
-			Committee::add_constituent(Origin::root().into(), 42),
+			Committee::add_constituent(Origin::root(), 42),
 			<pallet::Error<Test>>::AlreadyConstituentMember
 		);
 	});
