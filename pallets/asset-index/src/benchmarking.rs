@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use super::*;
-use primitives::AssetAvailability;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{
 	sp_runtime::traits::AccountIdConversion,
@@ -10,6 +9,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
+use primitives::AssetAvailability;
 use xcm::v0::MultiLocation;
 
 benchmarks! {

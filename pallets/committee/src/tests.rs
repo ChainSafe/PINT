@@ -251,7 +251,6 @@ fn add_constituents<I>(accounts: I)
 where
 	I: IntoIterator<Item = AccountId>,
 {
-	
 	for m in accounts.into_iter() {
 		<pallet::Members<Test>>::insert(m, MemberType::Constituent);
 	}
@@ -386,10 +385,7 @@ fn cannot_add_constituent_if_already_is_constituent() {
 	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
 		assert_ok!(Committee::add_constituent(Origin::root(), 42));
 
-		assert_noop!(
-			Committee::add_constituent(Origin::root(), 42),
-			<pallet::Error<Test>>::AlreadyConstituentMember
-		);
+		assert_noop!(Committee::add_constituent(Origin::root(), 42), <pallet::Error<Test>>::AlreadyConstituentMember);
 	});
 }
 
