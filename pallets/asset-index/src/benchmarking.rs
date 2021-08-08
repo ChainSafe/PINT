@@ -1,7 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
+
 use super::*;
-use crate::types::AssetAvailability;
+use primitives::AssetAvailability;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::{
 	sp_runtime::traits::AccountIdConversion,

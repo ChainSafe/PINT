@@ -39,6 +39,8 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
+pallet-saft-registry = { path = "../saft-registry" }
+
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 [features]

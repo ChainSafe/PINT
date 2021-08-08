@@ -1,15 +1,16 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::pallet_prelude::*;
-use frame_support::sp_runtime::{
-	app_crypto::sp_core,
-	generic,
-	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	FixedU128, MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
-	FixedPointNumber, FixedPointOperand
-
+use frame_support::{
+	pallet_prelude::*,
+	sp_runtime::{
+		app_crypto::sp_core,
+		generic,
+		traits::{BlakeTwo256, IdentifyAccount, Verify},
+		FixedPointNumber, FixedPointOperand, FixedU128, MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
+	},
 };
+use xcm::v0::MultiLocation;
 
 /// Some way of identifying an account on the chain. We intentionally make it
 /// equivalent to the public key of our transaction signing scheme.
@@ -69,6 +70,35 @@ pub type Price = FixedU128;
 
 pub type Ratio = FixedU128;
 
+/// Defines the location of an asset
+/// Liquid implies it exists on a chain somewhere in the network and
+/// can be moved around
+/// SAFT implies the asset is a Simple Agreement for Future Tokens and the
+/// promised tokens are not able to be transferred or traded until some time
+/// in the future.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum AssetAvailability {
+	Liquid(MultiLocation),
+	Saft,
+}
+
+impl AssetAvailability {
+	/// Whether this asset data represents a liquid asset
+	pub fn is_liquid(&self) -> bool {
+		matches!(self, AssetAvailability::Liquid(_))
+	}
+
+	/// Whether this asset data represents a SAFT
+	pub fn is_saft(&self) -> bool {
+		matches!(self, AssetAvailability::Saft)
+	}
+}
+
+impl From<MultiLocation> for AssetAvailability {
+	fn from(location: MultiLocation) -> Self {
+		AssetAvailability::Liquid(location)
+	}
+}
 
 /// Defines an asset pair identifier
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -98,8 +128,12 @@ impl<AssetId: frame_support::sp_std::cmp::PartialEq> AssetPricePair<AssetId> {
 	}
 }
 
-impl<AssetId> AssetPricePair<AssetId>
-{
+impl<AssetId> AssetPricePair<AssetId> {
+	/// Create a new instance
+	pub fn new(base: AssetId, quote: AssetId, price: Price) -> Self {
+		Self { base, quote, price }
+	}
+
 	/// Returns the price fraction `base/quote`
 	pub fn price(&self) -> &Price {
 		&self.price

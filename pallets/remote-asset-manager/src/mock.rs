@@ -418,6 +418,15 @@ pub mod para {
 		pub const AdminAccountId: AccountId = ADMIN_ACCOUNT;
 	}
 
+	impl pallet_saft_registry::Config for Test {
+		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+		type Event = Event;
+		type Balance = Balance;
+		type AssetRecorder = AssetIndex;
+		type AssetId = AssetId;
+		type WeightInfo = ();
+	}
+
 	impl pallet_asset_index::Config for Runtime {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type Event = Event;
@@ -433,6 +442,7 @@ pub mod para {
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;
+		type SaftRegistry = SaftRegistry;
 		type TreasuryPalletId = TreasuryPalletId;
 		type StringLimit = StringLimit;
 		type BaseWithdrawalFee = BaseWithdrawalFee;
@@ -561,7 +571,7 @@ pub mod para {
 			XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},
 			UnknownTokens: orml_unknown_tokens::{Pallet, Storage, Event},
 			AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
-
+			SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
 
 			XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
 			DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},

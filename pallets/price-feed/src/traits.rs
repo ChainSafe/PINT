@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::dispatch::DispatchError;
-use primitives::{Price, AssetPricePair };
+use primitives::{AssetPricePair, Price};
 
 /// An interface to access price data
 pub trait PriceFeed<AssetId> {

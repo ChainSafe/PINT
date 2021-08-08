@@ -5,11 +5,9 @@ use crate as pallet;
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, sp_runtime::FixedU128};
 use orml_traits::MultiCurrency;
-use pallet::{
-	traits::AssetRecorder,
-	types::{AssetAvailability, AssetWithdrawal, RedemptionState},
-};
+use pallet::types::{AssetWithdrawal, RedemptionState};
 use pallet_price_feed::PriceFeed;
+use primitives::{traits::AssetRecorder, types::AssetAvailability};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use xcm::v0::MultiLocation;
 

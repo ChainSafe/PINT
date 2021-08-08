@@ -4,6 +4,11 @@
 //! # AssetIndex Pallet
 //!
 //! Tracks all the assets in the PINT index, composed of multiple assets
+//!
+//! The value of the assets is determined depending on their class.
+//! The value of liquid assets is calculated by multiplying their current unit price by the amount
+//! held in the index. Whereas the value of an asset secured by SAFTs is measured by the total value
+//! of all SAFTs.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -17,7 +22,6 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
@@ -43,15 +47,14 @@ pub mod pallet {
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
-	pub use crate::traits::AssetRecorder;
 	use crate::types::{
-		AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal, AssetsDistribution,
-		AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
+		AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal, AssetsDistribution, AssetsVolume, IndexTokenLock,
+		PendingRedemption, RedemptionState,
 	};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
-		traits::{MultiAssetRegistry, NavProvider, RemoteAssetManager, UnbondingOutcome},
-		Ratio,
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry, UnbondingOutcome},
+		AssetAvailability, Ratio,
 	};
 	use sp_core::U256;
 
@@ -107,6 +110,9 @@ pub mod pallet {
 
 		/// The types that provides the necessary asset price pairs
 		type PriceFeed: PriceFeed<Self::AssetId>;
+
+		/// The type registry that stores all NAV for non liquid assets
+		type SaftRegistry: SaftRegistry<Self::AssetId, Self::Balance>;
 
 		/// The basic fees that apply when a withdrawal is executed
 		#[pallet::constant]
@@ -1051,6 +1057,12 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> SaftRegistry<T::AssetId, T::Balance> for Pallet<T> {
+		fn net_saft_value(asset: T::AssetId) -> T::Balance {
+			T::SaftRegistry::net_saft_value(asset)
+		}
+	}
+
 	impl<T: Config> NavProvider<T::AssetId, T::Balance> for Pallet<T> {
 		fn index_token_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
 			// Price_asset/NAV*units
@@ -1074,22 +1086,23 @@ pub mod pallet {
 				.volume(index_tokens.into())
 				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
 				.ok_or_else(|| ArithmeticError::Overflow.into())
-			//
-			// let nav = Self::nav()?;
-			// let price = T::PriceFeed::get_price(asset)?.price;
-			//
-			// let nav = Self::total_nav()?;
-			// let vol = index_tokens.checked_mul(&nav).ok_or(Error::<T>::NAVOverflow)?;
-			// let price = T::PriceFeed::get_price(asset)?;
-			// price
-			// 	.reciprocal_volume(vol.into())
-			// 	.ok_or(Error::<T>::NAVOverflow)?
-			// 	.try_into()
-			// 	.map_err(|_| Error::<T>::AssetUnitsOverflow.into());
 		}
 
 		fn relative_asset_price(asset: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
-			todo!()
+			let base_price = Self::nav()?;
+			if Self::is_native_asset(asset) {
+				return Ok(AssetPricePair::new(asset, asset, base_price));
+			}
+
+			let quote_price = if Self::is_liquid_asset(&asset) {
+				T::PriceFeed::get_price(asset)?.price
+			} else {
+				let val = Self::net_saft_value(asset);
+				Price::checked_from_rational(val.into(), Self::asset_balance(asset).into())
+					.ok_or(ArithmeticError::Overflow)?
+			};
+			let price = base_price.checked_div(&quote_price).ok_or(ArithmeticError::Overflow)?;
+			Ok(AssetPricePair::new(T::SelfAssetId::get(), asset, price))
 		}
 
 		fn calculate_net_asset_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
@@ -1110,9 +1123,14 @@ pub mod pallet {
 				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		fn calculate_net_saft_value(_asset: T::AssetId, _units: T::Balance) -> Result<T::Balance, DispatchError> {
-			// needs https://github.com/ChainSafe/PINT/issues/250
-			todo!("access the SAFT records")
+		fn calculate_net_saft_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+			let val = Self::net_saft_value(asset);
+			let price = Price::checked_from_rational(val.into(), Self::asset_balance(asset).into())
+				.ok_or(ArithmeticError::Overflow)?;
+			price
+				.checked_mul_int(units.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
 		fn total_net_liquid_value() -> Result<U256, DispatchError> {
@@ -1126,7 +1144,7 @@ pub mod pallet {
 		fn total_net_saft_value() -> Result<U256, DispatchError> {
 			Self::saft_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth
-					.checked_add(U256::from(Self::net_saft_value(asset)?.into()))
+					.checked_add(U256::from(Self::net_saft_value(asset).into()))
 					.ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
 		}
@@ -1136,10 +1154,18 @@ pub mod pallet {
 				if availability.is_liquid() {
 					worth.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
 				} else {
-					worth.checked_add(U256::from(Self::net_saft_value(asset)?.into()))
+					worth.checked_add(U256::from(Self::net_saft_value(asset).into()))
 				}
 				.ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
+		}
+
+		fn net_asset_value(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
+			if Self::is_liquid_asset(&asset) {
+				Self::calculate_net_liquid_value(asset, Self::asset_balance(asset))
+			} else {
+				Ok(Self::net_saft_value(asset))
+			}
 		}
 
 		fn nav() -> Result<Ratio, DispatchError> {
@@ -1149,7 +1175,7 @@ pub mod pallet {
 			}
 			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
 				let value =
-					if availability.is_liquid() { Self::net_liquid_value(asset) } else { Self::net_saft_value(asset) }?;
+					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
@@ -1175,7 +1201,7 @@ pub mod pallet {
 				return Ok(Ratio::zero());
 			}
 			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
-				let value = Self::net_saft_value(asset)?;
+				let value = Self::net_saft_value(asset);
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)

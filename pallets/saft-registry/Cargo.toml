@@ -33,8 +33,7 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
-
-pallet-asset-index = { path = "../asset-index" }
+pallet-asset-index= { path = "../asset-index" }
 pallet-remote-asset-manager = { path = "../remote-asset-manager" }
 pallet-price-feed = { path = "../price-feed" }
 
@@ -54,7 +53,6 @@ std = [
 
     'xcm/std',
 
-    'pallet-asset-index/std',
     'primitives/std'
 ]
 runtime-benchmarks = [

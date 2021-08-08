@@ -72,6 +72,7 @@ pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release
 
 # PINT
 pallet-asset-index = {path = "../asset-index" }
+pallet-saft-registry = {path = "../saft-registry" }
 pallet-price-feed = { path = "../price-feed" }
 
 # misc
