@@ -12,6 +12,8 @@ use frame_support::{
 	RuntimeDebug,
 };
 use xcm::v0::{MultiLocation, Outcome};
+use crate::{Price, AssetPricePair};
+use frame_support::sp_runtime::app_crypto::sp_core::U256;
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
@@ -51,7 +53,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 /// Abstracts net asset value (`NAV`) related calculations
 pub trait NavProvider<AssetId: Clone, Balance> {
 	/// Calculates the amount of index tokens that the given units of the asset
-	/// are value.
+	/// are worth.
 	///
 	/// This is achieved by dividing the value of the given units by the NAV.
 	/// The value, or volume, is determined by `vol_asset = units * Price_asset`
@@ -60,12 +62,19 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	fn index_token_equivalent(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
 	/// Calculates the units of the given asset that the given number of
-	/// index_tokens are value.
+	/// index_tokens are worth.
 	///
 	/// This is calculated by determine the net value of the given
 	/// `index_tokens` and dividing it by the price of the `asset`.
 	/// (`NAV * index_tokens) / Price_asset`
 	fn asset_equivalent(index_tokens: Balance, asset: AssetId) -> Result<Balance, DispatchError>;
+
+
+	/// Returns the price of the asset relative to the NAV of the index token.
+	///
+	/// This is essentially a price pair of `base/quote` whereas `base` is the NAV of the index token:
+	/// `NAV / Price_asset`
+	fn relative_asset_price(asset: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
 
 	/// Calculates the net value of the given units of the given asset.
 	/// .
@@ -105,13 +114,13 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	///
 	/// This is essentially the sum of the value of all liquid assets:
 	/// `net_liquid_value(Asset_0) + net_liquid_value(Asset_1) ...`
-	fn total_net_liquid_value() -> Result<Balance, DispatchError>;
+	fn total_net_liquid_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net value of all SAFT combined.
 	///
 	/// This is essentially the sum of the value of all SAFTs:
 	/// `net_saft_value(Asset_0) + net_saft_value(Asset_1) ...`
-	fn total_net_saft_value() -> Result<Balance, DispatchError>;
+	fn total_net_saft_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net asset value of all the index tokens which is equal to the
 	/// sum of the total value of all assets.
@@ -121,7 +130,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// tokens: `NAV * index_token_issuance`.
 	/// Or Simplified:
 	/// `total_net_liquid_value + total_net_saft_value`.
-	fn total_net_asset_value() -> Result<Balance, DispatchError>;
+	fn total_net_asset_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net value of the given liquid asset.
 	///
@@ -140,7 +149,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	}
 
 	/// Calculates the `NAV` of the index token, consisting of liquid assets
-	/// and SAFT. This the *per token value* (value of a single unit of index token)
+	/// and SAFT. This the *per token value* (value of a single unit of index token, or it's "price")
 	///
 	/// The the NAV is calculated by dividing the total value of all the
 	/// contributed assets by the total supply of index token:
@@ -152,7 +161,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// This can be simplified to
 	/// `NAV = (Liquid_net_value + SAFT_net_value) / Total Supply`,
 	/// which is also `NAV = NAV_liquids + NAV_saft`.
-	fn nav() -> Result<Balance, DispatchError>;
+	fn nav() -> Result<Price, DispatchError>;
 
 	/// Calculates the NAV of the index token solely for the liquid assets.
 	/// This is a *per token value*: the value of a single unit of index token for the funds total
@@ -162,7 +171,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// by `NAV_liquids = NAV - (SAFT_net_value / Total Supply)`
 	/// Or simplified
 	/// `NAV - NAV_saft`, which is  `Liquid_net_value / Total Supply`
-	fn liquid_nav() -> Result<Balance, DispatchError>;
+	fn liquid_nav() -> Result<Price, DispatchError>;
 
 	/// Calculates the NAV of the index token solely for the SAFT
 	/// This is a *per token value*: the value of a single unit of index token for the funds total
@@ -170,7 +179,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	///
 	/// Following `liquid_nav` calculation, this is determined by:
 	/// `SAFT_net_value / Total Supply`
-	fn saft_nav() -> Result<Balance, DispatchError>;
+	fn saft_nav() -> Result<Price, DispatchError>;
 
 	/// The total supply of index tokens currently in circulation.
 	fn index_token_issuance() -> Balance;

@@ -1,9 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::types::AssetPricePair;
 use frame_support::dispatch::DispatchError;
-use primitives::Price;
+use primitives::{Price, AssetPricePair };
 
 /// An interface to access price data
 pub trait PriceFeed<AssetId> {

@@ -26,7 +26,7 @@ mod types;
 pub mod pallet {
 	pub use crate::{
 		traits::PriceFeed,
-		types::{AssetPricePair, TimestampedValue},
+		types::{TimestampedValue},
 	};
 	#[cfg(feature = "std")]
 	use frame_support::traits::GenesisBuild;
@@ -38,7 +38,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
-	pub use primitives::Price;
+	pub use primitives::{Price, AssetPricePair};
 
 	pub type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
 	pub type MomentOf<T> = <<T as Config>::Time as Time>::Moment;
