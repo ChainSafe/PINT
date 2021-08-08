@@ -26,7 +26,7 @@ pub mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
-#[allow(clippy::unused_unit, clippy::large_enum_variant)]
+#[allow(clippy::unused_unit, clippy::large_enum_variant, clippy::type_complexity)]
 pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
@@ -333,7 +333,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(10_000)] // TODO: Set weights
 		/// Dispatches transfer to move assets out of the index’s account,
 		/// if a liquid asset is specified
 		/// Callable by an admin.
@@ -344,6 +343,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
+		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -371,7 +371,7 @@ pub mod pallet {
 		///
 		/// Only callable by the admin origin and for assets that are not yet
 		/// registered.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::register_asset())]
 		pub fn register_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -433,7 +433,7 @@ pub mod pallet {
 		/// This will withdraw the given amount from the user's sovereign
 		/// account and mints PINT proportionally using the latest
 		/// available price pairs
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
@@ -1225,12 +1225,22 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn register_asset() -> Weight;
+		fn deposit() -> Weight;
 		fn set_metadata() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
 	impl WeightInfo for () {
 		fn add_asset() -> Weight {
+			Default::default()
+		}
+
+		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn deposit() -> Weight {
 			Default::default()
 		}
 
