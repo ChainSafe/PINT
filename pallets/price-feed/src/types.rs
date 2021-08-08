@@ -3,8 +3,9 @@
 
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::{FixedPointNumber, FixedPointOperand, FixedU128},
+	sp_runtime::{FixedPointNumber, FixedPointOperand},
 };
+use primitives::Price;
 
 /// Represents an answer of a feed at a certain point of time
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
@@ -14,9 +15,6 @@ pub struct TimestampedValue<Value, Moment> {
 	/// Timestamp when the answer was first received
 	pub moment: Moment,
 }
-
-/// The type to represent asset prices
-pub type Price = FixedU128;
 
 /// Defines an asset pair identifier
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]

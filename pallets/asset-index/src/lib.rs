@@ -30,7 +30,7 @@ pub mod pallet {
 		require_transactional,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
-			FixedPointNumber, FixedU128,
+			FixedPointNumber,
 		},
 		sp_std::{convert::TryInto, prelude::*, result::Result},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
@@ -52,11 +52,10 @@ pub mod pallet {
 	use primitives::{
 		fee::{BaseFee, FeeRate},
 		traits::{MultiAssetRegistry, NavProvider, RemoteAssetManager, UnbondingOutcome},
+		Ratio,
 	};
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-
-	type Ratio = FixedU128;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {

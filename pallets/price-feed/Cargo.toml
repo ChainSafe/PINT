@@ -19,6 +19,7 @@ frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch =
 
 # PINT dependencies
 pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
+primitives = { path = "../../primitives/primitives", default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
@@ -37,6 +38,7 @@ std = [
     'frame-support/std',
     'frame-system/std',
     'pallet-chainlink-feed/std',
+    'primitives/std',
 ]
 runtime-benchmarks = [
     'frame-benchmarking',

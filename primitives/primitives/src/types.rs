@@ -5,7 +5,7 @@ use frame_support::sp_runtime::{
 	app_crypto::sp_core,
 	generic,
 	traits::{BlakeTwo256, IdentifyAccount, Verify},
-	MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
+	FixedU128, MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
 };
 
 /// Some way of identifying an account on the chain. We intentionally make it
@@ -58,5 +58,10 @@ pub type Value = u128;
 
 /// Identifier for a SAFT
 pub type SAFTId = u32;
+
+/// The type to represent asset prices
+pub type Price = FixedU128;
+
+pub type Ratio = FixedU128;
 
 pub type AccountPublic = <Signature as Verify>::Signer;
