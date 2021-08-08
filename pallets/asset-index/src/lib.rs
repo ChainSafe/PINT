@@ -137,12 +137,14 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	#[pallet::storage]
 	/// (AssetId) -> AssetAvailability
+	#[pallet::storage]
+	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
-	#[pallet::storage]
 	///  (AccountId) -> Vec<PendingRedemption>
+	#[pallet::storage]
+	#[pallet::getter(fn pending_withrawals)]
 	pub type PendingWithdrawals<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -151,16 +153,18 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	#[pallet::storage]
 	/// Tracks the locks of the minted index token that are locked up until
 	/// their `LockupPeriod` is over  (AccountId) -> Vec<IndexTokenLockInfo>
+	#[pallet::storage]
+	#[pallet::getter(fn index_token_locks)]
 	pub type IndexTokenLocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<IndexTokenLock<T::BlockNumber, T::Balance>>, ValueQuery>;
 
-	#[pallet::storage]
 	/// Tracks the amount of the currently locked index token per user.
 	/// This is equal to the sum(IndexTokenLocks[AccountId])
 	///  (AccountId) -> Balance
+	#[pallet::storage]
+	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
 	#[pallet::storage]
@@ -415,7 +419,7 @@ pub mod pallet {
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 				symbol.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
 
-			<Metadata<T>>::try_mutate_exists(id, |metadata| {
+			Metadata::<T>::try_mutate_exists(id, |metadata| {
 				*metadata = Some(AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
 
 				Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
