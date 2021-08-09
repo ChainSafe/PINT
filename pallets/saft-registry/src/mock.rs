@@ -23,6 +23,7 @@ use sp_runtime::{
 	DispatchError,
 };
 use xcm::v0::Outcome;
+use primitives::Price;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -159,15 +160,11 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
-	fn get_price(_quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+	fn get_price(_quote: AssetId) -> Result<Price, DispatchError> {
 		todo!()
 	}
 
 	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-		todo!()
-	}
-
-	fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
 		todo!()
 	}
 }

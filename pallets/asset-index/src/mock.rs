@@ -14,11 +14,8 @@ use frame_support::{
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::{
-	fee::FeeRate,
-	traits::{RemoteAssetManager, UnbondingOutcome},
-};
+use pallet_price_feed::{PriceFeed};
+use primitives::{fee::FeeRate, AssetPricePair, traits::{RemoteAssetManager, UnbondingOutcome}, Price};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -203,7 +200,7 @@ pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
-	fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+	fn get_price(quote: AssetId) -> Result<Price, DispatchError> {
 		Self::get_relative_price_pair(PINT_ASSET_ID, quote)
 	}
 
@@ -215,11 +212,6 @@ impl PriceFeed<AssetId> for MockPriceFeed {
 			_ => return Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into()),
 		};
 		Ok(AssetPricePair { base, quote, price })
-	}
-
-	fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
-		// pass all unknown asset ids
-		Self::get_price(UNKNOWN_ASSET_ID)
 	}
 }
 

@@ -454,7 +454,7 @@ pub mod para {
 
 	pub struct MockPriceFeed;
 	impl PriceFeed<AssetId> for MockPriceFeed {
-		fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+		fn get_price(quote: AssetId) -> Result<Price, DispatchError> {
 			Self::get_relative_price_pair(PARA_ASSET, quote)
 		}
 
@@ -464,10 +464,6 @@ pub mod para {
 				_ => return Err(pallet_asset_index::Error::<Runtime>::UnsupportedAsset.into()),
 			};
 			Ok(AssetPricePair { base, quote, price })
-		}
-
-		fn ensure_price(_: AssetId, _: Price) -> Result<AssetPricePair<AssetId>, DispatchError> {
-			todo!()
 		}
 	}
 
