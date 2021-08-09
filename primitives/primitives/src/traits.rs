@@ -52,7 +52,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 /// Abstracts net asset value (`NAV`) related calculations
 pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// Calculates the amount of index tokens that the given units of the asset
-	/// are worth.
+	/// are value.
 	///
 	/// This is achieved by dividing the value of the given units by the NAV.
 	/// The value, or volume, is determined by `vol_asset = units * Price_asset`
@@ -61,7 +61,7 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	fn index_token_equivalent(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
 	/// Calculates the units of the given asset that the given number of
-	/// index_tokens are worth.
+	/// index_tokens are value.
 	///
 	/// This is calculated by determine the net value of the given
 	/// `index_tokens` and dividing it by the price of the `asset`.
