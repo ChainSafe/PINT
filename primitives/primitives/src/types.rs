@@ -9,6 +9,7 @@ use frame_support::{
 		traits::{BlakeTwo256, IdentifyAccount, Verify},
 		FixedPointNumber, FixedPointOperand, FixedU128, MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
 	},
+	sp_std::vec::Vec
 };
 use xcm::v0::MultiLocation;
 
@@ -97,6 +98,35 @@ impl AssetAvailability {
 impl From<MultiLocation> for AssetAvailability {
 	fn from(location: MultiLocation) -> Self {
 		AssetAvailability::Liquid(location)
+	}
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetProportions<AssetId> {
+	/// The per token value used to calculate proportions
+	pub nav: Price,
+	/// All the assets with their proportions
+	pub proportions: Vec<AssetProportion<AssetId>>
+}
+
+/// Represents an asset and its proportion in the value of the index
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct AssetProportion<AssetId> {
+	/// The identifier for the asset
+	pub asset: AssetId,
+	/// The the share of all units of the asset held in the index
+	pub proportion: Ratio,
+}
+
+impl<AssetId> AssetProportion<AssetId> {
+
+	pub fn new(asset:AssetId, proportion: Ratio) -> Self {
+		Self{asset, proportion}
+	}
+
+	/// Calculates the share of the asset of the units
+	pub fn of<N:FixedPointOperand>(&self,units: N) -> Option<N> {
+		self.proportion.checked_mul_int(units)
 	}
 }
 

@@ -48,13 +48,13 @@ pub mod pallet {
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
 	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal, AssetsDistribution, AssetsVolume, IndexTokenLock,
+		AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock,
 		PendingRedemption, RedemptionState,
 	};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
 		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry, UnbondingOutcome},
-		AssetAvailability, Ratio,
+		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 	use sp_core::U256;
 
@@ -167,8 +167,9 @@ pub mod pallet {
 	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
-	#[pallet::storage]
 	/// Metadata of an asset ( for reversed usage now ).
+	#[pallet::storage]
+	#[pallet::getter(fn asset_metadata)]
 	pub(super) type Metadata<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -351,13 +352,13 @@ pub mod pallet {
 			}
 			Self::ensure_not_native_asset(&asset_id)?;
 
-			// calculate current PINT equivalent value
-			let value = Self::calculate_pint_equivalent(asset_id, units)?;
+			// the amount of index token the given units of the liquid assets are worth
+			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
 
 			// transfer the caller's fund into the treasury account
-			Self::remove_liquid(caller.clone(), asset_id, units, value, recipient.clone())?;
+			Self::remove_liquid(caller.clone(), asset_id, units, index_tokens, recipient.clone())?;
 
-			Self::deposit_event(Event::AssetRemoved(asset_id, units, caller, recipient, value));
+			Self::deposit_event(Event::AssetRemoved(asset_id, units, caller, recipient, index_tokens));
 			Ok(().into())
 		}
 
@@ -435,19 +436,19 @@ pub mod pallet {
 			}
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
-
 			// only liquid assets can be deposited
 			Self::ensure_liquid_asset(&asset_id)?;
 
-			let pint_amount = Self::calculate_pint_equivalent(asset_id, units)?;
+			// the amount of index token the given units of the liquid assets are worth
+			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
 
 			// transfer from the caller's sovereign account into the treasury's account
 			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
 			// mint index token in caller's account
-			Self::do_mint_index_token(&caller, pint_amount);
+			Self::do_mint_index_token(&caller, index_tokens);
 
-			Self::deposit_event(Event::Deposited(asset_id, units, caller, pint_amount));
+			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(().into())
 		}
 
@@ -483,15 +484,12 @@ pub mod pallet {
 			let fee = amount.fee(T::BaseWithdrawalFee::get()).ok_or(Error::<T>::AssetUnitsOverflow)?;
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
-			// calculate the distribution of all liquid assets
-			let distribution = Self::get_liquid_asset_distribution()?;
-
 			// calculate the payout for each asset based on the redeem amount
-			let asset_redemption = Self::get_asset_redemption(distribution, redeem)?;
+			let AssetRedemption { asset_amounts, redeemed_index_tokens} = Self::liquid_asset_redemptions(redeem)?;
 
 			// update the index balance by burning all of the redeemed tokens and the fee
 			// SAFETY: this is guaranteed to be lower than `amount`
-			let effectively_withdrawn = fee + asset_redemption.redeemed_pint;
+			let effectively_withdrawn = fee + redeemed_index_tokens;
 
 			// withdraw from caller balance
 			T::IndexToken::withdraw(
@@ -505,10 +503,10 @@ pub mod pallet {
 			let fee = T::IndexToken::issue(fee);
 			T::IndexToken::resolve_creating(&Self::treasury_account(), fee);
 
-			let mut assets = Vec::with_capacity(asset_redemption.asset_amounts.len());
+			let mut assets = Vec::with_capacity(asset_amounts.len());
 
 			// start the redemption process for each withdrawal
-			for (asset, units) in asset_redemption.asset_amounts {
+			for (asset, units) in asset_amounts {
 				// start the unbonding routine
 				let state = match T::RemoteAssetManager::unbond(asset, units) {
 					UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
@@ -659,62 +657,6 @@ pub mod pallet {
 			T::Currency::free_balance(asset, &Self::treasury_account())
 		}
 
-		/// Calculates the total NAV of the Index token: `sum(NAV_asset) / total
-		/// pint`
-		pub fn total_nav() -> Result<T::Balance, DispatchError> {
-			Self::calculate_nav(Assets::<T>::iter().map(|(k, _)| k))
-		}
-
-		/// Calculates the NAV of all liquid assets the Index token:
-		/// `sum(NAV_liquid) / total pint`
-		pub fn liquid_nav() -> Result<T::Balance, DispatchError> {
-			Self::calculate_nav(Self::liquid_assets())
-		}
-
-		/// Calculates the NAV of all SAFT the Index token: `sum(NAV_saft) /
-		/// total pint`
-		pub fn saft_nav() -> Result<T::Balance, DispatchError> {
-			Self::calculate_nav(Self::saft_assets())
-		}
-
-		/// Calculates the total NAV of all holdings
-		fn calculate_nav(iter: impl Iterator<Item = T::AssetId>) -> Result<T::Balance, DispatchError> {
-			let total_issuance = T::IndexToken::total_issuance();
-			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero());
-			}
-			let nav = iter.into_iter().try_fold(T::Balance::zero(), |nav, asset| -> Result<_, DispatchError> {
-				nav.checked_add(&Self::calculate_pint_equivalent(asset, Self::index_free_asset_balance(asset))?)
-					.ok_or_else(|| Error::<T>::NAVOverflow.into())
-			})?;
-
-			Ok(nav.checked_div(&total_issuance).ok_or(Error::<T>::NAVOverflow)?)
-		}
-
-		/// Calculates the volume of the given units with the provided price
-		fn calculate_volume(
-			units: T::Balance,
-			price: &AssetPricePair<T::AssetId>,
-		) -> Result<T::Balance, DispatchError> {
-			let units: u128 = units.into();
-			Ok(price
-				.volume(units)
-				.ok_or(Error::<T>::AssetVolumeOverflow)
-				.and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?)
-		}
-
-		/// Calculates the amount of PINT token the given units of the asset are
-		/// worth
-		fn calculate_pint_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
-			Self::calculate_volume(units, &T::PriceFeed::get_price(asset)?)
-		}
-
-		/// Calculates the NAV of a single asset
-		pub fn asset_nav(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
-			ensure!(Assets::<T>::contains_key(&asset), Error::<T>::UnsupportedAsset);
-			Self::calculate_pint_equivalent(asset, Self::index_free_asset_balance(asset))
-		}
-
 		/// Iterates over all liquid assets
 		pub fn liquid_assets() -> impl Iterator<Item = T::AssetId> {
 			Assets::<T>::iter().filter(|(_, availability)| availability.is_liquid()).map(|(id, _)| id)
@@ -725,93 +667,67 @@ pub mod pallet {
 			Assets::<T>::iter().filter(|(_, holding)| holding.is_saft()).map(|(k, _)| k)
 		}
 
-		/// Returns a Vec of the current prices of all active liquid assets
-		/// together with the derived volume of these assets residing in the
-		/// index
-		pub fn get_liquid_asset_volumes() -> Result<AssetsVolume<T::AssetId, T::Balance>, DispatchError> {
-			// accumulated pint volume that the assets represent
-			let mut total_volume = T::Balance::zero();
-
-			let volumes = Self::liquid_assets()
-				.map(|asset| -> Result<_, DispatchError> {
-					let volume = Self::get_liquid_asset_volume(asset)?;
-					total_volume = total_volume.checked_add(&volume.pint_volume).ok_or(Error::<T>::NAVOverflow)?;
-					Ok(volume)
-				})
-				.collect::<Result<_, _>>()?;
-
-			Ok(AssetsVolume { volumes, total_volume })
+		fn calculate_nav_proportion(asset: T::AssetId, nav: Ratio) -> Result<Ratio, DispatchError> {
+			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is `value(asset)/supply / nav`
+			let asset_value = Self::net_asset_value(asset)?;
+			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
+				.ok_or(ArithmeticError::Overflow)?;
+			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		/// Returns the current price and the volume of the given asset
+
+		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
+		/// num(asset) = num(index_tokens) * NAV/Asset.
 		///
-		/// This current volume of the index is equal to the free balance of the
-		/// treasury account.
-		pub fn get_liquid_asset_volume(
-			asset: T::AssetId,
-		) -> Result<AssetVolume<T::AssetId, T::Balance>, DispatchError> {
-			let price = T::PriceFeed::get_price(asset)?;
-			let pint_volume = Self::calculate_volume(Self::index_free_asset_balance(asset), &price)?;
-			Ok(AssetVolume::new(price, pint_volume))
-		}
-
-		/// Returns the current distribution of all liquid assets
-		///
-		/// For each plant the equivalent volume is determined and its share in
-		/// the total amount of pint, all these assets represent
-		pub fn get_liquid_asset_distribution() -> Result<AssetsDistribution<T::AssetId, T::Balance>, DispatchError> {
-			let AssetsVolume { volumes, total_volume } = Self::get_liquid_asset_volumes()?;
-
-			// calculate the share of each asset in the total_pint
-			let asset_shares = volumes
-				.into_iter()
-				.map(|asset| -> Result<_, DispatchError> {
-					let ratio = Ratio::checked_from_rational(asset.pint_volume.into(), total_volume.into())
-						.ok_or(Error::<T>::NAVOverflow)?;
-					Ok((asset, ratio))
-				})
-				.collect::<Result<_, _>>()?;
-
-			Ok(AssetsDistribution { total_pint: total_volume, asset_shares })
+		/// *NOTE*: assumes the `quote` is liquid asset.
+		fn liquid_nav_price_pair(nav: Price, quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+			let quote_price = T::PriceFeed::get_price(quote)?;
+			let price = nav.checked_div(&quote_price).ok_or(ArithmeticError::Overflow)?;
+			Ok(AssetPricePair::new(T::SelfAssetId::get(), quote, price))
 		}
 
 		/// Calculates the pure asset redemption for the given amount of the
-		/// index token to be redeemed based on the given distribution
+		/// index token to be redeemed for all liquid tokens
 		///
 		/// *NOTE*:
 		///   - This does not account for fees
 		///   - This is a noop for `redeem == 0`
-		pub fn get_asset_redemption(
-			distribution: AssetsDistribution<T::AssetId, T::Balance>,
+		pub fn liquid_asset_redemptions(
 			redeem: u128,
 		) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
 			if redeem.is_zero() {
 				return Ok(Default::default());
 			}
-			// track the pint that effectively gets redeemed
-			let mut redeemed_pint = 0u128;
+			// track the index tokens that effectively are redeemed
+			let mut redeemed_index_tokens = 0u128;
 
-			// calculate the the distribution of the assets
-			let asset_amounts = distribution
-				.asset_shares
+			// calculate the proportions of all liquid assets in the index' liquid value
+			let AssetProportions{nav, proportions } = Self::liquid_asset_proportions()?;
+
+			// calculate the redeemed amounts
+			let asset_amounts = proportions
 				.into_iter()
-				.map(|(asset, ratio)| -> Result<_, DispatchError> {
-					let amount: T::Balance = ratio
-						.checked_mul_int(redeem)
-						.and_then(|pint_units| {
-							redeemed_pint += pint_units;
-							asset.price.reciprocal_volume(pint_units)
-						})
-						.ok_or(Error::<T>::AssetVolumeOverflow)
-						.and_then(|units| units.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow))?;
+				.map(|proportion| -> Result<_, DispatchError> {
+					let index_tokens = proportion.of(redeem).ok_or(ArithmeticError::Overflow)?;
+					redeemed_index_tokens= redeemed_index_tokens.checked_add(
+						index_tokens
+					).ok_or(ArithmeticError::Overflow)?;
 
-					Ok((asset.price.quote, amount))
+					// the amount
+					let index_tokens: T::Balance = index_tokens.try_into().map_err(|_| ArithmeticError::Overflow)?;
+
+					// determine the asset amount based on the relative price pair NAV/Asset
+					let nav_asset_price = Self::liquid_nav_price_pair(nav, proportion.asset)?;
+					let asset_units: T::Balance = nav_asset_price.volume(index_tokens.into())
+						.and_then(|n| TryInto::<T::Balance>::try_into(n).ok()).ok_or(ArithmeticError::Overflow)?;
+
+					Ok((proportion.asset, asset_units))
 				})
 				.collect::<Result<_, _>>()?;
 
 			Ok(AssetRedemption {
 				asset_amounts,
-				redeemed_pint: redeemed_pint.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)?,
+				redeemed_index_tokens: redeemed_index_tokens.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)?,
 			})
 		}
 
@@ -1093,7 +1009,7 @@ pub mod pallet {
 			}
 
 			let quote_price = if Self::is_liquid_asset(&asset) {
-				T::PriceFeed::get_price(asset)?.price
+				T::PriceFeed::get_price(asset)?
 			} else {
 				let val = Self::net_saft_value(asset);
 				Price::checked_from_rational(val.into(), Self::asset_balance(asset).into())
@@ -1113,8 +1029,7 @@ pub mod pallet {
 		}
 
 		fn calculate_net_liquid_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
-			// TODO change price API
-			let price = T::PriceFeed::get_price(asset)?.price;
+			let price = T::PriceFeed::get_price(asset)?;
 			price
 				.checked_mul_int(units.into())
 				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
@@ -1204,6 +1119,47 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
 			})
+		}
+
+		fn asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {
+			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is `value(asset)/supply / nav`
+			let nav = Self::nav()?;
+			Self::calculate_nav_proportion(asset, nav)
+		}
+
+		fn liquid_asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {
+			let nav = Self::liquid_nav()?;
+			Self::calculate_nav_proportion(asset, nav)
+		}
+
+		fn saft_asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {
+			let nav = Self::saft_nav()?;
+			Self::calculate_nav_proportion(asset, nav)
+		}
+
+		fn asset_proportions() -> Result<AssetProportions<T::AssetId>, DispatchError> {
+			let nav = Self::nav()?;
+			let proportions = Assets::<T>::iter()
+				.map(|(id, _)| id)
+				.map(|id| Self::calculate_nav_proportion(id, nav).map(|ratio| AssetProportion::new(id, ratio)))
+				.collect::<Result<_, _>>()?;
+			Ok(AssetProportions { nav, proportions })
+		}
+
+		fn liquid_asset_proportions() -> Result<AssetProportions<T::AssetId>, DispatchError> {
+			let nav = Self::liquid_nav()?;
+			let proportions = Self::liquid_assets()
+				.map(|id| Self::calculate_nav_proportion(id, nav).map(|ratio| AssetProportion::new(id, ratio)))
+				.collect::<Result<_, _>>()?;
+			Ok(AssetProportions { nav, proportions })
+		}
+
+		fn saft_asset_proportions() -> Result<AssetProportions<T::AssetId>, DispatchError> {
+			let nav = Self::saft_nav()?;
+			let proportions = Self::saft_assets()
+				.map(|id| Self::calculate_nav_proportion(id, nav).map(|ratio| AssetProportion::new(id, ratio)))
+				.collect::<Result<_, _>>()?;
+			Ok(AssetProportions { nav, proportions })
 		}
 
 		fn index_token_issuance() -> T::Balance {

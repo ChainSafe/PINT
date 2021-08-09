@@ -14,8 +14,12 @@ use frame_support::{
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{PriceFeed};
-use primitives::{fee::FeeRate, AssetPricePair, traits::{RemoteAssetManager, UnbondingOutcome}, Price};
+use pallet_price_feed::PriceFeed;
+use primitives::{
+	fee::FeeRate,
+	traits::{RemoteAssetManager, UnbondingOutcome},
+	AssetPricePair, Price,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,

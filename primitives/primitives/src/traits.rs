@@ -4,7 +4,7 @@
 //! This contains shared traits that are used in multiple pallets to prevent
 //! circular dependencies
 
-use crate::{AssetAvailability, AssetPricePair, Price};
+use crate::{AssetAvailability, AssetPricePair, Price, Ratio, AssetProportions};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchError,
@@ -169,6 +169,27 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// Following `liquid_nav` calculation, this is determined by:
 	/// `SAFT_net_value / Total Supply`
 	fn saft_nav() -> Result<Price, DispatchError>;
+
+	/// Returns the share of the asset in the total value of the index:
+	/// `Asset Value / Total Net Asset Value`
+	fn asset_proportion(asset: AssetId) -> Result<Ratio, DispatchError>;
+
+	/// Returns the share of the liquid asset in the total value of all liquid assets in the index:
+	/// `Asset Value / Liquid Net Asset Value`
+	fn liquid_asset_proportion(asset: AssetId) -> Result<Ratio, DispatchError>;
+
+	/// Returns the share of the asset in the total value of all SAFTs of the asset in the index:
+	/// `Asset Value / SAFT Net Asset Value`
+	fn saft_asset_proportion(asset: AssetId) -> Result<Ratio, DispatchError>;
+
+	/// Returns the proportions for each asset in the index
+	fn asset_proportions() -> Result<AssetProportions<AssetId>, DispatchError>;
+
+	/// Returns the proportions for each liquid asset in total value of liquid assets in the index
+	fn liquid_asset_proportions() -> Result<AssetProportions<AssetId>, DispatchError>;
+
+	/// Returns the proportions for each saft asset in total value of SAFTs in the index
+	fn saft_asset_proportions() -> Result<AssetProportions<AssetId>, DispatchError>;
 
 	/// The total supply of index tokens currently in circulation.
 	fn index_token_issuance() -> Balance;
