@@ -100,7 +100,7 @@ benchmarks! {
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
+		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
 			));
 		let units = 1_000u32.into();
 		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
@@ -116,8 +116,6 @@ benchmarks! {
 		assert_eq!(AssetIndex::<T>::index_token_issuance(), expected_balance + admin_deposit);
 	}
 }
-
-fn x() {}
 
 #[cfg(test)]
 mod tests {

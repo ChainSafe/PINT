@@ -418,7 +418,7 @@ pub mod para {
 		pub const AdminAccountId: AccountId = ADMIN_ACCOUNT;
 	}
 
-	impl pallet_saft_registry::Config for Test {
+	impl pallet_saft_registry::Config for Runtime {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type Event = Event;
 		type Balance = Balance;
