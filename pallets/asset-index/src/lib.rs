@@ -1053,7 +1053,7 @@ pub mod pallet {
 			if nav.is_zero() {
 				return Ok(T::Balance::zero());
 			}
-			let assets = Self::calculate_asset_net_worth(asset, units)?;
+			let assets = Self::calculate_net_asset_value(asset, units)?;
 			Ok(assets.checked_div(&nav).ok_or(Error::<T>::NAVOverflow)?)
 		}
 
@@ -1068,57 +1068,57 @@ pub mod pallet {
 				.map_err(|_| Error::<T>::AssetUnitsOverflow.into())
 		}
 
-		fn calculate_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+		fn calculate_net_asset_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
 			// the asset net worth depends on whether the asset is liquid or SAFT
 			if Self::is_liquid_asset(&asset) {
-				Self::calculate_liquid_asset_net_worth(asset, units)
+				Self::calculate_net_liquid_value(asset, units)
 			} else {
-				Self::calculate_saft_net_worth(asset, units)
+				Self::calculate_net_saft_value(asset, units)
 			}
 		}
 
-		fn calculate_liquid_asset_net_worth(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+		fn calculate_net_liquid_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
 			let price = T::PriceFeed::get_price(asset)?;
 			Self::calculate_volume(units, &price)
 		}
 
-		fn calculate_saft_net_worth(_asset: T::AssetId, _units: T::Balance) -> Result<T::Balance, DispatchError> {
+		fn calculate_net_saft_value(_asset: T::AssetId, _units: T::Balance) -> Result<T::Balance, DispatchError> {
 			// needs https://github.com/ChainSafe/PINT/issues/250
 			todo!("access the SAFT records")
 		}
 
-		fn total_liquid_net_worth() -> Result<T::Balance, DispatchError> {
+		fn total_net_liquid_value() -> Result<T::Balance, DispatchError> {
 			Self::liquid_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
-				worth.checked_add(&Self::liquid_net_worth(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
+				worth.checked_add(&Self::net_liquid_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
 		}
 
-		fn total_saft_net_worth() -> Result<T::Balance, DispatchError> {
+		fn total_net_saft_value() -> Result<T::Balance, DispatchError> {
 			Self::saft_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
-				worth.checked_add(&Self::saft_net_worth(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
+				worth.checked_add(&Self::net_saft_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})
 		}
 
-		fn total_net_worth() -> Result<T::Balance, DispatchError> {
+		fn total_net_asset_value() -> Result<T::Balance, DispatchError> {
 			Assets::<T>::iter().try_fold(
 				T::Balance::zero(),
 				|worth, (asset, availability)| -> Result<_, DispatchError> {
 					if availability.is_liquid() {
-						worth.checked_add(&Self::liquid_net_worth(asset)?)
+						worth.checked_add(&Self::net_liquid_value(asset)?)
 					} else {
-						worth.checked_add(&Self::saft_net_worth(asset)?)
+						worth.checked_add(&Self::net_saft_value(asset)?)
 					}
 					.ok_or_else(|| Error::<T>::NAVOverflow.into())
 				},
 			)
 		}
 
-		fn total_nav() -> Result<T::Balance, DispatchError> {
+		fn nav() -> Result<T::Balance, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
-			let assets = Self::total_net_worth()?;
+			let assets = Self::total_net_asset_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
 
@@ -1127,7 +1127,7 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
-			let assets = Self::total_liquid_net_worth()?;
+			let assets = Self::total_net_liquid_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
 
@@ -1136,7 +1136,7 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(T::Balance::zero());
 			}
-			let assets = Self::total_saft_net_worth()?;
+			let assets = Self::total_net_saft_value()?;
 			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
 		}
 
