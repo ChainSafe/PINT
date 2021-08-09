@@ -4,10 +4,11 @@
 //! This contains shared traits that are used in multiple pallets to prevent
 //! circular dependencies
 
+use crate::{AssetAvailability, AssetPricePair, Price};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchError,
-	sp_runtime::DispatchResult,
+	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
 	sp_std::{boxed::Box, result::Result},
 	RuntimeDebug,
 };
@@ -49,7 +50,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 }
 
 /// Abstracts net asset value (`NAV`) related calculations
-pub trait NavProvider<AssetId: Clone, Balance> {
+pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// Calculates the amount of index tokens that the given units of the asset
 	/// are value.
 	///
@@ -66,6 +67,12 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// `index_tokens` and dividing it by the price of the `asset`.
 	/// (`NAV * index_tokens) / Price_asset`
 	fn asset_equivalent(index_tokens: Balance, asset: AssetId) -> Result<Balance, DispatchError>;
+
+	/// Returns the price of the asset relative to the NAV of the index token.
+	///
+	/// This is essentially a price pair of `base/quote` whereas `base` is the NAV of the index
+	/// token: `NAV / Price_asset`
+	fn relative_asset_price(asset: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
 
 	/// Calculates the net value of the given units of the given asset.
 	/// .
@@ -92,26 +99,17 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// the tracked `SAFTRecords`
 	fn calculate_net_saft_value(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
-	/// Calculates the net value of the given asset that were contributed to the index.
-	///
-	/// The net value of an asset is determined by multiplying the share price
-	/// of the asset by the amount deposited in the index.: `Price_asset * Index
-	/// Deposit`
-	fn net_asset_value(asset: AssetId) -> Result<Balance, DispatchError> {
-		Self::calculate_net_asset_value(asset.clone(), Self::asset_balance(asset))
-	}
-
 	/// Calculates the net value of all liquid assets combined.
 	///
 	/// This is essentially the sum of the value of all liquid assets:
 	/// `net_liquid_value(Asset_0) + net_liquid_value(Asset_1) ...`
-	fn total_net_liquid_value() -> Result<Balance, DispatchError>;
+	fn total_net_liquid_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net value of all SAFT combined.
 	///
 	/// This is essentially the sum of the value of all SAFTs:
 	/// `net_saft_value(Asset_0) + net_saft_value(Asset_1) ...`
-	fn total_net_saft_value() -> Result<Balance, DispatchError>;
+	fn total_net_saft_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net asset value of all the index tokens which is equal to the
 	/// sum of the total value of all assets.
@@ -121,7 +119,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// tokens: `NAV * index_token_issuance`.
 	/// Or Simplified:
 	/// `total_net_liquid_value + total_net_saft_value`.
-	fn total_net_asset_value() -> Result<Balance, DispatchError>;
+	fn total_net_asset_value() -> Result<U256, DispatchError>;
 
 	/// Calculates the net value of the given liquid asset.
 	///
@@ -131,16 +129,16 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 		Self::calculate_net_liquid_value(asset.clone(), Self::asset_balance(asset))
 	}
 
-	/// Calculates the net value of the given SAFT.
+	/// Calculates the net value of the given asset that were contributed to the index.
 	///
-	/// In contrast to `net_asset_value`, here it is not checked whether the
-	/// specified asset is a SAFT.
-	fn net_saft_value(asset: AssetId) -> Result<Balance, DispatchError> {
-		Self::calculate_net_saft_value(asset.clone(), Self::asset_balance(asset))
-	}
+	/// The net value of an asset is determined by multiplying the share price
+	/// of the asset by the amount deposited in the index.: `Price_asset * Index
+	/// Deposit`
+	fn net_asset_value(asset: AssetId) -> Result<Balance, DispatchError>;
 
 	/// Calculates the `NAV` of the index token, consisting of liquid assets
-	/// and SAFT. This the *per token value* (value of a single unit of index token)
+	/// and SAFT. This the *per token value* (value of a single unit of index token, or it's
+	/// "price")
 	///
 	/// The the NAV is calculated by dividing the total value of all the
 	/// contributed assets by the total supply of index token:
@@ -152,7 +150,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// This can be simplified to
 	/// `NAV = (Liquid_net_value + SAFT_net_value) / Total Supply`,
 	/// which is also `NAV = NAV_liquids + NAV_saft`.
-	fn nav() -> Result<Balance, DispatchError>;
+	fn nav() -> Result<Price, DispatchError>;
 
 	/// Calculates the NAV of the index token solely for the liquid assets.
 	/// This is a *per token value*: the value of a single unit of index token for the funds total
@@ -162,7 +160,7 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	/// by `NAV_liquids = NAV - (SAFT_net_value / Total Supply)`
 	/// Or simplified
 	/// `NAV - NAV_saft`, which is  `Liquid_net_value / Total Supply`
-	fn liquid_nav() -> Result<Balance, DispatchError>;
+	fn liquid_nav() -> Result<Price, DispatchError>;
 
 	/// Calculates the NAV of the index token solely for the SAFT
 	/// This is a *per token value*: the value of a single unit of index token for the funds total
@@ -170,13 +168,54 @@ pub trait NavProvider<AssetId: Clone, Balance> {
 	///
 	/// Following `liquid_nav` calculation, this is determined by:
 	/// `SAFT_net_value / Total Supply`
-	fn saft_nav() -> Result<Balance, DispatchError>;
+	fn saft_nav() -> Result<Price, DispatchError>;
 
 	/// The total supply of index tokens currently in circulation.
 	fn index_token_issuance() -> Balance;
 
 	/// The amount of the given asset currently held in the index.
 	fn asset_balance(asset: AssetId) -> Balance;
+}
+
+/// Abstracts SAFT related information
+pub trait SaftRegistry<AssetId, Balance> {
+	/// Returns the value of the assets currently secured by the SAFTS
+	fn net_saft_value(asset: AssetId) -> Balance;
+}
+
+/// Abstract core features of the `AssetIndex` shared across pallets.
+pub trait AssetRecorder<AccountId, AssetId, Balance> {
+	/// Add an liquid asset into the index.
+	/// This moves the given units from the caller's balance into the index's
+	/// and issues PINT accordingly.
+	fn add_liquid(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
+
+	/// Mints the SAFT into the index and awards the caller with given amount of
+	/// PINT token.
+	/// If an asset with the given AssetId does not already
+	/// exist, it will be registered as SAFT. Fails if the availability of
+	/// the asset is liquid.
+	fn add_saft(caller: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
+
+	/// Sets the availability of the given asset.
+	/// If the asset was already registered, the old `AssetAvailability` is
+	/// returned.
+	fn insert_asset_availability(asset_id: AssetId, availability: AssetAvailability) -> Option<AssetAvailability>;
+
+	/// Dispatches transfer to move liquid assets out of the index’s account.
+	/// Updates the index by burning the given amount of index token from
+	/// the caller's account.
+	fn remove_liquid(
+		who: AccountId,
+		id: AssetId,
+		units: Balance,
+		nav: Balance,
+		recipient: Option<AccountId>,
+	) -> DispatchResult;
+
+	/// Burns the given amount of SAFT token from the index and
+	/// the nav from the caller's account
+	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
 /// Outcome of an XCM unbonding api call

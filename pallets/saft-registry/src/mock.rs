@@ -130,6 +130,7 @@ impl pallet_asset_index::Config for Test {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
 	type Event = Event;

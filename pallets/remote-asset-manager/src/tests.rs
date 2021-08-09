@@ -15,8 +15,7 @@ use xcm::v0::{
 };
 use xcm_simulator::TestExt;
 
-use pallet_asset_index::types::AssetAvailability;
-use primitives::traits::MultiAssetRegistry;
+use primitives::{traits::MultiAssetRegistry, types::AssetAvailability};
 use xcm_calls::{
 	assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX},
 	proxy::ProxyType as ParaProxyType,

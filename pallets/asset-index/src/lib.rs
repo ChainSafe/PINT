@@ -4,6 +4,11 @@
 //! # AssetIndex Pallet
 //!
 //! Tracks all the assets in the PINT index, composed of multiple assets
+//!
+//! The value of the assets is determined depending on their class.
+//! The value of liquid assets is calculated by multiplying their current unit price by the amount
+//! held in the index. Whereas the value of an asset secured by SAFTs is measured by the total value
+//! of all SAFTs.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -17,12 +22,11 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
-pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
-#[allow(clippy::unused_unit, clippy::large_enum_variant)]
+#[allow(clippy::unused_unit, clippy::large_enum_variant, clippy::type_complexity)]
 pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
@@ -30,7 +34,7 @@ pub mod pallet {
 		require_transactional,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
-			FixedPointNumber, FixedU128,
+			ArithmeticError, FixedPointNumber,
 		},
 		sp_std::{convert::TryInto, prelude::*, result::Result},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
@@ -43,20 +47,18 @@ pub mod pallet {
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
-	pub use crate::traits::AssetRecorder;
 	use crate::types::{
-		AssetAvailability, AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal, AssetsDistribution,
-		AssetsVolume, IndexTokenLock, PendingRedemption, RedemptionState,
+		AssetMetadata, AssetRedemption, AssetVolume, AssetWithdrawal, AssetsDistribution, AssetsVolume, IndexTokenLock,
+		PendingRedemption, RedemptionState,
 	};
-	use frame_support::sp_runtime::traits::CheckedMul;
 	use primitives::{
 		fee::{BaseFee, FeeRate},
-		traits::{MultiAssetRegistry, NavProvider, RemoteAssetManager, UnbondingOutcome},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry, UnbondingOutcome},
+		AssetAvailability, Ratio,
 	};
+	use sp_core::U256;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-
-	type Ratio = FixedU128;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
@@ -109,6 +111,9 @@ pub mod pallet {
 		/// The types that provides the necessary asset price pairs
 		type PriceFeed: PriceFeed<Self::AssetId>;
 
+		/// The type registry that stores all NAV for non liquid assets
+		type SaftRegistry: SaftRegistry<Self::AssetId, Self::Balance>;
+
 		/// The basic fees that apply when a withdrawal is executed
 		#[pallet::constant]
 		type BaseWithdrawalFee: Get<FeeRate>;
@@ -132,12 +137,14 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	#[pallet::storage]
 	/// (AssetId) -> AssetAvailability
+	#[pallet::storage]
+	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
-	#[pallet::storage]
 	///  (AccountId) -> Vec<PendingRedemption>
+	#[pallet::storage]
+	#[pallet::getter(fn pending_withrawals)]
 	pub type PendingWithdrawals<T: Config> = StorageMap<
 		_,
 		Blake2_128Concat,
@@ -146,16 +153,18 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	#[pallet::storage]
 	/// Tracks the locks of the minted index token that are locked up until
 	/// their `LockupPeriod` is over  (AccountId) -> Vec<IndexTokenLockInfo>
+	#[pallet::storage]
+	#[pallet::getter(fn index_token_locks)]
 	pub type IndexTokenLocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<IndexTokenLock<T::BlockNumber, T::Balance>>, ValueQuery>;
 
-	#[pallet::storage]
 	/// Tracks the amount of the currently locked index token per user.
 	/// This is equal to the sum(IndexTokenLocks[AccountId])
 	///  (AccountId) -> Balance
+	#[pallet::storage]
+	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
 	#[pallet::storage]
@@ -324,7 +333,6 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(10_000)] // TODO: Set weights
 		/// Dispatches transfer to move assets out of the index’s account,
 		/// if a liquid asset is specified
 		/// Callable by an admin.
@@ -335,6 +343,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
+		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -362,7 +371,7 @@ pub mod pallet {
 		///
 		/// Only callable by the admin origin and for assets that are not yet
 		/// registered.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::register_asset())]
 		pub fn register_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -410,7 +419,7 @@ pub mod pallet {
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 				symbol.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
 
-			<Metadata<T>>::try_mutate_exists(id, |metadata| {
+			Metadata::<T>::try_mutate_exists(id, |metadata| {
 				*metadata = Some(AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
 
 				Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
@@ -424,7 +433,7 @@ pub mod pallet {
 		/// This will withdraw the given amount from the user's sovereign
 		/// account and mints PINT proportionally using the latest
 		/// available price pairs
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
@@ -822,8 +831,13 @@ pub mod pallet {
 
 		/// Ensures the given asset is not the native asset
 		fn ensure_not_native_asset(asset_id: &T::AssetId) -> DispatchResult {
-			ensure!(*asset_id != T::SelfAssetId::get(), Error::<T>::NativeAssetDisallowed);
+			ensure!(!Self::is_native_asset(*asset_id), Error::<T>::NativeAssetDisallowed);
 			Ok(())
+		}
+
+		/// Whether the asset is in fact the native asset
+		fn is_native_asset(asset_id: T::AssetId) -> bool {
+			asset_id == T::SelfAssetId::get()
 		}
 
 		/// Mints the given amount of index token into the user's account and
@@ -1047,25 +1061,52 @@ pub mod pallet {
 		}
 	}
 
+	impl<T: Config> SaftRegistry<T::AssetId, T::Balance> for Pallet<T> {
+		fn net_saft_value(asset: T::AssetId) -> T::Balance {
+			T::SaftRegistry::net_saft_value(asset)
+		}
+	}
+
 	impl<T: Config> NavProvider<T::AssetId, T::Balance> for Pallet<T> {
 		fn index_token_equivalent(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
-			let nav = Self::total_nav()?;
-			if nav.is_zero() {
-				return Ok(T::Balance::zero());
+			// Price_asset/NAV*units
+			if Self::is_native_asset(asset) {
+				return Ok(units);
 			}
-			let assets = Self::calculate_net_asset_value(asset, units)?;
-			Ok(assets.checked_div(&nav).ok_or(Error::<T>::NAVOverflow)?)
+			let price = Self::relative_asset_price(asset)?;
+			price
+				.reciprocal_volume(units.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
 		fn asset_equivalent(index_tokens: T::Balance, asset: T::AssetId) -> Result<T::Balance, DispatchError> {
-			let nav = Self::total_nav()?;
-			let vol = index_tokens.checked_mul(&nav).ok_or(Error::<T>::NAVOverflow)?;
-			let price = T::PriceFeed::get_price(asset)?;
+			if Self::is_native_asset(asset) {
+				return Ok(index_tokens);
+			}
+			// NAV/Price_asset*units
+			let price = Self::relative_asset_price(asset)?;
 			price
-				.reciprocal_volume(vol.into())
-				.ok_or(Error::<T>::NAVOverflow)?
-				.try_into()
-				.map_err(|_| Error::<T>::AssetUnitsOverflow.into())
+				.volume(index_tokens.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		fn relative_asset_price(asset: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
+			let base_price = Self::nav()?;
+			if Self::is_native_asset(asset) {
+				return Ok(AssetPricePair::new(asset, asset, base_price));
+			}
+
+			let quote_price = if Self::is_liquid_asset(&asset) {
+				T::PriceFeed::get_price(asset)?.price
+			} else {
+				let val = Self::net_saft_value(asset);
+				Price::checked_from_rational(val.into(), Self::asset_balance(asset).into())
+					.ok_or(ArithmeticError::Overflow)?
+			};
+			let price = base_price.checked_div(&quote_price).ok_or(ArithmeticError::Overflow)?;
+			Ok(AssetPricePair::new(T::SelfAssetId::get(), asset, price))
 		}
 
 		fn calculate_net_asset_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
@@ -1078,66 +1119,97 @@ pub mod pallet {
 		}
 
 		fn calculate_net_liquid_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
-			let price = T::PriceFeed::get_price(asset)?;
-			Self::calculate_volume(units, &price)
+			// TODO change price API
+			let price = T::PriceFeed::get_price(asset)?.price;
+			price
+				.checked_mul_int(units.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		fn calculate_net_saft_value(_asset: T::AssetId, _units: T::Balance) -> Result<T::Balance, DispatchError> {
-			// needs https://github.com/ChainSafe/PINT/issues/250
-			todo!("access the SAFT records")
+		fn calculate_net_saft_value(asset: T::AssetId, units: T::Balance) -> Result<T::Balance, DispatchError> {
+			let val = Self::net_saft_value(asset);
+			let price = Price::checked_from_rational(val.into(), Self::asset_balance(asset).into())
+				.ok_or(ArithmeticError::Overflow)?;
+			price
+				.checked_mul_int(units.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		fn total_net_liquid_value() -> Result<T::Balance, DispatchError> {
-			Self::liquid_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
-				worth.checked_add(&Self::net_liquid_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
-			})
-		}
-
-		fn total_net_saft_value() -> Result<T::Balance, DispatchError> {
-			Self::saft_assets().into_iter().try_fold(T::Balance::zero(), |worth, asset| -> Result<_, DispatchError> {
-				worth.checked_add(&Self::net_saft_value(asset)?).ok_or_else(|| Error::<T>::NAVOverflow.into())
-			})
-		}
-
-		fn total_net_asset_value() -> Result<T::Balance, DispatchError> {
-			Assets::<T>::iter().try_fold(
-				T::Balance::zero(),
-				|worth, (asset, availability)| -> Result<_, DispatchError> {
-					if availability.is_liquid() {
-						worth.checked_add(&Self::net_liquid_value(asset)?)
-					} else {
-						worth.checked_add(&Self::net_saft_value(asset)?)
-					}
+		fn total_net_liquid_value() -> Result<U256, DispatchError> {
+			Self::liquid_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
+				worth
+					.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
 					.ok_or_else(|| Error::<T>::NAVOverflow.into())
-				},
-			)
+			})
 		}
 
-		fn nav() -> Result<T::Balance, DispatchError> {
-			let total_issuance = T::IndexToken::total_issuance();
-			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero());
-			}
-			let assets = Self::total_net_asset_value()?;
-			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
+		fn total_net_saft_value() -> Result<U256, DispatchError> {
+			Self::saft_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
+				worth
+					.checked_add(U256::from(Self::net_saft_value(asset).into()))
+					.ok_or_else(|| Error::<T>::NAVOverflow.into())
+			})
 		}
 
-		fn liquid_nav() -> Result<T::Balance, DispatchError> {
-			let total_issuance = T::IndexToken::total_issuance();
-			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero());
-			}
-			let assets = Self::total_net_liquid_value()?;
-			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
+		fn total_net_asset_value() -> Result<U256, DispatchError> {
+			Assets::<T>::iter().try_fold(U256::zero(), |worth, (asset, availability)| -> Result<_, DispatchError> {
+				if availability.is_liquid() {
+					worth.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
+				} else {
+					worth.checked_add(U256::from(Self::net_saft_value(asset).into()))
+				}
+				.ok_or_else(|| Error::<T>::NAVOverflow.into())
+			})
 		}
 
-		fn saft_nav() -> Result<T::Balance, DispatchError> {
+		fn net_asset_value(asset: T::AssetId) -> Result<T::Balance, DispatchError> {
+			if Self::is_liquid_asset(&asset) {
+				Self::calculate_net_liquid_value(asset, Self::asset_balance(asset))
+			} else {
+				Ok(Self::net_saft_value(asset))
+			}
+		}
+
+		fn nav() -> Result<Ratio, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(T::Balance::zero());
+				return Ok(Ratio::zero());
 			}
-			let assets = Self::total_net_saft_value()?;
-			assets.checked_div(&total_issuance).ok_or_else(|| Error::<T>::NAVOverflow.into())
+			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
+				let value =
+					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
+		}
+
+		fn liquid_nav() -> Result<Ratio, DispatchError> {
+			let total_issuance = T::IndexToken::total_issuance();
+			if total_issuance.is_zero() {
+				return Ok(Ratio::zero());
+			}
+			Self::liquid_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+				let value = Self::net_liquid_value(asset)?;
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
+		}
+
+		fn saft_nav() -> Result<Ratio, DispatchError> {
+			let total_issuance = T::IndexToken::total_issuance();
+			if total_issuance.is_zero() {
+				return Ok(Ratio::zero());
+			}
+			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+				let value = Self::net_saft_value(asset);
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
 		}
 
 		fn index_token_issuance() -> T::Balance {
@@ -1153,12 +1225,22 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn register_asset() -> Weight;
+		fn deposit() -> Weight;
 		fn set_metadata() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
 	impl WeightInfo for () {
 		fn add_asset() -> Weight {
+			Default::default()
+		}
+
+		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn deposit() -> Weight {
 			Default::default()
 		}
 

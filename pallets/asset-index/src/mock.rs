@@ -38,6 +38,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
+		SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>},
 		AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Currency: orml_tokens::{Pallet, Event<T>},
@@ -127,6 +128,15 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 }
 
+impl pallet_saft_registry::Config for Test {
+	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+	type Event = Event;
+	type Balance = Balance;
+	type AssetRecorder = AssetIndex;
+	type AssetId = AssetId;
+	type WeightInfo = ();
+}
+
 parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
 	pub MinimumRedemption: u32 = 2;
@@ -155,6 +165,7 @@ impl pallet_asset_index::Config for Test {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
 	type Event = Event;

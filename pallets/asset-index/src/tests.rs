@@ -5,11 +5,9 @@ use crate as pallet;
 use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, sp_runtime::FixedU128};
 use orml_traits::MultiCurrency;
-use pallet::{
-	traits::AssetRecorder,
-	types::{AssetAvailability, AssetWithdrawal, RedemptionState},
-};
+use pallet::types::{AssetWithdrawal, RedemptionState};
 use pallet_price_feed::PriceFeed;
+use primitives::{traits::AssetRecorder, types::AssetAvailability};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use xcm::v0::MultiLocation;
 
@@ -147,7 +145,14 @@ fn deposit_fail_for_native_asset() {
 #[test]
 fn deposit_works_with_user_balance() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
+		let initial_units = 5;
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
 		assert_noop!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
 			orml_tokens::Error::<Test>::BalanceTooLow
@@ -160,7 +165,7 @@ fn deposit_works_with_user_balance() {
 		let expected_balance = MockPriceFeed::get_price(ASSET_A_ID).unwrap().volume(1_000).unwrap();
 
 		assert_eq!(AssetIndex::index_token_balance(&ASHLEY), expected_balance);
-		assert_eq!(AssetIndex::index_token_issuance(), expected_balance + 5);
+		assert_eq!(AssetIndex::index_token_issuance(), expected_balance + initial_units);
 	});
 }
 

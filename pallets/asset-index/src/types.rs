@@ -7,7 +7,6 @@ use frame_support::{
 	sp_std::vec::Vec,
 };
 use pallet_price_feed::AssetPricePair;
-use xcm::opaque::v0::MultiLocation;
 
 /// Abstraction over the lock of minted index token that are locked up for
 /// `LockupPeriod`
@@ -17,36 +16,6 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
 	pub locked: Balance,
 	/// The block when the locked index token can be unlocked.
 	pub end_block: BlockNumber,
-}
-
-/// Defines the location of an asset
-/// Liquid implies it exists on a chain somewhere in the network and
-/// can be moved around
-/// SAFT implies the asset is a Simple Agreement for Future Tokens and the
-/// promised tokens are not able to be transferred or traded until some time
-/// in the future.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum AssetAvailability {
-	Liquid(MultiLocation),
-	Saft,
-}
-
-impl AssetAvailability {
-	/// Whether this asset data represents a liquid asset
-	pub fn is_liquid(&self) -> bool {
-		matches!(self, AssetAvailability::Liquid(_))
-	}
-
-	/// Whether this asset data represents a SAFT
-	pub fn is_saft(&self) -> bool {
-		matches!(self, AssetAvailability::Saft)
-	}
-}
-
-impl From<MultiLocation> for AssetAvailability {
-	fn from(location: MultiLocation) -> Self {
-		AssetAvailability::Liquid(location)
-	}
 }
 
 /// Metadata for an asset

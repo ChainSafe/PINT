@@ -28,8 +28,11 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use pallet_asset_index::{traits::AssetRecorder, types::AssetAvailability};
-	use primitives::SAFTId;
+	use primitives::{
+		traits::{AssetRecorder, SaftRegistry},
+		types::AssetAvailability,
+		SAFTId,
+	};
 	use xcm::v0::MultiLocation;
 
 	#[pallet::config]
@@ -283,6 +286,12 @@ pub mod pallet {
 
 			Self::deposit_event(Event::<T>::ConvertedToLiquid(asset_id, location));
 			Ok(())
+		}
+	}
+
+	impl<T: Config> SaftRegistry<T::AssetId, T::Balance> for Pallet<T> {
+		fn net_saft_value(asset: T::AssetId) -> T::Balance {
+			SAFTNetAssetValue::<T>::get(asset)
 		}
 	}
 

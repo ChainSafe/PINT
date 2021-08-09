@@ -39,6 +39,19 @@ impl<T: frame_system::Config> pallet_asset_index::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
+
+	fn register_asset() -> Weight {
+		(38_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+
+	fn deposit() -> Weight {
+		(38_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
+			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+
 	fn set_metadata() -> Weight {
 		(18_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))

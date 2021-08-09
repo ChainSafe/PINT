@@ -460,6 +460,7 @@ impl pallet_asset_index::Config for Runtime {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currencies;
 	type PriceFeed = PriceFeed;
+	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
 	type Event = Event;
