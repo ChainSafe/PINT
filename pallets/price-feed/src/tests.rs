@@ -15,19 +15,19 @@ const ASSET_Y_ID: AssetId = 3;
 fn feed_creation_and_mapping_should_work() {
 	new_test_ext().execute_with(|| {
 		// insert two feeds
-		assert_ok!(FeedBuilder::new().description(b"PINT".to_vec()).build_and_store());
 		assert_ok!(FeedBuilder::new().description(b"X".to_vec()).build_and_store());
+		assert_ok!(FeedBuilder::new().description(b"Y".to_vec()).build_and_store());
 
 		// PINT asset id is not tracked yet
-		assert_noop!(PriceFeed::get_price(PINTAssetId::get()), Error::<Test>::AssetPriceFeedNotFound);
+		assert_noop!(PriceFeed::get_price(ASSET_X_ID), Error::<Test>::AssetPriceFeedNotFound);
 
 		// map feed 0 to PINT
-		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), PINTAssetId::get(), 0));
+		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_X_ID, 0));
 
 		// map feed 1 to assetId 2
-		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_X_ID, 1));
+		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_Y_ID, 1));
 
-		assert_ok!(PriceFeed::unmap_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_X_ID));
+		assert_ok!(PriceFeed::unmap_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_Y_ID));
 	});
 }
 

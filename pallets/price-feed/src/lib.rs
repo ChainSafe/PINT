@@ -91,8 +91,9 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	#[pallet::storage]
 	/// Store a mapping (AssetId) -> FeedId for all active assets
+	#[pallet::storage]
+	#[pallet::getter(fn asset_feed)]
 	pub type AssetFeeds<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, FeedIdFor<T>, OptionQuery>;
 
 	#[pallet::storage]
@@ -100,16 +101,6 @@ pub mod pallet {
 	/// Stores the timestamp of the latest answer of each feed (feed) ->
 	/// Timestamp
 	pub type LatestAnswerTimestamp<T: Config> = StorageMap<_, Twox64Concat, FeedIdFor<T>, MomentOf<T>, ValueQuery>;
-
-	#[pallet::storage]
-	/// (AssetId) -> AssetPricePair
-	///
-	/// This storage stores the initial price pair for quote assets based on
-	/// `SelfAssetId`
-	///
-	/// * insert: adding a new asset with no price pair been set yet
-	pub type InitialPricePairs<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AssetId, AssetPricePair<T::AssetId>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config>
@@ -180,7 +171,7 @@ pub mod pallet {
 		/// If the asset was already mapped to a price feed this will update the mapping
 		///
 		/// Callable by the governance committee.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(<T as Config>::WeightInfo::map_asset_price_feed())]
 		pub fn map_asset_price_feed(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -196,7 +187,7 @@ pub mod pallet {
 		/// This is a noop if the asset is not tracked.
 		///
 		/// Callable by the governance committee.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(<T as Config>::WeightInfo::unmap_asset_price_feed())]
 		pub fn unmap_asset_price_feed(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 			if let Some(feed_id) = AssetFeeds::<T>::take(&asset_id) {
@@ -277,17 +268,17 @@ pub mod pallet {
 
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
-		fn track_asset_price_feed() -> Weight;
-		fn untrack_asset_price_feed() -> Weight;
+		fn map_asset_price_feed() -> Weight;
+		fn unmap_asset_price_feed() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
 	impl WeightInfo for () {
-		fn track_asset_price_feed() -> Weight {
+		fn map_asset_price_feed() -> Weight {
 			Default::default()
 		}
 
-		fn untrack_asset_price_feed() -> Weight {
+		fn unmap_asset_price_feed() -> Weight {
 			Default::default()
 		}
 	}
