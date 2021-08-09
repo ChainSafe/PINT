@@ -87,6 +87,7 @@
       "Abstain": null
     }
   },
+  "SAFTId": "u32",
   "VoteAggregate": {
     "votes": "Vec<MemberVote>",
     "end": "BlockNumber"
