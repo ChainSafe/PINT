@@ -48,8 +48,7 @@ pub mod pallet {
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 
 	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock,
-		PendingRedemption, RedemptionState,
+		AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption, RedemptionState,
 	};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
@@ -485,7 +484,7 @@ pub mod pallet {
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
 			// calculate the payout for each asset based on the redeem amount
-			let AssetRedemption { asset_amounts, redeemed_index_tokens} = Self::liquid_asset_redemptions(redeem)?;
+			let AssetRedemption { asset_amounts, redeemed_index_tokens } = Self::liquid_asset_redemptions(redeem)?;
 
 			// update the index balance by burning all of the redeemed tokens and the fee
 			// SAFETY: this is guaranteed to be lower than `amount`
@@ -668,13 +667,13 @@ pub mod pallet {
 		}
 
 		fn calculate_nav_proportion(asset: T::AssetId, nav: Ratio) -> Result<Ratio, DispatchError> {
-			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is `value(asset)/supply / nav`
+			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
+			// `value(asset)/supply / nav`
 			let asset_value = Self::net_asset_value(asset)?;
 			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
-
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
 		/// num(asset) = num(index_tokens) * NAV/Asset.
@@ -702,24 +701,25 @@ pub mod pallet {
 			let mut redeemed_index_tokens = 0u128;
 
 			// calculate the proportions of all liquid assets in the index' liquid value
-			let AssetProportions{nav, proportions } = Self::liquid_asset_proportions()?;
+			let AssetProportions { nav, proportions } = Self::liquid_asset_proportions()?;
 
 			// calculate the redeemed amounts
 			let asset_amounts = proportions
 				.into_iter()
 				.map(|proportion| -> Result<_, DispatchError> {
 					let index_tokens = proportion.of(redeem).ok_or(ArithmeticError::Overflow)?;
-					redeemed_index_tokens= redeemed_index_tokens.checked_add(
-						index_tokens
-					).ok_or(ArithmeticError::Overflow)?;
+					redeemed_index_tokens =
+						redeemed_index_tokens.checked_add(index_tokens).ok_or(ArithmeticError::Overflow)?;
 
 					// the amount
 					let index_tokens: T::Balance = index_tokens.try_into().map_err(|_| ArithmeticError::Overflow)?;
 
 					// determine the asset amount based on the relative price pair NAV/Asset
 					let nav_asset_price = Self::liquid_nav_price_pair(nav, proportion.asset)?;
-					let asset_units: T::Balance = nav_asset_price.volume(index_tokens.into())
-						.and_then(|n| TryInto::<T::Balance>::try_into(n).ok()).ok_or(ArithmeticError::Overflow)?;
+					let asset_units: T::Balance = nav_asset_price
+						.volume(index_tokens.into())
+						.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+						.ok_or(ArithmeticError::Overflow)?;
 
 					Ok((proportion.asset, asset_units))
 				})
@@ -1122,7 +1122,8 @@ pub mod pallet {
 		}
 
 		fn asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {
-			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is `value(asset)/supply / nav`
+			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
+			// `value(asset)/supply / nav`
 			let nav = Self::nav()?;
 			Self::calculate_nav_proportion(asset, nav)
 		}

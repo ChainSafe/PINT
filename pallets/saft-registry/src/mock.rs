@@ -16,6 +16,7 @@ use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use primitives::traits::{RemoteAssetManager, UnbondingOutcome};
 use sp_runtime::DispatchResult;
 
+use primitives::Price;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -23,7 +24,6 @@ use sp_runtime::{
 	DispatchError,
 };
 use xcm::v0::Outcome;
-use primitives::Price;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;

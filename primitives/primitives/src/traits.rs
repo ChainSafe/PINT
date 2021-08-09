@@ -4,7 +4,7 @@
 //! This contains shared traits that are used in multiple pallets to prevent
 //! circular dependencies
 
-use crate::{AssetAvailability, AssetPricePair, Price, Ratio, AssetProportions};
+use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
 use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchError,

@@ -9,7 +9,7 @@ use frame_support::{
 		traits::{BlakeTwo256, IdentifyAccount, Verify},
 		FixedPointNumber, FixedPointOperand, FixedU128, MultiSignature, OpaqueExtrinsic as UncheckedExtrinsic,
 	},
-	sp_std::vec::Vec
+	sp_std::vec::Vec,
 };
 use xcm::v0::MultiLocation;
 
@@ -106,7 +106,7 @@ pub struct AssetProportions<AssetId> {
 	/// The per token value used to calculate proportions
 	pub nav: Price,
 	/// All the assets with their proportions
-	pub proportions: Vec<AssetProportion<AssetId>>
+	pub proportions: Vec<AssetProportion<AssetId>>,
 }
 
 /// Represents an asset and its proportion in the value of the index
@@ -119,13 +119,12 @@ pub struct AssetProportion<AssetId> {
 }
 
 impl<AssetId> AssetProportion<AssetId> {
-
-	pub fn new(asset:AssetId, proportion: Ratio) -> Self {
-		Self{asset, proportion}
+	pub fn new(asset: AssetId, proportion: Ratio) -> Self {
+		Self { asset, proportion }
 	}
 
 	/// Calculates the share of the asset of the units
-	pub fn of<N:FixedPointOperand>(&self,units: N) -> Option<N> {
+	pub fn of<N: FixedPointOperand>(&self, units: N) -> Option<N> {
 		self.proportion.checked_mul_int(units)
 	}
 }
