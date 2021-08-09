@@ -5,12 +5,7 @@
 
 use super::*;
 use frame_benchmarking::benchmarks;
-use frame_support::{
-	assert_ok,
-	dispatch::UnfilteredDispatchable,
-	sp_std::convert::TryInto,
-	traits::{EnsureOrigin},
-};
+use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_std::convert::TryInto, traits::EnsureOrigin};
 
 use crate::Pallet as PriceFeed;
 use codec::{Decode, Encode};
