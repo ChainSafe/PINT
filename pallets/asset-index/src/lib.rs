@@ -317,12 +317,6 @@ pub mod pallet {
 			// transfer the caller's fund into the treasury account
 			Self::add_liquid(&caller, asset_id, units, amount)?;
 
-			// Store initial price pair if not exists
-			T::PriceFeed::ensure_price(
-				asset_id,
-				Price::checked_from_rational(amount.into(), units.into()).ok_or(<Error<T>>::InvalidPrice)?,
-			)?;
-
 			// register asset if not yet known
 			if is_new_asset {
 				Assets::<T>::insert(asset_id, availability.clone());

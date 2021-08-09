@@ -204,10 +204,10 @@ pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 pub struct MockPriceFeed;
 impl PriceFeed<AssetId> for MockPriceFeed {
 	fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-		Self::get_price_pair(PINT_ASSET_ID, quote)
+		Self::get_relative_price_pair(PINT_ASSET_ID, quote)
 	}
 
-	fn get_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+	fn get_relative_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 		let price = match quote {
 			// includes unknown asset id since we don't need to mock initial price pair here
 			ASSET_A_ID | UNKNOWN_ASSET_ID => Price::checked_from_rational(600, 600 / ASSET_A_PRICE_MULTIPLIER).unwrap(),

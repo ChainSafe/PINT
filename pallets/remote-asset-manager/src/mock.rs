@@ -455,10 +455,10 @@ pub mod para {
 	pub struct MockPriceFeed;
 	impl PriceFeed<AssetId> for MockPriceFeed {
 		fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-			Self::get_price_pair(PARA_ASSET, quote)
+			Self::get_relative_price_pair(PARA_ASSET, quote)
 		}
 
-		fn get_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+		fn get_relative_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 			let price = match quote {
 				RELAY_CHAIN_ASSET => Price::checked_from_integer(RELAY_PRICE_MULTIPLIER).unwrap(),
 				_ => return Err(pallet_asset_index::Error::<Runtime>::UnsupportedAsset.into()),

@@ -163,7 +163,7 @@ impl PriceFeed<AssetId> for MockPriceFeed {
 		todo!()
 	}
 
-	fn get_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 		todo!()
 	}
 
