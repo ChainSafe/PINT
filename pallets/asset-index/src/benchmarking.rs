@@ -8,15 +8,15 @@ use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
 	sp_runtime::traits::AccountIdConversion,
-	sp_std::convert::TryInto,
 	traits::{EnsureOrigin, Get},
 };
+use frame_support::sp_runtime::FixedPointNumber;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
 use xcm::v0::MultiLocation;
-
 use pallet_price_feed::PriceFeed;
 use primitives::AssetAvailability;
+use primitives::traits::NavProvider;
 
 use crate::Pallet as AssetIndex;
 
@@ -104,16 +104,16 @@ benchmarks! {
 			));
 		let units = 1_000u32.into();
 		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
+		let nav = AssetIndex::<T>::nav().unwrap();
 	}: _(
 		RawOrigin::Signed(depositor.clone()),
 		asset_id,
 		units
 	)
 	verify {
-		let expected_balance =
-			T::PriceFeed::get_price(asset_id).unwrap().volume(units.into()).unwrap().try_into().ok().unwrap();
-		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor), expected_balance);
-		assert_eq!(AssetIndex::<T>::index_token_issuance(), expected_balance + admin_deposit);
+		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value.into());
+		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
 	}
 }
 
@@ -121,34 +121,34 @@ benchmarks! {
 mod tests {
 	use frame_support::assert_ok;
 
-	use crate::mock::{ExtBuilder, Test};
+	use crate::mock::{Test, new_test_ext};
 
 	use super::*;
 
 	#[test]
 	fn add_asset() {
-		ExtBuilder::default().build().execute_with(|| {
+		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_add_asset::<Test>());
 		});
 	}
 
 	#[test]
 	fn set_metadata() {
-		ExtBuilder::default().build().execute_with(|| {
+		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_set_metadata::<Test>());
 		});
 	}
 
 	#[test]
 	fn deposit() {
-		ExtBuilder::default().build().execute_with(|| {
+		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_deposit::<Test>());
 		});
 	}
 
 	#[test]
 	fn register_asset() {
-		ExtBuilder::default().build().execute_with(|| {
+		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_register_asset::<Test>());
 		});
 	}
