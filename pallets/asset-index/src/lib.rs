@@ -401,7 +401,7 @@ pub mod pallet {
 		///
 		/// Weight: `O(N + S)` where N and S are the length of the name and
 		/// symbol respectively.
-		#[pallet::weight(T::WeightInfo::add_asset())]
+		#[pallet::weight(T::WeightInfo::set_metadata())]
 		pub fn set_metadata(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
@@ -1123,13 +1123,10 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
-				let value =
-					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
-				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
-					.ok_or(ArithmeticError::Overflow)?;
-				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
-			})
+			 Self::total_net_asset_value()?
+			.checked_div(U256::from(total_issuance.into()))
+				.and_then(|r| TryInto::<u128>::try_into(r).ok())
+				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
 		fn liquid_nav() -> Result<Ratio, DispatchError> {
@@ -1137,12 +1134,10 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			Self::liquid_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
-				let value = Self::net_liquid_value(asset)?;
-				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
-					.ok_or(ArithmeticError::Overflow)?;
-				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
-			})
+			Self::total_net_liquid_value()?
+				.checked_div(U256::from(total_issuance.into()))
+				.and_then(|r| TryInto::<u128>::try_into(r).ok())
+				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
 		fn saft_nav() -> Result<Ratio, DispatchError> {
@@ -1150,12 +1145,10 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
-				let value = Self::net_saft_value(asset);
-				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
-					.ok_or(ArithmeticError::Overflow)?;
-				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
-			})
+			Self::total_net_saft_value()?
+				.checked_div(U256::from(total_issuance.into()))
+				.and_then(|r| TryInto::<u128>::try_into(r).ok())
+				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
 		fn asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {

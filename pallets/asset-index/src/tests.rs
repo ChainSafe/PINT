@@ -278,10 +278,24 @@ fn can_calculate_random_nav() {
 		for (account, asset, units) in balances.iter().cloned() {
 			let account_index_tokens = AssetIndex::index_token_balance(&account);
 			let expected_received = AssetIndex::index_token_equivalent(asset, units).unwrap();
+			let account_asset_balance = Currency::total_balance(asset, &account);
+			let nav = AssetIndex::nav().unwrap();
+			let expected_received = AssetIndex::index_token_equivalent(asset, units).unwrap();
+
 			// deposit
 			assert_ok!(AssetIndex::deposit(Origin::signed(account), asset, units));
 			let received = AssetIndex::index_token_balance(&account) - account_index_tokens;
 			assert_eq!(received, expected_received);
+
+			let price = MockPriceFeed::get_price(asset).unwrap();
+
+			let equivalent = nav.checked_mul_int(received).unwrap();
+			let effectively_deposited = account_asset_balance - Currency::total_balance(asset, &account);
+			// let deposited_value = relative_price.checked_mul_int(effectively_deposited).unwrap();
+			let deposited_value = price.checked_mul_int(effectively_deposited).unwrap();
+			dbg!(equivalent - deposited_value);
+
+
 		}
 	})
 }
