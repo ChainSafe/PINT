@@ -447,19 +447,19 @@ pub mod pallet {
 			}
 
 			// the amount of index token the given units of the liquid assets are worth
-			let (index_tokens, deposit) = Self::calculate_liquid_deposit(asset_id, units)?;
+			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
 
-			if index_tokens.is_zero() || deposit.is_zero() {
+			if index_tokens.is_zero() {
 				return Err(Error::<T>::InsufficientDeposit.into());
 			}
 
 			// transfer from the caller's sovereign account into the treasury's account
-			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), deposit)?;
+			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
 			// mint index token in caller's account
 			Self::do_mint_index_token(&caller, index_tokens);
 
-			Self::deposit_event(Event::Deposited(asset_id, deposit, caller, index_tokens));
+			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
 		}
 
@@ -688,35 +688,13 @@ pub mod pallet {
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
-		/// num(asset) = num(index_tokens) * NAV/Asset.
+		/// `num(asset) = num(index_tokens) * NAV/Asset`.
 		///
-		/// *NOTE*: assumes the `quote` is liquid asset.
+		/// *NOTE*: assumes the `quote` is a liquid asset.
 		fn liquid_nav_price_pair(nav: Price, quote: T::AssetId) -> Result<AssetPricePair<T::AssetId>, DispatchError> {
 			let quote_price = T::PriceFeed::get_price(quote)?;
 			let price = nav.checked_div(&quote_price).ok_or(ArithmeticError::Overflow)?;
 			Ok(AssetPricePair::new(T::SelfAssetId::get(), quote, price))
-		}
-
-		/// Calculates the how many index tokens the given units of the asset are worth and the
-		/// equivalent units after accounting for rounding
-		fn calculate_liquid_deposit(
-			asset: T::AssetId,
-			units: T::Balance,
-		) -> Result<(T::Balance, T::Balance), DispatchError> {
-			let price = Self::relative_asset_price(asset)?;
-			let index_tokens = price
-				.reciprocal_volume(units.into())
-				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
-				.ok_or(ArithmeticError::Overflow)?;
-
-			let equivalent_units = price
-				.volume(index_tokens.into())
-				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
-				.ok_or(ArithmeticError::Overflow)?;
-			let dust = units.saturating_sub(equivalent_units);
-			let deposit = units - dust;
-
-			Ok((index_tokens, deposit))
 		}
 
 		/// Calculates the pure asset redemption for the given amount of the
@@ -1123,10 +1101,13 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			 Self::total_net_asset_value()?
-			.checked_div(U256::from(total_issuance.into()))
-				.and_then(|r| TryInto::<u128>::try_into(r).ok())
-				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
+			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
+				let value =
+					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
 		}
 
 		fn liquid_nav() -> Result<Ratio, DispatchError> {
@@ -1134,10 +1115,12 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			Self::total_net_liquid_value()?
-				.checked_div(U256::from(total_issuance.into()))
-				.and_then(|r| TryInto::<u128>::try_into(r).ok())
-				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
+			Self::liquid_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+				let value = Self::net_liquid_value(asset)?;
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
 		}
 
 		fn saft_nav() -> Result<Ratio, DispatchError> {
@@ -1145,10 +1128,12 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
-			Self::total_net_saft_value()?
-				.checked_div(U256::from(total_issuance.into()))
-				.and_then(|r| TryInto::<u128>::try_into(r).ok())
-				.map(Ratio::from).ok_or_else(|| ArithmeticError::Overflow.into())
+			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+				let value = Self::net_saft_value(asset);
+				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
+					.ok_or(ArithmeticError::Overflow)?;
+				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
+			})
 		}
 
 		fn asset_proportion(asset: T::AssetId) -> Result<Ratio, DispatchError> {

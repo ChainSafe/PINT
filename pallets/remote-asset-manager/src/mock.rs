@@ -54,7 +54,7 @@ pub use xcm_test_support::{relay, types::*, Relay};
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
 pub const EMPTY_ACCOUNT: AccountId = AccountId::new([3u8; 32]);
-pub const INITIAL_BALANCE: Balance = 1_000_000_000_000_000;
+pub const INITIAL_BALANCE: Balance = 10_000;
 pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
 pub const PARA_ASSET: AssetId = 1;
@@ -194,7 +194,7 @@ pub mod para {
 	use orml_currencies::BasicCurrencyAdapter;
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-	use sp_runtime::{traits::Convert, FixedPointNumber};
+	use sp_runtime::traits::Convert;
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
@@ -449,14 +449,14 @@ pub mod para {
 		type WeightInfo = ();
 	}
 
-	// mock price multiplier for relay/para price pair
-	pub const RELAY_PRICE_MULTIPLIER: Balance = 2;
+	// mock price relay asset
+	pub const RELAY_PRICE: Balance = 3;
 
 	pub struct MockPriceFeed;
 	impl PriceFeed<AssetId> for MockPriceFeed {
 		fn get_price(quote: AssetId) -> Result<Price, DispatchError> {
 			let price = match quote {
-				RELAY_CHAIN_ASSET => Price::checked_from_integer(RELAY_PRICE_MULTIPLIER).unwrap(),
+				RELAY_CHAIN_ASSET => Price::from(RELAY_PRICE),
 				_ => return Err(pallet_asset_index::Error::<Runtime>::UnsupportedAsset.into()),
 			};
 			Ok(price)

@@ -1,35 +1,33 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use frame_support::{
-	assert_noop, assert_ok,
-	traits::{fungible::Inspect as _, tokens::fungibles::Inspect},
-};
-use orml_traits::MultiCurrencyExtended;
-use sp_runtime::traits::Zero;
+use frame_support::{assert_noop, assert_ok, traits::tokens::fungibles::Inspect};
+use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use primitives::traits::MultiAssetRegistry;
+use sp_runtime::{traits::Zero, FixedPointNumber};
 use xcm::v0::{
 	Junction::{self, *},
 	MultiAsset::*,
 	MultiLocation::*,
 	NetworkId,
 };
-use xcm_simulator::TestExt;
-
-use primitives::{traits::MultiAssetRegistry, types::AssetAvailability};
 use xcm_calls::{
 	assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX},
 	proxy::ProxyType as ParaProxyType,
 };
+use xcm_simulator::TestExt;
 
 use crate::{
 	mock::{
-		para::{ParaTreasuryAccount, RELAY_PRICE_MULTIPLIER},
+		para::{MockPriceFeed, ParaTreasuryAccount},
 		relay::ProxyType as RelayProxyType,
 		*,
 	},
 	pallet as pallet_remote_asset_manager,
 	types::StatemintConfig,
 };
+use pallet_price_feed::PriceFeed;
+use primitives::traits::NavProvider;
 
 #[allow(unused)]
 fn print_events<T: frame_system::Config>(context: &str) {
@@ -41,10 +39,15 @@ fn print_events<T: frame_system::Config>(context: &str) {
 
 /// registers the relay chain as liquid asset
 fn register_relay() {
-	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::register_asset(
-		para::Origin::signed(ADMIN_ACCOUNT.clone()),
+	// prepare index fund so NAV is available
+	let deposit = 1_000;
+	assert_ok!(orml_tokens::Pallet::<para::Runtime>::deposit(RELAY_CHAIN_ASSET, &ADMIN_ACCOUNT, 1_000));
+	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::add_asset(
+		para::Origin::signed(ADMIN_ACCOUNT),
 		RELAY_CHAIN_ASSET,
-		AssetAvailability::Liquid(Parent.into())
+		deposit,
+		X1(Parent),
+		deposit
 	));
 	assert!(pallet_asset_index::Pallet::<para::Runtime>::is_liquid_asset(&RELAY_CHAIN_ASSET));
 }
@@ -64,7 +67,6 @@ fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 	});
 	Para::execute_with(|| {
 		// ensure deposit arrived
-		assert_eq!(orml_tokens::Pallet::<para::Runtime>::total_issuance(RELAY_CHAIN_ASSET), relay_deposit_amount);
 		assert_eq!(orml_tokens::Pallet::<para::Runtime>::balance(RELAY_CHAIN_ASSET, &who), relay_deposit_amount);
 	});
 }
@@ -87,7 +89,10 @@ fn can_deposit_from_relay() {
 	transfer_to_para(deposit, ALICE);
 
 	Para::execute_with(|| {
-		let initial_balance = pallet_balances::Pallet::<para::Runtime>::balance(&ALICE);
+		let initial_index_tokens = pallet_asset_index::Pallet::<para::Runtime>::index_token_issuance();
+		let index_token_balance = pallet_asset_index::Pallet::<para::Runtime>::index_token_balance(&ALICE);
+		let nav = pallet_asset_index::Pallet::<para::Runtime>::nav().unwrap();
+
 		// alice has 1000 units of relay chain currency in her account on the parachain
 		assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::deposit(
 			para::Origin::signed(ALICE),
@@ -97,9 +102,15 @@ fn can_deposit_from_relay() {
 		// no more relay chain assets
 		assert!(orml_tokens::Pallet::<para::Runtime>::balance(RELAY_CHAIN_ASSET, &ALICE).is_zero());
 
+		let deposit_value = MockPriceFeed::get_price(RELAY_CHAIN_ASSET).unwrap().checked_mul_int(deposit).unwrap();
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
 		assert_eq!(
-			pallet_balances::Pallet::<para::Runtime>::balance(&ALICE),
-			initial_balance + deposit * RELAY_PRICE_MULTIPLIER
+			pallet_asset_index::Pallet::<para::Runtime>::index_token_balance(&ALICE),
+			received + index_token_balance
+		);
+		assert_eq!(
+			pallet_asset_index::Pallet::<para::Runtime>::index_token_issuance(),
+			received + initial_index_tokens
 		);
 	});
 }
@@ -236,7 +247,7 @@ fn can_transfer_to_statemint() {
 		assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id), initial_supply);
 	});
 
-	let transfer_amount = 12345;
+	let transfer_amount = 1_000;
 	Para::execute_with(|| {
 		// try to send PINT, but no config yet
 		assert_noop!(

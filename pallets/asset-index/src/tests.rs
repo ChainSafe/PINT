@@ -229,7 +229,7 @@ fn can_calculate_random_nav() {
 		.collect::<Vec<_>>();
 
 	// set random prices for the assets
-	MockPriceFeed::set_random_prices(assets.iter().cloned(), 1..3);
+	MockPriceFeed::set_random_prices(assets.iter().cloned(), 1..13);
 
 	ExtBuilder::default().with_balances(balances.clone()).build().execute_with(|| {
 		// register all assets first
@@ -249,7 +249,7 @@ fn can_calculate_random_nav() {
 			);
 		}
 
-		let initial_index_token_supply: Balance = 1_000_000_000_000_000;
+		let initial_index_token_supply: Balance = 100_000_000;
 		// mint some initial index token supply
 		Balances::make_free_balance_be(&ADMIN_ACCOUNT_ID, initial_index_token_supply);
 		assert_eq!(AssetIndex::index_token_issuance(), initial_index_token_supply);
@@ -258,7 +258,7 @@ fn can_calculate_random_nav() {
 		assert!(AssetIndex::nav().unwrap().is_zero());
 
 		// secure the index token with assets by minting them into the index' treasury
-		let initial_asset_supply: Balance = 10_000_000_000_000_000;
+		let initial_asset_supply: Balance = 10_000_000;
 		for asset in assets.iter().cloned() {
 			assert_ok!(Currency::deposit(asset, &AssetIndex::treasury_account(), initial_asset_supply));
 		}
@@ -278,24 +278,10 @@ fn can_calculate_random_nav() {
 		for (account, asset, units) in balances.iter().cloned() {
 			let account_index_tokens = AssetIndex::index_token_balance(&account);
 			let expected_received = AssetIndex::index_token_equivalent(asset, units).unwrap();
-			let account_asset_balance = Currency::total_balance(asset, &account);
-			let nav = AssetIndex::nav().unwrap();
-			let expected_received = AssetIndex::index_token_equivalent(asset, units).unwrap();
-
 			// deposit
 			assert_ok!(AssetIndex::deposit(Origin::signed(account), asset, units));
 			let received = AssetIndex::index_token_balance(&account) - account_index_tokens;
 			assert_eq!(received, expected_received);
-
-			let price = MockPriceFeed::get_price(asset).unwrap();
-
-			let equivalent = nav.checked_mul_int(received).unwrap();
-			let effectively_deposited = account_asset_balance - Currency::total_balance(asset, &account);
-			// let deposited_value = relative_price.checked_mul_int(effectively_deposited).unwrap();
-			let deposited_value = price.checked_mul_int(effectively_deposited).unwrap();
-			dbg!(equivalent - deposited_value);
-
-
 		}
 	})
 }
@@ -352,13 +338,13 @@ fn deposit_fail_for_unsupported_assets() {
 }
 
 #[test]
-fn deposit_fails_on_overflowing() {
+fn deposit_fails_on_missing_assets() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
 
 		assert_noop!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, Balance::MAX),
-			frame_support::sp_runtime::ArithmeticError::Overflow
+			orml_tokens::Error::<Test>::BalanceTooLow
 		);
 	})
 }
