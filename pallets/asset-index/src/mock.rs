@@ -8,7 +8,6 @@ use crate as pallet_asset_index;
 use frame_support::{
 	dispatch::DispatchResult,
 	ord_parameter_types, parameter_types,
-	sp_runtime::FixedPointNumber,
 	traits::{GenesisBuild, LockIdentifier, StorageMapShim},
 	PalletId,
 };
@@ -21,11 +20,16 @@ use primitives::{
 	AssetPricePair, Price,
 };
 use sp_core::H256;
+use sp_std::cell::RefCell;
+use std::collections::HashMap;
+
+use rand::{thread_rng, Rng};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
 	DispatchError,
 };
+use std::ops::Range;
 use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -83,7 +87,8 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
+pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 0;
+pub(crate) const ASHLEY: AccountId = 1;
 
 ord_parameter_types! {
 	pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
@@ -202,20 +207,37 @@ pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
 pub const ASSET_A_PRICE_MULTIPLIER: Balance = 2;
 pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
 
+thread_local! {
+	pub static PRICES: RefCell<HashMap<AssetId, Price>> = RefCell::new(HashMap::new());
+}
+
 pub struct MockPriceFeed;
-impl PriceFeed<AssetId> for MockPriceFeed {
-	fn get_price(quote: AssetId) -> Result<Price, DispatchError> {
-		Self::get_relative_price_pair(PINT_ASSET_ID, quote)
+
+impl MockPriceFeed {
+	pub fn set_prices(prices: impl IntoIterator<Item = (AssetId, Price)>) {
+		PRICES.with(|v| *v.borrow_mut() = prices.into_iter().collect());
 	}
 
-	fn get_relative_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
-		let price = match quote {
-			// includes unknown asset id since we don't need to mock initial price pair here
-			ASSET_A_ID | UNKNOWN_ASSET_ID => Price::checked_from_rational(600, 600 / ASSET_A_PRICE_MULTIPLIER).unwrap(),
-			ASSET_B_ID => Price::checked_from_rational(900, 900 / ASSET_B_PRICE_MULTIPLIER).unwrap(),
-			_ => return Err(pallet_asset_index::Error::<Test>::UnsupportedAsset.into()),
-		};
-		Ok(AssetPricePair { base, quote, price })
+	/// Use some random prices for the given assets
+	pub fn set_random_prices(assets: impl IntoIterator<Item = AssetId>, range: Range<u128>) {
+		let mut rng = thread_rng();
+		Self::set_prices(assets.into_iter().map(|asset| {
+			(asset, Price::from(rng.gen_range(range.clone())))
+		}
+			))
+	}
+}
+
+impl PriceFeed<AssetId> for MockPriceFeed {
+	// mock price supposed to return the price pair with the same `quote` price, like USD
+	fn get_price(asset: AssetId) -> Result<Price, DispatchError> {
+		PRICES.with(|v| {
+			v.borrow().get(&asset).cloned().ok_or_else(|| pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+		})
+	}
+
+	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
+		todo!()
 	}
 }
 
@@ -223,7 +245,7 @@ pub struct ExtBuilder {
 	balances: Vec<(AccountId, AssetId, Balance)>,
 }
 
-pub(crate) const ASHLEY: AccountId = 0;
+
 
 // Returns default values for genesis config
 impl Default for ExtBuilder {
@@ -253,4 +275,22 @@ impl ExtBuilder {
 
 		t.into()
 	}
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let mut ext = ExtBuilder::default().build();
+	ext.execute_with(|| System::set_block_number(1));
+
+	MockPriceFeed::set_prices( [(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)), (ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER))]);
+
+	ext
+}
+
+pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -> sp_io::TestExternalities {
+	let mut ext = ExtBuilder::default().with_balances(balances).build();
+	ext.execute_with(|| System::set_block_number(1));
+
+	MockPriceFeed::set_prices( [(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)), (ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER))]);
+
+	ext
 }

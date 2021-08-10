@@ -276,6 +276,8 @@ pub mod pallet {
 		AssetAlreadyExists,
 		/// Thrown when adding assets with zero amount or units
 		InvalidPrice,
+		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to determine the Asset/Index Token rate.
+		InsufficientIndexTokens
 	}
 
 	#[pallet::hooks]
@@ -428,27 +430,36 @@ pub mod pallet {
 		/// account and mints PINT proportionally using the latest
 		/// available price pairs
 		#[pallet::weight(T::WeightInfo::deposit())]
-		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResultWithPostInfo {
+		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 			if units.is_zero() {
-				return Ok(().into());
+				return Ok(());
 			}
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
 			// only liquid assets can be deposited
 			Self::ensure_liquid_asset(&asset_id)?;
 
+			// can't calculate an exchange rate if the total supply of index tokens is 0
+			if Self::index_token_issuance().is_zero() {
+				return Err(Error::<T>::InsufficientIndexTokens.into())
+			}
+
 			// the amount of index token the given units of the liquid assets are worth
-			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
+			let (index_tokens, deposit) = Self::calculate_liquid_deposit(asset_id, units)?;
+
+			if index_tokens.is_zero() || deposit.is_zero() {
+				return Err(Error::<T>::InsufficientDeposit.into())
+			}
 
 			// transfer from the caller's sovereign account into the treasury's account
-			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
+			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), deposit)?;
 
 			// mint index token in caller's account
 			Self::do_mint_index_token(&caller, index_tokens);
 
-			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
-			Ok(().into())
+			Self::deposit_event(Event::Deposited(asset_id, deposit, caller, index_tokens));
+			Ok(())
 		}
 
 		/// Starts the withdraw process for the given amount of PINT to redeem
@@ -685,6 +696,25 @@ pub mod pallet {
 			Ok(AssetPricePair::new(T::SelfAssetId::get(), quote, price))
 		}
 
+
+		/// Calculates the how many index tokens the given units of the asset are worth and the equivalent units after accounting for rounding
+		fn calculate_liquid_deposit(asset:T::AssetId, units: T::Balance) -> Result<(T::Balance, T::Balance), DispatchError> {
+			let price = Self::relative_asset_price(asset)?;
+			let index_tokens = price
+				.reciprocal_volume(units.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or(ArithmeticError::Overflow)?;
+
+			let equivalent_units = price
+				.volume(index_tokens.into())
+				.and_then(|n| TryInto::<T::Balance>::try_into(n).ok())
+				.ok_or(ArithmeticError::Overflow)?;
+			let dust = units.saturating_sub(equivalent_units);
+			let deposit = units - dust;
+
+			Ok((index_tokens, deposit))
+		}
+
 		/// Calculates the pure asset redemption for the given amount of the
 		/// index token to be redeemed for all liquid tokens
 		///
@@ -703,6 +733,10 @@ pub mod pallet {
 			// calculate the proportions of all liquid assets in the index' liquid value
 			let AssetProportions { nav, proportions } = Self::liquid_asset_proportions()?;
 
+			// the total NAV is sum(liquid_nav + saft_nav) and represents the real value of a 1unit of index
+			// token
+			let nav = Self::saft_nav()?.checked_add(&nav).ok_or(ArithmeticError::Overflow)?;
+
 			// calculate the redeemed amounts
 			let asset_amounts = proportions
 				.into_iter()
@@ -711,7 +745,7 @@ pub mod pallet {
 					redeemed_index_tokens =
 						redeemed_index_tokens.checked_add(index_tokens).ok_or(ArithmeticError::Overflow)?;
 
-					// the amount
+					// the amount of index tokens to redeem in proportion of the liquid asset
 					let index_tokens: T::Balance = index_tokens.try_into().map_err(|_| ArithmeticError::Overflow)?;
 
 					// determine the asset amount based on the relative price pair NAV/Asset
@@ -901,7 +935,6 @@ pub mod pallet {
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
-
 			Ok(())
 		}
 
@@ -1063,11 +1096,11 @@ pub mod pallet {
 		}
 
 		fn total_net_asset_value() -> Result<U256, DispatchError> {
-			Assets::<T>::iter().try_fold(U256::zero(), |worth, (asset, availability)| -> Result<_, DispatchError> {
+			Assets::<T>::iter().try_fold(U256::zero(), |value, (asset, availability)| -> Result<_, DispatchError> {
 				if availability.is_liquid() {
-					worth.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
+					value.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
 				} else {
-					worth.checked_add(U256::from(Self::net_saft_value(asset).into()))
+					value.checked_add(U256::from(Self::net_saft_value(asset).into()))
 				}
 				.ok_or_else(|| Error::<T>::NAVOverflow.into())
 			})

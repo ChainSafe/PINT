@@ -34,14 +34,16 @@ orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 [dev-dependencies]
 serde = { version = "1.0.101" }
 
-sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
+sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 
 pallet-saft-registry = { path = "../saft-registry" }
 
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+rand = "0.8.4"
 
 [features]
 default = ['std']
