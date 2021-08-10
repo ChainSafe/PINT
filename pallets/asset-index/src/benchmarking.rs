@@ -7,16 +7,14 @@ use frame_benchmarking::{account, benchmarks};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
-	sp_runtime::traits::AccountIdConversion,
+	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
 	traits::{EnsureOrigin, Get},
 };
-use frame_support::sp_runtime::FixedPointNumber;
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use xcm::v0::MultiLocation;
 use pallet_price_feed::PriceFeed;
-use primitives::AssetAvailability;
-use primitives::traits::NavProvider;
+use primitives::{traits::NavProvider, AssetAvailability};
+use xcm::v0::MultiLocation;
 
 use crate::Pallet as AssetIndex;
 
@@ -121,7 +119,7 @@ benchmarks! {
 mod tests {
 	use frame_support::assert_ok;
 
-	use crate::mock::{Test, new_test_ext};
+	use crate::mock::{new_test_ext, Test};
 
 	use super::*;
 
