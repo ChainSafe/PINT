@@ -64,7 +64,7 @@ benchmarks! {
 		let availability = AssetAvailability::Saft;
 		let call = Call::<T>::register_asset(
 						asset_id,
-						availability.clone(),
+						availability,
 		);
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
@@ -110,7 +110,7 @@ benchmarks! {
 	)
 	verify {
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value.into());
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
 		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
 	}
 }

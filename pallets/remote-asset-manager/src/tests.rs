@@ -233,7 +233,7 @@ fn can_transfer_to_statemint() {
 		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::create(
 			statemint::Origin::signed(ALICE),
 			spint_id,
-			sibling_sovereign_account().into(),
+			sibling_sovereign_account(),
 			100
 		));
 
@@ -241,7 +241,7 @@ fn can_transfer_to_statemint() {
 		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::mint(
 			statemint::Origin::signed(sibling_sovereign_account()),
 			spint_id,
-			sibling_sovereign_account().into(),
+			sibling_sovereign_account(),
 			initial_supply
 		));
 		assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id), initial_supply);
