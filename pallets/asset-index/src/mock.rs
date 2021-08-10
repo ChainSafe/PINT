@@ -221,10 +221,7 @@ impl MockPriceFeed {
 	/// Use some random prices for the given assets
 	pub fn set_random_prices(assets: impl IntoIterator<Item = AssetId>, range: Range<u128>) {
 		let mut rng = thread_rng();
-		Self::set_prices(assets.into_iter().map(|asset| {
-			(asset, Price::from(rng.gen_range(range.clone())))
-		}
-			))
+		Self::set_prices(assets.into_iter().map(|asset| (asset, Price::from(rng.gen_range(range.clone())))))
 	}
 }
 
@@ -244,8 +241,6 @@ impl PriceFeed<AssetId> for MockPriceFeed {
 pub struct ExtBuilder {
 	balances: Vec<(AccountId, AssetId, Balance)>,
 }
-
-
 
 // Returns default values for genesis config
 impl Default for ExtBuilder {
@@ -281,7 +276,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = ExtBuilder::default().build();
 	ext.execute_with(|| System::set_block_number(1));
 
-	MockPriceFeed::set_prices( [(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)), (ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER))]);
+	MockPriceFeed::set_prices([
+		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
+		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
+	]);
 
 	ext
 }
@@ -290,7 +288,10 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 	let mut ext = ExtBuilder::default().with_balances(balances).build();
 	ext.execute_with(|| System::set_block_number(1));
 
-	MockPriceFeed::set_prices( [(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)), (ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER))]);
+	MockPriceFeed::set_prices([
+		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
+		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
+	]);
 
 	ext
 }

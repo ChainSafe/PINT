@@ -3,17 +3,19 @@
 
 use crate as pallet;
 use crate::mock::*;
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::Currency as _};
 use orml_traits::MultiCurrency;
 use pallet_price_feed::PriceFeed;
-use primitives::traits::NavProvider;
-use primitives::{traits::AssetRecorder, AssetAvailability, Price};
+use primitives::{
+	traits::{AssetRecorder, NavProvider},
+	AssetAvailability, Price,
+};
 use rand::Rng;
-use sp_runtime::traits::Zero;
-use sp_runtime::{traits::BadOrigin, FixedPointNumber};
+use sp_runtime::{
+	traits::{BadOrigin, Zero},
+	FixedPointNumber,
+};
 use xcm::v0::MultiLocation;
-use frame_support::traits::Currency as _;
-
 
 #[test]
 fn non_admin_cannot_call_get_asset() {
@@ -216,8 +218,8 @@ fn can_calculate_nav_upon_deposit() {
 fn can_calculate_random_nav() {
 	// generate some random accounts and assets
 	let mut rng = rand::thread_rng();
-	let accounts: Vec<_> = ((ADMIN_ACCOUNT_ID +1) ..rng.gen_range(50..100)).collect();
-	let assets: Vec<_> = ((PINT_ASSET_ID +1)..rng.gen_range(5..10)).collect();
+	let accounts: Vec<_> = ((ADMIN_ACCOUNT_ID + 1)..rng.gen_range(50..100)).collect();
+	let assets: Vec<_> = ((PINT_ASSET_ID + 1)..rng.gen_range(5..10)).collect();
 	let prefund = 1_000;
 	// make sure all are funded
 	let balances = accounts
@@ -227,10 +229,7 @@ fn can_calculate_random_nav() {
 		.collect::<Vec<_>>();
 
 	// set random prices for the assets
-	MockPriceFeed::set_random_prices(
-		assets.iter().cloned(),
-			1..3
-	);
+	MockPriceFeed::set_random_prices(assets.iter().cloned(), 1..3);
 
 	ExtBuilder::default().with_balances(balances.clone()).build().execute_with(|| {
 		// register all assets first
@@ -244,26 +243,22 @@ fn can_calculate_random_nav() {
 
 		for (account, asset, units) in balances.iter().cloned() {
 			// can't deposit in an empty index
-			assert_noop!(AssetIndex::deposit(Origin::signed(account), asset, units),
+			assert_noop!(
+				AssetIndex::deposit(Origin::signed(account), asset, units),
 				pallet::Error::<Test>::InsufficientIndexTokens
 			);
 		}
 
-		let initial_index_token_supply:Balance = 1_000_000_000_000_000;
+		let initial_index_token_supply: Balance = 1_000_000_000_000_000;
 		// mint some initial index token supply
 		Balances::make_free_balance_be(&ADMIN_ACCOUNT_ID, initial_index_token_supply);
-		assert_eq!(
-			AssetIndex::index_token_issuance(),
-			initial_index_token_supply
-		);
+		assert_eq!(AssetIndex::index_token_issuance(), initial_index_token_supply);
 
 		// NAV is still zero because no assets secured, meaning all index tokens are worthless
-		assert!(
-			AssetIndex::nav().unwrap().is_zero()
-		);
+		assert!(AssetIndex::nav().unwrap().is_zero());
 
 		// secure the index token with assets by minting them into the index' treasury
-		let initial_asset_supply:Balance = 10_000_000_000_000_000;
+		let initial_asset_supply: Balance = 10_000_000_000_000_000;
 		for asset in assets.iter().cloned() {
 			assert_ok!(Currency::deposit(asset, &AssetIndex::treasury_account(), initial_asset_supply));
 		}
@@ -273,17 +268,12 @@ fn can_calculate_random_nav() {
 		for asset in assets.iter().cloned() {
 			let price = MockPriceFeed::get_price(asset).unwrap();
 			let backed = price.checked_mul_int(initial_asset_supply).unwrap();
-			assert_eq!(
-				AssetIndex::net_asset_value(asset).unwrap(), backed
-			);
-			expected_value+=backed;
+			assert_eq!(AssetIndex::net_asset_value(asset).unwrap(), backed);
+			expected_value += backed;
 		}
 		assert_eq!(total_value, expected_value.into());
 		let nav = AssetIndex::nav().unwrap();
-		assert_eq!(
-			nav,
-			Price::checked_from_rational(expected_value, initial_index_token_supply).unwrap()
-		);
+		assert_eq!(nav, Price::checked_from_rational(expected_value, initial_index_token_supply).unwrap());
 
 		for (account, asset, units) in balances.iter().cloned() {
 			let account_index_tokens = AssetIndex::index_token_balance(&account);
@@ -340,8 +330,9 @@ fn deposit_fail_for_unsupported_assets() {
 			5
 		));
 		assert_ok!(Currency::deposit(UNKNOWN_ASSET_ID, &ASHLEY, 1_000));
-		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 100),
-		pallet::Error::<Test>::UnsupportedAsset
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 100),
+			pallet::Error::<Test>::UnsupportedAsset
 		);
 	})
 }

@@ -276,8 +276,9 @@ pub mod pallet {
 		AssetAlreadyExists,
 		/// Thrown when adding assets with zero amount or units
 		InvalidPrice,
-		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to determine the Asset/Index Token rate.
-		InsufficientIndexTokens
+		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
+		/// determine the Asset/Index Token rate.
+		InsufficientIndexTokens,
 	}
 
 	#[pallet::hooks]
@@ -442,14 +443,14 @@ pub mod pallet {
 
 			// can't calculate an exchange rate if the total supply of index tokens is 0
 			if Self::index_token_issuance().is_zero() {
-				return Err(Error::<T>::InsufficientIndexTokens.into())
+				return Err(Error::<T>::InsufficientIndexTokens.into());
 			}
 
 			// the amount of index token the given units of the liquid assets are worth
 			let (index_tokens, deposit) = Self::calculate_liquid_deposit(asset_id, units)?;
 
 			if index_tokens.is_zero() || deposit.is_zero() {
-				return Err(Error::<T>::InsufficientDeposit.into())
+				return Err(Error::<T>::InsufficientDeposit.into());
 			}
 
 			// transfer from the caller's sovereign account into the treasury's account
@@ -696,9 +697,12 @@ pub mod pallet {
 			Ok(AssetPricePair::new(T::SelfAssetId::get(), quote, price))
 		}
 
-
-		/// Calculates the how many index tokens the given units of the asset are worth and the equivalent units after accounting for rounding
-		fn calculate_liquid_deposit(asset:T::AssetId, units: T::Balance) -> Result<(T::Balance, T::Balance), DispatchError> {
+		/// Calculates the how many index tokens the given units of the asset are worth and the
+		/// equivalent units after accounting for rounding
+		fn calculate_liquid_deposit(
+			asset: T::AssetId,
+			units: T::Balance,
+		) -> Result<(T::Balance, T::Balance), DispatchError> {
 			let price = Self::relative_asset_price(asset)?;
 			let index_tokens = price
 				.reciprocal_volume(units.into())
