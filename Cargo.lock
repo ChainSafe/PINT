@@ -4953,10 +4953,12 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-parachain",
  "primitives",
+ "rand 0.8.4",
  "serde",
  "sp-core",
  "sp-io",
  "sp-runtime",
+ "sp-std 3.0.0",
  "xcm",
  "xcm-executor",
 ]

@@ -149,6 +149,7 @@ pub struct FeedBuilder {
 	value_bounds: Option<(Value, Value)>,
 	min_submissions: Option<u32>,
 	description: Option<Vec<u8>>,
+	decimals: Option<u8>,
 	restart_delay: Option<RoundId>,
 	oracles: Option<Vec<(AccountId, AccountId)>>,
 }
@@ -189,6 +190,11 @@ impl FeedBuilder {
 		self
 	}
 
+	pub fn decimals(mut self, d: u8) -> Self {
+		self.decimals = Some(d);
+		self
+	}
+
 	pub fn restart_delay(mut self, d: RoundId) -> Self {
 		self.restart_delay = Some(d);
 		self
@@ -205,7 +211,7 @@ impl FeedBuilder {
 		let timeout = self.timeout.unwrap_or(1);
 		let value_bounds = self.value_bounds.unwrap_or((1, 1_000));
 		let min_submissions = self.min_submissions.unwrap_or(2);
-		let decimals = 5;
+		let decimals = self.decimals.unwrap_or(5);
 		let description = self.description.unwrap_or_else(|| b"desc".to_vec());
 		let oracles = self.oracles.unwrap_or_else(|| vec![(2, 4), (3, 4), (4, 4)]);
 		let restart_delay = self.restart_delay.unwrap_or(oracles.len().saturating_sub(1) as u32);

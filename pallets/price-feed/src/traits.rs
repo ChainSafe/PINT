@@ -6,13 +6,12 @@ use primitives::{AssetPricePair, Price};
 
 /// An interface to access price data
 pub trait PriceFeed<AssetId> {
-	/// Returns the current price pair for `base/quote` where `base` is the
-	/// native token
-	fn get_price(quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
+	/// Returns the current price for the given asset measured in the constant denominating asset
+	/// which is used as the quote currency, whereas the price of the `base` Asset will be the base
+	/// currency for the price pair. *Note*: this returns the price for 1 basic unit
+	fn get_price(base: AssetId) -> Result<Price, DispatchError>;
 
-	/// Returns the current price pair for `base/quote`
-	fn get_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
-
-	/// Set initial price pair if feed not exists
-	fn ensure_price(quote: AssetId, units: Price) -> Result<AssetPricePair<AssetId>, DispatchError>;
+	/// Returns the current price pair for the prices of the base and quote asset in the form of
+	/// `base/quote`
+	fn get_relative_price_pair(base: AssetId, quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
 }
