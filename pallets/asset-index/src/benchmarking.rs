@@ -58,6 +58,24 @@ benchmarks! {
 
 	}
 
+	remove_asset {
+		let asset_id = 1_u32.into();
+		let origin = T::AdminOrigin::successful_origin();
+		let depositor = whitelisted_account::<T>("depositor", 0);
+		let units: u32 = 100;
+		let admin_deposit = 5u32.into();
+		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units.into(), MultiLocation::Null,admin_deposit
+		));
+
+		// construct remove call
+		let call = Call::<T>::remove_asset(asset_id, units.into(), None);
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(
+			AssetIndex::<T>::assets(asset_id),
+			None
+		);
+	}
+
 	register_asset {
 		let asset_id = 1337_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
@@ -141,6 +159,12 @@ mod tests {
 	fn deposit() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_deposit::<Test>());
+		});
+	}
+
+	fn remove_asset() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_remove_asset::<Test>());
 		});
 	}
 
