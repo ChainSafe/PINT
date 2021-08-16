@@ -28,18 +28,22 @@ pub struct AssetMetadata<BoundedString> {
 /// State of a single asset withdrawal on some parachain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum RedemptionState {
-	/// Requested, but unbonding failed, either because the corresponding xcm
-	/// unbonding failed to execute or because there is nothing to unbond and
-	/// the minimum remote stash balance is exhausted.
+	/// This marks the state in which a withdrawal was initiated but the requested unbonding failed,
+	/// either because the corresponding xcm unbonding failed to execute or because there is nothing
+	/// to unbond and the minimum remote stash balance is exhausted.
+	/// This indicates that the redemption in progress needs get confirmation that the remote asset
+	/// manager followed up on the failed unbonding procedure.
 	Initiated,
 	/// Unbonding was successful due to:
 	///   - the asset does not support staking.
 	///   - the current parachain's stash account is liquid enough to cover the withdrawal after the
 	///     redemption period without falling below the configured minimum stash balance threshold.
 	///   - xcm unbonding call was sent successfully.
+	///
+	/// This state represents a waiting state until the redemption period is over.
 	Unbonding,
-	/// This is a intermediary state in which the it's attempted to transfer the
-	/// units to the LP's account
+	/// This is a intermediary state in which it will be attempted to transfer the
+	/// units to the LP's account.
 	Transferring,
 	/// Successfully transferred the units to LP's account, the
 	/// `AssetWithdrawal` has thus been completed.
