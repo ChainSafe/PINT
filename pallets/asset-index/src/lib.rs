@@ -228,10 +228,10 @@ pub mod pallet {
 		/// Started the withdrawal process
 		/// \[Account, PINTAmount\]
 		WithdrawalInitiated(AccountIdFor<T>, T::Balance),
-		/// Completed a single asset withdrawal
+		/// Completed a single asset withdrawal of the PendingRedemption
 		/// \[Account, AssetId, AssetUnits\]
 		Withdrawn(AccountIdFor<T>, T::AssetId, T::Balance),
-		/// Completed a pending asset withdrawal
+		/// Completed an entire pending asset withdrawal
 		/// \[Account, Assets\]
 		WithdrawalCompleted(AccountIdFor<T>, Vec<AssetWithdrawal<T::AssetId, T::Balance>>),
 		/// New metadata has been set for an asset. \[asset_id, name, symbol,
@@ -518,7 +518,7 @@ pub mod pallet {
 
 			// start the redemption process for each withdrawal
 			for (asset, units) in asset_amounts {
-				// start the unbonding routine
+				// start the unbonding routine, and determine the state of this withdrawal after the initial attempt
 				let state = match T::RemoteAssetManager::unbond(asset, units) {
 					UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
 						// nothing to unbond, the funds are assumed to be available after the
@@ -542,11 +542,9 @@ pub mod pallet {
 
 				// reserve the funds in the treasury's account until the redemption period is
 				// over after which they can be transferred to the user account
-				// NOTE: this should always succeed due to the way the distribution is
+				// NOTE: this should always succeed due to the way the asset distribution is
 				// calculated
 				T::Currency::reserve(asset, &Self::treasury_account(), units)?;
-
-				// T::Currency::transfer(asset, &Self::treasury_account(), &caller, units)?;
 				assets.push(AssetWithdrawal { asset, state, units });
 			}
 
@@ -564,7 +562,7 @@ pub mod pallet {
 		}
 
 		/// Attempts to complete all currently pending redemption processes
-		/// started by `withdraw`.
+		/// started by the `withdraw` extrinsic.
 		///
 		/// This checks every pending withdrawal within `PendingWithdrawal` and
 		/// tries to close it. Completing a withdrawal will succeed if
@@ -580,8 +578,8 @@ pub mod pallet {
 		/// withdrawals will not be fully closed until the last withdrawal is
 		/// completed. This means that a single `AssetWithdrawal` will be closed
 		/// as soon as the aforementioned conditions are met, regardless of
-		/// whether the other `AssetWithdrawal` of the same `PendingWithdrawal`
-		/// entry can also be closed successfully.
+		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
+		/// can also be closed successfully.
 		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
@@ -597,21 +595,19 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block {
-							if Self::do_complete_redemption(&caller, &mut redemption.assets) {
-								// all redemptions completed, remove from storage
-								Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
-								None
-							} else {
-								Some(redemption)
-							}
-						} else {
-							Some(redemption)
+						if redemption.end_block >= current_block &&
+							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						{
+							// all individual redemptions closed, remove from storage
+							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
+							return None;
 						}
+						Some(redemption)
 					})
 					.collect();
 
 				if !still_pending.is_empty() {
+					// still have redemptions pending
 					*maybe_pending = Some(still_pending);
 				}
 				Ok(())
@@ -698,7 +694,7 @@ pub mod pallet {
 		}
 
 		/// Calculates the pure asset redemption for the given amount of the
-		/// index token to be redeemed for all liquid tokens
+		/// index token to be redeemed for all the liquid tokens in the index
 		///
 		/// *NOTE*:
 		///   - This does not account for fees
@@ -828,7 +824,8 @@ pub mod pallet {
 		}
 
 		/// Tries to complete every single `AssetWithdrawal` by advancing their
-		/// states towards the `Withdrawn` state.
+		/// states towards the `Withdrawn` state. In which all assets were transferred to the
+		/// caller's holding accounts.
 		///
 		/// Returns `true` if all entries are completed (the have been
 		/// transferred to the caller's account)
@@ -843,8 +840,10 @@ pub mod pallet {
 			for asset in assets {
 				match asset.state {
 					RedemptionState::Initiated => {
-						// unbonding processes failed
-						// TODO retry or handle this separately?
+						// unbonding processes failed in previous attempt, we don't initiate another xcm here instead we
+						// rely on the remote asset manager that it followed up on the failing xcm. Instead we check if
+						// the parachain has enough assets available now to cover this pending witdrawal once the
+						// redemption period is over TODO retry or handle this separately?
 						all_withdrawn = false;
 					}
 					RedemptionState::Unbonding => {
