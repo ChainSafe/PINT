@@ -94,7 +94,7 @@ benchmarks! {
 	}: _(
 		RawOrigin::Signed(origin.clone())
 	) verify {
-		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 0);
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin), None);
 	}
 
 	deposit {
@@ -186,16 +186,16 @@ benchmarks! {
 			tokens
 		));
 
+		// deposit some funds into the index from an user account
+		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
+		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
+
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
 				+ T::LockupPeriod::get()
 				+ 1_u32.into(),
 		);
-
-		// deposit some funds into the index from an user account
-		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
-		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
 	}: _(
 		RawOrigin::Signed(origin.clone()),
 		42_u32.into()
@@ -209,9 +209,11 @@ benchmarks! {
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
-		));
 		let units = 1_000u32.into();
+
+		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(), MultiLocation::Null, admin_deposit));
+
+		// deposit
 		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
 		let nav = AssetIndex::<T>::nav().unwrap();
 
