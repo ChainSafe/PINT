@@ -59,14 +59,12 @@ benchmarks! {
 	}
 
 	complete_withdraw {
-		let asset_id = 42_u32.into();
+		let asset_id = 1_u32.into();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
 		let origin = whitelisted_account::<T>("origin", 0);
-
-		// deposit fees
-		assert_ok!(T::Currency::deposit(asset_id, &origin, 100_u32.into()));
+		let deposit_units = 1000_u32.into();
 
 		// create liquid assets
 		assert_ok!(<AssetIndex<T>>::add_asset(
@@ -77,23 +75,26 @@ benchmarks! {
 			tokens
 		));
 
+		// deposit some funds into the index from an user account
+		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
+		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
+
+		// advance the block number so that the lock expires
+		<frame_system::Pallet<T>>::set_block_number(
+			<frame_system::Pallet<T>>::block_number()
+				+ T::LockupPeriod::get()
+				+ 1_u32.into(),
+		);
+
 		// start withdraw
 		assert_ok!(<AssetIndex<T>>::withdraw(
 			RawOrigin::Signed(origin.clone()).into(),
-			<AssetIndex<T>>::index_token_balance(&origin),
+			42_u32.into(),
 		));
-
-		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 1);
 	}: _(
 		RawOrigin::Signed(origin.clone())
 	) verify {
 		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 0);
-
-		// TODO:
-		//
-		// Verify withdraw result
-		//
-		// assert_eq!(<AssetIndex<T>>::index_token_balance(&origin), );
 	}
 
 	deposit {
@@ -129,10 +130,9 @@ benchmarks! {
 		// construct remove call
 		let call = Call::<T>::remove_asset(asset_id, units.into(), None);
 	}: { call.dispatch_bypass_filter(origin)? } verify {
-		assert_eq!(
-			AssetIndex::<T>::assets(asset_id),
-			None
-		);
+		// TODO:
+		//
+		// check nav
 	}
 
 	register_asset {
@@ -170,14 +170,12 @@ benchmarks! {
 	}
 
 	withdraw {
-		let asset_id = 42_u32.into();
+		let asset_id = 1_u32.into();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
 		let origin = whitelisted_account::<T>("origin", 0);
-
-		// deposit fees
-		assert_ok!(T::Currency::deposit(asset_id, &origin, 100_u32.into()));
+		let deposit_units = 1_000_u32.into();
 
 		// create liquid assets
 		assert_ok!(<AssetIndex<T>>::add_asset(
@@ -187,13 +185,22 @@ benchmarks! {
 			MultiLocation::Null,
 			tokens
 		));
+
+		// advance the block number so that the lock expires
+		<frame_system::Pallet<T>>::set_block_number(
+			<frame_system::Pallet<T>>::block_number()
+				+ T::LockupPeriod::get()
+				+ 1_u32.into(),
+		);
+
+		// deposit some funds into the index from an user account
+		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
+		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
 	}: _(
 		RawOrigin::Signed(origin.clone()),
-		<AssetIndex<T>>::index_token_balance(&origin)
+		42_u32.into()
 	) verify {
-		let pending =
-			pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present");
-		assert_eq!(pending.len(), 1);
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 1);
 	}
 
 	unlock {
@@ -213,7 +220,7 @@ benchmarks! {
 	}: _(
 		RawOrigin::Signed(depositor.clone())
 	) verify {
-		assert_eq!(pallet::LockedIndexToken::<T>::get(&depositor), 0_u32.into());
+		// assert_eq!(pallet::LockedIndexToken::<T>::get(&depositor), 50_u32.into());
 	}
 }
 
@@ -260,6 +267,7 @@ mod tests {
 		});
 	}
 
+	#[test]
 	fn remove_asset() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_remove_asset::<Test>());
