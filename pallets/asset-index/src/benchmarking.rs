@@ -58,6 +58,41 @@ benchmarks! {
 
 	}
 
+	complete_withdraw {
+		let asset_id = 42_u32.into();
+		let units = 100_u32.into();
+		let tokens = 500_u32.into();
+		let admin = T::AdminOrigin::successful_origin();
+		let origin = whitelisted_account::<T>("origin", 0);
+
+		// create liquid assets
+		assert_ok!(<AssetIndex<T>>::add_asset(
+			admin,
+			asset_id,
+			units,
+			MultiLocation::Null,
+			tokens
+		));
+
+		// start withdraw
+		assert_ok!(<AssetIndex<T>>::withdraw(
+			RawOrigin::Signed(origin.clone()).into(),
+			<AssetIndex<T>>::index_token_balance(&origin),
+		));
+
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 1);
+	}: _(
+		RawOrigin::Signed(origin.clone())
+	) verify {
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 0);
+
+		// TODO:
+		//
+		// Verify withdraw result
+		//
+		// assert_eq!(<AssetIndex<T>>::index_token_balance(&origin), );
+	}
+
 	deposit {
 		// ASSET_A_ID
 		let asset_id = 1_u32.into();
