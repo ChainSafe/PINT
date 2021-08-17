@@ -65,6 +65,9 @@ benchmarks! {
 		let admin = T::AdminOrigin::successful_origin();
 		let origin = whitelisted_account::<T>("origin", 0);
 
+		// deposit fees
+		assert_ok!(T::Currency::deposit(asset_id, &origin, 100_u32.into()));
+
 		// create liquid assets
 		assert_ok!(<AssetIndex<T>>::add_asset(
 			admin,
@@ -173,6 +176,9 @@ benchmarks! {
 		let admin = T::AdminOrigin::successful_origin();
 		let origin = whitelisted_account::<T>("origin", 0);
 
+		// deposit fees
+		assert_ok!(T::Currency::deposit(asset_id, &origin, 100_u32.into()));
+
 		// create liquid assets
 		assert_ok!(<AssetIndex<T>>::add_asset(
 			admin,
@@ -207,9 +213,7 @@ benchmarks! {
 	}: _(
 		RawOrigin::Signed(depositor.clone())
 	) verify {
-		// TODO:
-		//
-		// verify unlock
+		assert_eq!(pallet::LockedIndexToken::<T>::get(&depositor), 0_u32.into());
 	}
 }
 
