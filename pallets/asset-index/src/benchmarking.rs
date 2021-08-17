@@ -229,6 +229,13 @@ mod tests {
 	}
 
 	#[test]
+	fn complete_withdraw() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_complete_withdraw::<Test>());
+		});
+	}
+
+	#[test]
 	fn set_metadata() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_set_metadata::<Test>());
@@ -242,6 +249,13 @@ mod tests {
 		});
 	}
 
+	#[test]
+	fn register_asset() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_register_asset::<Test>());
+		});
+	}
+
 	fn remove_asset() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(test_benchmark_remove_asset::<Test>());
@@ -249,9 +263,16 @@ mod tests {
 	}
 
 	#[test]
-	fn register_asset() {
+	fn unlock() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_register_asset::<Test>());
+			assert_ok!(test_benchmark_unlock::<Test>());
+		});
+	}
+
+	#[test]
+	fn withdraw() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(test_benchmark_withdraw::<Test>());
 		});
 	}
 }
