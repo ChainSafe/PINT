@@ -26,11 +26,12 @@
 //! epoch should last. **An epoch length cannot be changed after the chain has started.** Meaning
 //! this is chain specific constant. An Epoch on kusama is 1 hour, and 4 hours
 //!
-//! Knowledge of the `EpochDuration` and the `BondingDuration` and the `MILLISECS_PER_BLOCK` is
-//! required to determine when we call `withdraw_unbonded` after we initiate the `unbond`.
+//! Knowledge of the `EpochDuration` and the `BondingDuration` and the `MILLISECS_PER_BLOCK` or
+//! rather the `SLOT_DURATION` is required to determine when we call `withdraw_unbonded` after we
+//! initiate the `unbond`.
 
 use codec::{Compact, Decode, Encode, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
+use frame_support::{sp_std::vec::Vec, weights::Weight, BoundedVec, RuntimeDebug};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -184,29 +185,25 @@ pub enum RewardDestination<AccountId> {
 /// The `pallet_staking` configuration for a particular chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
-pub struct StakingConfig<AccountId, Balance> {
+pub struct StakingConfig<AccountId, Balance, BlockNumber> {
 	/// The index of `pallet_index` within the parachain's runtime
 	pub pallet_index: u8,
-	/// The limitation to the number of fund-chunks that can be scheduled to be
-	/// unlocked via `unbond`.
-	///
-	/// If this is reached, the bonded account _must_ first wait until
-	/// successful call to `withdraw_unbonded` to remove some of the chunks.
-	// TODO make this a constant? `MAX_UNLOCKING_CHUNKS`
-	pub max_unlocking_chunks: u32,
-	/// Counter for the sent `unbond` calls.
-	pub pending_unbond_calls: u32,
 	/// The configured reward destination
 	pub reward_destination: RewardDestination<AccountId>,
 	/// The specified `minimum_balance` specified the parachain's `T::Currency`
 	pub minimum_balance: Balance,
 	/// The configured weights for `pallet_staking`
 	pub weights: StakingWeights,
-	/* (in number of eras) must
-	 * pass until the funds can actually be removed. Once the `BondingDuration` is over
-	 * TODO: add bonding duration */
-
-	/* pub type EraIndex = u32; */
+	/// This measures the time that must pass until `unbonded` funds can be withdrawn measured in
+	/// **BlockNumber**s
+	///
+	/// *NOTE:* It is expected that this is already the duration measured in PINT parachain blocks
+	/// and *NOT* in remote chain blocks. This involves converting the block time of the other chain
+	/// to the block time of PINT. The `bonding_duration` as it's expected here is
+	/// ```nocompile
+	///    BondDuration * EPOCH_DURATION_IN_SLOTS * (MILLISEC_PER_BLOCK_other / MILLISEC_PER_BLOCK_pint)
+	/// ```
+	pub bonding_duration: BlockNumber,
 }
 
 // Counter for the number of eras that have passed
@@ -214,35 +211,33 @@ pub type EraIndex = u32;
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct UnlockChunk<Balance> {
+pub struct UnlockChunk<Balance, BlockNumber> {
 	/// Amount of funds to be unlocked.
 	pub value: Balance,
-	/// Era number at which point it'll be unlocked.
-	pub era: EraIndex,
+	/// The block number at which point it'll be unlocked.
+	///
+	/// *NOTE:* this is expected to be PINT block number
+	pub end: BlockNumber,
 }
 
 /// Represents the state of staking of the PINT's sovereign account on another chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct StakingLedger<Source, Balance> {
+pub struct StakingLedger<Source, Balance, BlockNumber> {
 	/// The controller account
 	pub controller: Source,
-
 	/// The total amount of the stash's balance that will be at stake
 	pub active: Balance,
-
 	/// The amount currently unbonded but not withrawn
 	pub unbonded: Balance,
-
-	/// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
-	pub unlocked_chunks: u32,
-	/* /// Any balance that is becoming free, which may eventually be transferred out
-	 * /// of the stash (assuming it doesn't get slashed first).
-	 * No more than a limited number of unlocking chunks can co-exists at the same time.
-	 * (See `MAX_UNLOCKING_CHUNKS`) In that case, they chunks need to be removed first via `withdraw_unbonded`
-	 * pub unlocking: Vec<UnlockChunk<Balance>>, */
+	/// Any balance that is becoming free, which may eventually be transferred out
+	/// of the stash (assuming it doesn't get slashed first).
+	///
+	/// *NOTE:* No more than a limited number of unlocking chunks can co-exists at the same time.
+	///  See `pallet_staking::MAX_UNLOCKING_CHUNKS`.
+	pub unlocking: BoundedVec<UnlockChunk<Balance, BlockNumber>, pallet_staking::MAX_UNLOCKING_CHUNKS>,
 }
 
-impl<Source, Balance> StakingLedger<Source, Balance>
+impl<Source, Balance, BlockNumber> StakingLedger<Source, Balance, BlockNumber>
 where
 	Balance: AtLeast32BitUnsigned + Copy,
 {
@@ -279,4 +274,21 @@ pub struct StakingWeights {
 	pub unbond: Weight,
 	/// Weight for `withdraw_unbonded` extrinsic
 	pub withdraw_unbonded: Weight,
+}
+
+/// Represents all staking related durations required to determine the correct chain-specific
+/// bonding duration.
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
+pub struct StakingDurations {
+	/// This determines the average expected block time that the chain is targeting.
+	///
+	/// This is essentially the block time in milliseconds.
+	pub slot_duration: u64,
+	/// The amount of time in slots, that each epoch should last
+	///
+	/// This is essentially the duration of an Era
+	pub epoch_duration: u64,
+	/// The number of eras the bonding duration is long
+	pub bonding_duration: u64,
 }
