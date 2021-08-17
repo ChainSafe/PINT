@@ -31,7 +31,7 @@
 //! initiate the `unbond`.
 
 use codec::{Compact, Decode, Encode, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, BoundedVec, RuntimeDebug};
+use frame_support::{sp_std::vec::Vec, weights::Weight, BoundedVec, RuntimeDebug, parameter_types};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -220,6 +220,11 @@ pub struct UnlockChunk<Balance, BlockNumber> {
 	pub end: BlockNumber,
 }
 
+parameter_types! {
+	// The maximum allowed number of unlocking chunks that can exist simultaneously
+	pub const MaxUnlockingChunks: u32 = pallet_staking::MAX_UNLOCKING_CHUNKS as u32;
+}
+
 /// Represents the state of staking of the PINT's sovereign account on another chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct StakingLedger<Source, Balance, BlockNumber> {
@@ -234,7 +239,7 @@ pub struct StakingLedger<Source, Balance, BlockNumber> {
 	///
 	/// *NOTE:* No more than a limited number of unlocking chunks can co-exists at the same time.
 	///  See `pallet_staking::MAX_UNLOCKING_CHUNKS`.
-	pub unlocking: BoundedVec<UnlockChunk<Balance, BlockNumber>, pallet_staking::MAX_UNLOCKING_CHUNKS>,
+	pub unlocking: BoundedVec<UnlockChunk<Balance, BlockNumber>, MaxUnlockingChunks>,
 }
 
 impl<Source, Balance, BlockNumber> StakingLedger<Source, Balance, BlockNumber>
@@ -253,7 +258,7 @@ where
 	pub fn unbond(&mut self, amount: Balance) {
 		self.active = self.active.saturating_sub(amount);
 		self.unbonded = self.unbonded.saturating_add(amount);
-		self.unlocked_chunks = self.unlocked_chunks.saturating_add(1);
+		// self.unlocked_chunks = self.unlocked_chunks.saturating_add(1);
 	}
 
 	/// The total amount of balance currently held in the staking pallet
