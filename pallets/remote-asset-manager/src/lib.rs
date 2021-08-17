@@ -41,7 +41,7 @@ pub mod pallet {
 		assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights},
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
-			Bond, RewardDestination, StakingBondState, StakingCall, StakingCallEncoder, StakingConfig, StakingWeights,
+			Bond, RewardDestination, StakingLedger, StakingCall, StakingCallEncoder, StakingConfig, StakingWeights,
 		},
 		PalletCall, PalletCallEncoder,
 	};
@@ -189,7 +189,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		<T as Config>::AssetId,
-		StakingBondState<LookupSourceFor<T>, T::Balance>,
+		StakingLedger<LookupSourceFor<T>, T::Balance>,
 		OptionQuery,
 	>;
 
@@ -405,9 +405,9 @@ pub mod pallet {
 			ensure!(result.is_ok(), Error::<T>::FailedToSendBondXcm);
 
 			// mark as bonded
-			let state = StakingBondState {
+			let state = StakingLedger {
 				controller: controller.clone(),
-				bonded: value,
+				active: value,
 				unbonded: Zero::zero(),
 				unlocked_chunks: Zero::zero(),
 			};
@@ -701,7 +701,7 @@ pub mod pallet {
 			let mut state = PalletStakingBondState::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
 			// ensure that we have enough balance bonded to unbond
-			ensure!(amount < state.bonded.saturating_sub(config.minimum_balance), Error::<T>::InsufficientBond);
+			ensure!(amount < state.active.saturating_sub(config.minimum_balance), Error::<T>::InsufficientBond);
 
 			// Can't schedule unbond before withdrawing the unlocked funds first
 			ensure!(
@@ -787,7 +787,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
-
 		fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
 			Self::do_send_bond_extra(asset, amount)
 		}
@@ -823,6 +822,13 @@ pub mod pallet {
 			T::MinimumRemoteStashBalance::get(asset)
 		}
 	}
+
+	// impl<T: Config> OnNewEra<EraIndex> for Pallet<T> {
+	// 	fn on_new_era(new_era: EraIndex) {
+	// 		CurrentEra::<T>::put(new_era);
+	// 		RebalancePhase::<T>::put(Phase::Started);
+	// 	}
+	// }
 
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {

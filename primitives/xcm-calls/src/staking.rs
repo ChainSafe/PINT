@@ -174,31 +174,54 @@ pub struct StakingConfig<AccountId, Balance> {
 	pub minimum_balance: Balance,
 	/// The configured weights for `pallet_staking`
 	pub weights: StakingWeights,
+
+	// (in number of eras) must
+	// pass until the funds can actually be removed. Once the `BondingDuration` is over
+	// TODO: add bonding duration
+
+	// pub type EraIndex = u32;
+
 }
 
-/// Represents the bond state of the PINT's sovereign account on a chain
+// Counter for the number of eras that have passed
+pub type EraIndex = u32;
+
+/// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub struct StakingBondState<Source, Balance> {
-	/// The controller
+pub struct UnlockChunk<Balance> {
+	/// Amount of funds to be unlocked.
+	pub value: Balance,
+	/// Era number at which point it'll be unlocked.
+	pub era: EraIndex,
+}
+
+/// Represents the state of staking of the PINT's sovereign account on another chain
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub struct StakingLedger<Source, Balance> {
+	/// The controller account
 	pub controller: Source,
 
-	/// The amount currently bonded
-	pub bonded: Balance,
+	/// The total amount of the stash's balance that will be at stake
+	pub active: Balance,
 
 	/// The amount currently unbonded but not withrawn
 	pub unbonded: Balance,
 
 	/// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
 	pub unlocked_chunks: u32,
+
+	// /// Any balance that is becoming free, which may eventually be transferred out
+	// /// of the stash (assuming it doesn't get slashed first).
+	// pub unlocking: Vec<UnlockChunk<Balance>>,
 }
 
-impl<Source, Balance> StakingBondState<Source, Balance>
+impl<Source, Balance> StakingLedger<Source, Balance>
 where
 	Balance: AtLeast32BitUnsigned + Copy,
 {
 	/// Mirror an `bond` or `bond_extra` that increased the bonded amount
 	pub fn add_bond(&mut self, amount: Balance) {
-		self.bonded = self.unbonded.saturating_add(amount);
+		self.active = self.unbonded.saturating_add(amount);
 	}
 
 	/// Mirror an `unbond` call that
@@ -206,14 +229,14 @@ where
 	///   - increases the unbonded balance by `amount`
 	///   - increases the unlocked chunks by +1
 	pub fn unbond(&mut self, amount: Balance) {
-		self.bonded = self.bonded.saturating_sub(amount);
+		self.active = self.active.saturating_sub(amount);
 		self.unbonded = self.unbonded.saturating_add(amount);
 		self.unlocked_chunks = self.unlocked_chunks.saturating_add(1);
 	}
 
 	/// The total amount of balance currently held in the staking pallet
 	pub fn total_balance(&self) -> Balance {
-		self.bonded.saturating_add(self.unbonded)
+		self.active.saturating_add(self.unbonded)
 	}
 }
 
