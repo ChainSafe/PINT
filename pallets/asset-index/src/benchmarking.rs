@@ -58,6 +58,27 @@ benchmarks! {
 
 	}
 
+	deposit {
+		// ASSET_A_ID
+		let asset_id = 1_u32.into();
+		let origin = T::AdminOrigin::successful_origin();
+		let depositor = whitelisted_account::<T>("depositor", 0);
+		let admin_deposit = 5u32.into();
+		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
+		));
+		let units = 1_000u32.into();
+		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
+		let nav = AssetIndex::<T>::nav().unwrap();
+	}: _(
+		RawOrigin::Signed(depositor.clone()),
+		asset_id,
+		units
+	) verify {
+			let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
+			let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
+			assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
+	}
+
 	remove_asset {
 		let asset_id = 1_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
@@ -110,26 +131,28 @@ benchmarks! {
 		assert_eq!(metadata.decimals, decimals);
 	}
 
-	deposit {
-		// ASSET_A_ID
-		let asset_id = 1_u32.into();
-		let origin = T::AdminOrigin::successful_origin();
-		let depositor = whitelisted_account::<T>("depositor", 0);
-		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
-			));
-		let units = 1_000u32.into();
-		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
-		let nav = AssetIndex::<T>::nav().unwrap();
+	withdraw {
+		let asset_id = 42_u32.into();
+		let units = 100_u32.into();
+		let tokens = 500_u32.into();
+		let admin = T::AdminOrigin::successful_origin();
+		let origin = whitelisted_account::<T>("origin", 0);
+
+		// create liquid assets
+		assert_ok!(<AssetIndex<T>>::add_asset(
+			admin,
+			asset_id,
+			units,
+			MultiLocation::Null,
+			tokens
+		));
 	}: _(
-		RawOrigin::Signed(depositor.clone()),
-		asset_id,
-		units
-	)
-	verify {
-		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
-		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
+		RawOrigin::Signed(origin.clone()),
+		<AssetIndex<T>>::index_token_balance(&origin)
+	) verify {
+		let pending =
+			pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present");
+		assert_eq!(pending.len(), 1);
 	}
 }
 
