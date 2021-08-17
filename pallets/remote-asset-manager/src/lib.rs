@@ -41,7 +41,7 @@ pub mod pallet {
 		assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights},
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
-			Bond, RewardDestination, StakingLedger, StakingCall, StakingCallEncoder, StakingConfig, StakingWeights,
+			Bond, RewardDestination, StakingCall, StakingCallEncoder, StakingConfig, StakingLedger, StakingWeights,
 		},
 		PalletCall, PalletCallEncoder,
 	};
@@ -185,13 +185,8 @@ pub mod pallet {
 
 	/// The current state of PINT sovereign account bonding in `pallet_staking`.
 	#[pallet::storage]
-	pub type PalletStakingBondState<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		<T as Config>::AssetId,
-		StakingLedger<LookupSourceFor<T>, T::Balance>,
-		OptionQuery,
-	>;
+	pub type PalletStakingBondState<T: Config> =
+		StorageMap<_, Twox64Concat, <T as Config>::AssetId, StakingLedger<LookupSourceFor<T>, T::Balance>, OptionQuery>;
 
 	/// The config of `pallet_proxy` in the runtime of the parachain.
 	#[pallet::storage]
@@ -743,6 +738,7 @@ pub mod pallet {
 		/// Remove any unlocked chunks from the `unlocking` queue.
 		/// An `withdraw_unbonded` call must be signed by the controller
 		/// account.
+		/// This essentially gives the PNIT's sovereign hold of the balance
 		pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
 			let dest = T::AssetRegistry::native_asset_location(&asset)
 				.ok_or(Error::<T>::UnknownAsset)?
@@ -762,6 +758,7 @@ pub mod pallet {
 				Error::<T>::NoControllerPermission
 			);
 
+			// NOTE: this sets `num_slashing_spans` to 0, to not clear slashing metadata
 			let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 

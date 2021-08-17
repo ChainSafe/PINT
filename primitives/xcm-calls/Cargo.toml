@@ -14,6 +14,8 @@ codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = 
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
 
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+
 [dev-dependencies]
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
@@ -40,6 +42,7 @@ std = [
     'codec/std',
     'frame-support/std',
     'frame-system/std',
+    'pallet-staking/std'
 ]
 # this feature is only for compilation now
 runtime-benchmarks = []

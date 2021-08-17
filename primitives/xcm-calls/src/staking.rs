@@ -1,7 +1,33 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-//! Xcm support for `pallet_staking` calls
+//! # Xcm support for `pallet_staking` calls.
+//!
+//! This module provides support for calling into the FRAME `pallet_staking` pallet of a remote
+//! chain via XCM.
+//!
+//! Staking involves bonding funds for a certain amount of blocks.
+//! The `pallet_staking` pallet is configured with [`Config::BondingDuration`] (in number of eras)
+//! must pass until the funds can actually be removed (`withdraw_unbonded`), after they were
+//! `unbonded`.
+//! - An **Era** is defined as  (whole) number of sessions, which is the period that the validator
+//!   set (and each validator's active nominator set) is recalculated and where rewards are paid
+//!   out. An era is ~7 days (relay chain) and the `BondingDuration` on polkadot is 28 Eras and 7
+//!   Eras on Kusama.
+//! - A **Session** is a period of time that has a constant set of validators and is measured in
+//!   block numbers. Sessions are handled by the FRAME `pallet_session` pallet which implement the
+//!   `ShouldEndSession` trait which determines when a session has ended, and new started. This is
+//!   used to determine the overall session length.
+//!
+//! Kusama and polkadot rely on **BABE** (`pallet_babe`) to determine when a session has ended. the
+//! BABE pallet implements the `ShouldEndSession` trait and determines whether a session should end
+//! by determine whether the epoch should change. An epoch should change if more than
+//! `EpochDuration` time has passed. `EpochDuration` measures the amount of time in slots, that each
+//! epoch should last. **An epoch length cannot be changed after the chain has started.** Meaning
+//! this is chain specific constant. An Epoch on kusama is 1 hour, and 4 hours
+//!
+//! Knowledge of the `EpochDuration` and the `BondingDuration` and the `MILLISECS_PER_BLOCK` is
+//! required to determine when we call `withdraw_unbonded` after we initiate the `unbond`.
 
 use codec::{Compact, Decode, Encode, Output};
 use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
@@ -102,6 +128,7 @@ pub enum StakingCall<Source, Balance, AccountId> {
 	///
 	/// The dispatch origin for this call must be _Signed_ by the controller,
 	/// not the stash.
+	/// `num_slashing_spans` the number of slashing spans to remove.
 	// #[codec(index = 3)]
 	WithdrawUnbonded(u32),
 	/// The [`nominate`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.nominate) extrinsic.
@@ -165,6 +192,7 @@ pub struct StakingConfig<AccountId, Balance> {
 	///
 	/// If this is reached, the bonded account _must_ first wait until
 	/// successful call to `withdraw_unbonded` to remove some of the chunks.
+	// TODO make this a constant? `MAX_UNLOCKING_CHUNKS`
 	pub max_unlocking_chunks: u32,
 	/// Counter for the sent `unbond` calls.
 	pub pending_unbond_calls: u32,
@@ -174,13 +202,11 @@ pub struct StakingConfig<AccountId, Balance> {
 	pub minimum_balance: Balance,
 	/// The configured weights for `pallet_staking`
 	pub weights: StakingWeights,
+	/* (in number of eras) must
+	 * pass until the funds can actually be removed. Once the `BondingDuration` is over
+	 * TODO: add bonding duration */
 
-	// (in number of eras) must
-	// pass until the funds can actually be removed. Once the `BondingDuration` is over
-	// TODO: add bonding duration
-
-	// pub type EraIndex = u32;
-
+	/* pub type EraIndex = u32; */
 }
 
 // Counter for the number of eras that have passed
@@ -209,10 +235,11 @@ pub struct StakingLedger<Source, Balance> {
 
 	/// Number of dispatched `unbond` calls since the last `withdraw_unbonded`
 	pub unlocked_chunks: u32,
-
-	// /// Any balance that is becoming free, which may eventually be transferred out
-	// /// of the stash (assuming it doesn't get slashed first).
-	// pub unlocking: Vec<UnlockChunk<Balance>>,
+	/* /// Any balance that is becoming free, which may eventually be transferred out
+	 * /// of the stash (assuming it doesn't get slashed first).
+	 * No more than a limited number of unlocking chunks can co-exists at the same time.
+	 * (See `MAX_UNLOCKING_CHUNKS`) In that case, they chunks need to be removed first via `withdraw_unbonded`
+	 * pub unlocking: Vec<UnlockChunk<Balance>>, */
 }
 
 impl<Source, Balance> StakingLedger<Source, Balance>
