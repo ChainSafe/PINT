@@ -189,6 +189,28 @@ benchmarks! {
 			pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present");
 		assert_eq!(pending.len(), 1);
 	}
+
+	unlock {
+		// ASSET_A_ID
+		let asset_id = 1_u32.into();
+		let origin = T::AdminOrigin::successful_origin();
+		let depositor = whitelisted_account::<T>("depositor", 0);
+		let admin_deposit = 5u32.into();
+		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
+		));
+		let units = 1_000u32.into();
+		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
+		let nav = AssetIndex::<T>::nav().unwrap();
+
+		// deposit
+		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(depositor.clone()).into(), asset_id, units));
+	}: _(
+		RawOrigin::Signed(depositor.clone())
+	) verify {
+		// TODO:
+		//
+		// verify unlock
+	}
 }
 
 #[cfg(test)]
