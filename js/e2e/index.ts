@@ -115,38 +115,42 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["assetIndex.addAsset"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "withdraw",
-            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
-            verify: async () => {
-                assert(
-                    ((
-                        await api.query.assetIndex.pendingWithdrawals(
-                            config.alice.address
-                        )
-                    ).toHuman() as any).length === 1,
-                    "assetIndex.withdraw failed"
-                );
-            },
-        },
-        {
-            required: ["assetIndex.withdraw"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "completeWithdraw",
-            args: [],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.pendingWithdrawals(
-                        config.alice.address
-                    )) as any).isNone,
-                    "assetIndex.completeWithdraw failed"
-                );
-            },
-        },
+        // {
+        //     required: ["assetIndex.addAsset"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "withdraw",
+        //     args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (
+        //                     await api.query.assetIndex.pendingWithdrawals(
+        //                         config.alice.address
+        //                     )
+        //                 ).toHuman() as any
+        //             ).length === 1,
+        //             "assetIndex.withdraw failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["assetIndex.withdraw"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "completeWithdraw",
+        //     args: [],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (await api.query.assetIndex.pendingWithdrawals(
+        //                     config.alice.address
+        //                 )) as any
+        //             ).isNone,
+        //             "assetIndex.completeWithdraw failed"
+        //         );
+        //     },
+        // },
         /* remote-asset-manager*/
         {
             required: ["assetIndex.addAsset"],
@@ -225,14 +229,16 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             shared: async () => {
                 return new Promise(async (resolve) => {
                     await waitBlock(1);
-                    const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                    const hash = (
+                        (await api.query.committee.activeProposals()) as any
+                    )[0];
                     const currentBlock = (
                         await api.derive.chain.bestNumber()
                     ).toNumber();
 
-                    const end = ((
-                        await api.query.committee.votes(hash)
-                    ).toJSON() as any).end as number;
+                    const end = (
+                        (await api.query.committee.votes(hash)).toJSON() as any
+                    ).end as number;
 
                     const needsToWait =
                         end - currentBlock > VOTING_PERIOD
@@ -290,7 +296,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             required: ["committee.vote"],
             shared: async () => {
-                const hash = ((await api.query.committee.activeProposals()) as any)[0];
+                const hash = (
+                    (await api.query.committee.activeProposals()) as any
+                )[0];
                 return hash;
             },
             signed: config.alice,
@@ -313,9 +321,11 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [config.ziggy.address],
             verify: async () => {
                 assert(
-                    ((await api.query.committee.members(
-                        config.ziggy.address
-                    )) as any).isSome,
+                    (
+                        (await api.query.committee.members(
+                            config.ziggy.address
+                        )) as any
+                    ).isSome,
                     "Add constituent failed"
                 );
             },
@@ -360,35 +370,35 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         /* price-feed */
-        {
-            required: ["chainlinkFeed.createFeed"],
-            pallet: "priceFeed",
-            call: "trackAssetPriceFeed",
-            args: [ASSET_ID_A, 0],
-            verify: async () => {
-                assert(
-                    Number(
-                        (
-                            await api.query.priceFeed.assetFeeds(ASSET_ID_A)
-                        ).toHuman()
-                    ) === 0,
-                    "Track feed failed"
-                );
-            },
-        },
-        {
-            required: ["priceFeed.trackAssetPriceFeed"],
-            pallet: "priceFeed",
-            call: "untrackAssetPriceFeed",
-            args: [ASSET_ID_A],
-            verify: async () => {
-                assert(
-                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-                        .isNone,
-                    "Untrack feed failed"
-                );
-            },
-        },
+        // {
+        //     required: ["chainlinkFeed.createFeed"],
+        //     pallet: "priceFeed",
+        //     call: "trackAssetPriceFeed",
+        //     args: [ASSET_ID_A, 0],
+        //     verify: async () => {
+        //         assert(
+        //             Number(
+        //                 (
+        //                     await api.query.priceFeed.assetFeeds(ASSET_ID_A)
+        //                 ).toHuman()
+        //             ) === 0,
+        //             "Track feed failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["priceFeed.trackAssetPriceFeed"],
+        //     pallet: "priceFeed",
+        //     call: "untrackAssetPriceFeed",
+        //     args: [ASSET_ID_A],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "Untrack feed failed"
+        //         );
+        //     },
+        // },
         /* saft-registry */
         {
             signed: config.alice,
@@ -403,32 +413,34 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["saftRegistry.addSaft"],
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "reportNav",
-            args: [ASSET_ID_B, 0, 336],
-            verify: async () => {
-                const saft = ((await api.query.saftRegistry.activeSAFTs(
-                    ASSET_ID_B
-                )) as any).toJSON();
-                const expect = {
-                    nav: 336,
-                    units: 42,
-                };
-                assert(
-                    JSON.stringify(saft[0]) ===
-                        JSON.stringify({
-                            nav: 336,
-                            units: 42,
-                        }),
-                    `Report nav failed, expect: ${JSON.stringify(
-                        expect
-                    )}, result: ${JSON.stringify(saft[0])}`
-                );
-            },
-        },
+        // {
+        //     required: ["saftRegistry.addSaft"],
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "reportNav",
+        //     args: [ASSET_ID_B, 0, 336],
+        //     verify: async () => {
+        //         const saft = (
+        //             (await api.query.saftRegistry.activeSAFTs(
+        //                 ASSET_ID_B
+        //             )) as any
+        //         ).toJSON();
+        //         const expect = {
+        //             nav: 336,
+        //             units: 42,
+        //         };
+        //         assert(
+        //             JSON.stringify(saft[0]) ===
+        //                 JSON.stringify({
+        //                     nav: 336,
+        //                     units: 42,
+        //                 }),
+        //             `Report nav failed, expect: ${JSON.stringify(
+        //                 expect
+        //             )}, result: ${JSON.stringify(saft[0])}`
+        //         );
+        //     },
+        // },
         /* asset-index */
         {
             required: ["saftRegistry.reportNav"],

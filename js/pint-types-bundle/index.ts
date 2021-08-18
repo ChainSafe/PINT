@@ -25,7 +25,24 @@ export const definitions = {
                         Saft: null,
                     },
                 },
+                AssetConfig: {
+                    pallet_index: "u8",
+                    weights: "AssetsWeights",
+                },
                 AssetId: "u32",
+                AssetsWeights: {
+                    mint: "Weight",
+                    burn: "Weight",
+                    transfer: "Weight",
+                    force_transfer: "Weight",
+                    freeze: "Weight",
+                    thaw: "Weight",
+                    freeze_asset: "Weight",
+                    thaw_asset: "Weight",
+                    approve_transfer: "Weight",
+                    cancel_approval: "Weight",
+                    transfer_approved: "Weight",
+                },
                 AssetMetadata: {
                     name: "BoundedString",
                     symbol: "BoundedString",
@@ -93,6 +110,7 @@ export const definitions = {
                         Transferred: null,
                     },
                 },
+                SAFTId: "u32",
                 SAFTRecord: {
                     nav: "Balance",
                     units: "Balance",
@@ -108,6 +126,12 @@ export const definitions = {
                     bond_extra: "Weight",
                     unbond: "Weight",
                     withdraw_unbonded: "Weight",
+                },
+                StatemintConfig: {
+                    assets_config: "AssetConfig",
+                    parachain_id: "u32",
+                    enabled: "bool",
+                    pint_asset_id: "AssetId",
                 },
                 Vote: {
                     _enum: {
