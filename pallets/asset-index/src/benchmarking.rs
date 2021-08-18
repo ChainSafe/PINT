@@ -8,7 +8,7 @@ use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
 	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
-	traits::{EnsureOrigin, Get},
+	traits::{Currency as _, EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
@@ -34,7 +34,6 @@ fn whitelist_acc<T: Config>(acc: &T::AccountId) {
 
 benchmarks! {
 	add_asset {
-		// ASSET_A_ID
 		let asset_id: T::AssetId = 1_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
@@ -55,7 +54,6 @@ benchmarks! {
 			T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account()),
 			million
 		);
-
 	}
 
 	complete_withdraw {
@@ -121,18 +119,24 @@ benchmarks! {
 	remove_asset {
 		let asset_id = 1_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
-		let depositor = whitelisted_account::<T>("depositor", 0);
 		let units: u32 = 100;
-		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units.into(), MultiLocation::Null,admin_deposit
+		let amount = 500u32.into();
+
+		assert_ok!(AssetIndex::<T>::add_asset(
+			origin.clone(),
+			asset_id,
+			units.into(),
+			MultiLocation::Null,
+			amount,
 		));
+
+		// ensure
+		assert_eq!(T::IndexToken::total_balance(&Default::default()), 500u32.into());
 
 		// construct remove call
 		let call = Call::<T>::remove_asset(asset_id, units.into(), None);
-	}: { call.dispatch_bypass_filter(origin)? } verify {
-		// TODO:
-		//
-		// check nav
+	}: { call.dispatch_bypass_filter(origin.clone())? } verify {
+		assert_eq!(T::IndexToken::total_balance(&Default::default()), 0u32.into());
 	}
 
 	register_asset {
@@ -204,7 +208,6 @@ benchmarks! {
 	}
 
 	unlock {
-		// ASSET_A_ID
 		let asset_id = 1_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
