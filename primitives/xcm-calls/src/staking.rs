@@ -31,7 +31,7 @@
 //! initiate the `unbond`.
 
 use codec::{Compact, Decode, Encode, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, BoundedVec, RuntimeDebug, parameter_types};
+use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
 
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -220,11 +220,6 @@ pub struct UnlockChunk<Balance, BlockNumber> {
 	pub end: BlockNumber,
 }
 
-parameter_types! {
-	// The maximum allowed number of unlocking chunks that can exist simultaneously
-	pub const MaxUnlockingChunks: u32 = pallet_staking::MAX_UNLOCKING_CHUNKS as u32;
-}
-
 /// Represents the state of staking of the PINT's sovereign account on another chain
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct StakingLedger<Source, Balance, BlockNumber> {
@@ -232,38 +227,49 @@ pub struct StakingLedger<Source, Balance, BlockNumber> {
 	pub controller: Source,
 	/// The total amount of the stash's balance that will be at stake
 	pub active: Balance,
-	/// The amount currently unbonded but not withrawn
-	pub unbonded: Balance,
+	/// The total amount of the stash's balance that we are currently accounting for.
+	/// It's just `active` plus all the `unlocking` balances.
+	pub total: Balance,
 	/// Any balance that is becoming free, which may eventually be transferred out
 	/// of the stash (assuming it doesn't get slashed first).
 	///
 	/// *NOTE:* No more than a limited number of unlocking chunks can co-exists at the same time.
 	///  See `pallet_staking::MAX_UNLOCKING_CHUNKS`.
-	pub unlocking: BoundedVec<UnlockChunk<Balance, BlockNumber>, MaxUnlockingChunks>,
+	pub unlocking: Vec<UnlockChunk<Balance, BlockNumber>>,
 }
 
 impl<Source, Balance, BlockNumber> StakingLedger<Source, Balance, BlockNumber>
 where
 	Balance: AtLeast32BitUnsigned + Copy,
+	BlockNumber: AtLeast32BitUnsigned,
 {
 	/// Mirror an `bond` or `bond_extra` that increased the bonded amount
-	pub fn add_bond(&mut self, amount: Balance) {
-		self.active = self.unbonded.saturating_add(amount);
+	pub fn bond_extra(&mut self, amount: Balance) {
+		self.active = self.active.saturating_add(amount);
 	}
 
-	/// Mirror an `unbond` call that
-	///   - decreases the bonded balance by `amount`
-	///   - increases the unbonded balance by `amount`
-	///   - increases the unlocked chunks by +1
-	pub fn unbond(&mut self, amount: Balance) {
-		self.active = self.active.saturating_sub(amount);
-		self.unbonded = self.unbonded.saturating_add(amount);
-		// self.unlocked_chunks = self.unlocked_chunks.saturating_add(1);
+	/// The amount currently unbonding
+	pub fn unlocking(&self) -> Balance {
+		self.total.saturating_sub(self.active)
 	}
 
-	/// The total amount of balance currently held in the staking pallet
-	pub fn total_balance(&self) -> Balance {
-		self.active.saturating_add(self.unbonded)
+	/// Remove entries from `unlocking` that are sufficiently old and reduce the
+	/// total by the sum of their balances.
+	/// Returns `true` if at least one chunk was consolidated
+	pub fn consolidate_unlocked(&mut self, current_block: BlockNumber) -> bool {
+		let chunks = self.unlocking.len();
+		let mut total = self.total;
+		self.unlocking.retain(|chunk| {
+			if chunk.end > current_block {
+				true
+			} else {
+				total = total.saturating_sub(chunk.value);
+				false
+			}
+		});
+		self.total = total;
+
+		chunks > self.unlocking.len()
 	}
 }
 
