@@ -18,6 +18,7 @@ export const definitions = {
                     available: "Balance",
                     reserved: "Balance",
                 },
+                Amount: "i128",
                 AssetAvailability: {
                     _enum: {
                         Liquid: "MultiLocation",
@@ -81,6 +82,10 @@ export const definitions = {
                 ProxyState: {
                     added: "Vec<ProxyType>",
                 },
+                ProxyWeights: {
+                    add_proxy: "Weight",
+                    remove_proxy: "Weight",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,
@@ -97,6 +102,12 @@ export const definitions = {
                     bonded: "Balance",
                     unbonded: "Balance",
                     unlocked_chunks: "u32",
+                },
+                StakingWeights: {
+                    bond: "Weight",
+                    bond_extra: "Weight",
+                    unbond: "Weight",
+                    withdraw_unbonded: "Weight",
                 },
                 Vote: {
                     _enum: {
