@@ -3,7 +3,7 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks};
+use frame_benchmarking::{account, benchmarks, vec};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
@@ -217,7 +217,10 @@ benchmarks! {
 	}: _(
 		RawOrigin::Signed(depositor.clone())
 	) verify {
-		// assert_eq!(pallet::LockedIndexToken::<T>::get(&depositor), 50_u32.into());
+		assert_eq!(<pallet::IndexTokenLocks<T>>::get(&depositor), vec![types::IndexTokenLock{
+			locked: 500_u32.into(),
+			end_block: <frame_system::Pallet<T>>::block_number() + T::LockupPeriod::get(),
+		}]);
 	}
 }
 
