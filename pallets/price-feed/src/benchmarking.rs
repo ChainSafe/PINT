@@ -1,28 +1,68 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
+
+#![cfg(feature = "runtime-benchmarks")]
+
 use super::*;
-use frame_benchmarking::{benchmarks, Zero};
-use frame_support::{assert_noop, traits::Get};
-use frame_system::Origin;
+use frame_benchmarking::benchmarks;
+use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_std::convert::TryInto, traits::EnsureOrigin};
+
+use crate::Pallet as PriceFeed;
+use codec::{Decode, Encode};
 
 benchmarks! {
-    track_asset_price_feed {
-    }: _(
-        <Origin<T>>::Root,
-        T::SelfAssetId::get(),
-        Zero::zero()
-    ) verify {
-        assert_noop!(
-            <Pallet<T>>::get_price(T::SelfAssetId::get()),
-            <Error<T>>::AssetPriceFeedNotFound
-        );
-    }
+	map_asset_price_feed {
+		let asset_id = T::AssetId::decode(&mut 2u64.encode().as_ref()).ok().unwrap();
+		let origin = T::AdminOrigin::successful_origin();
+		let feed_id = 0u32.try_into().ok().unwrap();
+		let call = Call::<T>::map_asset_price_feed(
+					asset_id.clone(),
+					feed_id
+		);
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(
+			PriceFeed::<T>::asset_feed(asset_id),
+			Some(feed_id)
+		);
+	}
 
-    untrack_asset_price_feed {
-    }: _(
-        <Origin<T>>::Root,
-        T::SelfAssetId::get()
-    ) verify {
-        assert_eq!(<AssetFeeds<T>>::get::<T::AssetId>(T::SelfAssetId::get()), None);
-    }
+	unmap_asset_price_feed {
+		let asset_id = T::AssetId::decode(&mut 2u64.encode().as_ref()).ok().unwrap();
+		let origin = T::AdminOrigin::successful_origin();
+		let feed_id = 0u32.try_into().ok().unwrap();
+		assert_ok!(PriceFeed::<T>::map_asset_price_feed(origin.clone(), asset_id.clone(), feed_id));
+		let call = Call::<T>::unmap_asset_price_feed(
+					asset_id.clone(),
+		);
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(
+			PriceFeed::<T>::asset_feed(asset_id),
+			None
+		);
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use frame_support::assert_ok;
+
+	use crate::mock::{new_test_ext, FeedBuilder, Test};
+
+	use super::*;
+
+	#[test]
+	fn map_asset_price_feed() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(FeedBuilder::new().description(b"X".to_vec()).build_and_store());
+			assert_ok!(test_benchmark_map_asset_price_feed::<Test>());
+		});
+	}
+
+	#[test]
+	fn unmap_asset_price_feed() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(FeedBuilder::new().description(b"X".to_vec()).build_and_store());
+			assert_ok!(test_benchmark_unmap_asset_price_feed::<Test>());
+		});
+	}
 }
