@@ -140,6 +140,10 @@ impl pallet_asset_index::Config for Test {
 
 pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> Result<Outcome, DispatchError> {
+		Ok(Outcome::Complete(0))
+	}
+
 	fn bond(_: AssetId, _: Balance) -> DispatchResult {
 		Ok(())
 	}

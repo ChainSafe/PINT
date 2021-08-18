@@ -118,8 +118,6 @@ pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 			RELAY_CHAIN_ASSET,
 			StakingConfig {
 				pallet_index: relay::STAKING_PALLET_INDEX,
-				max_unlocking_chunks: 42,
-				pending_unbond_calls: 42,
 				reward_destination: RewardDestination::Staked,
 				minimum_balance: 0,
 				weights: StakingWeights {
@@ -128,6 +126,7 @@ pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 					unbond: 1000_u64,
 					withdraw_unbonded: 1000_u64,
 				},
+				bonding_duration: 1_000,
 			},
 		)],
 		proxy_configs: vec![(
@@ -507,7 +506,7 @@ pub mod para {
 			match &location {
 				MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
 				MultiLocation::X3(Junction::Parent, Junction::Parachain(id), Junction::GeneralKey(key))
-					if ParaId::from(*id) == ParachainInfo::parachain_id().into() =>
+					if ParaId::from(*id) == ParachainInfo::parachain_id() =>
 				{
 					if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
 						if AssetIndex::is_liquid_asset(&asset_id) {
