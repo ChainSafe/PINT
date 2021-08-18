@@ -276,7 +276,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = ExtBuilder::default().build();
 	ext.execute_with(|| System::set_block_number(1));
 
-	MockPriceFeed::set_prices([
+	MockPriceFeed::set_prices(vec![
 		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
 		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
 	]);
@@ -288,7 +288,7 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 	let mut ext = ExtBuilder::default().with_balances(balances).build();
 	ext.execute_with(|| System::set_block_number(1));
 
-	MockPriceFeed::set_prices([
+	MockPriceFeed::set_prices(vec![
 		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
 		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
 	]);

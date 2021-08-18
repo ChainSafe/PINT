@@ -581,6 +581,7 @@ pub mod pallet {
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
 		#[pallet::weight(10_000)] // TODO: Set weights
+		#[transactional]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
