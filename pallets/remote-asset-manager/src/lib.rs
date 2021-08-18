@@ -725,6 +725,8 @@ pub mod pallet {
 			// insert the unlock chunk with its deadline, on this system
 			let end = frame_system::Pallet::<T>::block_number().saturating_add(config.bonding_duration);
 
+			// move from active to unlocking
+			ledger.active -= amount;
 			ledger.unlocking.push(UnlockChunk { value: amount, end });
 
 			PalletStakingLedger::<T>::insert(&asset, ledger);
