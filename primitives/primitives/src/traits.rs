@@ -24,7 +24,7 @@ pub trait MultiAssetRegistry<AssetId> {
 	fn is_liquid_asset(asset: &AssetId) -> bool;
 }
 
-/// Facility for remote asset transactions.
+/// Facility for remote asset operations.
 pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 	/// Transfers the given amount of asset from the account's sovereign account
 	/// on PINT into the account on the asset's destination.
@@ -42,10 +42,24 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 		amount: Balance,
 	) -> frame_support::sp_std::result::Result<Outcome, DispatchError>;
 
-	/// Dispatch XCM to bond assets
+	/// Notification of deposited funds in the index, ready to be`bond` to earn staking rewards.
+	///
+	/// This is an abstraction over how staking is supported on the `asset`'s native location.
+	/// In general, this can be one of
+	///     - None, staking is not supported, meaning this asset is idle.
+	///     - Staking via the FRAME `pallet_staking`, (e.g. Relay Chain).
+	///     - Liquid Staking, with support for early unbonding.
 	fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
 
-	/// Dispatch XCM to unbond assets
+	/// Notification of an upcoming withdrawal.
+	/// This tells the manager to either reserve the given amount from the free remote balance or
+	/// prepare to unbond those funds.
+	///
+	/// Unbonding an asset will involve:
+	///     - Nothing for assets that do not support staking (idle asset).
+	///     - Call `pallet_staking::unbond` + `pallet_staking::withdraw` on the asset's native chain
+	///       (e.g Relay Chain)
+	///     - Execute the unbond mechanism of the liquid staking protocol
 	fn unbond(asset: AssetId, amount: Balance) -> UnbondingOutcome;
 }
 

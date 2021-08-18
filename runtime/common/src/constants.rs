@@ -50,6 +50,16 @@ pub const UNIT: Balance = 1_000_000_000_000;
 pub const MILLIUNIT: Balance = 1_000_000_000;
 pub const MICROUNIT: Balance = 1_000_000;
 
+// NOTE: same block time as PINT
+pub const KUSAMA_EPOCH_DURATION_IN_SLOTS: BlockNumber = 1 * HOURS;
+pub const POLKADOT_EPOCH_DURATION_IN_SLOTS: BlockNumber = 4 * HOURS;
+
+// 28 eras for unbonding (7 days). Six sessions in an era (6 hours).
+pub const KUSAMA_BONDING_DURATION_IN_BLOCKS: BlockNumber = 28 * 6 * KUSAMA_EPOCH_DURATION_IN_SLOTS;
+
+/// 28 eras for unbonding (28 days). Six sessions in an era (24 hours)
+pub const POLKADOT_BONDING_DURATION_IN_BLOCKS: BlockNumber = 28 * 6 * POLKADOT_EPOCH_DURATION_IN_SLOTS;
+
 parameter_types! {
 	// TODO: use actual fees
 	pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};

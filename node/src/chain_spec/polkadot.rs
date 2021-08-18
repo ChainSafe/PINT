@@ -154,11 +154,10 @@ fn pint_testnet_genesis(
 				42,
 				StakingConfig {
 					pallet_index: 7,
-					max_unlocking_chunks: 42,
-					pending_unbond_calls: 42,
 					reward_destination: RewardDestination::Staked,
 					minimum_balance: 0,
 					weights: StakingWeights::polkadot(),
+					bonding_duration: POLKADOT_BONDING_DURATION_IN_BLOCKS,
 				},
 			)],
 			proxy_configs: vec![(42, ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() })],

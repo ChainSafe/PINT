@@ -39,7 +39,7 @@ std = [
     'serde',
     'codec/std',
     'frame-support/std',
-    'frame-system/std',
+    'frame-system/std'
 ]
 # this feature is only for compilation now
 runtime-benchmarks = []
