@@ -201,7 +201,7 @@ pub struct StakingConfig<AccountId, Balance, BlockNumber> {
 	/// and *NOT* in remote chain blocks. This involves converting the block time of the other chain
 	/// to the block time of PINT. The `bonding_duration` as it's expected here is
 	/// ```nocompile
-	///    BondDuration * EPOCH_DURATION_IN_SLOTS * (MILLISEC_PER_BLOCK_other / MILLISEC_PER_BLOCK_pint)
+	///    BondDuration * EPOCH_DURATION_IN_BLOCKS * SessionsPerEra * (MILLISEC_PER_BLOCK_other / MILLISEC_PER_BLOCK_pint)
 	/// ```
 	pub bonding_duration: BlockNumber,
 }
