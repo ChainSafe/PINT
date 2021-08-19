@@ -50,8 +50,9 @@ export const definitions = {
                 },
                 AssetWithdrawal: {
                     asset: "AssetId",
-                    state: "RedemptionState",
+                    reserved: "Balance",
                     units: "Balance",
+                    withdrawn: "bool",
                 },
                 Balance: "u128",
                 BalanceFor: "Balance",

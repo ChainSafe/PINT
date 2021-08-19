@@ -443,20 +443,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //                 )
         //             )) as any
         //         ).toJSON();
-        //         const expect = {
-        //             nav: 336,
-        //             units: 42,
-        //         };
-        //         assert(
-        //             JSON.stringify(saft[0]) ===
-        //                 JSON.stringify({
-        //                     nav: 336,
-        //                     units: 42,
-        //                 }),
-        //             `Report nav failed, expect: ${JSON.stringify(
-        //                 expect
-        //             )}, result: ${JSON.stringify(saft[0])}`
-        //         );
+        //         // const expect = {
+        //         //     nav: 336,
+        //         //     units: 42,
+        //         // };
+        //         // assert(
+        //         //     JSON.stringify(saft[0]) ===
+        //         //         JSON.stringify({
+        //         //             nav: 336,
+        //         //             units: 42,
+        //         //         }),
+        //         //     `Report nav failed, expect: ${JSON.stringify(
+        //         //         expect
+        //         //     )}, result: ${JSON.stringify(saft[0])}`
+        //         // );
         //     },
         // },
         /* asset-index */
