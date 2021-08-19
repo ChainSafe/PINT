@@ -92,29 +92,29 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["assetIndex.addAsset"],
-            shared: async () => {
-                return (await api.query.system.account(config.alice.address))
-                    .data.free;
-            },
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "deposit",
-            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
-            verify: async (before: Balance) => {
-                const current = (
-                    await api.query.system.account(config.alice.address)
-                ).data.free;
-
-                // cover weight fee
-                assert(
-                    current.sub(before).div(PINT).toNumber() ===
-                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
-                    "assetIndex.deposit failed"
-                );
-            },
-        },
+        // {
+        //     required: ["assetIndex.addAsset"],
+        //     shared: async () => {
+        //         return (await api.query.system.account(config.alice.address))
+        //             .data.free;
+        //     },
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "deposit",
+        //     args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+        //     verify: async (before: Balance) => {
+        //         const current = (
+        //             await api.query.system.account(config.alice.address)
+        //         ).data.free;
+        //
+        //         // cover weight fee
+        //         assert(
+        //             current.sub(before).div(PINT).toNumber() ===
+        //                 ASSET_ID_A_DEPOSIT.toNumber() - 1,
+        //             "assetIndex.deposit failed"
+        //         );
+        //     },
+        // },
         // {
         //     required: ["assetIndex.addAsset"],
         //     signed: config.alice,
@@ -293,28 +293,28 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["committee.vote"],
-            shared: async () => {
-                const hash = (
-                    (await api.query.committee.activeProposals()) as any
-                )[0];
-                return hash;
-            },
-            signed: config.alice,
-            pallet: "committee",
-            call: "close",
-            args: [(hash: string) => hash],
-            verify: async (hash: string) => {
-                const proposals = await api.query.committee.executedProposals(
-                    hash
-                );
-                assert(
-                    (proposals as any).isSome,
-                    "no proposal executed after committe.close"
-                );
-            },
-        },
+        // {
+        //     required: ["committee.vote"],
+        //     shared: async () => {
+        //         const hash = (
+        //             (await api.query.committee.activeProposals()) as any
+        //         )[0];
+        //         return hash;
+        //     },
+        //     signed: config.alice,
+        //     pallet: "committee",
+        //     call: "close",
+        //     args: [(hash: string) => hash],
+        //     verify: async (hash: string) => {
+        //         const proposals = await api.query.committee.executedProposals(
+        //             hash
+        //         );
+        //         assert(
+        //             (proposals as any).isSome,
+        //             "no proposal executed after committe.close"
+        //         );
+        //     },
+        // },
         {
             pallet: "committee",
             call: "addConstituent",
