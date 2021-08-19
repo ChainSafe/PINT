@@ -256,7 +256,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     const hash = (
                         (await api.query.committee.activeProposals()) as any
                     )[0];
-                    o;
                     const currentBlock = (
                         await api.derive.chain.bestNumber()
                     ).toNumber();
