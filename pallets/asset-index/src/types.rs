@@ -25,48 +25,25 @@ pub struct AssetMetadata<BoundedString> {
 	pub decimals: u8,
 }
 
-/// State of a single asset withdrawal on some parachain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum RedemptionState {
-	/// This marks the state in which a withdrawal was initiated but the requested unbonding failed,
-	/// either because the corresponding xcm unbonding failed to execute or because there is nothing
-	/// to unbond and the minimum remote stash balance is exhausted.
-	/// This indicates that the redemption in progress needs get confirmation that the remote asset
-	/// manager followed up on the failed unbonding procedure.
-	Initiated,
-	/// Unbonding was successful due to:
-	///   - the asset does not support staking.
-	///   - the current parachain's stash account is liquid enough to cover the withdrawal after the
-	///     redemption period without falling below the configured minimum stash balance threshold.
-	///   - xcm unbonding call was sent successfully.
-	///
-	/// This state represents a waiting state until the redemption period is over.
-	Unbonding,
-	/// This is a intermediary state in which it will be attempted to transfer the
-	/// units to the LP's account.
-	Transferring,
-	/// Successfully transferred the units to LP's account, the
-	/// `AssetWithdrawal` has thus been completed.
-	Withdrawn,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Represents a single asset being withdrawn
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub struct AssetWithdrawal<AssetId, Balance> {
 	/// The identifier of the asset
 	pub asset: AssetId,
-	/// The state in which the redemption process currently is.
-	pub state: RedemptionState,
 	/// The amount of asset units about to be transferred to the LP.
 	pub units: Balance,
+	/// The amount still reserved for this withdrawal.
+	pub reserved: Balance,
+	/// Whether this withdrawal was already been closed.
+	pub withdrawn: bool,
 }
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
-	/// When the redemption process is over
+	/// The block after which the redemption process is over.
 	pub end_block: BlockNumber,
-	/// All the withdrawals resulted from the redemption
+	/// All the withdrawals resulted from the redemption.
 	pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
 

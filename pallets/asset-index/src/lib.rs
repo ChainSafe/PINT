@@ -31,7 +31,6 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
-		require_transactional,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
 			ArithmeticError, FixedPointNumber,
@@ -43,19 +42,17 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
 	use polkadot_parachain::primitives::Id as ParaId;
+	use sp_core::U256;
 	use xcm::v0::{Junction, MultiLocation};
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-
-	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption, RedemptionState,
-	};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
-		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry, UnbondingOutcome},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry},
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
-	use sp_core::U256;
+
+	use crate::types::{AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption};
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
@@ -518,34 +515,14 @@ pub mod pallet {
 
 			// start the redemption process for each withdrawal
 			for (asset, units) in asset_amounts {
-				// start the unbonding routine, and determine the state of this withdrawal after the initial attempt
-				let state = match T::RemoteAssetManager::unbond(asset, units) {
-					UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
-						// nothing to unbond, the funds are assumed to be available after the
-						// redemption period is over
-						RedemptionState::Unbonding
-					}
-					UnbondingOutcome::Outcome(outcome) => {
-						// the outcome of the dispatched xcm call
-						if outcome.ensure_complete().is_ok() {
-							// the XCM call was dispatched successfully, however, this is  *NOT*
-							// synonymous with a successful completion of the unbonding process.
-							// instead, this state implies that XCM is now being processed on a
-							// different parachain
-							RedemptionState::Unbonding
-						} else {
-							// failed to send the unbond xcm
-							RedemptionState::Initiated
-						}
-					}
-				};
-
+				// start the unbonding routine
+				T::RemoteAssetManager::unbond(asset, units);
 				// reserve the funds in the treasury's account until the redemption period is
 				// over after which they can be transferred to the user account
 				// NOTE: this should always succeed due to the way the asset distribution is
 				// calculated
 				T::Currency::reserve(asset, &Self::treasury_account(), units)?;
-				assets.push(AssetWithdrawal { asset, state, units });
+				assets.push(AssetWithdrawal { asset, units, reserved: units, withdrawn: false });
 			}
 
 			// after this block an asset withdrawal is allowed to advance to the transfer
@@ -568,10 +545,9 @@ pub mod pallet {
 		/// tries to close it. Completing a withdrawal will succeed if
 		/// following conditions are met:
 		///   - the `LockupPeriod` has passed since the withdrawal was initiated
-		///   - the unbonding process on other parachains was successful
 		///   - the treasury can cover the asset transfer to the caller's account, from which the
 		///     caller then can initiate an `Xcm::Withdraw` to remove the assets from the PINT
-		///     parachain entirely.
+		///     parachain entirely, if xcm transfers are supported.
 		///
 		/// *NOTE*: All individual withdrawals that resulted from "Withdraw"
 		/// will be completed separately, however, the entire record of pending
@@ -581,7 +557,6 @@ pub mod pallet {
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
 		#[pallet::weight(10_000)] // TODO: Set weights
-		#[transactional]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
@@ -599,7 +574,7 @@ pub mod pallet {
 						if redemption.end_block >= current_block &&
 							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
-							// all individual redemptions closed, remove from storage
+							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
 							return None;
 						}
@@ -830,7 +805,6 @@ pub mod pallet {
 		///
 		/// Returns `true` if all entries are completed (the have been
 		/// transferred to the caller's account)
-		#[require_transactional]
 		fn do_complete_redemption(
 			caller: &T::AccountId,
 			assets: &mut Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
@@ -839,39 +813,16 @@ pub mod pallet {
 			let mut all_withdrawn = true;
 
 			for asset in assets {
-				match asset.state {
-					RedemptionState::Initiated => {
-						// unbonding processes failed in previous attempt, we don't initiate another xcm here instead we
-						// rely on the remote asset manager that it followed up on the failing xcm. Instead we check if
-						// the parachain has enough assets available now to cover this pending witdrawal once the
-						// redemption period is over TODO retry or handle this separately?
-						all_withdrawn = false;
+				if !asset.withdrawn {
+					// `unreserve` the previously reserved assets from the treasury.
+					asset.reserved = T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.reserved);
+					if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
+						Self::deposit_event(Event::Withdrawn(caller.clone(), asset.asset, asset.units));
+						asset.withdrawn = true;
+						continue;
 					}
-					RedemptionState::Unbonding => {
-						// funds are unbonded and can be transferred to the caller's account
-
-						// `unreserve` only moves up to `units` from the reserved balance to free.
-						// if this returns `>0` then the treasury's reserved balance is empty, in
-						// which case we simply proceed with attempting to transfer
-						T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.units);
-
-						if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
-							asset.state = RedemptionState::Withdrawn;
-						} else {
-							asset.state = RedemptionState::Transferring;
-							all_withdrawn = false;
-						}
-					}
-					RedemptionState::Transferring => {
-						// try to transfer again
-						if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
-							asset.state = RedemptionState::Withdrawn;
-						} else {
-							all_withdrawn = false;
-						}
-					}
-					RedemptionState::Withdrawn => {}
 				}
+				all_withdrawn = false
 			}
 			all_withdrawn
 		}
