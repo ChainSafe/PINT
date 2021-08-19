@@ -90,7 +90,7 @@ export const definitions = {
                     reserved: "Balance",
                 },
                 PendingRedemption: {
-                    initiated: "BlockNumber",
+                    end_block: "BlockNumber",
                     assets: "Vec<AssetWithdrawal>",
                 },
                 ProposalNonce: "u32",
