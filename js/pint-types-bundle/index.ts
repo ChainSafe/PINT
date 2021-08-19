@@ -18,13 +18,31 @@ export const definitions = {
                     available: "Balance",
                     reserved: "Balance",
                 },
+                Amount: "i128",
                 AssetAvailability: {
                     _enum: {
                         Liquid: "MultiLocation",
                         Saft: null,
                     },
                 },
+                AssetConfig: {
+                    pallet_index: "u8",
+                    weights: "AssetsWeights",
+                },
                 AssetId: "u32",
+                AssetsWeights: {
+                    mint: "Weight",
+                    burn: "Weight",
+                    transfer: "Weight",
+                    force_transfer: "Weight",
+                    freeze: "Weight",
+                    thaw: "Weight",
+                    freeze_asset: "Weight",
+                    thaw_asset: "Weight",
+                    approve_transfer: "Weight",
+                    cancel_approval: "Weight",
+                    transfer_approved: "Weight",
+                },
                 AssetMetadata: {
                     name: "BoundedString",
                     symbol: "BoundedString",
@@ -32,8 +50,9 @@ export const definitions = {
                 },
                 AssetWithdrawal: {
                     asset: "AssetId",
-                    state: "RedemptionState",
+                    reserved: "Balance",
                     units: "Balance",
+                    withdrawn: "bool",
                 },
                 Balance: "u128",
                 BalanceFor: "Balance",
@@ -81,6 +100,10 @@ export const definitions = {
                 ProxyState: {
                     added: "Vec<ProxyType>",
                 },
+                ProxyWeights: {
+                    add_proxy: "Weight",
+                    remove_proxy: "Weight",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,
@@ -88,6 +111,7 @@ export const definitions = {
                         Transferred: null,
                     },
                 },
+                SAFTId: "u32",
                 SAFTRecord: {
                     nav: "Balance",
                     units: "Balance",
@@ -97,6 +121,18 @@ export const definitions = {
                     bonded: "Balance",
                     unbonded: "Balance",
                     unlocked_chunks: "u32",
+                },
+                StakingWeights: {
+                    bond: "Weight",
+                    bond_extra: "Weight",
+                    unbond: "Weight",
+                    withdraw_unbonded: "Weight",
+                },
+                StatemintConfig: {
+                    assets_config: "AssetConfig",
+                    parachain_id: "u32",
+                    enabled: "bool",
+                    pint_asset_id: "AssetId",
                 },
                 Vote: {
                     _enum: {

@@ -183,7 +183,6 @@ export default class Runner implements Config {
      * @returns {Promise<void>}
      */
     public async queue(): Promise<void> {
-        const runner = this;
         const queue: Extrinsic[] = [];
         for (const e of this.exs) {
             // 0. check if required ex with ids has finished
@@ -237,14 +236,26 @@ export default class Runner implements Config {
     public async batch(exs: Extrinsic[]): Promise<any> {
         let currentNonce = Number(this.nonce);
         return Promise.all(
-            exs.map((e, i) => {
-                let n = -1;
-                if (!e.signed || e.signed.address === this.pair.address) {
-                    n = Number(currentNonce);
-                    currentNonce += 1;
-                }
-                return e.run(this.errors, n);
-            })
+            exs
+                .filter((e) => {
+                    const isFunction =
+                        typeof this.api.tx[e.pallet][e.call] === "function";
+
+                    if (!isFunction) {
+                        this.errors.push(
+                            `====> Error: ${e.pallet}.${e.call} not exists`
+                        );
+                    }
+                    return isFunction;
+                })
+                .map((e) => {
+                    let n = -1;
+                    if (!e.signed || e.signed.address === this.pair.address) {
+                        n = Number(currentNonce);
+                        currentNonce += 1;
+                    }
+                    return e.run(this.errors, n);
+                })
         ).then(() => {
             this.nonce = currentNonce;
         });

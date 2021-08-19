@@ -124,8 +124,9 @@ export class Extrinsic {
                     const maybeError = value.event.data[0];
                     if (maybeError && (maybeError as DispatchError).isModule) {
                         const error = this.api.registry.findMetaError(
-                            (value.event
-                                .data[0] as DispatchError).asModule.toU8a()
+                            (
+                                value.event.data[0] as DispatchError
+                            ).asModule.toU8a()
                         );
                         reject(
                             `${error.section}.${error.method}: ${error.documentation}`
