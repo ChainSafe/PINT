@@ -153,7 +153,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         : 0;
 
                 console.log(
-                    `\t | waiting for the voting peirod (around ${Math.floor(
+                    `\t | waiting for the withdrawls peirod (around ${Math.floor(
                         (needsToWait * 12) / 60
                     )} mins)...`
                 );
