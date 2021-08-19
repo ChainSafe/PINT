@@ -92,29 +92,29 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // {
-        //     required: ["chainlinkFeed.submit"],
-        //     shared: async () => {
-        //         return (await api.query.system.account(config.alice.address))
-        //             .data.free;
-        //     },
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "deposit",
-        //     args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
-        //     verify: async (before: Balance) => {
-        //         const current = (
-        //             await api.query.system.account(config.alice.address)
-        //         ).data.free;
-        //
-        //         // cover weight fee
-        //         assert(
-        //             current.sub(before).div(PINT).toNumber() ===
-        //                 ASSET_ID_A_DEPOSIT.toNumber() - 1,
-        //             "assetIndex.deposit failed"
-        //         );
-        //     },
-        // },
+        {
+            required: ["priceFeed.mapAssetPriceFeed"],
+            shared: async () => {
+                return (await api.query.system.account(config.alice.address))
+                    .data.free;
+            },
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "deposit",
+            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
+
+                // cover weight fee
+                assert(
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
+                    "assetIndex.deposit failed"
+                );
+            },
+        },
         // {
         //     required: ["assetIndex.addAsset"],
         //     signed: config.alice,
@@ -210,162 +210,137 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // /* committee */
-        // {
-        //     signed: config.alice,
-        //     pallet: "committee",
-        //     call: "propose",
-        //     args: [api.tx.balances.transfer(config.bob.address, 1000000)],
-        //     verify: async () => {
-        //         const proposals = await api.query.committee.activeProposals();
-        //         assert(
-        //             (proposals as any).length > 0,
-        //             "no proposal found after committe.propose"
-        //         );
-        //     },
-        // },
-        // {
-        //     required: ["committee.propose"],
-        //     shared: async () => {
-        //         return new Promise(async (resolve) => {
-        //             await waitBlock(1);
-        //             const hash = (
-        //                 (await api.query.committee.activeProposals()) as any
-        //             )[0];
-        //             const currentBlock = (
-        //                 await api.derive.chain.bestNumber()
-        //             ).toNumber();
-        //
-        //             const end = (
-        //                 (await api.query.committee.votes(hash)).toJSON() as any
-        //             ).end as number;
-        //
-        //             const needsToWait =
-        //                 end - currentBlock > VOTING_PERIOD
-        //                     ? end - currentBlock - VOTING_PERIOD
-        //                     : 0;
-        //
-        //             console.log(
-        //                 `\t | waiting for the voting peirod (around ${Math.floor(
-        //                     (needsToWait * 12) / 60
-        //                 )} mins)...`
-        //             );
-        //
-        //             await waitBlock(needsToWait);
-        //             resolve(hash);
-        //         });
-        //     },
-        //     signed: config.alice,
-        //     pallet: "committee",
-        //     call: "vote",
-        //     args: [(hash: string) => hash, api.createType("Vote" as any)],
-        //     with: [
-        //         async (hash: string): Promise<IExtrinsic> => {
-        //             return {
-        //                 signed: config.bob,
-        //                 pallet: "committee",
-        //                 call: "vote",
-        //                 args: [hash, api.createType("Vote" as any)],
-        //             };
-        //         },
-        //         async (hash: string): Promise<IExtrinsic> => {
-        //             return {
-        //                 signed: config.charlie,
-        //                 pallet: "committee",
-        //                 call: "vote",
-        //                 args: [hash, api.createType("Vote" as any)],
-        //             };
-        //         },
-        //         async (hash: string): Promise<IExtrinsic> => {
-        //             return {
-        //                 signed: config.dave,
-        //                 pallet: "committee",
-        //                 call: "vote",
-        //                 args: [hash, api.createType("Vote" as any)],
-        //             };
-        //         },
-        //     ],
-        //     verify: async (hash: string) => {
-        //         assert(
-        //             ((await api.query.committee.votes(hash)).toJSON() as any)
-        //                 .votes[0].vote === "Aye",
-        //             "committee.vote failed"
-        //         );
-        //     },
-        // },
-        // // {
-        // //     required: ["committee.vote"],
-        // //     shared: async () => {
-        // //         const hash = (
-        // //             (await api.query.committee.activeProposals()) as any
-        // //         )[0];
-        // //         return hash;
-        // //     },
-        // //     signed: config.alice,
-        // //     pallet: "committee",
-        // //     call: "close",
-        // //     args: [(hash: string) => hash],
-        // //     verify: async (hash: string) => {
-        // //         const proposals = await api.query.committee.executedProposals(
-        // //             hash
-        // //         );
-        // //         assert(
-        // //             (proposals as any).isSome,
-        // //             "no proposal executed after committe.close"
-        // //         );
-        // //     },
-        // // },
-        // {
-        //     pallet: "committee",
-        //     call: "addConstituent",
-        //     args: [config.ziggy.address],
-        //     verify: async () => {
-        //         assert(
-        //             (
-        //                 (await api.query.committee.members(
-        //                     config.ziggy.address
-        //                 )) as any
-        //             ).isSome,
-        //             "Add constituent failed"
-        //         );
-        //     },
-        // },
-        // /* local_treasury */
-        // {
-        //     pallet: "localTreasury",
-        //     call: "withdraw",
-        //     args: [500000000000, config.ziggy.address],
-        //     verify: async () => {
-        //         assert(
-        //             (
-        //                 await api.derive.balances.all(config.ziggy.address)
-        //             ).freeBalance.toNumber() === 500000000000,
-        //             "localTreasury.withdraw failed"
-        //         );
-        //     },
-        // },
-        /* chainlink-feed*/
+        /* committee */
         {
             signed: config.alice,
-            pallet: "chainlinkFeed",
-            call: "createFeed",
-            args: [
-                100000000000,
-                0,
-                [100000000000, 100000000000],
-                1,
-                9,
-                "test_feed",
-                0,
-                [[config.alice.address, config.bob.address]],
-                null,
-                null,
+            pallet: "committee",
+            call: "propose",
+            args: [api.tx.balances.transfer(config.bob.address, 1000000)],
+            verify: async () => {
+                const proposals = await api.query.committee.activeProposals();
+                assert(
+                    (proposals as any).length > 0,
+                    "no proposal found after committe.propose"
+                );
+            },
+        },
+        {
+            required: ["committee.propose"],
+            shared: async () => {
+                return new Promise(async (resolve) => {
+                    await waitBlock(1);
+                    const hash = (
+                        (await api.query.committee.activeProposals()) as any
+                    )[0];
+                    const currentBlock = (
+                        await api.derive.chain.bestNumber()
+                    ).toNumber();
+
+                    const end = (
+                        (await api.query.committee.votes(hash)).toJSON() as any
+                    ).end as number;
+
+                    const needsToWait =
+                        end - currentBlock > VOTING_PERIOD
+                            ? end - currentBlock - VOTING_PERIOD
+                            : 0;
+
+                    console.log(
+                        `\t | waiting for the voting peirod (around ${Math.floor(
+                            (needsToWait * 12) / 60
+                        )} mins)...`
+                    );
+
+                    await waitBlock(needsToWait);
+                    resolve(hash);
+                });
+            },
+            signed: config.alice,
+            pallet: "committee",
+            call: "vote",
+            args: [(hash: string) => hash, api.createType("Vote" as any)],
+            with: [
+                async (hash: string): Promise<IExtrinsic> => {
+                    return {
+                        signed: config.bob,
+                        pallet: "committee",
+                        call: "vote",
+                        args: [hash, api.createType("Vote" as any)],
+                    };
+                },
+                async (hash: string): Promise<IExtrinsic> => {
+                    return {
+                        signed: config.charlie,
+                        pallet: "committee",
+                        call: "vote",
+                        args: [hash, api.createType("Vote" as any)],
+                    };
+                },
+                async (hash: string): Promise<IExtrinsic> => {
+                    return {
+                        signed: config.dave,
+                        pallet: "committee",
+                        call: "vote",
+                        args: [hash, api.createType("Vote" as any)],
+                    };
+                },
             ],
+            verify: async (hash: string) => {
+                assert(
+                    ((await api.query.committee.votes(hash)).toJSON() as any)
+                        .votes[0].vote === "Aye",
+                    "committee.vote failed"
+                );
+            },
+        },
+        {
+            required: ["committee.vote"],
+            shared: async () => {
+                const hash = (
+                    (await api.query.committee.activeProposals()) as any
+                )[0];
+                return hash;
+            },
+            signed: config.alice,
+            pallet: "committee",
+            call: "close",
+            args: [(hash: string) => hash],
+            verify: async (hash: string) => {
+                const proposals = await api.query.committee.executedProposals(
+                    hash
+                );
+                assert(
+                    (proposals as any).isSome,
+                    "no proposal executed after committe.close"
+                );
+            },
+        },
+        {
+            pallet: "committee",
+            call: "addConstituent",
+            args: [config.ziggy.address],
             verify: async () => {
                 assert(
-                    (await api.query.chainlinkFeed.feeds.entries()).length ===
-                        1,
-                    "Create feed failed"
+                    (
+                        (await api.query.committee.members(
+                            config.ziggy.address
+                        )) as any
+                    ).isSome,
+                    "Add constituent failed"
+                );
+            },
+        },
+        /* local_treasury */
+        {
+            pallet: "localTreasury",
+            call: "withdraw",
+            args: [500000000000, config.ziggy.address],
+            verify: async () => {
+                assert(
+                    (
+                        await api.derive.balances.all(config.ziggy.address)
+                    ).freeBalance.toNumber() === 500000000000,
+                    "localTreasury.withdraw failed"
                 );
             },
         },
@@ -407,7 +382,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
-            required: ["chainlinkFeed.createFeed"],
+            required: ["chainlinkFeed.submit"],
             pallet: "priceFeed",
             call: "mapAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -458,7 +433,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     verify: async () => {
         //         const saft = (
         //             (await api.query.saftRegistry.activeSAFTs(
-        //                 ASSET_ID_B
+        //                 ASSET_ID_B,
+        //                 Number(
+        //                     (
+        //                         await api.query.saftRegistry.sAFTCounter(
+        //                             ASSET_ID_B
+        //                         )
+        //                     ).toHuman()
+        //                 )
         //             )) as any
         //         ).toJSON();
         //         const expect = {
