@@ -356,7 +356,19 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+
+		/// Check for staking calls we need to get in this block
+		///
+		/// This will compare the pending withdrawals against the free balance of each asset and determine whether an XCM unbond, bond_extra or withdrawal is in order
+		///
+		fn on_initialize(now: T::BlockNumber) -> Weight {
+
+
+			0
+		}
+
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
