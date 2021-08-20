@@ -93,91 +93,91 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["priceFeed.mapAssetPriceFeed"],
-            shared: async () => {
-                return (await api.query.system.account(config.alice.address))
-                    .data.free;
-            },
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "deposit",
-            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
-            verify: async (before: Balance) => {
-                const current = (
-                    await api.query.system.account(config.alice.address)
-                ).data.free;
-
-                // cover weight fee
-                assert(
-                    current.sub(before).div(PINT).toNumber() ===
-                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
-                    "assetIndex.deposit failed"
-                );
-            },
-        },
-        {
-            required: ["priceFeed.mapAssetPriceFeed"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "withdraw",
-            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
-            verify: async () => {
-                assert(
-                    (
-                        (
-                            await api.query.assetIndex.pendingWithdrawals(
-                                config.alice.address
-                            )
-                        ).toHuman() as any
-                    ).length === 1,
-                    "assetIndex.withdraw failed"
-                );
-            },
-        },
-        {
-            required: ["assetIndex.withdraw"],
-            shared: async () => {
-                const currentBlock = (
-                    await api.derive.chain.bestNumber()
-                ).toNumber();
-                const pendingWithdrawls =
-                    await api.query.assetIndex.pendingWithdrawals(
-                        config.alice.address
-                    );
-
-                const end = (pendingWithdrawls as any).toHuman()[0].end_block;
-                const needsToWait =
-                    end - currentBlock > WITHDRAWALS_PERIOD
-                        ? end - currentBlock - WITHDRAWALS_PERIOD
-                        : 0;
-
-                console.log(
-                    `\t | waiting for the withdrawls peirod (around ${Math.floor(
-                        (needsToWait * 12) / 60
-                    )} mins)...`
-                );
-
-                await waitBlock(needsToWait);
-            },
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "completeWithdraw",
-            args: [],
-            verify: async () => {
-                assert(
-                    (
-                        (await api.query.assetIndex.pendingWithdrawals(
-                            config.alice.address
-                        )) as any
-                    ).isNone,
-                    "assetIndex.completeWithdraw failed"
-                );
-            },
-        },
+        // {
+        //     required: ["priceFeed.mapAssetPriceFeed"],
+        //     shared: async () => {
+        //         return (await api.query.system.account(config.alice.address))
+        //             .data.free;
+        //     },
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "deposit",
+        //     args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+        //     verify: async (before: Balance) => {
+        //         const current = (
+        //             await api.query.system.account(config.alice.address)
+        //         ).data.free;
+        //
+        //         // cover weight fee
+        //         assert(
+        //             current.sub(before).div(PINT).toNumber() ===
+        //                 ASSET_ID_A_DEPOSIT.toNumber() - 1,
+        //             "assetIndex.deposit failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["priceFeed.mapAssetPriceFeed"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "withdraw",
+        //     args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (
+        //                     await api.query.assetIndex.pendingWithdrawals(
+        //                         config.alice.address
+        //                     )
+        //                 ).toHuman() as any
+        //             ).length === 1,
+        //             "assetIndex.withdraw failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["assetIndex.withdraw"],
+        //     shared: async () => {
+        //         const currentBlock = (
+        //             await api.derive.chain.bestNumber()
+        //         ).toNumber();
+        //         const pendingWithdrawls =
+        //             await api.query.assetIndex.pendingWithdrawals(
+        //                 config.alice.address
+        //             );
+        //
+        //         const end = (pendingWithdrawls as any).toHuman()[0].end_block;
+        //         const needsToWait =
+        //             end - currentBlock > WITHDRAWALS_PERIOD
+        //                 ? end - currentBlock - WITHDRAWALS_PERIOD
+        //                 : 0;
+        //
+        //         console.log(
+        //             `\t | waiting for the withdrawls peirod (around ${Math.floor(
+        //                 (needsToWait * 12) / 60
+        //             )} mins)...`
+        //         );
+        //
+        //         await waitBlock(needsToWait);
+        //     },
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "completeWithdraw",
+        //     args: [],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (await api.query.assetIndex.pendingWithdrawals(
+        //                     config.alice.address
+        //                 )) as any
+        //             ).isNone,
+        //             "assetIndex.completeWithdraw failed"
+        //         );
+        //     },
+        // },
         /* remote-asset-manager*/
         {
-            required: ["assetIndex.addAsset"],
+            required: ["priceFeed.mapAssetPriceFeed"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendAddProxy",
@@ -199,175 +199,176 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
+        {
+            required: ["priceFeed.mapAssetPriceFeed"],
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendBond",
+            args: [
+                ASSET_ID_A,
+                config.alice.address,
+                1000,
+                api.createType("RewardDestination", {
+                    Staked: null,
+                }),
+            ],
+            verify: async () => {
+                const json = JSON.stringify(
+                    (
+                        await api.query.remoteAssetManager.palletStakingLedger(
+                            ASSET_ID_A
+                        )
+                    ).toJSON()
+                );
+                console.log(json);
+                assert(
+                    json ===
+                        JSON.stringify({
+                            controller: config.alice.address,
+                            bonded: 1000,
+                            unbonded: 0,
+                            unlocked_chunks: [0],
+                        }),
+
+                    "remoteAssetManager.sendBond failed"
+                );
+            },
+        },
+        // /* committee */
         // {
-        //     required: ["assetIndex.addAsset"],
         //     signed: config.alice,
-        //     pallet: "remoteAssetManager",
-        //     call: "sendBond",
-        //     args: [
-        //         ASSET_ID_A,
-        //         config.alice.address,
-        //         1000,
-        //         api.createType("RewardDestination", {
-        //             Staked: null,
-        //         }),
-        //     ],
+        //     pallet: "committee",
+        //     call: "propose",
+        //     args: [api.tx.balances.transfer(config.bob.address, 1000000)],
         //     verify: async () => {
+        //         const proposals = await api.query.committee.activeProposals();
         //         assert(
-        //             JSON.stringify(
-        //                 (
-        //                     await api.query.remoteAssetManager.palletStakingBondState(
-        //                         ASSET_ID_A
-        //                     )
-        //                 ).toJSON()
-        //             ) ===
-        //                 JSON.stringify({
-        //                     controller: {
-        //                         id: config.alice.address,
-        //                     },
-        //                     bonded: 1000,
-        //                     unbonded: 0,
-        //                     unlocked_chunks: 0,
-        //                 }),
-        //
-        //             "remoteAssetManager.sendBond failed"
+        //             (proposals as any).length > 0,
+        //             "no proposal found after committe.propose"
         //         );
         //     },
         // },
-        /* committee */
-        {
-            signed: config.alice,
-            pallet: "committee",
-            call: "propose",
-            args: [api.tx.balances.transfer(config.bob.address, 1000000)],
-            verify: async () => {
-                const proposals = await api.query.committee.activeProposals();
-                assert(
-                    (proposals as any).length > 0,
-                    "no proposal found after committe.propose"
-                );
-            },
-        },
-        {
-            required: ["committee.propose"],
-            shared: async () => {
-                return new Promise(async (resolve) => {
-                    await waitBlock(1);
-                    const hash = (
-                        (await api.query.committee.activeProposals()) as any
-                    )[0];
-                    const currentBlock = (
-                        await api.derive.chain.bestNumber()
-                    ).toNumber();
-
-                    const end = (
-                        (await api.query.committee.votes(hash)).toJSON() as any
-                    ).end as number;
-
-                    const needsToWait =
-                        end - currentBlock > VOTING_PERIOD
-                            ? end - currentBlock - VOTING_PERIOD
-                            : 0;
-
-                    console.log(
-                        `\t | waiting for the voting peirod (around ${Math.floor(
-                            (needsToWait * 12) / 60
-                        )} mins)...`
-                    );
-
-                    await waitBlock(needsToWait);
-                    resolve(hash);
-                });
-            },
-            signed: config.alice,
-            pallet: "committee",
-            call: "vote",
-            args: [(hash: string) => hash, api.createType("Vote" as any)],
-            with: [
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.bob,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.charlie,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.dave,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-            ],
-            verify: async (hash: string) => {
-                assert(
-                    ((await api.query.committee.votes(hash)).toJSON() as any)
-                        .votes[0].vote === "Aye",
-                    "committee.vote failed"
-                );
-            },
-        },
-        {
-            required: ["committee.vote"],
-            shared: async () => {
-                const hash = (
-                    (await api.query.committee.activeProposals()) as any
-                )[0];
-                return hash;
-            },
-            signed: config.alice,
-            pallet: "committee",
-            call: "close",
-            args: [(hash: string) => hash],
-            verify: async (hash: string) => {
-                const proposals = await api.query.committee.executedProposals(
-                    hash
-                );
-                assert(
-                    (proposals as any).isSome,
-                    "no proposal executed after committe.close"
-                );
-            },
-        },
-        {
-            pallet: "committee",
-            call: "addConstituent",
-            args: [config.ziggy.address],
-            verify: async () => {
-                assert(
-                    (
-                        (await api.query.committee.members(
-                            config.ziggy.address
-                        )) as any
-                    ).isSome,
-                    "Add constituent failed"
-                );
-            },
-        },
-        /* local_treasury */
-        {
-            pallet: "localTreasury",
-            call: "withdraw",
-            args: [500000000000, config.ziggy.address],
-            verify: async () => {
-                assert(
-                    (
-                        await api.derive.balances.all(config.ziggy.address)
-                    ).freeBalance.toNumber() === 500000000000,
-                    "localTreasury.withdraw failed"
-                );
-            },
-        },
+        // {
+        //     required: ["committee.propose"],
+        //     shared: async () => {
+        //         return new Promise(async (resolve) => {
+        //             await waitBlock(1);
+        //             const hash = (
+        //                 (await api.query.committee.activeProposals()) as any
+        //             )[0];
+        //             const currentBlock = (
+        //                 await api.derive.chain.bestNumber()
+        //             ).toNumber();
+        //
+        //             const end = (
+        //                 (await api.query.committee.votes(hash)).toJSON() as any
+        //             ).end as number;
+        //
+        //             const needsToWait =
+        //                 end - currentBlock > VOTING_PERIOD
+        //                     ? end - currentBlock - VOTING_PERIOD
+        //                     : 0;
+        //
+        //             console.log(
+        //                 `\t | waiting for the voting peirod (around ${Math.floor(
+        //                     (needsToWait * 12) / 60
+        //                 )} mins)...`
+        //             );
+        //
+        //             await waitBlock(needsToWait);
+        //             resolve(hash);
+        //         });
+        //     },
+        //     signed: config.alice,
+        //     pallet: "committee",
+        //     call: "vote",
+        //     args: [(hash: string) => hash, api.createType("Vote" as any)],
+        //     with: [
+        //         async (hash: string): Promise<IExtrinsic> => {
+        //             return {
+        //                 signed: config.bob,
+        //                 pallet: "committee",
+        //                 call: "vote",
+        //                 args: [hash, api.createType("Vote" as any)],
+        //             };
+        //         },
+        //         async (hash: string): Promise<IExtrinsic> => {
+        //             return {
+        //                 signed: config.charlie,
+        //                 pallet: "committee",
+        //                 call: "vote",
+        //                 args: [hash, api.createType("Vote" as any)],
+        //             };
+        //         },
+        //         async (hash: string): Promise<IExtrinsic> => {
+        //             return {
+        //                 signed: config.dave,
+        //                 pallet: "committee",
+        //                 call: "vote",
+        //                 args: [hash, api.createType("Vote" as any)],
+        //             };
+        //         },
+        //     ],
+        //     verify: async (hash: string) => {
+        //         assert(
+        //             ((await api.query.committee.votes(hash)).toJSON() as any)
+        //                 .votes[0].vote === "Aye",
+        //             "committee.vote failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["committee.vote"],
+        //     shared: async () => {
+        //         const hash = (
+        //             (await api.query.committee.activeProposals()) as any
+        //         )[0];
+        //         return hash;
+        //     },
+        //     signed: config.alice,
+        //     pallet: "committee",
+        //     call: "close",
+        //     args: [(hash: string) => hash],
+        //     verify: async (hash: string) => {
+        //         const proposals = await api.query.committee.executedProposals(
+        //             hash
+        //         );
+        //         assert(
+        //             (proposals as any).isSome,
+        //             "no proposal executed after committe.close"
+        //         );
+        //     },
+        // },
+        // {
+        //     pallet: "committee",
+        //     call: "addConstituent",
+        //     args: [config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (await api.query.committee.members(
+        //                     config.ziggy.address
+        //                 )) as any
+        //             ).isSome,
+        //             "Add constituent failed"
+        //         );
+        //     },
+        // },
+        // /* local_treasury */
+        // {
+        //     pallet: "localTreasury",
+        //     call: "withdraw",
+        //     args: [500000000000, config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 await api.derive.balances.all(config.ziggy.address)
+        //             ).freeBalance.toNumber() === 500000000000,
+        //             "localTreasury.withdraw failed"
+        //         );
+        //     },
+        // },
+        /* chainlink_feed */
         {
             signed: config.alice,
             pallet: "chainlinkFeed",
@@ -421,33 +422,33 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["assetIndex.deposit"],
-            pallet: "priceFeed",
-            call: "unmapAssetPriceFeed",
-            args: [ASSET_ID_A],
-            verify: async () => {
-                assert(
-                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-                        .isNone,
-                    "unmap price feed failed"
-                );
-            },
-        },
-        /* saft-registry */
-        {
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "addSaft",
-            args: [ASSET_ID_B, 168, 42],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
-                        .isSome,
-                    "Add saft failed"
-                );
-            },
-        },
+        // {
+        //     required: ["assetIndex.deposit"],
+        //     pallet: "priceFeed",
+        //     call: "unmapAssetPriceFeed",
+        //     args: [ASSET_ID_A],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "unmap price feed failed"
+        //         );
+        //     },
+        // },
+        // /* saft-registry */
+        // {
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "addSaft",
+        //     args: [ASSET_ID_B, 168, 42],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
+        //                 .isSome,
+        //             "Add saft failed"
+        //         );
+        //     },
+        // },
         // {
         //     required: ["saftRegistry.addSaft"],
         //     signed: config.alice,

@@ -116,12 +116,13 @@ export const definitions = {
                     nav: "Balance",
                     units: "Balance",
                 },
-                StakingBondState: {
-                    controller: "LookupSourceFor",
-                    bonded: "Balance",
-                    unbonded: "Balance",
-                    unlocked_chunks: "u32",
+                StakingLedger: {
+                    controller: "AccountId",
+                    active: "Balance",
+                    total: "Balance",
+                    unlocking: "Vec<UnlockChunk<Balance, BlockNumber>>",
                 },
+                StakingLedgerFor: "StakingLedger",
                 StakingWeights: {
                     bond: "Weight",
                     bond_extra: "Weight",
@@ -133,6 +134,10 @@ export const definitions = {
                     parachain_id: "u32",
                     enabled: "bool",
                     pint_asset_id: "AssetId",
+                },
+                UnlockChunk: {
+                    value: "Balance",
+                    end: "BlockNumber",
                 },
                 Vote: {
                     _enum: {
