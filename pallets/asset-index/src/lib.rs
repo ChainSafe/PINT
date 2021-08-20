@@ -290,6 +290,9 @@ pub mod pallet {
 		/// Caller's balance is updated to allocate the correct amount of the
 		/// IndexToken. If the asset does not exist yet, it will get
 		/// created with the given location.
+		///
+		/// The Governance committee decides the tokens that comprise the index,
+		/// as well as the allocation of each and their value.
 		#[pallet::weight(T::WeightInfo::add_asset())]
 		pub fn add_asset(
 			origin: OriginFor<T>,
@@ -842,8 +845,8 @@ pub mod pallet {
 			}
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
-			// transfer the given units of asset from the caller into the treasury account
-			T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
+			// mint asset into the treasury account
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
 			Ok(())
