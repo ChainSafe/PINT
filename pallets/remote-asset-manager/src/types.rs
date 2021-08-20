@@ -11,7 +11,7 @@ use xcm_calls::assets::AssetsConfig;
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatemintConfig<AssetId> {
 	/// Dedicated config for the internal `pallet_assets`
-	pub assets_config: assetsconfig,
+	pub assets_config: AssetsConfig,
 	/// The id of the `statemint` parachain
 	///
 	/// *NOTE* using `u32` here instead of location, since `MultiLocation` has
