@@ -290,6 +290,9 @@ pub mod pallet {
 		/// Caller's balance is updated to allocate the correct amount of the
 		/// IndexToken. If the asset does not exist yet, it will get
 		/// created with the given location.
+		///
+		/// The Governance committee decides the tokens that comprise the index,
+		/// as well as the allocation of each and their value.
 		#[pallet::weight(T::WeightInfo::add_asset())]
 		pub fn add_asset(
 			origin: OriginFor<T>,
