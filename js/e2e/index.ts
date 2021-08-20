@@ -148,8 +148,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
 
                 const end = (pendingWithdrawls as any).toHuman()[0].end_block;
                 const needsToWait =
-                    end - currentBlock > VOTING_PERIOD
-                        ? end - currentBlock - VOTING_PERIOD
+                    end - currentBlock > WITHDRAWALS_PERIOD
+                        ? end - currentBlock - WITHDRAWALS_PERIOD
                         : 0;
 
                 console.log(
