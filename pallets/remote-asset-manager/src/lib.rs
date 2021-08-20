@@ -63,9 +63,6 @@ pub mod pallet {
 	// expects a `ProxyType` of u8 and blocknumber of u32
 	type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
-	// A `pallet_assets` dispatchable on another chain
-	pub type PalletAssetsCall<T> = AssetsCall<AssetIdFor<T>, LookupSourceFor<T>, BalanceFor<T>>;
-
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// The balance type for cross chain transfers
@@ -101,15 +98,6 @@ pub mod pallet {
 			Self::AccountId,
 			ProxyType,
 			Self::BlockNumber,
-			Context = Self::AssetId,
-		>;
-
-		/// The encoder to use for encoding when transacting a `pallet_assets`
-		/// Call
-		type PalletAssetsCallEncoder: AssetsCallEncoder<
-			Self::AssetId,
-			<Self::Lookup as StaticLookup>::Source,
-			Self::Balance,
 			Context = Self::AssetId,
 		>;
 
@@ -600,31 +588,31 @@ pub mod pallet {
 		pub fn transfer_to_statemint(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(amount >= T::MinimumStatemintTransferAmount::get(), Error::<T>::MinimumStatemintTransfer);
-
-			let config = StatemintParaConfig::<T>::get().ok_or(Error::<T>::NoStatemintConfigFound)?;
-			ensure!(config.enabled, Error::<T>::StatemintDisabled);
-
-			let pint_asset = T::SelfAssetId::get();
-
-			// transfer the given amount to the custodian
-			T::Assets::transfer(pint_asset, &who, &T::StatemintCustodian::get(), amount)?;
-
-			let dest = config.location();
-			let beneficiary = T::Lookup::unlookup(who.clone());
-			let call = PalletAssetsCall::<T>::Mint(AssetParams { id: config.pint_asset_id, beneficiary, amount });
-			let encoder = call.encoder::<T::PalletAssetsCallEncoder>(&pint_asset);
-
-			let xcm = Xcm::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.assets_config.weights.mint,
-				call: encoder.encode_runtime_call(config.assets_config.pallet_index).encode().into(),
-			};
-
-			let result = T::XcmSender::send_xcm(dest, xcm);
-			log::info!(target: "pint_xcm", "sent statemint pallet_assets::mint xcm: {:?} ",result);
-			ensure!(result.is_ok(), Error::<T>::FailedToSendAssetsMint);
-
-			Self::deposit_event(Event::StatemintTransfer(who, amount));
+			//
+			// let config = StatemintParaConfig::<T>::get().ok_or(Error::<T>::NoStatemintConfigFound)?;
+			// ensure!(config.enabled, Error::<T>::StatemintDisabled);
+			//
+			// let pint_asset = T::SelfAssetId::get();
+			//
+			// // transfer the given amount to the custodian
+			// T::Assets::transfer(pint_asset, &who, &T::StatemintCustodian::get(), amount)?;
+			//
+			// let dest = config.location();
+			// let beneficiary = T::Lookup::unlookup(who.clone());
+			// let call = PalletAssetsCall::<T>::Mint(AssetParams { id: config.pint_asset_id, beneficiary, amount });
+			// let encoder = call.encoder::<T::PalletAssetsCallEncoder>(&pint_asset);
+			//
+			// let xcm = Xcm::Transact {
+			// 	origin_type: OriginKind::SovereignAccount,
+			// 	require_weight_at_most: config.assets_config.weights.mint,
+			// 	call: encoder.encode_runtime_call(config.assets_config.pallet_index).encode().into(),
+			// };
+			//
+			// let result = T::XcmSender::send_xcm(dest, xcm);
+			// log::info!(target: "pint_xcm", "sent statemint pallet_assets::mint xcm: {:?} ",result);
+			// ensure!(result.is_ok(), Error::<T>::FailedToSendAssetsMint);
+			//
+			// Self::deposit_event(Event::StatemintTransfer(who, amount));
 			Ok(())
 		}
 	}
