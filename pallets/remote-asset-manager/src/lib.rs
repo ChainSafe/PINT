@@ -187,6 +187,7 @@ pub mod pallet {
 
 	/// The config of `pallet_staking` in the runtime of the parachain.
 	#[pallet::storage]
+	#[pallet::getter(fn staking_config)]
 	pub type PalletStakingConfig<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
@@ -197,17 +198,20 @@ pub mod pallet {
 
 	/// The current state of PINT sovereign account bonding in `pallet_staking`.
 	#[pallet::storage]
+	#[pallet::getter(fn skating_ledger)]
 	pub type PalletStakingLedger<T: Config> =
 		StorageMap<_, Twox64Concat, <T as Config>::AssetId, StakingLedgerFor<T>, OptionQuery>;
 
 	/// The total number of xmc related messages sent to the `pallet_staking` pallet of the asset's
 	/// location
 	#[pallet::storage]
+	#[pallet::getter(fn xcm_staking_count)]
 	pub(super) type XcmStakingCount<T: Config> =
 		StorageMap<_, Twox64Concat, T::AssetId, XcmStakingMessageCount, ValueQuery>;
 
 	/// The config of `pallet_proxy` in the runtime of the parachain.
 	#[pallet::storage]
+	#[pallet::getter(fn proxy_config)]
 	pub type PalletProxyConfig<T: Config> =
 		StorageMap<_, Twox64Concat, <T as Config>::AssetId, ProxyConfig, OptionQuery>;
 
@@ -216,6 +220,7 @@ pub mod pallet {
 	///
 	/// `location identifier` -> `delegate` -> `proxies`
 	#[pallet::storage]
+	#[pallet::getter(fn proxies)]
 	pub type Proxies<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, T::AssetId, Twox64Concat, AccountIdFor<T>, ProxyState, ValueQuery>;
 
@@ -384,9 +389,17 @@ pub mod pallet {
 		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
 		/// assets with staking support.
 		fn on_finalize(now: T::BlockNumber) {
-			// check each liquid asset
+			// check all assets with enabled cross chain staking support
+			for (asset, config) in  PalletStakingConfig::<T>::iter() {
+				// consider only location which are already bonded
+				if let Some(mut ledger) = PalletStakingLedger::<T>::get(&asset) {
+						// determine xcm action
 
-			// check if staking is supported
+				}
+
+
+				// update ledger
+			}
 
 			// check if we can bond_extra
 
@@ -700,7 +713,7 @@ pub mod pallet {
 
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
-			let mut state = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
+			let mut ledger = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
 			// ensures enough balance is available to bond extra
 			Self::ensure_free_stash(asset, amount)?;
@@ -718,8 +731,8 @@ pub mod pallet {
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
 			ensure!(result.is_ok(), Error::<T>::FailedToSendBondExtraXcm);
 
-			state.bond_extra(amount);
-			PalletStakingLedger::<T>::insert(&asset, state);
+			ledger.bond_extra(amount);
+			PalletStakingLedger::<T>::insert(&asset, ledger);
 
 			Self::deposit_event(Event::SentBondExtra(asset, amount));
 			Ok(())
