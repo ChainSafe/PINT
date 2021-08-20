@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::{assert_noop, assert_ok, traits::tokens::fungibles::Inspect};
-use orml_traits::{MultiCurrency, MultiCurrencyExtended};
+use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
 use sp_runtime::{traits::Zero, FixedPointNumber};
 use xcm::v0::{
@@ -18,11 +18,7 @@ use xcm_calls::{
 use xcm_simulator::TestExt;
 
 use crate::{
-	mock::{
-		para::{MockPriceFeed, ParaTreasuryAccount},
-		relay::ProxyType as RelayProxyType,
-		*,
-	},
+	mock::{para::MockPriceFeed, relay::ProxyType as RelayProxyType, *},
 	pallet as pallet_remote_asset_manager,
 	types::StatemintConfig,
 };
@@ -154,36 +150,19 @@ fn can_transact_register_proxy() {
 #[test]
 fn can_transact_staking() {
 	MockNet::reset();
-	let bond = 1_000;
+	// `- 1` for avoiding dust account issue
+	//
+	// see also https://github.com/open-web3-stack/open-runtime-module-library/issues/427
+	let bond = 1_000 - 1;
 
 	Para::execute_with(|| {
 		register_relay();
-		// fails to bond since no relay chain currency was deposited until now
-		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<para::Runtime>::send_bond(
-				para::Origin::signed(ADMIN_ACCOUNT),
-				RELAY_CHAIN_ASSET,
-				ADMIN_ACCOUNT,
-				bond,
-				xcm_calls::staking::RewardDestination::Staked
-			),
-			pallet_remote_asset_manager::Error::<para::Runtime>::InusufficientStash
-		);
 
 		// fails to bond extra, no initial bond
 		assert_noop!(
 			pallet_remote_asset_manager::Pallet::<para::Runtime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond,),
 			pallet_remote_asset_manager::Error::<para::Runtime>::NotBonded
 		);
-
-		let make_balance = 100_000;
-		// issue some relay chain currency first
-		orml_tokens::Pallet::<para::Runtime>::update_balance(
-			RELAY_CHAIN_ASSET,
-			&ParaTreasuryAccount::get(),
-			make_balance,
-		)
-		.unwrap();
 
 		// transact a bond call that adds `ADMIN_ACCOUNT` as controller
 		assert_ok!(pallet_remote_asset_manager::Pallet::<para::Runtime>::send_bond(
@@ -214,7 +193,7 @@ fn can_transact_staking() {
 
 	Para::execute_with(|| {
 		// bond extra
-		assert_ok!(pallet_remote_asset_manager::Pallet::<para::Runtime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond,));
+		assert_ok!(pallet_remote_asset_manager::Pallet::<para::Runtime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond));
 	});
 
 	Relay::execute_with(|| {
