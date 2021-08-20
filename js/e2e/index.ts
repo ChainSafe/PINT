@@ -148,8 +148,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
 
                 const end = (pendingWithdrawls as any).toHuman()[0].end_block;
                 const needsToWait =
-                    end - currentBlock > VOTING_PERIOD
-                        ? end - currentBlock - VOTING_PERIOD
+                    end - currentBlock > WITHDRAWALS_PERIOD
+                        ? end - currentBlock - WITHDRAWALS_PERIOD
                         : 0;
 
                 console.log(
@@ -177,7 +177,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* remote-asset-manager*/
         {
-            required: ["assetIndex.addAsset"],
+            required: ["priceFeed.mapAssetPriceFeed"],
             signed: config.alice,
             pallet: "remoteAssetManager",
             call: "sendAddProxy",
@@ -199,41 +199,39 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // {
-        //     required: ["assetIndex.addAsset"],
-        //     signed: config.alice,
-        //     pallet: "remoteAssetManager",
-        //     call: "sendBond",
-        //     args: [
-        //         ASSET_ID_A,
-        //         config.alice.address,
-        //         1000,
-        //         api.createType("RewardDestination", {
-        //             Staked: null,
-        //         }),
-        //     ],
-        //     verify: async () => {
-        //         assert(
-        //             JSON.stringify(
-        //                 (
-        //                     await api.query.remoteAssetManager.palletStakingBondState(
-        //                         ASSET_ID_A
-        //                     )
-        //                 ).toJSON()
-        //             ) ===
-        //                 JSON.stringify({
-        //                     controller: {
-        //                         id: config.alice.address,
-        //                     },
-        //                     bonded: 1000,
-        //                     unbonded: 0,
-        //                     unlocked_chunks: 0,
-        //                 }),
-        //
-        //             "remoteAssetManager.sendBond failed"
-        //         );
-        //     },
-        // },
+        {
+            required: ["priceFeed.mapAssetPriceFeed"],
+            signed: config.alice,
+            pallet: "remoteAssetManager",
+            call: "sendBond",
+            args: [
+                ASSET_ID_A,
+                config.alice.address,
+                1000,
+                api.createType("RewardDestination", {
+                    Staked: null,
+                }),
+            ],
+            verify: async () => {
+                assert(
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.palletStakingLedger(
+                                ASSET_ID_A
+                            )
+                        ).toJSON()
+                    ) ===
+                        JSON.stringify({
+                            controller: config.alice.address,
+                            bonded: 1000,
+                            unbonded: 0,
+                            unlocked_chunks: [0],
+                        }),
+
+                    "remoteAssetManager.sendBond failed"
+                );
+            },
+        },
         /* committee */
         {
             signed: config.alice,
@@ -368,6 +366,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
+        /* chainlink_feed */
         {
             signed: config.alice,
             pallet: "chainlinkFeed",
@@ -484,20 +483,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     },
         // },
         /* asset-index */
-        // {
-        //     required: ["saftRegistry.reportNav"],
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "removeAsset",
-        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-        //                 .isNone,
-        //             "assetIndex.removeAsset failed"
-        //         );
-        //     },
-        // },
+        {
+            required: ["saftRegistry.deposit"],
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "removeAsset",
+            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isNone,
+                    "assetIndex.removeAsset failed"
+                );
+            },
+        },
     ].map((e) => new Extrinsic(expandId(e), api, config.alice));
 };
 
