@@ -117,10 +117,10 @@ export const definitions = {
                     units: "Balance",
                 },
                 StakingLedger: {
-                    controller: "AccountId",
+                    controller: "LookupSourceFor",
                     active: "Balance",
                     total: "Balance",
-                    unlocking: "Vec<UnlockChunk<Balance, BlockNumber>>",
+                    unlocking: "Vec<UnlockChunk>",
                 },
                 StakingLedgerFor: "StakingLedger",
                 StakingWeights: {

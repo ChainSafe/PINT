@@ -1,4 +1,4 @@
-// Copyright 2021 ChainSafe Systems
+// Copyright 2021 ChainSafe Systemsls
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
@@ -11,7 +11,7 @@ use xcm_calls::assets::AssetsConfig;
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatemintConfig<AssetId> {
 	/// Dedicated config for the internal `pallet_assets`
-	pub assets_config: AssetsConfig,
+	pub assets_config: assetsconfig,
 	/// The id of the `statemint` parachain
 	///
 	/// *NOTE* using `u32` here instead of location, since `MultiLocation` has

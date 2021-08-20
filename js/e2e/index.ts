@@ -213,16 +213,14 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 }),
             ],
             verify: async () => {
-                const json = JSON.stringify(
-                    (
-                        await api.query.remoteAssetManager.palletStakingLedger(
-                            ASSET_ID_A
-                        )
-                    ).toJSON()
-                );
-                console.log(json);
                 assert(
-                    json ===
+                    JSON.stringify(
+                        (
+                            await api.query.remoteAssetManager.palletStakingLedger(
+                                ASSET_ID_A
+                            )
+                        ).toJSON()
+                    ) ===
                         JSON.stringify({
                             controller: config.alice.address,
                             bonded: 1000,
