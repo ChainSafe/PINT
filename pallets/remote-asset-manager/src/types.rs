@@ -1,4 +1,4 @@
-// Copyright 2021 ChainSafe Systemsls
+// Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use codec::{Decode, Encode};
