@@ -27,6 +27,7 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
+		require_transactional,
 		sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Saturating, StaticLookup, Zero},
 		sp_std::{self, mem, prelude::*},
 		traits::Get,
@@ -46,7 +47,10 @@ pub mod pallet {
 		PalletCall, PalletCallEncoder,
 	};
 
-	use crate::{traits::BalanceMeter, types::StatemintConfig};
+	use crate::{
+		traits::BalanceMeter,
+		types::{StatemintConfig, XcmStakingMessageCount},
+	};
 	use xcm_calls::staking::UnlockChunk;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -195,6 +199,12 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PalletStakingLedger<T: Config> =
 		StorageMap<_, Twox64Concat, <T as Config>::AssetId, StakingLedgerFor<T>, OptionQuery>;
+
+	/// The total number of xmc related messages sent to the `pallet_staking` pallet of the asset's
+	/// location
+	#[pallet::storage]
+	pub(super) type XcmStakingCount<T: Config> =
+		StorageMap<_, Twox64Concat, T::AssetId, XcmStakingMessageCount, ValueQuery>;
 
 	/// The config of `pallet_proxy` in the runtime of the parachain.
 	#[pallet::storage]
@@ -357,17 +367,36 @@ pub mod pallet {
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
-
-		/// Check for staking calls we need to get in this block
+		/// Check for staking related XCM we need to get in to this block
 		///
-		/// This will compare the pending withdrawals against the free balance of each asset and determine whether an XCM unbond, bond_extra or withdrawal is in order
+		/// This will compare the pending withdrawals against the free balance of each asset and
+		/// determine whether an XCM unbond, bond_extra or withdrawal is in order.
 		///
-		fn on_initialize(now: T::BlockNumber) -> Weight {
+		/// Executing XCM on another chain is subject to fees that will be paid for with the balance
+		/// which is under control of the PINT's account on that chain (the reserve held for all xcm
+		/// deposits sent to PINT), therefore it is feasible that a certain amount of each asset is
+		/// kept idle (not staked) at all times to mitigate the risk of lacking founds for the fees
+		/// for unstaking. This reserve balance has fixed lower barrier and an additional buffer
+		/// which reflects the NAV_asset of the asset in relation to the NAV of the index, since the
+		/// amount of on asset a LP receives upon redeeming their PINT directly correlates with the
+		/// value of each asset.
+		///
+		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
+		/// assets with staking support.
+		fn on_finalize(now: T::BlockNumber) {
+			// check each liquid asset
+
+			// check if staking is supported
+
+			// check if we can bond_extra
+
+			// check if we need to withdraw
+
+			// check if we need to unbond
 
 
-			0
+
 		}
-
 	}
 
 	#[pallet::call]
@@ -375,7 +404,7 @@ pub mod pallet {
 		/// Send a `pallet_staking` [`bond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond) call to the location of the asset.
 		///
 		/// This will encode the `bond` call accordingly and dispatch to the
-		/// location of the given asset. Limited to the council origin
+		/// location of the given asset. Limited to the council origin.
 		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn send_bond(
 			origin: OriginFor<T>,
@@ -642,6 +671,9 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+		#[require_transactional]
+		fn test() {}
+
 		/// Sets the `enabled` flag of the `StatemintConfig` to the given
 		/// parameter.
 		///

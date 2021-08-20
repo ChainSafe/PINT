@@ -6,6 +6,17 @@ use frame_support::RuntimeDebug;
 use xcm::v0::{Junction, MultiLocation};
 use xcm_calls::assets::AssetsConfig;
 
+/// Represents all XCM calls of the `pallet_staking` pallet transacted on a parachain
+#[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+pub struct XcmStakingMessageCount {
+	/// Total number of all `pallet_staking::Pallet::bond_extra` calls transacted
+	pub bond_extra: u32,
+	/// Total number of all `pallet_staking::Pallet::unbond` calls transacted
+	pub unbond: u32,
+	/// Total number of all `pallet_staking::Pallet::withdraw_unbonded` calls transacted
+	pub withdraw_unbonded: u32,
+}
+
 /// Represents the config for the statemint parachain
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
