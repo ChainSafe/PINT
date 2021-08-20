@@ -433,20 +433,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // /* saft-registry */
-        // {
-        //     signed: config.alice,
-        //     pallet: "saftRegistry",
-        //     call: "addSaft",
-        //     args: [ASSET_ID_B, 168, 42],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
-        //                 .isSome,
-        //             "Add saft failed"
-        //         );
-        //     },
-        // },
+        /* saft-registry */
+        {
+            signed: config.alice,
+            pallet: "saftRegistry",
+            call: "addSaft",
+            args: [ASSET_ID_B, 168, 42],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
+                        .isSome,
+                    "Add saft failed"
+                );
+            },
+        },
         // {
         //     required: ["saftRegistry.addSaft"],
         //     signed: config.alice,
@@ -483,20 +483,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     },
         // },
         /* asset-index */
-        // {
-        //     required: ["saftRegistry.reportNav"],
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "removeAsset",
-        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-        //                 .isNone,
-        //             "assetIndex.removeAsset failed"
-        //         );
-        //     },
-        // },
+        {
+            required: ["saftRegistry.deposit"],
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "removeAsset",
+            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isNone,
+                    "assetIndex.removeAsset failed"
+                );
+            },
+        },
     ].map((e) => new Extrinsic(expandId(e), api, config.alice));
 };
 
