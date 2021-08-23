@@ -386,18 +386,25 @@ pub mod pallet {
 		/// amount of on asset a LP receives upon redeeming their PINT directly correlates with the
 		/// value of each asset.
 		///
+		/// If an asset's chain supports staking (it was previously bonded with
+		/// `pallet_staking::bond`) then we need to check what action is appropriate in this for
+		/// this asset's staking pallet. Following states exists:
+		///    - `Idle`: nothing to bond_extra, unbond or withdraw
+		///    - `BondExtra`: new deposits were added to the PINT's parachain balance sheet and can
+		///      now be bonded. This will also check if currently unbonded funds can be rebonded
+		///      again instead.
+		///    - `Unbond`: pending withdrawals reached a threshold were we need to unbund staked
+		///      funds.
+		///    - `Withdraw`: The bonding duration of an unlocking chunk is over and the funds are now
+		///      safe to withdraw via `withdraw_unbonded`
+		///
 		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
 		/// assets with staking support.
 		fn on_finalize(now: T::BlockNumber) {
 			// check all assets with enabled cross chain staking support
-			for (asset, config) in  PalletStakingConfig::<T>::iter() {
+			for (asset, config) in PalletStakingConfig::<T>::iter() {
 				// consider only location which are already bonded
-				if let Some(mut ledger) = PalletStakingLedger::<T>::get(&asset) {
-						// determine xcm action
-
-				}
-
-
+				if let Some(mut ledger) = PalletStakingLedger::<T>::get(&asset) {}
 				// update ledger
 			}
 
@@ -406,9 +413,6 @@ pub mod pallet {
 			// check if we need to withdraw
 
 			// check if we need to unbond
-
-
-
 		}
 	}
 
