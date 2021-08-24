@@ -459,6 +459,9 @@ pub mod pallet {
 			// mint index token in caller's account
 			Self::do_mint_index_token(&caller, index_tokens);
 
+			// tell the remote asset manager that assets are available to bond
+			T::RemoteAssetManager::deposit(asset_id, units);
+
 			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
 		}
@@ -518,8 +521,8 @@ pub mod pallet {
 
 			// start the redemption process for each withdrawal
 			for (asset, units) in asset_amounts {
-				// start the unbonding routine
-				T::RemoteAssetManager::unbond(asset, units);
+				// announce the unbonding routine
+				T::RemoteAssetManager::announce_withdrawal(asset, units);
 				// reserve the funds in the treasury's account until the redemption period is
 				// over after which they can be transferred to the user account
 				// NOTE: this should always succeed due to the way the asset distribution is
