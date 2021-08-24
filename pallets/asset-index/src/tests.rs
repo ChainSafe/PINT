@@ -124,6 +124,15 @@ fn can_add_saft() {
 }
 
 #[test]
+fn can_add_saft_twice() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5));
+		assert_ne!(AssetIndex::saft_nav().unwrap(), Price::zero());
+		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_B_ID, 100, 5));
+	});
+}
+
+#[test]
 fn add_saft_fails_on_liquid_already_registered() {
 	let balance = vec![(ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
 	new_test_ext_with_balance(balance).execute_with(|| {
@@ -366,12 +375,17 @@ fn can_calculate_nav() {
 		));
 
 		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_B_ID, b_units, saft_units));
+
 		let total_supply = AssetIndex::index_token_issuance();
 		assert_eq!(total_supply, saft_units + index_token_units);
 
-		let nav = AssetIndex::nav().unwrap();
 		let liquid_nav = AssetIndex::liquid_nav().unwrap();
+		assert_ne!(liquid_nav, Price::zero());
+
 		let saft_nav = AssetIndex::saft_nav().unwrap();
+		assert_ne!(saft_nav, Price::zero());
+
+		let nav = AssetIndex::nav().unwrap();
 		assert_eq!(nav, liquid_nav + saft_nav);
 	})
 }
