@@ -10,6 +10,7 @@ use xcm::v0::{Junction, MultiLocation};
 
 const ASHLEY: AccountId = 0;
 const ASSET_A: u32 = 0;
+const ASSET_B: u32 = 1;
 
 #[test]
 fn non_admin_cannot_call_any_extrinsics() {
@@ -73,6 +74,16 @@ fn admin_can_add_and_remove_saft() {
 		assert_ok!(SaftRegistry::remove_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A, saft_id));
 		assert_eq!(SaftRegistry::active_safts(ASSET_A, saft_id), None);
 		assert_eq!(SaftRegistry::saft_nav(ASSET_A), additional_nav);
+	});
+}
+
+#[test]
+fn admin_can_add_saft_twice() {
+	let units = 20;
+	let nav = 100;
+	new_test_ext().execute_with(|| {
+		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A, nav, units));
+		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_B, nav, units));
 	});
 }
 

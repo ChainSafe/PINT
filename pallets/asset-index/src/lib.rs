@@ -657,7 +657,11 @@ pub mod pallet {
 			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
 			// `value(asset)/supply / nav`
 			let asset_value = Self::net_asset_value(asset)?;
-			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
+			Self::calculate_nav_proportion_with_value(asset_value, nav)
+		}
+
+		fn calculate_nav_proportion_with_value(value: T::Balance, nav: Ratio) -> Result<Ratio, DispatchError> {
+			let share = Ratio::checked_from_rational(value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
@@ -874,13 +878,17 @@ pub mod pallet {
 			let pint = if Self::index_token_issuance().into() == 0_u128 || Self::saft_nav()? == FixedU128::zero() {
 				nav
 			} else {
-				Self::saft_asset_proportion(asset_id)?
-					.reciprocal()
-					.ok_or(Error::<T>::AssetUnitsOverflow)?
-					.checked_mul_int::<u128>(nav.into())
-					.ok_or(Error::<T>::AssetUnitsOverflow)?
-					.try_into()
-					.map_err(|_| Error::<T>::AssetUnitsOverflow)?
+				(if Self::net_saft_value(asset_id).into() == 0_u128 {
+					Self::calculate_nav_proportion_with_value(nav, Self::saft_nav()?)?
+				} else {
+					Self::saft_asset_proportion(asset_id)?
+				})
+				.reciprocal()
+				.ok_or(Error::<T>::AssetUnitsOverflow)?
+				.checked_mul_int::<u128>(nav.into())
+				.ok_or(Error::<T>::AssetUnitsOverflow)?
+				.try_into()
+				.map_err(|_| Error::<T>::AssetUnitsOverflow)?
 			};
 
 			// mint PINT into caller's balance increasing the total issuance
