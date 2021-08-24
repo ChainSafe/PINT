@@ -114,7 +114,7 @@ fn admin_can_update_metadata() {
 #[test]
 fn can_add_saft() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5),);
+		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5));
 		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Saft));
 		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
 		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);

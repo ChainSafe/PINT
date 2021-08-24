@@ -867,17 +867,22 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// convert nav to pint
-			let pint = Self::saft_asset_proportion(asset_id)?
-				.reciprocal()
-				.ok_or(Error::<T>::AssetUnitsOverflow)?
-				.checked_mul_int::<u128>(nav.into())
-				.ok_or(Error::<T>::AssetUnitsOverflow)?
-				.try_into()
-				.map_err(|_| Error::<T>::AssetUnitsOverflow)?;
-
 			// mint SAFT into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+
+			// convert nav to pint
+			let pint = if Self::index_token_issuance().into() == 0_u128 {
+				nav
+			} else {
+				Self::saft_asset_proportion(asset_id)?
+					.reciprocal()
+					.ok_or(Error::<T>::AssetUnitsOverflow)?
+					.checked_mul_int::<u128>(nav.into())
+					.ok_or(Error::<T>::AssetUnitsOverflow)?
+					.try_into()
+					.map_err(|_| Error::<T>::AssetUnitsOverflow)?
+			};
+
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, pint);
 			Ok(())
