@@ -33,7 +33,7 @@ pub mod pallet {
 		pallet_prelude::*,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
-			ArithmeticError, FixedPointNumber,
+			ArithmeticError, FixedPointNumber, FixedU128,
 		},
 		sp_std::{convert::TryInto, prelude::*, result::Result},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
@@ -871,7 +871,7 @@ pub mod pallet {
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
 			// convert nav to pint
-			let pint = if Self::index_token_issuance().into() == 0_u128 {
+			let pint = if Self::index_token_issuance().into() == 0_u128 || Self::saft_nav()? == FixedU128::zero() {
 				nav
 			} else {
 				Self::saft_asset_proportion(asset_id)?
