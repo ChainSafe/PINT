@@ -13,8 +13,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::traits::{RemoteAssetManager, UnbondingOutcome};
-use sp_runtime::DispatchResult;
+use primitives::traits::RemoteAssetManager;
 
 use sp_core::H256;
 use sp_runtime::{
@@ -144,13 +143,9 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 		Ok(Outcome::Complete(0))
 	}
 
-	fn bond(_: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
+	fn deposit(_: AssetId, _: Balance) {}
 
-	fn unbond(_: AssetId, _: Balance) -> UnbondingOutcome {
-		UnbondingOutcome::NotSupported
-	}
+	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub struct MockPriceFeed;

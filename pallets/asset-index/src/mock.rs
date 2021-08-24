@@ -6,7 +6,6 @@
 
 use crate as pallet_asset_index;
 use frame_support::{
-	dispatch::DispatchResult,
 	ord_parameter_types, parameter_types,
 	traits::{GenesisBuild, LockIdentifier, StorageMapShim},
 	PalletId,
@@ -14,11 +13,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::PriceFeed;
-use primitives::{
-	fee::FeeRate,
-	traits::{RemoteAssetManager, UnbondingOutcome},
-	AssetPricePair, Price,
-};
+use primitives::{fee::FeeRate, traits::RemoteAssetManager, AssetPricePair, Price};
 use sp_core::H256;
 use sp_std::cell::RefCell;
 use std::collections::HashMap;
@@ -185,13 +180,9 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 		Ok(Outcome::Complete(0))
 	}
 
-	fn bond(_: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
+	fn deposit(_: AssetId, _: Balance) {}
 
-	fn unbond(_: AssetId, _: Balance) -> UnbondingOutcome {
-		UnbondingOutcome::NotSupported
-	}
+	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const PINT_ASSET_ID: AssetId = 0u32;

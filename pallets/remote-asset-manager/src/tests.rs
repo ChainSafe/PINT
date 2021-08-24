@@ -38,6 +38,7 @@ fn print_events<T: frame_system::Config>(context: &str) {
 	});
 }
 
+#[allow(unused)]
 fn run_to_block<Runtime>(n: u64)
 where
 	Runtime: pallet_remote_asset_manager::Config<BlockNumber = BlockNumber>,

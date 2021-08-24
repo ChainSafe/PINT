@@ -48,7 +48,7 @@ pub trait StakingThresholds<AssetId, Balance> {
 	///
 	/// This must be at least the `ExistentialDeposit` as configured on the
 	/// asset's native chain (e.g. DOT/Polkadot)
-	fn minimum_resereve_balance(asset: AssetId) -> Balance;
+	fn minimum_reserve_balance(asset: AssetId) -> Balance;
 
 	/// The minimum required amount to justify an additional `bond_extra` XCM call to stake
 	/// additional funds.
@@ -61,7 +61,7 @@ where
 	ReserveMinimum: GetByKey<AssetId, Balance>,
 	BondExtra: GetByKey<AssetId, Balance>,
 {
-	fn minimum_resereve_balance(asset: AssetId) -> Balance {
+	fn minimum_reserve_balance(asset: AssetId) -> Balance {
 		ReserveMinimum::get(&asset)
 	}
 

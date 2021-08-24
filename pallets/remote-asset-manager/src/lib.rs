@@ -978,7 +978,7 @@ pub mod pallet {
 		}
 
 		fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
-			T::StakingThreshold::minimum_resereve_balance(*asset)
+			T::StakingThreshold::minimum_reserve_balance(*asset)
 		}
 	}
 
