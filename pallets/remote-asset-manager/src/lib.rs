@@ -38,7 +38,7 @@ pub mod pallet {
 		Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Outcome, Result as XcmResult, SendXcm, Xcm,
 	};
 
-	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager, UnbondingOutcome};
+	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 	use xcm_calls::{
 		assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights},
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
@@ -432,6 +432,7 @@ pub mod pallet {
 					// check if the additional funds would warrant a bond extra
 					if balances.deposited >= T::StakingThreshold::minimum_bond_extra(asset) {
 						// TODO: could check against the currently unbonding balance and rebond
+
 						// only if the free remote is above the reserve threshold
 						if Self::ensure_free_stash(asset, balances.deposited).is_ok() {
 							// attempt to send bond extra
@@ -546,7 +547,7 @@ pub mod pallet {
 		/// Transacts a `pallet_proxy::Call::add_proxy` call to add a proxy on
 		/// behalf of the PINT parachain's account on the target chain.
 		///
-		/// Limitied to the council origin
+		/// Limited to the council origin
 		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn send_add_proxy(
 			origin: OriginFor<T>,
@@ -947,15 +948,14 @@ pub mod pallet {
 			T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
 		}
 
-		fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-			todo!()
+		fn deposit(asset: T::AssetId, amount: T::Balance) {
+			AssetBalance::<T>::mutate(asset, |balance| balance.deposited = balance.deposited.saturating_add(amount))
 		}
 
-		fn unbond(_asset: T::AssetId, _amount: T::Balance) -> UnbondingOutcome {
-			// TODO this will check the balance meter for the asset, if unbonding is
-			// supported it will check the current stash
-			// Self::do_send_unbond(asset, amount)
-			UnbondingOutcome::NotSupported
+		fn announce_withdrawal(asset: T::AssetId, amount: T::Balance) {
+			AssetBalance::<T>::mutate(asset, |balance| {
+				balance.pending_redemption = balance.pending_redemption.saturating_add(amount)
+			})
 		}
 	}
 
