@@ -285,6 +285,8 @@ pub mod pallet {
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
+		/// Deposits reached the max limit
+		MaxDeposits,
 	}
 
 	#[pallet::hooks]
@@ -445,6 +447,12 @@ pub mod pallet {
 			if units.is_zero() {
 				return Ok(());
 			}
+
+			// check if reach the limit
+			if <Deposits<T>>::get(&caller).len() as u32 == T::DepositLimit::get() {
+				return Err(<Error<T>>::MaxDeposits.into());
+			}
+
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
 			// only liquid assets can be deposited
@@ -470,6 +478,12 @@ pub mod pallet {
 
 			// tell the remote asset manager that assets are available to bond
 			T::RemoteAssetManager::deposit(asset_id, units);
+
+			// insert new deposit
+			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
+				deposits.push((index_tokens, <frame_system::Pallet<T>>::block_number()));
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
