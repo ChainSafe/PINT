@@ -262,6 +262,8 @@ pub mod pallet {
 		ExpectedLiquid,
 		/// Thrown when trying to remove liquid assets without recipient
 		NoRecipient,
+		/// Thrown when trying to remove deposits with no deposits
+		NoDeposits,
 		/// Invalid metadata given.
 		BadMetadata,
 		/// Thrown if no index could be found for an asset identifier.
@@ -614,6 +616,24 @@ pub mod pallet {
 				if !still_pending.is_empty() {
 					// still have redemptions pending
 					*maybe_pending = Some(still_pending);
+				}
+				Ok(())
+			})?;
+
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> DispatchResult {
+				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
+
+				// TODO:
+				//
+				// consolidate and clean deposits
+				let still_depositing: Vec<_> = depositing
+					.into_iter()
+					.filter_map(|(index_tokens, block_number)| Some((index_tokens, block_number)))
+					.collect();
+
+				if !still_depositing.is_empty() {
+					// still have redemptions pending
+					*maybe_depositing = Some(still_depositing);
 				}
 				Ok(())
 			})?;
