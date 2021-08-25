@@ -33,10 +33,12 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use orml_traits::{location::Parse, GetByKey, MultiCurrency, XcmTransfer};
-	use xcm::v0::{ExecuteXcm, MultiLocation, OriginKind, Outcome, SendXcm, Xcm};
+	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
+	use xcm::v0::{
+		Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Outcome, Result as XcmResult, SendXcm, Xcm,
+	};
 
-	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager, UnbondingOutcome};
+	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 	use xcm_calls::{
 		assets::{AssetParams, AssetsCall, AssetsCallEncoder, AssetsWeights},
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
@@ -46,7 +48,10 @@ pub mod pallet {
 		PalletCall, PalletCallEncoder,
 	};
 
-	use crate::{traits::BalanceMeter, types::StatemintConfig};
+	use crate::{
+		traits::{BalanceMeter, StakingThresholds},
+		types::{AssetLedger, StatemintConfig, XcmStakingMessageCount},
+	};
 	use xcm_calls::staking::UnlockChunk;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -55,7 +60,11 @@ pub mod pallet {
 	type AssetIdFor<T> = <T as Config>::AssetId;
 	type StakingLedgerFor<T> =
 		StakingLedger<LookupSourceFor<T>, <T as Config>::Balance, <T as frame_system::Config>::BlockNumber>;
-
+	type StakingConfigFor<T> = StakingConfig<
+		<T as frame_system::Config>::AccountId,
+		<T as Config>::Balance,
+		<T as frame_system::Config>::BlockNumber,
+	>;
 	// A `pallet_staking` dispatchable on another chain
 	type PalletStakingCall<T> = StakingCall<LookupSourceFor<T>, BalanceFor<T>, AccountIdFor<T>>;
 
@@ -127,14 +136,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayChainAssetId: Get<Self::AssetId>;
 
-		/// The minimum amount that should be held in stash (must remain
-		/// unbonded).
-		/// Withdrawals are only authorized if the updated stash balance does
-		/// exceeds this.
-		///
-		/// This must be at least the `ExistentialDeposit` as configured on the
-		/// asset's native chain (e.g. DOT/Polkadot)
-		type MinimumRemoteStashBalance: GetByKey<Self::AssetId, Self::Balance>;
+		/// Determines the threshold amounts when operating with staked assets.
+		type StakingThreshold: StakingThresholds<Self::AssetId, Self::Balance>;
 
 		/// Currency type for deposit/withdraw xcm assets
 		///
@@ -171,21 +174,40 @@ pub mod pallet {
 
 	/// The config of `pallet_staking` in the runtime of the parachain.
 	#[pallet::storage]
-	pub type PalletStakingConfig<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		<T as Config>::AssetId,
-		StakingConfig<T::AccountId, T::Balance, T::BlockNumber>,
-		OptionQuery,
-	>;
+	#[pallet::getter(fn staking_config)]
+	pub type PalletStakingConfig<T: Config> =
+		StorageMap<_, Twox64Concat, <T as Config>::AssetId, StakingConfigFor<T>, OptionQuery>;
 
 	/// The current state of PINT sovereign account bonding in `pallet_staking`.
 	#[pallet::storage]
+	#[pallet::getter(fn skating_ledger)]
 	pub type PalletStakingLedger<T: Config> =
 		StorageMap<_, Twox64Concat, <T as Config>::AssetId, StakingLedgerFor<T>, OptionQuery>;
 
+	/// The ledger of deposited funds and funds about to be withdrawn
+	/// This mirrors the `deposited` and `withdrawn` amounts from the asset index until
+	/// Separating this from the `MultiCurrency` balances, which is used to represent any kind of
+	/// funds (for example assets minted via governance proposal), ensures that this the real inflow
+	/// of reserve backed assets.
+	///
+	/// NOTE: This expects the `deposited` funds to be backed by reserve deposits on the assets
+	/// native location. For DOT for example this expects the `deposited` funds to be available on
+	/// the Polkadot relay chain in the sovereign account of the PINT parachain.
+	#[pallet::storage]
+	#[pallet::getter(fn asset_balance)]
+	pub type AssetBalance<T: Config> =
+		StorageMap<_, Twox64Concat, <T as Config>::AssetId, AssetLedger<T::Balance>, ValueQuery>;
+
+	/// The total number of xmc related messages sent to the `pallet_staking` pallet of the asset's
+	/// location
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_staking_count)]
+	pub(super) type XcmStakingCount<T: Config> =
+		StorageMap<_, Twox64Concat, T::AssetId, XcmStakingMessageCount, ValueQuery>;
+
 	/// The config of `pallet_proxy` in the runtime of the parachain.
 	#[pallet::storage]
+	#[pallet::getter(fn proxy_config)]
 	pub type PalletProxyConfig<T: Config> =
 		StorageMap<_, Twox64Concat, <T as Config>::AssetId, ProxyConfig, OptionQuery>;
 
@@ -194,6 +216,7 @@ pub mod pallet {
 	///
 	/// `location identifier` -> `delegate` -> `proxies`
 	#[pallet::storage]
+	#[pallet::getter(fn proxies)]
 	pub type Proxies<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, T::AssetId, Twox64Concat, AccountIdFor<T>, ProxyState, ValueQuery>;
 
@@ -217,7 +240,7 @@ pub mod pallet {
 	#[allow(clippy::type_complexity)]
 	pub struct GenesisConfig<T: Config> {
 		/// key-value pairs for the `PalletStakingConfig` storage map
-		pub staking_configs: Vec<(T::AssetId, StakingConfig<T::AccountId, T::Balance, T::BlockNumber>)>,
+		pub staking_configs: Vec<(T::AssetId, StakingConfigFor<T>)>,
 		/// key-value pairs for the `PalletProxyConfig` storage map
 		pub proxy_configs: Vec<(T::AssetId, ProxyConfig)>,
 		/// configures the statemint parachain
@@ -253,9 +276,18 @@ pub mod pallet {
 		/// Successfully sent a cross chain message to bond extra. \[asset,
 		/// amount\]
 		SentBondExtra(T::AssetId, T::Balance),
-		/// Successfully sent a cross chain message to bond extra. \[asset,
 		/// amount\]
 		SentUnbond(T::AssetId, T::Balance),
+		/// Failed to send a bond_extra call. \[error, asset,
+		/// amount\]
+		ErrorSendingBondExtra(XcmError, T::AssetId, T::Balance),
+		/// Failed to send a withdraw_unbonded call. \[error, asset,
+		/// amount\]
+		ErrorSendingWithdrawUnbonded(XcmError, T::AssetId, T::Balance),
+		/// Successfully sent a cross chain message to bond extra. \[asset,
+		/// Failed to send a unbond call. \[error, asset,
+		/// amount\]
+		ErrorSendingUnbond(XcmError, T::AssetId, T::Balance),
 		/// Successfully sent a cross chain message to withdraw unbonded funds.
 		/// \[asset \]
 		SentWithdrawUnbonded(T::AssetId),
@@ -333,7 +365,7 @@ pub mod pallet {
 		/// Balance would fall below the minimum requirements for bond
 		InsufficientBond,
 		/// Thrown if the balance of the PINT parachain account would fall below
-		/// the `MinimumRemoteStashBalance`
+		/// the minimum reserve balance
 		InusufficientStash,
 		/// Thrown if liquid asset has invalid chain location
 		InvalidChainLocation,
@@ -344,14 +376,112 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		/// Check for staking related XCM we need to get in to this block
+		///
+		/// This will compare the pending withdrawals against the free balance of each asset and
+		/// determine whether an XCM unbond, bond_extra or withdrawal is in order.
+		///
+		/// Executing XCM on another chain is subject to fees that will be paid for with the balance
+		/// which is under control of the PINT's account on that chain (the reserve held for all xcm
+		/// deposits sent to PINT), therefore it is feasible that a certain amount of each asset is
+		/// kept idle (not staked) at all times to mitigate the risk of lacking founds for the fees
+		/// for unstaking. This reserve balance has fixed lower barrier and an additional buffer
+		/// which reflects the NAV_asset of the asset in relation to the NAV of the index, since the
+		/// amount of on asset a LP receives upon redeeming their PINT directly correlates with the
+		/// value of each asset.
+		///
+		/// If an asset's chain supports staking (it was previously bonded with
+		/// `pallet_staking::bond`) then we need to check what action is appropriate in this for
+		/// this asset's staking pallet. Following states exists:
+		///    - `Idle`: nothing to bond_extra, unbond or withdraw
+		///    - `BondExtra`: new deposits were added to the PINT's parachain balance sheet and can
+		///      now be bonded. This will also check if currently unbonded funds can be rebonded
+		///      again instead.
+		///    - `Unbond`: pending withdrawals reached a threshold were we need to unbund staked
+		///      funds.
+		///    - `Withdraw`: The bonding duration of an unlocking chunk is over and the funds are
+		///      now safe to withdraw via `withdraw_unbonded`
+		///
+		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
+		/// assets with staking support.
+		fn on_finalize(now: T::BlockNumber) {
+			// check all assets with enabled cross chain staking support and a valid destination
+			for (asset, config, dest) in PalletStakingConfig::<T>::iter()
+				.filter_map(|(asset, config)| Self::asset_destination(asset).ok().map(|dest| (asset, config, dest)))
+			{
+				// consider only location which are already bonded
+				if let Some(mut ledger) = PalletStakingLedger::<T>::get(&asset) {
+					// derive the appropriate action based on the current balances
+					let mut balances = AssetBalance::<T>::get(&asset);
+					// cancel the deposits against the withdrawals since the last action
+					balances.consolidate();
+
+					// check if the additional funds would warrant a bond extra
+					if balances.deposited >= T::StakingThreshold::minimum_bond_extra(asset) {
+						// TODO: could check against the currently unbonding balance and rebond
+
+						// only if the free remote is above the reserve threshold
+						if Self::ensure_free_stash(asset, balances.deposited).is_ok() {
+							// attempt to send bond extra
+							match Self::do_transact_bond_extra(&config, asset, balances.deposited, dest) {
+								Ok(()) => {
+									XcmStakingCount::<T>::mutate(asset, |count| {
+										count.bond_extra = count.bond_extra.saturating_add(1)
+									});
+									Self::deposit_event(Event::SentBondExtra(asset, balances.deposited));
+									ledger.bond_extra(balances.deposited);
+									PalletStakingLedger::<T>::insert(&asset, ledger);
+									balances.deposited = T::Balance::zero();
+								}
+								Err(err) => {
+									Self::deposit_event(Event::ErrorSendingBondExtra(err, asset, balances.deposited));
+								}
+							}
+						}
+					} else if !balances.pending_redemption.is_zero() {
+						// check if we need and able to unbond funds: only with we currently have enough active funds
+						// and room for 1 more unlocking chunk
+						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
+							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+						{
+							// attempt to send unbond
+							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
+								Ok(()) => {
+									XcmStakingCount::<T>::mutate(asset, |count| {
+										count.unbond = count.unbond.saturating_add(1)
+									});
+									Self::deposit_event(Event::SentUnbond(asset, balances.pending_redemption));
+
+									// update the ledger
+									let end = now.saturating_add(config.bonding_duration);
+									ledger.active -= balances.pending_redemption;
+									ledger.unlocking.push(UnlockChunk { value: balances.pending_redemption, end });
+									PalletStakingLedger::<T>::insert(&asset, ledger);
+
+									balances.pending_redemption = T::Balance::zero();
+								}
+								Err(err) => {
+									Self::deposit_event(Event::ErrorSendingBondExtra(err, asset, balances.deposited));
+								}
+							}
+						}
+
+						// TODO automated withdrawing
+					}
+					// insert the updated balance back
+					AssetBalance::<T>::insert(asset, balances);
+				}
+			}
+		}
+	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Send a `pallet_staking` [`bond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond) call to the location of the asset.
 		///
 		/// This will encode the `bond` call accordingly and dispatch to the
-		/// location of the given asset. Limited to the council origin
+		/// location of the given asset. Limited to the council origin.
 		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn send_bond(
 			origin: OriginFor<T>,
@@ -366,10 +496,8 @@ pub mod pallet {
 				return Ok(().into());
 			}
 
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = Self::asset_destination(asset)?;
+
 			log::info!(target: "pint_xcm", "Attempting bond on: {:?} with controller {:?}", dest, controller, );
 
 			// ensures that the call is encodable for the destination
@@ -407,7 +535,7 @@ pub mod pallet {
 		/// Transacts a `pallet_proxy::Call::add_proxy` call to add a proxy on
 		/// behalf of the PINT parachain's account on the target chain.
 		///
-		/// Limitied to the council origin
+		/// Limited to the council origin
 		#[pallet::weight(10_000)] // TODO: Set weights
 		pub fn send_add_proxy(
 			origin: OriginFor<T>,
@@ -419,10 +547,8 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin)?;
 			let delegate = delegate.unwrap_or(who);
 
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = Self::asset_destination(asset)?;
+
 			log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
 			// ensures that the call is encodable for the destination
@@ -635,20 +761,34 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = Self::asset_destination(asset)?;
 			// ensures that the call is encodable for the destination
 			ensure!(T::PalletProxyCallEncoder::can_encode(&asset), Error::<T>::NotEncodableForLocation);
 
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
-			let mut state = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
+			let mut ledger = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
 			// ensures enough balance is available to bond extra
 			Self::ensure_free_stash(asset, amount)?;
 
+			Self::do_transact_bond_extra(&config, asset, amount, dest)
+				.map_err(|_| Error::<T>::FailedToSendBondExtraXcm)?;
+
+			ledger.bond_extra(amount);
+			PalletStakingLedger::<T>::insert(&asset, ledger);
+
+			Self::deposit_event(Event::SentBondExtra(asset, amount));
+			Ok(())
+		}
+
+		/// Encodes the correct `Xcm::Transact` message and sends it to the given destination
+		fn do_transact_bond_extra(
+			config: &StakingConfigFor<T>,
+			asset: T::AssetId,
+			amount: T::Balance,
+			dest: MultiLocation,
+		) -> XcmResult {
 			let call = PalletStakingCall::<T>::BondExtra(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
@@ -657,16 +797,9 @@ pub mod pallet {
 				require_weight_at_most: config.weights.bond_extra,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
-
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
-			ensure!(result.is_ok(), Error::<T>::FailedToSendBondExtraXcm);
-
-			state.bond_extra(amount);
-			PalletStakingLedger::<T>::insert(&asset, state);
-
-			Self::deposit_event(Event::SentBondExtra(asset, amount));
-			Ok(())
+			result
 		}
 
 		/// Sends an XCM [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) call
@@ -677,10 +810,7 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = Self::asset_destination(asset)?;
 			// ensures that the call is encodable for the destination
 			ensure!(T::PalletProxyCallEncoder::can_encode(&asset), Error::<T>::NotEncodableForLocation);
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
@@ -697,18 +827,7 @@ pub mod pallet {
 			// requires controller origin
 			Self::ensure_staking_controller(ledger.controller.clone())?;
 
-			let call = PalletStakingCall::<T>::Unbond(amount);
-			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
-
-			let xcm = Xcm::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.unbond,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-
-			let result = T::XcmSender::send_xcm(dest, xcm);
-			log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
-			ensure!(result.is_ok(), Error::<T>::FailedToSendUnbondXcm);
+			Self::do_transact_unbond(&config, asset, amount, dest).map_err(|_| Error::<T>::FailedToSendUnbondXcm)?;
 
 			// insert the unlock chunk with its deadline, on this system
 			let end = frame_system::Pallet::<T>::block_number().saturating_add(config.bonding_duration);
@@ -722,6 +841,26 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Encodes the correct `Xcm::Transact` message and sends it to the given destination
+		fn do_transact_unbond(
+			config: &StakingConfigFor<T>,
+			asset: T::AssetId,
+			amount: T::Balance,
+			dest: MultiLocation,
+		) -> XcmResult {
+			let call = PalletStakingCall::<T>::Unbond(amount);
+			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
+
+			let xcm = Xcm::Transact {
+				origin_type: OriginKind::SovereignAccount,
+				require_weight_at_most: config.weights.unbond,
+				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
+			};
+			let result = T::XcmSender::send_xcm(dest, xcm);
+			log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
+			result
+		}
+
 		/// Sends an XCM [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) call
 		///
 		/// Remove any unlocked chunks from the `unlocking` queue.
@@ -729,10 +868,7 @@ pub mod pallet {
 		/// account.
 		/// This essentially gives the PNIT's sovereign hold of the balance
 		pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = Self::asset_destination(asset)?;
 			// ensures that the call is encodable for the destination
 			ensure!(T::PalletProxyCallEncoder::can_encode(&asset), Error::<T>::NotEncodableForLocation);
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
@@ -775,6 +911,14 @@ pub mod pallet {
 			);
 			Ok(())
 		}
+
+		fn asset_destination(asset: T::AssetId) -> Result<MultiLocation, DispatchError> {
+			let dest = T::AssetRegistry::native_asset_location(&asset)
+				.ok_or(Error::<T>::UnknownAsset)?
+				.chain_part()
+				.ok_or(Error::<T>::InvalidChainLocation)?;
+			Ok(dest)
+		}
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
@@ -792,21 +936,20 @@ pub mod pallet {
 			T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
 		}
 
-		fn bond(asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-			Self::do_send_bond_extra(asset, amount)
+		fn deposit(asset: T::AssetId, amount: T::Balance) {
+			AssetBalance::<T>::mutate(asset, |balance| balance.deposited = balance.deposited.saturating_add(amount))
 		}
 
-		fn unbond(_asset: T::AssetId, _amount: T::Balance) -> UnbondingOutcome {
-			// TODO this will check the balance meter for the asset, if unbonding is
-			// supported it will check the current stash
-			// Self::do_send_unbond(asset, amount)
-			UnbondingOutcome::NotSupported
+		fn announce_withdrawal(asset: T::AssetId, amount: T::Balance) {
+			AssetBalance::<T>::mutate(asset, |balance| {
+				balance.pending_redemption = balance.pending_redemption.saturating_add(amount)
+			})
 		}
 	}
 
 	impl<T: Config> BalanceMeter<T::Balance, T::AssetId> for Pallet<T> {
 		/// This will return the total issuance of the given `asset` minus the
-		/// amount that is currently unvavailable due to staking
+		/// amount that is currently unavailable due to staking
 		fn free_stash_balance(asset: T::AssetId) -> T::Balance {
 			// this is the amount that is currently reserved by staking, either `bonded` or
 			// `unbonded` but not yet withdrawn
@@ -823,7 +966,7 @@ pub mod pallet {
 		}
 
 		fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
-			T::MinimumRemoteStashBalance::get(asset)
+			T::StakingThreshold::minimum_reserve_balance(*asset)
 		}
 	}
 

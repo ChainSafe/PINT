@@ -382,8 +382,14 @@ pub mod para {
 	}
 
 	parameter_type_with_key! {
-		pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
+		pub MinimumReserve: |_asset_id: AssetId| -> Balance {
 			ExistentialDeposit::get()
+		};
+	}
+
+	parameter_type_with_key! {
+		pub MinimumBondExtra: |_asset_id: AssetId| -> Balance {
+			1_000
 		};
 	}
 
@@ -482,7 +488,7 @@ pub mod para {
 		type SelfLocation = SelfLocation;
 		type SelfParaId = parachain_info::Pallet<Runtime>;
 		type RelayChainAssetId = RelayChainAssetId;
-		type MinimumRemoteStashBalance = MinimumRemoteStashBalance;
+		type StakingThreshold = (MinimumReserve, MinimumBondExtra);
 		type Assets = Currency;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type XcmAssetTransfer = XTokens;

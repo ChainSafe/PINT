@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::dispatch::DispatchResult;
+use orml_traits::GetByKey;
 
 /// The trait that provides balances related info about the parachain's various
 /// sovereign accounts.
@@ -36,4 +37,35 @@ pub trait BalanceMeter<Balance, AssetId> {
 	/// Returns the configured minimum stash balance below which the parachain's
 	/// sovereign account balance must not fall.
 	fn minimum_free_stash_balance(asset: &AssetId) -> Balance;
+}
+
+/// A type to abstract several staking related thresholds
+pub trait StakingThresholds<AssetId, Balance> {
+	/// The minimum amount that should be held in stash (must remain
+	/// unbonded).
+	/// Withdrawals are only authorized if the updated stash balance does
+	/// exceeds this.
+	///
+	/// This must be at least the `ExistentialDeposit` as configured on the
+	/// asset's native chain (e.g. DOT/Polkadot)
+	fn minimum_reserve_balance(asset: AssetId) -> Balance;
+
+	/// The minimum required amount to justify an additional `bond_extra` XCM call to stake
+	/// additional funds.
+	fn minimum_bond_extra(asset: AssetId) -> Balance;
+}
+
+// Convenience impl for orml `parameter_type_with_key!` impls
+impl<AssetId, Balance, ReserveMinimum, BondExtra> StakingThresholds<AssetId, Balance> for (ReserveMinimum, BondExtra)
+where
+	ReserveMinimum: GetByKey<AssetId, Balance>,
+	BondExtra: GetByKey<AssetId, Balance>,
+{
+	fn minimum_reserve_balance(asset: AssetId) -> Balance {
+		ReserveMinimum::get(&asset)
+	}
+
+	fn minimum_bond_extra(asset: AssetId) -> Balance {
+		BondExtra::get(&asset)
+	}
 }
