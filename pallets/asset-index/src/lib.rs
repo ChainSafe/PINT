@@ -33,7 +33,7 @@ pub mod pallet {
 		pallet_prelude::*,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
-			ArithmeticError, FixedPointNumber, FixedU128,
+			ArithmeticError, FixedPointNumber,
 		},
 		sp_std::{convert::TryInto, prelude::*, result::Result},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
@@ -251,6 +251,8 @@ pub mod pallet {
 		/// Thrown if a liquid asset operation was requested for a registered
 		/// SAFT asset.
 		ExpectedLiquid,
+		/// Thrown if adding saft when total nav is empty
+		EmptyNav,
 		/// Thrown when trying to remove liquid assets without recipient
 		NoRecipient,
 		/// Invalid metadata given.
@@ -875,10 +877,12 @@ pub mod pallet {
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
 			// convert nav to pint
-			let pint = if Self::index_token_issuance().into() == 0_u128 || Self::saft_nav()? == FixedU128::zero() {
+			let pint = if Self::index_token_issuance().into() == 0_u128 {
 				nav
+			} else if Self::nav()?.is_zero() {
+				return Err(<Error<T>>::EmptyNav)?;
 			} else {
-				(if Self::net_saft_value(asset_id).into() == 0_u128 {
+				(if Self::net_saft_value(asset_id).is_zero() {
 					Self::calculate_nav_proportion_with_value(nav, Self::saft_nav()?)?
 				} else {
 					Self::saft_asset_proportion(asset_id)?
