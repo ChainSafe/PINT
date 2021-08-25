@@ -11,10 +11,7 @@ use xcm::v0::{
 	MultiLocation::*,
 	NetworkId,
 };
-use xcm_calls::{
-	assets::{AssetsConfig, AssetsWeights, STATEMINT_PALLET_ASSETS_INDEX},
-	proxy::ProxyType as ParaProxyType,
-};
+use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
 use crate::{
@@ -252,15 +249,7 @@ fn can_transfer_to_statemint() {
 			pallet_remote_asset_manager::Error::<para::Runtime>::NoStatemintConfigFound
 		);
 
-		let config = StatemintConfig {
-			assets_config: AssetsConfig {
-				pallet_index: STATEMINT_PALLET_ASSETS_INDEX,
-				weights: assets_weights_from_runtime::<statemint::Runtime>(),
-			},
-			parachain_id: STATEMINT_PARA_ID,
-			enabled: false,
-			pint_asset_id: spint_id,
-		};
+		let config = StatemintConfig { parachain_id: STATEMINT_PARA_ID, enabled: false, pint_asset_id: spint_id };
 
 		assert_ok!(pallet_remote_asset_manager::Pallet::<para::Runtime>::set_statemint_config(
 			para::Origin::signed(ADMIN_ACCOUNT),
@@ -295,28 +284,13 @@ fn can_transfer_to_statemint() {
 		));
 	});
 
-	Statemint::execute_with(|| {
-		// SPINT should be minted into ALICE account
-		assert_eq!(
-			pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id),
-			initial_supply + transfer_amount
-		);
-		assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::balance(spint_id, &ALICE), transfer_amount);
-	})
-}
-
-pub fn assets_weights_from_runtime<T: pallet_assets::Config>() -> AssetsWeights {
-	AssetsWeights {
-		mint: <T::WeightInfo as pallet_assets::WeightInfo>::mint(),
-		burn: <T::WeightInfo as pallet_assets::WeightInfo>::burn(),
-		transfer: <T::WeightInfo as pallet_assets::WeightInfo>::transfer(),
-		force_transfer: <T::WeightInfo as pallet_assets::WeightInfo>::force_transfer(),
-		freeze: <T::WeightInfo as pallet_assets::WeightInfo>::freeze(),
-		thaw: <T::WeightInfo as pallet_assets::WeightInfo>::thaw(),
-		freeze_asset: <T::WeightInfo as pallet_assets::WeightInfo>::freeze_asset(),
-		thaw_asset: <T::WeightInfo as pallet_assets::WeightInfo>::thaw_asset(),
-		approve_transfer: <T::WeightInfo as pallet_assets::WeightInfo>::approve_transfer(),
-		cancel_approval: <T::WeightInfo as pallet_assets::WeightInfo>::cancel_approval(),
-		transfer_approved: <T::WeightInfo as pallet_assets::WeightInfo>::transfer_approved(),
-	}
+	// Reserve based transfers are not yet fully implemented https://github.com/paritytech/cumulus/pull/552
+	// Statemint::execute_with(|| {
+	// // SPINT should be minted into ALICE account
+	// assert_eq!(
+	// 	pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id),
+	// 	initial_supply + transfer_amount
+	// );
+	// assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::balance(spint_id, &ALICE),
+	// transfer_amount); })
 }

@@ -130,7 +130,6 @@ export const definitions = {
                     withdraw_unbonded: "Weight",
                 },
                 StatemintConfig: {
-                    assets_config: "AssetConfig",
                     parachain_id: "u32",
                     enabled: "bool",
                     pint_asset_id: "AssetId",
