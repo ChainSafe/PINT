@@ -3,8 +3,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{sp_runtime::traits::AtLeast32BitUnsigned, RuntimeDebug};
-use xcm::v0::{Junction, MultiLocation};
-use xcm_calls::assets::AssetsConfig;
+use xcm::v0::{Junction, MultiAsset, MultiLocation};
 
 /// Represents all XCM calls of the `pallet_staking` pallet transacted on a parachain
 #[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug)]
@@ -42,8 +41,6 @@ where
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatemintConfig<AssetId> {
-	/// Dedicated config for the internal `pallet_assets`
-	pub assets_config: AssetsConfig,
 	/// The id of the `statemint` parachain
 	///
 	/// *NOTE* using `u32` here instead of location, since `MultiLocation` has
@@ -57,7 +54,19 @@ pub struct StatemintConfig<AssetId> {
 
 impl<AssetId> StatemintConfig<AssetId> {
 	/// The path to the `statemint` parachain
-	pub fn location(&self) -> MultiLocation {
+	///
+	/// *NOTE:* this is not the full path to the asset on the statemint chain
+	pub fn parahain_location(&self) -> MultiLocation {
 		(Junction::Parent, Junction::Parachain(self.parachain_id)).into()
+	}
+}
+impl<AssetId: Into<u128> + Copy> StatemintConfig<AssetId> {
+	/// The XCM `MultiAsset` the statemint parachain expects in order to convert it correctly to the
+	/// pint asset
+	pub fn multi_asset(&self, amount: u128) -> MultiAsset {
+		// TODO simplify when on polkadot-v0.9.9 (xcm-latest) with the correct asset id converter:
+		// AsPrefixedGeneralIndex<Local, AssetId, JustTry>::reverse_ref(&self.pint_asset_id.into())
+		// where Local is MultiLocation = Junctions::Here.into()
+		MultiAsset::ConcreteFungible { id: Junction::GeneralIndex { id: self.pint_asset_id.into() }.into(), amount }
 	}
 }
