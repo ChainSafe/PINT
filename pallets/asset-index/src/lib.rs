@@ -96,6 +96,10 @@ pub mod pallet {
 		/// Type used to identify assets
 		type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy + MaybeSerializeDeserialize;
 
+		/// Restricts how many deposits can be active
+		#[pallet::constant]
+		type DepositLimit: Get<u32>;
+
 		/// The native asset id
 		#[pallet::constant]
 		type SelfAssetId: Get<Self::AssetId>;
