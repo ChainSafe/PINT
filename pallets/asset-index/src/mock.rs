@@ -140,13 +140,13 @@ impl pallet_saft_registry::Config for Test {
 
 parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
-	pub MinimumRedemption: u32 = 2;
+	pub MinimumRedemption: u32 = 3;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
 	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
-	pub DepositLimit: u32 = 3;
+	pub DepositLimit: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 
 	// No fees for now
