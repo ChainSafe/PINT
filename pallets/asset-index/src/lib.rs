@@ -138,6 +138,11 @@ pub mod pallet {
 	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn deposits)]
+	pub type Deposits<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<(T::Balance, T::BlockNumber)>, ValueQuery>;
+
 	///  (AccountId) -> Vec<PendingRedemption>
 	#[pallet::storage]
 	#[pallet::getter(fn pending_withrawals)]
