@@ -20,7 +20,7 @@ sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkad
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
+
 
 ## Substrate Pallet Dependencies
 pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }

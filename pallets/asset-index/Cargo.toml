@@ -24,7 +24,7 @@ xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9
 xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9', default-features = false }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = "https://github.com/ChainSafe/chainlink-polkadot", branch = "upgrade-substrate-master", default-features = false, optional = true }
+pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.8', default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
@@ -66,7 +66,7 @@ runtime-benchmarks = [
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
-    'pallet-chainlink-feed/runtime-benchmarks',
+#    'pallet-chainlink-feed/runtime-benchmarks',
 ]
 
 [package.metadata.docs.rs]

@@ -11,7 +11,7 @@ version = '0.0.1'
 [dependencies]
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.101", features = ["derive"], optional = true }
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive']}
+codec = { package = 'parity-scale-codec', version = '2.2.0', default-features = false, features = ['derive', 'max-encoded-len']}
 
 # Substrate Dependencies
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
@@ -44,7 +44,7 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
+
 
 ## Substrate Pallet Dependencies
 pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
