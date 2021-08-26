@@ -78,16 +78,6 @@ fn admin_can_add_and_remove_saft() {
 }
 
 #[test]
-fn admin_can_add_saft_twice() {
-	let units = 20;
-	let nav = 100;
-	new_test_ext().execute_with(|| {
-		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A, nav, units));
-		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_B, nav, units));
-	});
-}
-
-#[test]
 fn add_saft_depositing_index_tokens() {
 	let units = 20;
 	let nav = 100;

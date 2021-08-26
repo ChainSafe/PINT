@@ -113,14 +113,29 @@ fn admin_can_update_metadata() {
 
 #[test]
 fn can_add_saft() {
+	let units = 5;
+	let nav = 100;
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5));
+		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, nav, units));
 		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Saft));
-		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
-		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), 5);
-		assert_eq!(AssetIndex::index_token_issuance(), 5);
+		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), nav);
+		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), units);
+		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), units);
+		assert_eq!(AssetIndex::index_token_issuance(), units);
 	});
+}
+
+#[test]
+fn can_add_saft_in_registry() {
+	let units = 100;
+	let nav = 100;
+	new_test_ext().execute_with(|| {
+		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, nav, units));
+		assert_eq!(
+			Price::from(AssetIndex::relative_asset_price(ASSET_A_ID).unwrap().volume(units).unwrap()),
+			nav.into()
+		);
+	})
 }
 
 #[test]
