@@ -635,7 +635,7 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			Ok(().into())
+			Ok(Some(10_000).into())
 		}
 
 		/// Updates the index token locks of the caller.
@@ -710,7 +710,7 @@ pub mod pallet {
 		fn do_consolidate_deposits(
 			caller: &T::AccountId,
 			redemption: &PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>,
-		) -> DispatchResult {
+		) -> DispatchResultWithPostInfo {
 			let mut total = 0;
 			for withdrawal in &redemption.assets {
 				if withdrawal.withdrawn {
@@ -721,12 +721,24 @@ pub mod pallet {
 					.ok_or(ArithmeticError::Overflow)?;
 			}
 
-			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> DispatchResult {
+			let fee = <Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<Weight, DispatchError> {
 				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
+				let (mut start, mut end) = (0_u32.into(), 1_u32.into());
 
 				let still_depositing: Vec<_> = depositing
 					.into_iter()
 					.filter_map(|(index_tokens, block_number)| {
+						// check depositing duration
+						if start == 0_u32.into() {
+							start = block_number;
+							end = block_number;
+						} else if block_number <= start {
+							start = block_number
+						} else if block_number >= end {
+							end = block_number;
+						}
+
+						// consolidate deposits
 						let mut tokens = index_tokens.into();
 						if block_number > frame_system::Pallet::<T>::block_number() {
 							Some((index_tokens, block_number))
@@ -751,14 +763,17 @@ pub mod pallet {
 					*maybe_depositing = Some(still_depositing);
 				}
 
-				Ok(())
+				Ok(T::RedemptionFee::redemption_fee(
+					end.saturating_sub(start),
+					total.try_into().map_err(|_| ArithmeticError::Overflow)?,
+				))
 			})?;
 
 			if !total == 0 {
 				return Err(<Error<T>>::InsufficientDeposit.into());
 			}
 
-			Ok(())
+			Ok(Some(fee).into())
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
