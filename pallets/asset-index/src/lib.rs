@@ -576,8 +576,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -858,7 +858,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn add_saft(caller: &T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn add_saft(
+			caller: &T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -873,26 +878,18 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// mint SAFT into the treasury's account
+			// determine the index token equivalent value of the given saft_nav, or how many index token the given `saft_nav` is worth
+			// we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
+			let index_token: T::Balance = Self::nav()?
+				.reciprocal()
+				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
+				.ok_or(ArithmeticError::Overflow)?;
+
+			// mint the given units of the SAFT asset into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
-			// convert nav to pint
-			let pint = if Self::index_token_issuance().into() == 0_u128 {
-				nav
-			} else if Self::nav()?.is_zero() {
-				return Err(<Error<T>>::EmptyNav)?;
-			} else {
-				Price::from(nav.into())
-					.checked_div(&Self::nav()?)
-					.ok_or(ArithmeticError::Overflow)?
-					.checked_mul_int(1_u32)
-					.ok_or(ArithmeticError::Overflow)?
-					.try_into()
-					.map_err(|_| ArithmeticError::Overflow)?
-			};
-
 			// mint PINT into caller's balance increasing the total issuance
-			T::IndexToken::deposit_creating(caller, pint);
+			T::IndexToken::deposit_creating(caller, index_token);
 			Ok(())
 		}
 

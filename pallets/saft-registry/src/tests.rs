@@ -78,14 +78,12 @@ fn admin_can_add_and_remove_saft() {
 }
 
 #[test]
-fn add_saft_depositing_index_tokens() {
+fn add_saft_depositing_index_tokens_works() {
 	let units = 20;
 	let nav = 100;
 	new_test_ext().execute_with(|| {
 		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A, nav, units));
 		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav);
-		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_B, nav, units));
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav * 2);
 	});
 }
 
