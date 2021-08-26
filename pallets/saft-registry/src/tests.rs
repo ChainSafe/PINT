@@ -88,6 +88,18 @@ fn admin_can_add_saft_twice() {
 }
 
 #[test]
+fn add_saft_depositing_index_tokens() {
+	let units = 20;
+	let nav = 100;
+	new_test_ext().execute_with(|| {
+		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A, nav, units));
+		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav);
+		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_B, nav, units));
+		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav * 2);
+	});
+}
+
+#[test]
 fn admin_can_add_then_update_saft() {
 	new_test_ext().execute_with(|| {
 		// add

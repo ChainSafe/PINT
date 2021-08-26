@@ -367,7 +367,10 @@ fn can_calculate_nav() {
 		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_B_ID, b_units, saft_units));
 
 		let total_supply = AssetIndex::index_token_issuance();
-		assert_eq!(total_supply, saft_units + index_token_units);
+		assert_eq!(
+			total_supply,
+			saft_units / AssetIndex::nav().unwrap().checked_mul_int(1_u128).unwrap() + index_token_units
+		);
 
 		let liquid_nav = AssetIndex::liquid_nav().unwrap();
 		let saft_nav = AssetIndex::saft_nav().unwrap();

@@ -882,17 +882,13 @@ pub mod pallet {
 			} else if Self::nav()?.is_zero() {
 				return Err(<Error<T>>::EmptyNav)?;
 			} else {
-				(if Self::net_saft_value(asset_id).is_zero() {
-					Self::calculate_nav_proportion_with_value(nav, Self::saft_nav()?)?
-				} else {
-					Self::saft_asset_proportion(asset_id)?
-				})
-				.reciprocal()
-				.ok_or(Error::<T>::AssetUnitsOverflow)?
-				.checked_mul_int::<u128>(nav.into())
-				.ok_or(Error::<T>::AssetUnitsOverflow)?
-				.try_into()
-				.map_err(|_| Error::<T>::AssetUnitsOverflow)?
+				Price::from(nav.into())
+					.checked_div(&Self::nav()?)
+					.ok_or(ArithmeticError::Overflow)?
+					.checked_mul_int(1_u32)
+					.ok_or(ArithmeticError::Overflow)?
+					.try_into()
+					.map_err(|_| ArithmeticError::Overflow)?
 			};
 
 			// mint PINT into caller's balance increasing the total issuance
