@@ -9,6 +9,7 @@ use frame_support::{
 	dispatch::DispatchError,
 	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
 	sp_std::result::Result,
+	weights::Weight,
 };
 use xcm::v0::{MultiLocation, Outcome};
 
@@ -264,7 +265,7 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 
 /// Hook for determining redemption fee
 pub trait RedemptionFee<BlockNumber, Balance> {
-	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> DispatchResult {
-		Ok(())
+	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Weight {
+		1_000_u64.into()
 	}
 }
