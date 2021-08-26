@@ -261,3 +261,10 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// the nav from the caller's account
 	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
+
+/// Hook for determining redemption fee
+pub trait RedemptionFee<BlockNumber, Balance> {
+	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> DispatchResult {
+		Ok(())
+	}
+}

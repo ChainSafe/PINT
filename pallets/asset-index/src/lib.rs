@@ -48,7 +48,7 @@ pub mod pallet {
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
-		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RedemptionFee, RemoteAssetManager, SaftRegistry},
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
@@ -99,6 +99,9 @@ pub mod pallet {
 		/// Restricts how many deposits can be active
 		#[pallet::constant]
 		type DepositLimit: Get<u32>;
+
+		/// Determines the redemption fee in complete_withdraw
+		type RedemptionFee: RedemptionFee<Self::BlockNumber, Self::Balance>;
 
 		/// The native asset id
 		#[pallet::constant]

@@ -436,6 +436,10 @@ pub mod para {
 		pub DepositLimit: u32 = 50;
 	}
 
+	pub struct RedemptionFee;
+
+	impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {}
+
 	impl pallet_asset_index::Config for Runtime {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type Event = Event;
@@ -445,6 +449,7 @@ pub mod para {
 		type IndexToken = Balances;
 		type Balance = Balance;
 		type DepositLimit = DepositLimit;
+		type RedemptionFee = RedemptionFee;
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;
 		type WithdrawalPeriod = WithdrawalPeriod;

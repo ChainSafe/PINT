@@ -116,11 +116,16 @@ parameter_types! {
 	pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
+pub struct RedemptionFee;
+
+impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {}
+
 impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type DepositLimit = DepositLimit;
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;

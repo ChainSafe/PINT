@@ -445,12 +445,17 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type WeightInfo = ();
 }
 
+pub struct RedemptionFee;
+
+impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {}
+
 impl pallet_asset_index::Config for Runtime {
 	// Using signed as the admin origin for testing now
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type DepositLimit = DepositLimit;
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
