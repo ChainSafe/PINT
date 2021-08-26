@@ -588,6 +588,7 @@ pub mod pallet {
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
 		#[pallet::weight(10_000)] // TODO: Set weights
+		#[transactional]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
@@ -595,6 +596,7 @@ pub mod pallet {
 
 			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
 				let pending = maybe_pending.take().ok_or(<Error<T>>::NoPendingWithdrawals)?;
+				let mut consolidate_deposits_failed = false;
 
 				// try to redeem each redemption, but only close it if all assets could be
 				// redeemed
@@ -605,6 +607,11 @@ pub mod pallet {
 						if redemption.end_block >= current_block &&
 							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
+							// Consolidate and clean deposits
+							if Self::do_consolidate_deposits(&caller, &redemption).is_err() {
+								consolidate_deposits_failed = true;
+							}
+
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
 							return None;
@@ -613,30 +620,18 @@ pub mod pallet {
 					})
 					.collect();
 
+				if consolidate_deposits_failed {
+					return Err(<Error<T>>::InsufficientDeposit.into());
+				}
+
 				if !still_pending.is_empty() {
 					// still have redemptions pending
 					*maybe_pending = Some(still_pending);
 				}
+
 				Ok(())
 			})?;
 
-			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> DispatchResult {
-				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
-
-				// TODO:
-				//
-				// consolidate and clean deposits
-				let still_depositing: Vec<_> = depositing
-					.into_iter()
-					.filter_map(|(index_tokens, block_number)| Some((index_tokens, block_number)))
-					.collect();
-
-				if !still_depositing.is_empty() {
-					// still have redemptions pending
-					*maybe_depositing = Some(still_depositing);
-				}
-				Ok(())
-			})?;
 			Ok(().into())
 		}
 
@@ -706,6 +701,61 @@ pub mod pallet {
 			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		/// Consolidate and clean deposits while completing withdraw
+		fn do_consolidate_deposits(
+			caller: &T::AccountId,
+			redemption: &PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>,
+		) -> DispatchResult {
+			let mut total = 0;
+			for withdrawal in &redemption.assets {
+				if withdrawal.withdrawn {
+					continue;
+				}
+				total += Self::relative_asset_price(withdrawal.asset)?
+					.volume(withdrawal.units.into())
+					.ok_or(ArithmeticError::Overflow)?;
+			}
+
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> DispatchResult {
+				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
+
+				let still_depositing: Vec<_> = depositing
+					.into_iter()
+					.filter_map(|(index_tokens, block_number)| {
+						let mut tokens = index_tokens.into();
+						if block_number > frame_system::Pallet::<T>::block_number() {
+							Some((index_tokens, block_number))
+						} else if total >= tokens {
+							total -= tokens;
+							None
+						} else {
+							tokens -= total;
+							total = 0;
+							if let Ok(tokens) = tokens.try_into() {
+								Some((tokens, block_number))
+							} else {
+								total = index_tokens.into() - tokens;
+								Some((index_tokens, block_number))
+							}
+						}
+					})
+					.collect();
+
+				if !still_depositing.is_empty() {
+					// still have redemptions pending
+					*maybe_depositing = Some(still_depositing);
+				}
+
+				Ok(())
+			})?;
+
+			if !total == 0 {
+				return Err(<Error<T>>::InsufficientDeposit.into());
+			}
+
+			Ok(())
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
