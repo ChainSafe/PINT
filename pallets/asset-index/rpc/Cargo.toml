@@ -1,0 +1,35 @@
+[package]
+authors = ['ChainSafe Systems']
+description = 'RPC for the asset-index pallet.'
+edition = '2018'
+license = 'LGPL-3.0-only'
+name = 'pallet-asset-index-rpc'
+readme = 'README.md'
+repository = 'https://github.com/ChainSafe/PINT/'
+version = '0.0.1'
+
+[dependencies]
+jsonrpc-core = "15.0.0"
+jsonrpc-derive = "15.0.0"
+ethereum-types = "0.12.0"
+serde = { version = "1.0.124", features = ["derive"] }
+
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.8" }
+pallet-asset-index-rpc-runtime-api = { path = "runtime-api" }
+
+primitives = { path = "../../../primitives/primitives", default-features = false }
+
+[dev-dependencies]
+serde_json = "1.0.64"
+
+[package.metadata.docs.rs]
+targets = ['x86_64-unknown-linux-gnu']
