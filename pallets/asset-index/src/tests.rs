@@ -147,18 +147,18 @@ fn can_add_saft() {
 	});
 }
 
-#[test]
-fn _can_add_saft_in_registry() {
-	let units = 100;
-	let nav = 100;
-	new_test_ext().execute_with(|| {
-		// assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, nav, units));
-		// assert_eq!(
-		// 	Price::from(AssetIndex::relative_asset_price(ASSET_A_ID).unwrap().volume(units).unwrap()),
-		// 	nav.into()
-		// );
-	})
-}
+// #[test]
+// fn can_add_saft_in_registry() {
+// 	let units = 100;
+// 	let nav = 100;
+// 	new_test_ext().execute_with(|| {
+// 		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, nav, units));
+// 		assert_eq!(
+// 			Price::from(AssetIndex::relative_asset_price(ASSET_A_ID).unwrap().volume(units).unwrap()),
+// 			nav.into()
+// 		);
+// 	})
+// }
 
 #[test]
 fn add_saft_fails_on_liquid_already_registered() {
@@ -185,9 +185,22 @@ fn deposit_only_works_for_added_liquid_assets() {
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
 			pallet::Error::<Test>::UnsupportedAsset
 		);
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5));
+
+		// mint and intial supply of pint
+		let initial_liquid_supply = 1_000;
+		let initial_tokens = 2_0000;
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			initial_liquid_supply,
+			MultiLocation::Null,
+			initial_tokens
+		));
+
+		// add saft
+		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_B_ID, 100, 5));
 		assert_noop!(
-			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_B_ID, 1_000),
 			pallet::Error::<Test>::UnsupportedAsset
 		);
 	});
