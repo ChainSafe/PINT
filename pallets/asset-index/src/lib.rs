@@ -251,6 +251,8 @@ pub mod pallet {
 		/// Thrown if a liquid asset operation was requested for a registered
 		/// SAFT asset.
 		ExpectedLiquid,
+		/// Thrown if adding saft when total nav is empty
+		EmptyNav,
 		/// Thrown when trying to remove liquid assets without recipient
 		NoRecipient,
 		/// Invalid metadata given.
@@ -855,7 +857,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn add_saft(caller: &T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn add_saft(
+			caller: &T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -870,10 +877,18 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// mint SAFT into the treasury's account
+			// determine the index token equivalent value of the given saft_nav, or how many index token the
+			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
+			let index_token: T::Balance = Self::nav()?
+				.reciprocal()
+				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
+				.ok_or(ArithmeticError::Overflow)?;
+
+			// mint the given units of the SAFT asset into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+
 			// mint PINT into caller's balance increasing the total issuance
-			T::IndexToken::deposit_creating(caller, nav);
+			T::IndexToken::deposit_creating(caller, index_token);
 			Ok(())
 		}
 

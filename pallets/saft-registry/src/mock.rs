@@ -5,8 +5,9 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_saft_registry;
+use core::cell::RefCell;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	assert_ok, ord_parameter_types, parameter_types,
 	traits::{LockIdentifier, StorageMapShim},
 	PalletId,
 };
@@ -14,6 +15,7 @@ use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use primitives::traits::RemoteAssetManager;
+use xcm::v0::MultiLocation;
 
 use sp_core::H256;
 use sp_runtime::{
@@ -21,6 +23,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, IdentityLookup, Zero},
 	DispatchError,
 };
+use std::collections::HashMap;
 use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -148,10 +151,27 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
+pub const LIQUID_ASSET_ID: AssetId = 42u32;
+pub const SAFT_ASSET_ID: AssetId = 43u32;
+pub const LIQUID_ASSET_MULTIPLIER: Balance = 2;
+pub const SAFT_ASSET_MULTIPLIER: Balance = 3;
+
+thread_local! {
+	pub static PRICES: RefCell<HashMap<AssetId, Price>> = RefCell::new(HashMap::new());
+}
+
 pub struct MockPriceFeed;
+impl MockPriceFeed {
+	pub fn set_prices(prices: impl IntoIterator<Item = (AssetId, Price)>) {
+		PRICES.with(|v| *v.borrow_mut() = prices.into_iter().collect());
+	}
+}
+
 impl PriceFeed<AssetId> for MockPriceFeed {
-	fn get_price(_quote: AssetId) -> Result<Price, DispatchError> {
-		todo!()
+	fn get_price(asset: AssetId) -> Result<Price, DispatchError> {
+		PRICES.with(|v| {
+			v.borrow().get(&asset).cloned().ok_or_else(|| pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+		})
 	}
 
 	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
@@ -190,8 +210,30 @@ impl pallet_saft_registry::Config for Test {
 	type WeightInfo = ();
 }
 
+pub const INDEX_TOKEN_SUPPLY: u128 = 2_0000;
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	t.into()
+	let mut t: sp_io::TestExternalities =
+		frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+
+	t.execute_with(|| {
+		// mint and intial supply of pint
+		let initial_liquid_supply = 1_000;
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			LIQUID_ASSET_ID,
+			initial_liquid_supply,
+			MultiLocation::Null,
+			INDEX_TOKEN_SUPPLY,
+		));
+
+		// set initial prices
+		MockPriceFeed::set_prices(vec![
+			(LIQUID_ASSET_ID, Price::from(LIQUID_ASSET_MULTIPLIER)),
+			(SAFT_ASSET_ID, Price::from(SAFT_ASSET_MULTIPLIER)),
+		]);
+	});
+
+	t
 }
