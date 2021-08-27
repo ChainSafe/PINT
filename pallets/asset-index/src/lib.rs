@@ -576,8 +576,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block
-							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block &&
+							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -659,11 +659,7 @@ pub mod pallet {
 			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
 			// `value(asset)/supply / nav`
 			let asset_value = Self::net_asset_value(asset)?;
-			Self::calculate_nav_proportion_with_value(asset_value, nav)
-		}
-
-		fn calculate_nav_proportion_with_value(value: T::Balance, nav: Ratio) -> Result<Ratio, DispatchError> {
-			let share = Ratio::checked_from_rational(value.into(), Self::index_token_issuance().into())
+			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
@@ -878,8 +874,8 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// determine the index token equivalent value of the given saft_nav, or how many index token the given `saft_nav` is worth
-			// we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
+			// determine the index token equivalent value of the given saft_nav, or how many index token the
+			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
 			let index_token: T::Balance = Self::nav()?
 				.reciprocal()
 				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))

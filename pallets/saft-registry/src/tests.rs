@@ -4,8 +4,8 @@
 use crate as pallet;
 use crate::{mock::*, SAFTRecord};
 use frame_support::{assert_noop, assert_ok};
-use primitives::traits::MultiAssetRegistry;
-use sp_runtime::traits::BadOrigin;
+use primitives::traits::{MultiAssetRegistry, NavProvider};
+use sp_runtime::{traits::BadOrigin, FixedPointNumber};
 use xcm::v0::{Junction, MultiLocation};
 
 const ASHLEY: AccountId = 0;
@@ -65,12 +65,15 @@ fn admin_can_add_and_remove_saft() {
 			Some(SAFTRecord::new(additional_nav, additional_units))
 		);
 
-		let total_nav = initial_balance + nav + additional_nav;
+		let total_nav = nav + additional_nav;
+		let expected_mint_token: u128 =
+			AssetIndex::nav().unwrap().reciprocal().unwrap().checked_mul_int(total_nav.into()).unwrap();
+		let index_token = expected_mint_token + INDEX_TOKEN_SUPPLY;
 		let total_units = units + additional_units;
 		assert_eq!(AssetIndex::index_total_asset_balance(SAFT_ASSET_ID), total_units);
-		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), total_nav);
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), total_nav);
-		assert_eq!(AssetIndex::index_token_issuance(), total_nav);
+		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), index_token);
+		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), index_token);
+		assert_eq!(AssetIndex::index_token_issuance(), index_token);
 
 		assert_eq!(SaftRegistry::saft_nav(SAFT_ASSET_ID), total_nav);
 		// remove
@@ -85,8 +88,12 @@ fn add_saft_depositing_index_tokens_works() {
 	let units = 20;
 	let nav = 100;
 	new_test_ext().execute_with(|| {
+		let initial_supply = AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID);
 		assert_ok!(SaftRegistry::add_saft(Origin::signed(ADMIN_ACCOUNT_ID), SAFT_ASSET_ID, nav, units));
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), nav);
+		assert_eq!(
+			AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID),
+			initial_supply + AssetIndex::index_token_equivalent(SAFT_ASSET_ID, units).unwrap(),
+		);
 	});
 }
 

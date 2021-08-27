@@ -215,6 +215,8 @@ impl pallet_saft_registry::Config for Test {
 	type WeightInfo = ();
 }
 
+pub const INDEX_TOKEN_SUPPLY: u128 = 2_0000;
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t: sp_io::TestExternalities =
@@ -223,13 +225,12 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.execute_with(|| {
 		// mint and intial supply of pint
 		let initial_liquid_supply = 1_000;
-		let initial_tokens = 2_0000;
 		assert_ok!(AssetIndex::add_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),
 			LIQUID_ASSET_ID,
 			initial_liquid_supply,
 			MultiLocation::Null,
-			initial_tokens
+			INDEX_TOKEN_SUPPLY,
 		));
 
 		// set initial prices
