@@ -716,9 +716,7 @@ pub mod pallet {
 				if withdrawal.withdrawn {
 					continue;
 				}
-				total += Self::relative_asset_price(withdrawal.asset)?
-					.volume(withdrawal.units.into())
-					.ok_or(ArithmeticError::Overflow)?;
+				total += Self::index_token_equivalent(withdrawal.asset, withdrawal.units)?.into();
 			}
 
 			let fee = <Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<Weight, DispatchError> {
