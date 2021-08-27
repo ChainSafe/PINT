@@ -5,12 +5,10 @@
 //! circular dependencies
 
 use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
-use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchError,
 	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
-	sp_std::{boxed::Box, result::Result},
-	RuntimeDebug,
+	sp_std::result::Result,
 };
 use xcm::v0::{MultiLocation, Outcome};
 
@@ -42,14 +40,14 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 		amount: Balance,
 	) -> frame_support::sp_std::result::Result<Outcome, DispatchError>;
 
-	/// Notification of deposited funds in the index, ready to be`bond` to earn staking rewards.
+	/// Notification of deposited funds in the index, ready to be `bond` to earn staking rewards.
 	///
 	/// This is an abstraction over how staking is supported on the `asset`'s native location.
 	/// In general, this can be one of
 	///     - None, staking is not supported, meaning this asset is idle.
 	///     - Staking via the FRAME `pallet_staking`, (e.g. Relay Chain).
 	///     - Liquid Staking, with support for early unbonding.
-	fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
+	fn deposit(asset: AssetId, amount: Balance);
 
 	/// Notification of an upcoming withdrawal.
 	/// This tells the manager to either reserve the given amount from the free remote balance or
@@ -60,7 +58,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 	///     - Call `pallet_staking::unbond` + `pallet_staking::withdraw` on the asset's native chain
 	///       (e.g Relay Chain)
 	///     - Execute the unbond mechanism of the liquid staking protocol
-	fn unbond(asset: AssetId, amount: Balance) -> UnbondingOutcome;
+	fn announce_withdrawal(asset: AssetId, amount: Balance);
 }
 
 /// Abstracts net asset value (`NAV`) related calculations
@@ -262,16 +260,4 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// Burns the given amount of SAFT token from the index and
 	/// the nav from the caller's account
 	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
-}
-
-/// Outcome of an XCM unbonding api call
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub enum UnbondingOutcome {
-	/// Staking is not supported, therefore nothing to unbond
-	NotSupported,
-	/// Staking is supported, but the parachain's reserve account currently
-	/// holds enough units as stash so that no unbonding procedure is necessary
-	SufficientReserve,
-	/// The outcome of the XCM unbond call
-	Outcome(Box<Outcome>),
 }

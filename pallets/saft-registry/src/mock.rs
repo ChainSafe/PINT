@@ -147,13 +147,9 @@ impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance
 		Ok(Outcome::Complete(0))
 	}
 
-	fn bond(_: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
+	fn deposit(_: AssetId, _: Balance) {}
 
-	fn unbond(_: AssetId, _: Balance) -> UnbondingOutcome {
-		UnbondingOutcome::NotSupported
-	}
+	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const LIQUID_ASSET_ID: AssetId = 42u32;

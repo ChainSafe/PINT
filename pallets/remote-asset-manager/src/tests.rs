@@ -22,6 +22,7 @@ use crate::{
 	pallet as pallet_remote_asset_manager,
 	types::StatemintConfig,
 };
+use frame_support::traits::Hooks;
 use pallet_price_feed::PriceFeed;
 use primitives::traits::NavProvider;
 
@@ -31,6 +32,20 @@ fn print_events<T: frame_system::Config>(context: &str) {
 	frame_system::Pallet::<T>::events().iter().for_each(|r| {
 		println!("{:?}", r.event);
 	});
+}
+
+#[allow(unused)]
+fn run_to_block<Runtime>(n: u64)
+where
+	Runtime: pallet_remote_asset_manager::Config<BlockNumber = BlockNumber>,
+{
+	while frame_system::Pallet::<Runtime>::block_number() < n {
+		pallet_remote_asset_manager::Pallet::<Runtime>::on_finalize(frame_system::Pallet::<Runtime>::block_number());
+		frame_system::Pallet::<Runtime>::on_finalize(frame_system::Pallet::<Runtime>::block_number());
+		frame_system::Pallet::<Runtime>::set_block_number(frame_system::Pallet::<Runtime>::block_number() + 1);
+		frame_system::Pallet::<Runtime>::on_initialize(frame_system::Pallet::<Runtime>::block_number());
+		pallet_remote_asset_manager::Pallet::<Runtime>::on_initialize(frame_system::Pallet::<Runtime>::block_number());
+	}
 }
 
 /// registers the relay chain as liquid asset
