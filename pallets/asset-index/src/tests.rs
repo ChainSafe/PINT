@@ -350,6 +350,30 @@ fn deposit_fails_on_missing_assets() {
 }
 
 #[test]
+fn deposit_fails_on_exceeding_limit() {
+	new_test_ext().execute_with(|| {
+		let deposit = 1_000;
+		let initial_units = 1_000;
+
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
+
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
+		}
+
+		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1), <crate::Error<Test>>::MaxDeposits);
+	})
+}
+
+#[test]
 fn can_calculate_nav() {
 	new_test_ext().execute_with(|| {
 		let a_units = 100;
