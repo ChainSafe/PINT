@@ -140,6 +140,12 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
+	/// Testing storage for RedemptionFee
+	#[cfg(test)]
+	#[pallet::storage]
+	#[pallet::getter(fn last_redemption)]
+	pub type LastRedemption<T: Config> = StorageValue<_, (T::BlockNumber, T::Balance), ValueQuery>;
+
 	/// (AssetId) -> AssetAvailability
 	#[pallet::storage]
 	#[pallet::getter(fn assets)]

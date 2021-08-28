@@ -369,6 +369,7 @@ fn deposit_fails_on_exceeding_limit() {
 			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
 		}
 
+		assert_eq!(<crate::Deposits<Test>>::get(ASHLEY).len(), 50);
 		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1), <crate::Error<Test>>::MaxDeposits);
 	})
 }
