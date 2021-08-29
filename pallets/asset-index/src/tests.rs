@@ -399,7 +399,10 @@ fn redemption_fee_works_on_completing_withdraw() {
 		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit);
 
 		// ensure the redemption fee hook works
-		assert_eq!(<crate::LastRedemption<Test>>::get(), (LockupPeriod::get(), deposit));
+		assert_eq!(
+			<crate::LastRedemption<Test>>::get(),
+			(LockupPeriod::get(), AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap())
+		);
 	})
 }
 
