@@ -719,15 +719,17 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let mut total = 0;
 			for withdrawal in &redemption.assets {
-				if withdrawal.withdrawn {
+				if !withdrawal.withdrawn {
 					continue;
 				}
+
 				total += Self::index_token_equivalent(withdrawal.asset, withdrawal.units)?.into();
 			}
+			let withdrawal_amount = total.clone();
 
 			let fee = <Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<Weight, DispatchError> {
 				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
-				let (mut start, mut end) = (0_u32.into(), 1_u32.into());
+				let mut start: T::BlockNumber = 0_u32.into();
 
 				let still_depositing: Vec<_> = depositing
 					.into_iter()
@@ -735,11 +737,8 @@ pub mod pallet {
 						// check depositing duration
 						if start == 0_u32.into() {
 							start = block_number;
-							end = block_number;
-						} else if block_number <= start {
-							start = block_number
-						} else if block_number >= end {
-							end = block_number;
+						} else if block_number < start {
+							start = block_number;
 						}
 
 						// consolidate deposits
@@ -768,8 +767,8 @@ pub mod pallet {
 				}
 
 				Ok(T::RedemptionFee::redemption_fee(
-					end.saturating_sub(start),
-					total.try_into().map_err(|_| ArithmeticError::Overflow)?,
+					frame_system::Pallet::<T>::block_number().saturating_sub(start.into()),
+					withdrawal_amount.try_into().map_err(|_| ArithmeticError::Overflow)?,
 				))
 			})?;
 

@@ -375,6 +375,35 @@ fn deposit_fails_on_exceeding_limit() {
 }
 
 #[test]
+fn redemption_fee_works_on_completing_withdraw() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit));
+		assert_eq!(<crate::Deposits<Test>>::get(ASHLEY).len(), 1);
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
+
+		// advance the block number so that the lock expires
+		frame_system::Pallet::<Test>::set_block_number(LockupPeriod::get() + 1);
+		assert_ok!(AssetIndex::withdraw(Origin::signed(ASHLEY), AssetIndex::index_token_balance(&ASHLEY)));
+		assert_ok!(AssetIndex::complete_withdraw(Origin::signed(ASHLEY)));
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit);
+
+		// ensure the redemption fee hook works
+		assert_eq!(<crate::LastRedemption<Test>>::get(), (LockupPeriod::get(), deposit));
+	})
+}
+
+#[test]
 fn can_calculate_nav() {
 	new_test_ext().execute_with(|| {
 		let a_units = 100;
