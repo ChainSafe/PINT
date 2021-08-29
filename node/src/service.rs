@@ -52,7 +52,7 @@ native_executor_instance!(
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
-#[cfg(feature = "kusama")]
+#[cfg(feature = "polkadot")]
 native_executor_instance!(
 	pub PolkadotExecutor,
 	pint_runtime_polkadot::api::dispatch,
@@ -486,7 +486,7 @@ pub fn new_chain_ops(
 		}
 
 		#[cfg(not(feature = "polkadot"))]
-		Err(KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+		Err(POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		let PartialComponents { client, backend, import_queue, task_manager, .. } =
 			new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(config, false, false)?;
