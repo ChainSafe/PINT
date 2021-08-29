@@ -725,7 +725,7 @@ pub mod pallet {
 
 				total += Self::index_token_equivalent(withdrawal.asset, withdrawal.units)?.into();
 			}
-			let withdrawal_amount = total.clone();
+			let withdrawal_amount = total;
 
 			let fee = <Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<Weight, DispatchError> {
 				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
@@ -735,9 +735,7 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|(index_tokens, block_number)| {
 						// check depositing duration
-						if start == 0_u32.into() {
-							start = block_number;
-						} else if block_number < start {
+						if block_number < start || start == 0_u32.into() {
 							start = block_number;
 						}
 
@@ -767,7 +765,7 @@ pub mod pallet {
 				}
 
 				Ok(T::RedemptionFee::redemption_fee(
-					frame_system::Pallet::<T>::block_number().saturating_sub(start.into()),
+					frame_system::Pallet::<T>::block_number().saturating_sub(start),
 					withdrawal_amount.try_into().map_err(|_| ArithmeticError::Overflow)?,
 				))
 			})?;

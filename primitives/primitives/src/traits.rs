@@ -266,6 +266,6 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 /// Hook for determining redemption fee
 pub trait RedemptionFee<BlockNumber, Balance> {
 	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Weight {
-		1_000_u64.into()
+		1_000_u64
 	}
 }
