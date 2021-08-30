@@ -9,10 +9,7 @@ use jsonrpc_derive::rpc;
 use primitives::Ratio;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{
-	generic::BlockId,
-	traits::{Block as BlockT, MaybeDisplay, MaybeFromStr},
-};
+use sp_runtime::{generic::BlockId, traits::Block as BlockT};
 use std::sync::Arc;
 
 pub use self::gen_client::Client as AssetIndexClient;
@@ -58,7 +55,7 @@ where
 	C::Api: AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>,
 	AccountId: Codec,
 	AssetId: Codec,
-	Balance: Codec + MaybeDisplay + MaybeFromStr,
+	Balance: Codec,
 {
 	fn get_nav(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Ratio> {
 		let api = self.client.runtime_api();

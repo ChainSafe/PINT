@@ -9,7 +9,6 @@
 #![allow(clippy::unnecessary_mut_passed)]
 
 use codec::Codec;
-use sp_runtime::traits::{MaybeDisplay, MaybeFromStr};
 use sp_std::prelude::*;
 
 use primitives::Ratio;
@@ -18,7 +17,7 @@ sp_api::decl_runtime_apis! {
 	pub trait AssetIndexApi<AccountId, AssetId, Balance> where
 		AccountId: Codec,
 		AssetId: Codec,
-		Balance: Codec + MaybeDisplay + MaybeFromStr,
+		Balance: Codec,
 	{
 		fn get_nav() -> Ratio;
 	}
