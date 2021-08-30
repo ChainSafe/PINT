@@ -744,15 +744,15 @@ pub mod pallet {
 						if block_number > frame_system::Pallet::<T>::block_number() {
 							Some((index_tokens, block_number))
 						} else if total >= tokens {
-							total -= tokens;
+							total = total.saturating_sub(tokens);
 							None
 						} else {
-							tokens -= total;
+							tokens = tokens.saturating_sub(total);
 							total = 0;
 							if let Ok(tokens) = tokens.try_into() {
 								Some((tokens, block_number))
 							} else {
-								total = index_tokens.into() - tokens;
+								total = index_tokens.into().saturating_sub(tokens);
 								Some((index_tokens, block_number))
 							}
 						}
