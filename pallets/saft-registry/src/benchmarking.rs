@@ -110,28 +110,28 @@ mod tests {
 	#[test]
 	fn add_saft() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_add_saft::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_add_saft());
 		});
 	}
 
 	#[test]
 	fn remove_saft() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_remove_saft::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_remove_saft());
 		});
 	}
 
 	#[test]
 	fn report_nav() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_report_nav::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_report_nav());
 		});
 	}
 
 	#[test]
 	fn convert_to_liquid() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_convert_to_liquid::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_convert_to_liquid());
 		});
 	}
 }
