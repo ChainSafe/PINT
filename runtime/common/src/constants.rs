@@ -112,7 +112,6 @@ parameter_types! {
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
 	pub const SS58Prefix: u8 = 0;
-	pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
 	// Maximum allowed string length for feed names
 	pub const StringLimit: u32 = 15;
 	pub const TransactionByteFee: Balance = 1 ;

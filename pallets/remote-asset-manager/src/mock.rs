@@ -187,7 +187,6 @@ pub mod para {
 		xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder},
 		*,
 	};
-	use crate::mock::xcm_test_support::calls::PalletAssetsEncoder;
 	use codec::Decode;
 	use frame_support::dispatch::DispatchError;
 	use orml_currencies::BasicCurrencyAdapter;
@@ -408,7 +407,6 @@ pub mod para {
 		pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 		pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 		pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
-		pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
 		pub StringLimit: u32 = 4;
 
 		pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
@@ -491,8 +489,6 @@ pub mod para {
 		type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
 		// Encodes `pallet_proxy` calls before transaction them to other chains
 		type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
-		type PalletAssetsCallEncoder = PalletAssetsEncoder<CanEncodeAsset>;
-		type StatemintCustodian = StatemintCustodian;
 		type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
 		type SelfAssetId = PINTAssetId;
 		type SelfLocation = SelfLocation;
