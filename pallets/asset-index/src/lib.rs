@@ -1163,8 +1163,12 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn complete_withdraw() -> Weight;
 		fn register_asset() -> Weight;
+		fn remove_asset() -> Weight;
 		fn deposit() -> Weight;
+		fn unlock() -> Weight;
+		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
 	}
 
@@ -1174,7 +1178,15 @@ pub mod pallet {
 			Default::default()
 		}
 
+		fn complete_withdraw() -> Weight {
+			Default::default()
+		}
+
 		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn remove_asset() -> Weight {
 			Default::default()
 		}
 
@@ -1183,6 +1195,14 @@ pub mod pallet {
 		}
 
 		fn set_metadata() -> Weight {
+			Default::default()
+		}
+
+		fn unlock() -> Weight {
+			Default::default()
+		}
+
+		fn withdraw() -> Weight {
 			Default::default()
 		}
 	}

@@ -40,6 +40,14 @@ impl<T: frame_system::Config> pallet_asset_index::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 
+	fn complete_withdraw() -> Weight {
+		Default::default()
+	}
+
+	fn remove_asset() -> Weight {
+		Default::default()
+	}
+
 	fn register_asset() -> Weight {
 		(38_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
@@ -56,5 +64,13 @@ impl<T: frame_system::Config> pallet_asset_index::WeightInfo for WeightInfo<T> {
 		(18_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn unlock() -> Weight {
+		Default::default()
+	}
+
+	fn withdraw() -> Weight {
+		Default::default()
 	}
 }
