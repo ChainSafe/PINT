@@ -498,7 +498,7 @@ mod tests {
 	#[test]
 	fn test_pallet_staking_call_codec() {
 		let bond_extra = PalletStakingCall::bond_extra(100);
-		let call: Call = bond_extra.clone().into();
+		let call: Call = bond_extra.into();
 		let mut encoded: DoubleEncoded<Call> = call.encode().into();
 		assert!(encoded.ensure_decoded().is_ok());
 		assert_eq!(encoded.take_decoded().unwrap(), call)
