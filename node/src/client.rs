@@ -1,6 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-use primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
+use primitives::{AccountId, AssetId, Balance, Block, BlockNumber, Hash, Header, Nonce};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
 use sc_service::{TFullBackend, TFullClient};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
@@ -27,6 +27,7 @@ pub trait RuntimeApiCollection:
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+	+ pallet_asset_index_rpc::AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
@@ -43,6 +44,7 @@ where
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+		+ pallet_asset_index_rpc::AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
@@ -332,6 +334,22 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Kusama(client) => client.child_storage_keys(id, child_info, key_prefix),
 			#[cfg(feature = "polkadot")]
 			Self::Polkadot(client) => client.child_storage_keys(id, child_info, key_prefix),
+		}
+	}
+
+	fn child_storage_keys_iter<'a>(
+		&self,
+		id: &BlockId<Block>,
+		child_info: ChildInfo,
+		prefix: Option<&'a StorageKey>,
+		start_key: Option<&StorageKey>,
+	) -> sp_blockchain::Result<KeyIterator<'a, <FullBackend as sc_client_api::Backend<Block>>::State, Block>> {
+		match self {
+			Self::Dev(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "kusama")]
+			Self::Kusama(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "polkadot")]
+			Self::Polkadot(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
 		}
 	}
 

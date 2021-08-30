@@ -8,11 +8,10 @@
 use primitives::{AccountId, AssetId, Balance, Block, Hash, Nonce};
 use sc_client_api::light::{Fetcher, RemoteBlockchain};
 pub use sc_rpc_api::DenyUnsafe;
-// use sc_transaction_pool_api::TransctionPool;
+use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
-use sp_transaction_pool::TransactionPool;
 use std::sync::Arc;
 
 pub use sc_rpc::SubscriptionTaskExecutor;

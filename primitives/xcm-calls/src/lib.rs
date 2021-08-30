@@ -87,12 +87,12 @@ where
 mod tests {
 	use std::{cell::RefCell, collections::HashSet};
 
-	use codec::{Decode, Encode};
+	use codec::{Decode, Encode, MaxEncodedLen};
 	use frame_election_provider_support::onchain;
 	use frame_support::{
 		parameter_types,
 		sp_runtime::traits::BlakeTwo256,
-		traits::{Currency, FindAuthor, Imbalance, InstanceFilter, MaxEncodedLen, OnUnbalanced, OneSessionHandler},
+		traits::{Currency, FindAuthor, Imbalance, InstanceFilter, OnUnbalanced, OneSessionHandler},
 		weights::constants::RocksDbWeight,
 	};
 	use pallet_staking as staking;
@@ -114,6 +114,7 @@ mod tests {
 
 	use super::*;
 	use crate::assets::{AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX};
+	use frame_support::traits::Everything;
 
 	/// The AccountId alias in this test module.
 	pub(crate) type AccountId = u64;
@@ -214,7 +215,7 @@ mod tests {
 	}
 
 	impl frame_system::Config for Test {
-		type BaseCallFilter = ();
+		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
 		type DbWeight = RocksDbWeight;

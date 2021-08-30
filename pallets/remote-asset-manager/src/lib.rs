@@ -34,9 +34,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
-	use xcm::v0::{
-		Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Outcome, Result as XcmResult, SendXcm, Xcm,
-	};
+	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
 	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
 	use xcm_calls::{
@@ -865,11 +863,7 @@ pub mod pallet {
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
-		fn transfer_asset(
-			recipient: T::AccountId,
-			asset: T::AssetId,
-			amount: T::Balance,
-		) -> sp_std::result::Result<Outcome, DispatchError> {
+		fn transfer_asset(recipient: T::AccountId, asset: T::AssetId, amount: T::Balance) -> DispatchResult {
 			// asset's native chain location
 			let dest: MultiLocation =
 				T::AssetIdConvert::convert(asset).ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;

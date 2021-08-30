@@ -17,6 +17,7 @@ use frame_support::{
 };
 use frame_system::{self as system, EnsureSignedBy};
 
+use frame_support::traits::Everything;
 use sp_core::H256;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
@@ -42,7 +43,7 @@ parameter_types! {
 pub(crate) type AccountId = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();

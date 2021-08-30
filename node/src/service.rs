@@ -18,8 +18,9 @@ use sc_consensus_aura::ImportQueueParams;
 pub use sc_executor::NativeExecutor;
 use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullClient, TaskManager};
+use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
+use sc_transaction_pool::BasicPool;
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
@@ -80,6 +81,12 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 	}
 }
 
+/// PINT's full backend.
+type FullBackend = TFullBackend<Block>;
+
+/// PINT's full client.
+type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+
 /// Maybe Mandala Dev full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 
@@ -96,7 +103,7 @@ pub fn new_partial<RuntimeApi, Executor>(
 		FullClient<RuntimeApi, Executor>,
 		FullBackend,
 		MaybeFullSelectChain,
-		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>,
 		(Option<Telemetry>, Option<TelemetryWorkerHandle>),
 	>,
@@ -134,7 +141,7 @@ where
 
 	let registry = config.prometheus_registry();
 
-	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
+	let transaction_pool = BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
 		registry,
@@ -224,7 +231,7 @@ async fn start_node_impl<RB, RuntimeApi, Executor, BIC>(
 	parachain_config: Configuration,
 	polkadot_config: Configuration,
 	id: ParaId,
-	rpc_ext_builder: RB,
+	_rpc_ext_builder: RB,
 	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
@@ -285,22 +292,19 @@ where
 		import_queue: import_queue.clone(),
 		on_demand: None,
 		block_announce_validator_builder: Some(Box::new(|_| block_announce_validator)),
+		warp_sync: None,
 	})?;
 
-	let rpc_client = client.clone();
-	// TODO: replace once migrated to 9.9 with TransactionpoolApi
-	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
-	// let rpc_extensions_builder = {
-	// 	let client = client.clone();
-	// 	let transaction_pool = transaction_pool.clone();
-	//
-	// 	Box::new(move |deny_unsafe, _| {
-	// 		let deps = pint_rpc::FullDeps { client: client.clone(), pool: transaction_pool.clone(),
-	// deny_unsafe };
-	//
-	// 		Ok(pint_rpc::create_full(deps))
-	// 	})
-	// };
+	let rpc_extensions_builder = {
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
+
+		Box::new(move |deny_unsafe, _| {
+			let deps = pint_rpc::FullDeps { client: client.clone(), pool: transaction_pool.clone(), deny_unsafe };
+
+			Ok(pint_rpc::create_full(deps))
+		})
+	};
 
 	if parachain_config.offchain_worker.enabled {
 		sc_service::build_offchain_workers(
@@ -473,7 +477,7 @@ pub fn new_chain_ops(
 	(
 		Arc<Client>,
 		Arc<FullBackend>,
-		sp_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
+		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		TaskManager,
 	),
 	sc_service::Error,

@@ -46,6 +46,7 @@ pint-runtime-common = { path = '../runtime/common' }
 primitives = { path = "../primitives/primitives" }
 xcm-calls = { path = '../primitives/xcm-calls' }
 pint-rpc  = { path = '../rpc' }
+pallet-asset-index-rpc = { path = '../pallets/asset-index/rpc' }
 
 # Substrate Dependencies
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
@@ -64,7 +65,9 @@ sc-basic-authorship = { git = 'https://github.com/paritytech/substrate', branch 
 sc-chain-spec = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-cli = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-client-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-sc-consensus = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
+sc-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-consensus-manual-seal = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
+sc-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.9" }
 sc-consensus-aura = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-executor = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-network = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
@@ -75,7 +78,6 @@ sc-service = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 sc-telemetry = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-transaction-pool = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 sc-tracing = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-sc-consensus-manual-seal = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
 
 ## Substrate Primitive Dependencies
 sp-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
