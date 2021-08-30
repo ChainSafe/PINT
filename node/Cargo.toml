@@ -45,6 +45,7 @@ pint-runtime-polkadot = { path = '../runtime/polkadot', optional = true }
 pint-runtime-common = { path = '../runtime/common' }
 primitives = { path = "../primitives/primitives" }
 xcm-calls = { path = '../primitives/xcm-calls' }
+pint-rpc  = { path = '../rpc' }
 
 # Substrate Dependencies
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }

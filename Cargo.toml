@@ -7,6 +7,10 @@ members = [
     'pallets/*',
     'primitives/*',
     'runtime/*',
+
+    'rpc',
+    'pallets/asset-index/rpc',
+    'pallets/asset-index/rpc/runtime-api',
 ]
 exclude = ["test-utils/xcm-test-support"]
 

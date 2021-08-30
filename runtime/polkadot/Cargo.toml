@@ -92,6 +92,7 @@ pallet-price-feed = {path = '../../pallets/price-feed', default-features = false
 pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', default-features = false }
 primitives = { path = '../../primitives/primitives', default-features = false }
 xcm-calls = {path = '../../primitives/xcm-calls', default-features = false }
+pallet-asset-index-rpc-runtime-api = { path = '../../pallets/asset-index/rpc/runtime-api', default-features = false }
 
 pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
 
@@ -158,6 +159,7 @@ std = [
 	'pallet-session/std',
 	'pallet-transaction-payment/std',
 	'primitives/std',
+	'pallet-asset-index-rpc-runtime-api/std',
 
 	'parachain-info/std',
 	'cumulus-pallet-aura-ext/std',

@@ -793,6 +793,18 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl pallet_asset_index_rpc_runtime_api::AssetIndexApi<
+		Block,
+		AccountId,
+		AssetId,
+		Balance,
+	> for Runtime {
+		fn get_nav() -> primitives::Ratio {
+			use primitives::traits::NavProvider;
+			AssetIndex::nav().unwrap_or_default()
+		}
+	}
+
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
 		fn dispatch_benchmark(

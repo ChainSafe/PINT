@@ -288,7 +288,19 @@ where
 	})?;
 
 	let rpc_client = client.clone();
+	// TODO: replace once migrated to 9.9 with TransactionpoolApi
 	let rpc_extensions_builder = Box::new(move |_, _| rpc_ext_builder(rpc_client.clone()));
+	// let rpc_extensions_builder = {
+	// 	let client = client.clone();
+	// 	let transaction_pool = transaction_pool.clone();
+	//
+	// 	Box::new(move |deny_unsafe, _| {
+	// 		let deps = pint_rpc::FullDeps { client: client.clone(), pool: transaction_pool.clone(),
+	// deny_unsafe };
+	//
+	// 		Ok(pint_rpc::create_full(deps))
+	// 	})
+	// };
 
 	if parachain_config.offchain_worker.enabled {
 		sc_service::build_offchain_workers(
