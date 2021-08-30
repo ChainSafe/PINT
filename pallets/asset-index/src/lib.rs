@@ -98,7 +98,7 @@ pub mod pallet {
 
 		/// Restricts how many deposits can be active
 		#[pallet::constant]
-		type DepositLimit: Get<u32>;
+		type MaxActiveDeposits: Get<u32>;
 
 		/// Determines the redemption fee in complete_withdraw
 		type RedemptionFee: RedemptionFee<Self::BlockNumber, Self::Balance>;
@@ -153,8 +153,13 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn deposits)]
-	pub type Deposits<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<(T::Balance, T::BlockNumber)>, ValueQuery>;
+	pub type Deposits<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<(T::Balance, T::BlockNumber), T::MaxActiveDeposits>,
+		ValueQuery,
+	>;
 
 	///  (AccountId) -> Vec<PendingRedemption>
 	#[pallet::storage]
@@ -459,11 +464,6 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			// check if reach the limit
-			if <Deposits<T>>::get(&caller).len() as u32 == T::DepositLimit::get() {
-				return Err(<Error<T>>::MaxDeposits.into());
-			}
-
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
 			// only liquid assets can be deposited
@@ -492,7 +492,9 @@ pub mod pallet {
 
 			// insert new deposit
 			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
-				deposits.push((index_tokens, <frame_system::Pallet<T>>::block_number()));
+				deposits
+					.try_push((index_tokens, <frame_system::Pallet<T>>::block_number()))
+					.map_err(|_| Error::<T>::InsufficientDeposit)?;
 				Ok(())
 			})?;
 
@@ -761,7 +763,7 @@ pub mod pallet {
 
 				if !still_depositing.is_empty() {
 					// still have redemptions pending
-					*maybe_depositing = Some(still_depositing);
+					*maybe_depositing = Some(still_depositing.try_into().map_err(|_| <Error<T>>::InsufficientDeposit)?);
 				}
 
 				Ok(T::RedemptionFee::redemption_fee(
