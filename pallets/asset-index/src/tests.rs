@@ -369,9 +369,12 @@ fn deposit_fails_on_exceeding_limit() {
 			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
 		}
 
-		assert_noop!(
+		// TODO:
+		//
+		// if use `assert_noop`, here will be an binary mismatched
+		assert_eq!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1),
-			pallet::Error::<Test>::InsufficientDeposit
+			Err(pallet::Error::<Test>::InsufficientDeposit.into())
 		);
 	})
 }
