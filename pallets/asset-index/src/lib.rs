@@ -342,7 +342,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
-		#[pallet::weight(T::WeightInfo::remove_asset())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::remove_asset())]
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -479,7 +479,7 @@ pub mod pallet {
 		///
 		/// The distribution of the underlying assets will be equivalent to the
 		/// ratio of the liquid assets in the index.
-		#[pallet::weight(T::WeightInfo::withdraw())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
@@ -564,7 +564,7 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
-		#[pallet::weight(T::WeightInfo::complete_withdraw())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::complete_withdraw())]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
