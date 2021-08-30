@@ -39,12 +39,17 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
+	#[cfg(feature = "runtime-benchmarks")]
+	pub use crate::traits::PriceFeedBenchmarks;
 	pub use crate::{traits::PriceFeed, types::TimestampedValue};
 	#[cfg(feature = "std")]
 	use frame_support::traits::GenesisBuild;
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
+		sp_runtime::{
+			traits::{CheckedDiv, Zero},
+			FixedPointNumber, FixedPointOperand,
+		},
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;
@@ -257,6 +262,36 @@ pub mod pallet {
 			let quote_price = Self::get_price(quote.clone())?;
 			let price = base_price.checked_div(&quote_price).ok_or(Error::<T>::ExceededAccuracy)?;
 			Ok(AssetPricePair::new(base, quote, price))
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> PriceFeedBenchmarks<T::AccountId, T::AssetId> for Pallet<T> {
+		fn create_feed(
+			caller: <T as frame_system::Config>::AccountId,
+			asset_id: T::AssetId,
+		) -> DispatchResultWithPostInfo {
+			use frame_benchmarking::vec;
+
+			pallet_chainlink_feed::Pallet::<T>::create_feed(
+				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
+				600u32.into(),
+				Zero::zero(),
+				(1u8.into(), 100u8.into()),
+				1u8.into(),
+				5u8,
+				vec![1; T::StringLimit::get() as usize],
+				Zero::zero(),
+				vec![(caller.clone(), caller)],
+				None,
+				None,
+			)?;
+
+			let _ = AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| {
+				maybe_feed_id.replace(<pallet_chainlink_feed::FeedCounter<T>>::get())
+			});
+
+			Ok(().into())
 		}
 	}
 
