@@ -5073,6 +5073,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-index-rpc"
+version = "0.0.1"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-asset-index-rpc-runtime-api",
+ "parity-scale-codec",
+ "primitives",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-asset-index-rpc-runtime-api"
+version = "0.0.1"
+dependencies = [
+ "parity-scale-codec",
+ "primitives",
+ "serde",
+ "sp-api",
+ "sp-runtime",
+ "sp-std 3.0.0",
+]
+
+[[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
@@ -6445,6 +6474,7 @@ dependencies = [
  "pallet-transaction-payment-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
  "parity-scale-codec",
+ "pint-rpc",
  "pint-runtime-common",
  "pint-runtime-dev",
  "pint-runtime-kusama",
@@ -6492,6 +6522,27 @@ dependencies = [
  "substrate-frame-rpc-system",
  "substrate-prometheus-endpoint",
  "xcm-calls",
+]
+
+[[package]]
+name = "pint-rpc"
+version = "0.0.1"
+dependencies = [
+ "jsonrpc-core",
+ "pallet-asset-index-rpc",
+ "pallet-transaction-payment-rpc",
+ "parity-scale-codec",
+ "pint-runtime-common",
+ "primitives",
+ "sc-client-api",
+ "sc-rpc",
+ "sc-rpc-api",
+ "sp-api",
+ "sp-block-builder",
+ "sp-blockchain",
+ "sp-runtime",
+ "sp-transaction-pool",
+ "substrate-frame-rpc-system",
 ]
 
 [[package]]
@@ -6544,6 +6595,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-index",
+ "pallet-asset-index-rpc-runtime-api",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -6616,6 +6668,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-index",
+ "pallet-asset-index-rpc-runtime-api",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -6688,6 +6741,7 @@ dependencies = [
  "orml-xcm-support",
  "orml-xtokens",
  "pallet-asset-index",
+ "pallet-asset-index-rpc-runtime-api",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
