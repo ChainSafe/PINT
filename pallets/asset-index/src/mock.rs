@@ -6,9 +6,7 @@
 
 use crate as pallet_asset_index;
 use frame_support::{
-	ord_parameter_types,
-	pallet_prelude::Weight,
-	parameter_types,
+	ord_parameter_types, parameter_types,
 	traits::{GenesisBuild, LockIdentifier, StorageMapShim},
 	PalletId,
 };
@@ -158,9 +156,9 @@ parameter_types! {
 pub struct RedemptionFee;
 
 impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
-	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Weight {
+	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Balance {
 		<crate::LastRedemption<Test>>::set((duration, amount));
-		0_u64
+		Default::default()
 	}
 }
 

@@ -433,7 +433,7 @@ pub mod para {
 	}
 
 	parameter_types! {
-		pub DepositLimit: u32 = 50;
+		pub MaxActiveDeposits: u32 = 50;
 	}
 
 	pub struct RedemptionFee;
@@ -448,7 +448,7 @@ pub mod para {
 		type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 		type IndexToken = Balances;
 		type Balance = Balance;
-		type DepositLimit = DepositLimit;
+		type MaxActiveDeposits = MaxActiveDeposits;
 		type RedemptionFee = RedemptionFee;
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;

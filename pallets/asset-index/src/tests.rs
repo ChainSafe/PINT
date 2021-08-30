@@ -351,10 +351,10 @@ fn deposit_fails_on_missing_assets() {
 
 #[test]
 fn deposit_fails_on_exceeding_limit() {
-	new_test_ext().execute_with(|| {
-		let deposit = 1_000;
-		let initial_units = 1_000;
+	let deposit = 1_000;
+	let initial_units = 1_000;
 
+	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::add_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),
 			ASSET_A_ID,
@@ -369,8 +369,10 @@ fn deposit_fails_on_exceeding_limit() {
 			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
 		}
 
-		assert_eq!(<crate::Deposits<Test>>::get(ASHLEY).len(), 50);
-		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1), <crate::Error<Test>>::MaxDeposits);
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1),
+			pallet::Error::<Test>::InsufficientDeposit
+		);
 	})
 }
 
@@ -388,8 +390,10 @@ fn redemption_fee_works_on_completing_withdraw() {
 			initial_units
 		));
 		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
-		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit));
-		assert_eq!(<crate::Deposits<Test>>::get(ASHLEY).len(), 1);
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 20));
+		}
+
 		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
 
 		// advance the block number so that the lock expires
@@ -403,6 +407,9 @@ fn redemption_fee_works_on_completing_withdraw() {
 			<crate::LastRedemption<Test>>::get(),
 			(LockupPeriod::get(), AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap())
 		);
+
+		// can deposit again after withdrawal
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
 	})
 }
 

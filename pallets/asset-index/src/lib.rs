@@ -301,8 +301,6 @@ pub mod pallet {
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
-		/// Deposits reached the max limit
-		MaxDeposits,
 	}
 
 	#[pallet::hooks]
@@ -531,7 +529,10 @@ pub mod pallet {
 			)?;
 
 			// amount = fee + redeem
-			let fee = amount.fee(T::BaseWithdrawalFee::get()).ok_or(Error::<T>::AssetUnitsOverflow)?;
+			let fee = amount
+				.fee(T::BaseWithdrawalFee::get())
+				.ok_or(Error::<T>::AssetUnitsOverflow)?
+				.saturating_add(Self::do_consolidate_deposits(&caller, amount)?);
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
 			// calculate the payout for each asset based on the redeem amount
@@ -607,7 +608,6 @@ pub mod pallet {
 
 			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
 				let pending = maybe_pending.take().ok_or(<Error<T>>::NoPendingWithdrawals)?;
-				let mut consolidate_deposits_failed = false;
 
 				// try to redeem each redemption, but only close it if all assets could be
 				// redeemed
@@ -618,11 +618,6 @@ pub mod pallet {
 						if redemption.end_block >= current_block &&
 							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
-							// Consolidate and clean deposits
-							if Self::do_consolidate_deposits(&caller, &redemption).is_err() {
-								consolidate_deposits_failed = true;
-							}
-
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
 							return None;
@@ -630,10 +625,6 @@ pub mod pallet {
 						Some(redemption)
 					})
 					.collect();
-
-				if consolidate_deposits_failed {
-					return Err(<Error<T>>::InsufficientDeposit.into());
-				}
 
 				if !still_pending.is_empty() {
 					// still have redemptions pending
@@ -715,48 +706,30 @@ pub mod pallet {
 		}
 
 		/// Consolidate and clean deposits while completing withdraw
-		fn do_consolidate_deposits(
-			caller: &T::AccountId,
-			redemption: &PendingRedemption<T::AssetId, T::Balance, BlockNumberFor<T>>,
-		) -> DispatchResultWithPostInfo {
-			let mut total = 0;
-			for withdrawal in &redemption.assets {
-				if !withdrawal.withdrawn {
-					continue;
-				}
-
-				total += Self::index_token_equivalent(withdrawal.asset, withdrawal.units)?.into();
-			}
-			let withdrawal_amount = total;
-
-			let fee = <Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<Weight, DispatchError> {
+		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
+			let withdrawal_amount = amount.clone();
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<T::Balance, DispatchError> {
 				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
 				let mut start: T::BlockNumber = 0_u32.into();
 
 				let still_depositing: Vec<_> = depositing
 					.into_iter()
-					.filter_map(|(index_tokens, block_number)| {
+					.filter_map(|(mut index_tokens, block_number)| {
 						// check depositing duration
 						if block_number < start || start == 0_u32.into() {
 							start = block_number;
 						}
 
 						// consolidate deposits
-						let mut tokens = index_tokens.into();
 						if block_number > frame_system::Pallet::<T>::block_number() {
 							Some((index_tokens, block_number))
-						} else if total >= tokens {
-							total = total.saturating_sub(tokens);
+						} else if amount >= index_tokens {
+							amount = amount.saturating_sub(index_tokens);
 							None
 						} else {
-							tokens = tokens.saturating_sub(total);
-							total = 0;
-							if let Ok(tokens) = tokens.try_into() {
-								Some((tokens, block_number))
-							} else {
-								total = index_tokens.into().saturating_sub(tokens);
-								Some((index_tokens, block_number))
-							}
+							index_tokens = index_tokens.saturating_sub(amount);
+							amount = Default::default();
+							Some((index_tokens, block_number))
 						}
 					})
 					.collect();
@@ -766,17 +739,15 @@ pub mod pallet {
 					*maybe_depositing = Some(still_depositing.try_into().map_err(|_| <Error<T>>::InsufficientDeposit)?);
 				}
 
+				if amount != Default::default() {
+					return Err(<Error<T>>::InsufficientDeposit.into());
+				}
+
 				Ok(T::RedemptionFee::redemption_fee(
 					frame_system::Pallet::<T>::block_number().saturating_sub(start),
-					withdrawal_amount.try_into().map_err(|_| ArithmeticError::Overflow)?,
+					withdrawal_amount,
 				))
-			})?;
-
-			if !total == 0 {
-				return Err(<Error<T>>::InsufficientDeposit.into());
-			}
-
-			Ok(Some(fee).into())
+			})
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
