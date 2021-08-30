@@ -273,24 +273,33 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			use frame_benchmarking::vec;
 
+			pallet_chainlink_feed::Pallet::<T>::set_feed_creator(
+				<frame_system::Origin<T>>::Signed(pallet_chainlink_feed::Pallet::<T>::pallet_admin()).into(),
+				caller.clone(),
+			)?;
+
 			pallet_chainlink_feed::Pallet::<T>::create_feed(
 				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
-				600u32.into(),
+				100u32.into(),
 				Zero::zero(),
 				(1u8.into(), 100u8.into()),
 				1u8.into(),
-				5u8,
+				8u8,
 				vec![1; T::StringLimit::get() as usize],
 				Zero::zero(),
-				vec![(caller.clone(), caller)],
+				vec![(caller.clone(), caller.clone())],
 				None,
 				None,
 			)?;
 
-			let _ = AssetFeeds::<T>::mutate(&asset_id, |maybe_feed_id| {
-				maybe_feed_id.replace(<pallet_chainlink_feed::FeedCounter<T>>::get())
-			});
-
+			let feed_id = <pallet_chainlink_feed::FeedCounter<T>>::get() - 1.into();
+			AssetFeeds::<T>::insert(&asset_id, feed_id);
+			pallet_chainlink_feed::Pallet::<T>::submit(
+				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
+				feed_id,
+				1_u32.into(),
+				42.into(),
+			)?;
 			Ok(().into())
 		}
 	}

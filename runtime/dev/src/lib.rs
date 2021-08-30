@@ -453,6 +453,8 @@ impl pallet_asset_index::Config for Runtime {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currencies;
 	type PriceFeed = PriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = PriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
