@@ -125,7 +125,7 @@ runtime-benchmarks = [
     'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
 
-	'orml-tokens/runtime-benchmarks'
+	'orml-tokens/runtime-benchmarks',
 ]
 std = [
 	'codec/std',
