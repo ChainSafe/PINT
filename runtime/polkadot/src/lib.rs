@@ -440,7 +440,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 
 impl pallet_asset_index::Config for Runtime {
 	// Using signed as the admin origin for testing now
-	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+	type AdminOrigin = EnsureApprovedByCommittee<AccountId, Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type LockupPeriod = LockupPeriod;
