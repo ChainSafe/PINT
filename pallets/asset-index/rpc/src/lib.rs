@@ -6,8 +6,7 @@
 use codec::Codec;
 use jsonrpc_core::{Error as RpcError, ErrorCode, Result};
 use jsonrpc_derive::rpc;
-use module_staking_pool_rpc_runtime_api::BalanceInfo;
-use module_support::ExchangeRate;
+use primitives::Ratio;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_runtime::{
@@ -16,31 +15,26 @@ use sp_runtime::{
 };
 use std::sync::Arc;
 
-pub use self::gen_client::Client as StakingPoolClient;
-pub use module_staking_pool_rpc_runtime_api::StakingPoolApi as StakingPoolRuntimeApi;
+pub use self::gen_client::Client as AssetIndexClient;
+pub use pallet_asset_index_rpc_runtime_api::AssetIndexApi as AssetIndexRuntimeApi;
 
+/// Asset index state API
 #[rpc]
-pub trait AssetIndexApi<BlockHash, AccountId, ResponseType> {
-	#[rpc(name = "stakingPool_getAvailableUnbonded")]
-	fn get_available_unbonded(&self, account: AccountId, at: Option<BlockHash>) -> Result<ResponseType>;
-
-	#[rpc(name = "stakingPool_getLiquidStakingExchangeRate")]
-	fn get_liquid_staking_exchange_rate(&self, at: Option<BlockHash>) -> Result<ExchangeRate>;
+pub trait AssetIndexApi<BlockHash, AccountId, AssetId, Balance> {
+	#[rpc(name = "assetIndex_getNav")]
+	fn get_nav(&self, at: Option<BlockHash>) -> Result<Ratio>;
 }
 
-/// A struct that implements the [`StakingPoolApi`].
-pub struct StakingPool<C, B> {
+/// A struct that implements the [`AssetIndexApi`].
+pub struct AssetIndexBackend<C, B> {
 	client: Arc<C>,
 	_marker: std::marker::PhantomData<B>,
 }
 
-impl<C, B> StakingPool<C, B> {
-	/// Create new `StakingPool` with the given reference to the client.
+impl<C, B> AssetIndexBackend<C, B> {
+	/// Create new `AssetIndex` with the given reference to the client.
 	pub fn new(client: Arc<C>) -> Self {
-		StakingPool {
-			client,
-			_marker: Default::default(),
-		}
+		AssetIndexBackend { client, _marker: Default::default() }
 	}
 }
 
@@ -56,43 +50,25 @@ impl From<Error> for i64 {
 	}
 }
 
-impl<C, Block, AccountId, Balance> AssetIndexApi<<Block as BlockT>::Hash, AccountId, BalanceInfo<Balance>>
-for StakingPool<C, Block>
-	where
-		Block: BlockT,
-		C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
-		C::Api: StakingPoolRuntimeApi<Block, AccountId, Balance>,
-		AccountId: Codec,
-		Balance: Codec + MaybeDisplay + MaybeFromStr,
+impl<C, Block, AccountId, AssetId, Balance> AssetIndexApi<<Block as BlockT>::Hash, AccountId, AssetId, Balance>
+	for AssetIndexBackend<C, Block>
+where
+	Block: BlockT,
+	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
+	C::Api: AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>,
+	AccountId: Codec,
+	AssetId: Codec,
+	Balance: Codec + MaybeDisplay + MaybeFromStr,
 {
-	fn get_available_unbonded(
-		&self,
-		account: AccountId,
-		at: Option<<Block as BlockT>::Hash>,
-	) -> Result<BalanceInfo<Balance>> {
+	fn get_nav(&self, at: Option<<Block as BlockT>::Hash>) -> Result<Ratio> {
 		let api = self.client.runtime_api();
 		let at = BlockId::hash(at.unwrap_or(
 			// If the block hash is not supplied assume the best block.
 			self.client.info().best_hash,
 		));
-
-		api.get_available_unbonded(&at, account).map_err(|e| RpcError {
+		api.get_nav(&at).map_err(|e| RpcError {
 			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get available unbonded.".into(),
-			data: Some(format!("{:?}", e).into()),
-		})
-	}
-
-	fn get_liquid_staking_exchange_rate(&self, at: Option<<Block as BlockT>::Hash>) -> Result<ExchangeRate> {
-		let api = self.client.runtime_api();
-		let at = BlockId::hash(at.unwrap_or(
-			// If the block hash is not supplied assume the best block.
-			self.client.info().best_hash,
-		));
-
-		api.get_liquid_staking_exchange_rate(&at).map_err(|e| RpcError {
-			code: ErrorCode::ServerError(Error::RuntimeError.into()),
-			message: "Unable to get liquid staking exchange rate.".into(),
+			message: "Unable to get current NAV.".into(),
 			data: Some(format!("{:?}", e).into()),
 		})
 	}

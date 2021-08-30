@@ -4964,6 +4964,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-index-rpc"
+version = "0.0.1"
+dependencies = [
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "pallet-asset-index-rpc-runtime-api",
+ "parity-scale-codec",
+ "primitives",
+ "serde",
+ "serde_json",
+ "sp-api",
+ "sp-blockchain",
+ "sp-runtime",
+]
+
+[[package]]
+name = "pallet-asset-index-rpc-runtime-api"
+version = "0.0.1"
+dependencies = [
+ "parity-scale-codec",
+ "primitives",
+ "serde",
+ "sp-api",
+ "sp-runtime",
+ "sp-std 3.0.0",
+]
+
+[[package]]
 name = "pallet-assets"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.8#74101dc21cfffb4c2d014fcc28edc166d5ca1b16"
