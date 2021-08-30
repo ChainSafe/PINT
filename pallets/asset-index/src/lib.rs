@@ -251,6 +251,8 @@ pub mod pallet {
 		/// Thrown if a liquid asset operation was requested for a registered
 		/// SAFT asset.
 		ExpectedLiquid,
+		/// Thrown if adding saft when total nav is empty
+		EmptyNav,
 		/// Thrown when trying to remove liquid assets without recipient
 		NoRecipient,
 		/// Invalid metadata given.
@@ -340,7 +342,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::remove_asset())] // TODO: Set weights
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -477,7 +479,7 @@ pub mod pallet {
 		///
 		/// The distribution of the underlying assets will be equivalent to the
 		/// ratio of the liquid assets in the index.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::withdraw())] // TODO: Set weights
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
@@ -562,7 +564,7 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::complete_withdraw())] // TODO: Set weights
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
@@ -601,7 +603,7 @@ pub mod pallet {
 		///
 		/// This removes expired locks and updates the caller's index token
 		/// balance accordingly.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 			Self::do_update_index_token_locks(&caller);
@@ -855,7 +857,12 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn add_saft(caller: &T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn add_saft(
+			caller: &T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -870,10 +877,18 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// mint SAFT into the treasury's account
+			// determine the index token equivalent value of the given saft_nav, or how many index token the
+			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
+			let index_token: T::Balance = Self::nav()?
+				.reciprocal()
+				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
+				.ok_or(ArithmeticError::Overflow)?;
+
+			// mint the given units of the SAFT asset into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+
 			// mint PINT into caller's balance increasing the total issuance
-			T::IndexToken::deposit_creating(caller, nav);
+			T::IndexToken::deposit_creating(caller, index_token);
 			Ok(())
 		}
 
@@ -1148,8 +1163,12 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn complete_withdraw() -> Weight;
 		fn register_asset() -> Weight;
+		fn remove_asset() -> Weight;
 		fn deposit() -> Weight;
+		fn unlock() -> Weight;
+		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
 	}
 
@@ -1159,7 +1178,15 @@ pub mod pallet {
 			Default::default()
 		}
 
+		fn complete_withdraw() -> Weight {
+			Default::default()
+		}
+
 		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn remove_asset() -> Weight {
 			Default::default()
 		}
 
@@ -1168,6 +1195,14 @@ pub mod pallet {
 		}
 
 		fn set_metadata() -> Weight {
+			Default::default()
+		}
+
+		fn unlock() -> Weight {
+			Default::default()
+		}
+
+		fn withdraw() -> Weight {
 			Default::default()
 		}
 	}
