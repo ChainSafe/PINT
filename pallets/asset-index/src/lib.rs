@@ -342,7 +342,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::remove_asset())] // TODO: Set weights
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -479,7 +479,7 @@ pub mod pallet {
 		///
 		/// The distribution of the underlying assets will be equivalent to the
 		/// ratio of the liquid assets in the index.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::withdraw())] // TODO: Set weights
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
@@ -564,7 +564,7 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::complete_withdraw())] // TODO: Set weights
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 
@@ -603,7 +603,7 @@ pub mod pallet {
 		///
 		/// This removes expired locks and updates the caller's index token
 		/// balance accordingly.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 			Self::do_update_index_token_locks(&caller);
@@ -1163,8 +1163,12 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn complete_withdraw() -> Weight;
 		fn register_asset() -> Weight;
+		fn remove_asset() -> Weight;
 		fn deposit() -> Weight;
+		fn unlock() -> Weight;
+		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
 	}
 
@@ -1174,7 +1178,15 @@ pub mod pallet {
 			Default::default()
 		}
 
+		fn complete_withdraw() -> Weight {
+			Default::default()
+		}
+
 		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn remove_asset() -> Weight {
 			Default::default()
 		}
 
@@ -1183,6 +1195,14 @@ pub mod pallet {
 		}
 
 		fn set_metadata() -> Weight {
+			Default::default()
+		}
+
+		fn unlock() -> Weight {
+			Default::default()
+		}
+
+		fn withdraw() -> Weight {
 			Default::default()
 		}
 	}
