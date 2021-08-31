@@ -4,19 +4,20 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+#[cfg(feature = "runtime-benchmarks")]
+use pallet_price_feed::PriceFeedBenchmarks;
+
 use crate as pallet_saft_registry;
 use core::cell::RefCell;
 use frame_support::{
-	assert_ok, ord_parameter_types,
-	pallet_prelude::DispatchResultWithPostInfo,
-	parameter_types,
+	assert_ok, ord_parameter_types, parameter_types,
 	traits::{LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-#[cfg(feature = "runtime-benchmarks")]
-use pallet_price_feed::PriceFeedBenchmarks;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use primitives::traits::RemoteAssetManager;
 use xcm::v0::MultiLocation;
