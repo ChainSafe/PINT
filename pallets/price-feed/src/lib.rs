@@ -41,15 +41,15 @@ mod types;
 pub mod pallet {
 	#[cfg(feature = "runtime-benchmarks")]
 	pub use crate::traits::PriceFeedBenchmarks;
-	pub use crate::{traits::PriceFeed, types::TimestampedValue};
+	#[cfg(feature = "runtime-benchmarks")]
+	use frame_benchmarking::Zero;
 	#[cfg(feature = "std")]
 	use frame_support::traits::GenesisBuild;
+
+	pub use crate::{traits::PriceFeed, types::TimestampedValue};
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::{
-			traits::{CheckedDiv, Zero},
-			FixedPointNumber, FixedPointOperand,
-		},
+		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;
