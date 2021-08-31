@@ -407,8 +407,7 @@ impl pallet_local_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	// Using signed as the admin origin for now
-	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+	type AdminOrigin = GoveranceOrigin<AccountId, Runtime>;
 	type AssetRecorder = AssetIndex;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -455,7 +454,6 @@ impl pallet_chainlink_feed::Config for Runtime {
 }
 
 impl pallet_asset_index::Config for Runtime {
-	// Using signed as the admin origin for testing now
 	type AdminOrigin = GoveranceOrigin<AccountId, Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
