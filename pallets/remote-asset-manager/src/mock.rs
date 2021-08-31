@@ -447,6 +447,7 @@ pub mod para {
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;
+		#[cfg(feature = "runtime-benchmarks")]
 		type PriceFeedBenchmarks = MockPriceFeed;
 		type SaftRegistry = SaftRegistry;
 		type TreasuryPalletId = TreasuryPalletId;
