@@ -68,7 +68,7 @@ fn admin_can_add_and_remove_saft() {
 		let total_nav = nav + additional_nav;
 		let total_units = units + additional_units;
 		let expected_mint_token: u128 =
-			AssetIndex::nav().unwrap().reciprocal().unwrap().checked_mul_int(total_nav.into()).unwrap();
+			AssetIndex::nav().unwrap().reciprocal().unwrap().checked_mul_int(total_nav).unwrap();
 		let index_token = expected_mint_token + INDEX_TOKEN_SUPPLY;
 
 		assert_eq!(AssetIndex::index_token_equivalent(SAFT_ASSET_ID, total_units).unwrap(), expected_mint_token);

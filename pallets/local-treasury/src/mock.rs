@@ -8,6 +8,7 @@ use crate as pallet_local_treasury;
 use frame_support::{ord_parameter_types, parameter_types, traits::StorageMapShim, PalletId};
 use frame_system as system;
 
+use frame_support::traits::Everything;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -39,7 +40,7 @@ pub(crate) type Balance = u64;
 pub(crate) type AccountId = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();

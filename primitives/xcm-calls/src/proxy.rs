@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 //! Xcm support for `pallet_proxy` calls
-use codec::{Decode, Encode, Output};
+use codec::{Decode, Encode, MaxEncodedLen, Output};
 use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub const POLKADOT_PALLET_PROXY_INDEX: u8 = 29u8;
 pub const POLKADOT_PALLET_PROXY_TYPE_STAKING_INDEX: u8 = 3u8;
 
 /// Denotes an enum based (identified by an `u8`) proxy type
-#[derive(Encode, Decode, Copy, Clone, PartialEq, RuntimeDebug)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, RuntimeDebug, MaxEncodedLen)]
 pub struct ProxyType(pub u8);
 
 impl From<u8> for ProxyType {

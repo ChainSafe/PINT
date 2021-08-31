@@ -41,10 +41,11 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
-	use polkadot_parachain::primitives::Id as ParaId;
 	use sp_core::U256;
-	use xcm::v0::{Junction, MultiLocation};
+	use xcm::v0::MultiLocation;
 
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
@@ -113,6 +114,10 @@ pub mod pallet {
 
 		/// The types that provides the necessary asset price pairs
 		type PriceFeed: PriceFeed<Self::AssetId>;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		/// The type that provides benchmark features of pallet_price_feed
+		type PriceFeedBenchmarks: PriceFeedBenchmarks<Self::AccountId, Self::AssetId>;
 
 		/// The type registry that stores all NAV for non liquid assets
 		type SaftRegistry: SaftRegistry<Self::AssetId, Self::Balance>;
@@ -203,7 +208,7 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		/// All the liquid assets together with their parachain id known at
 		/// genesis
-		pub liquid_assets: Vec<(T::AssetId, ParaId)>,
+		pub liquid_assets: Vec<(T::AssetId, polkadot_parachain::primitives::Id)>,
 		/// ALl safts to register at genesis
 		pub saft_assets: Vec<T::AssetId>,
 	}
@@ -218,6 +223,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			use xcm::v0::Junction;
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid((Junction::Parent, Junction::Parachain(id.into())).into());
 				Assets::<T>::insert(asset, availability)
@@ -367,7 +373,7 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
-		#[pallet::weight(T::WeightInfo::remove_asset())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::remove_asset())]
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
@@ -513,7 +519,7 @@ pub mod pallet {
 		///
 		/// The distribution of the underlying assets will be equivalent to the
 		/// ratio of the liquid assets in the index.
-		#[pallet::weight(T::WeightInfo::withdraw())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
@@ -602,7 +608,7 @@ pub mod pallet {
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
 		#[transactional]
-		#[pallet::weight(T::WeightInfo::complete_withdraw())] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::complete_withdraw())]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
 			let caller = ensure_signed(origin)?;
 

@@ -4,7 +4,8 @@ use cumulus_pallet_xcm::Origin;
 use frame_support::{
 	parameter_types,
 	sp_runtime::{traits::AccountIdConversion, Perbill},
-	traits::LockIdentifier,
+	sp_std::prelude::*,
+	traits::{Contains, LockIdentifier},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, Weight,
@@ -135,6 +136,17 @@ parameter_types! {
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
 	pub const WithdrawalPeriod: BlockNumber = 10;
+}
+
+pub fn get_all_pallet_accounts() -> Vec<AccountId> {
+	vec![TreasuryPalletId::get().into_account()]
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		get_all_pallet_accounts().contains(a)
+	}
 }
 
 // --- ORML configurations

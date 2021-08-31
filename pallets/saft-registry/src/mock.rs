@@ -7,16 +7,19 @@
 use crate as pallet_saft_registry;
 use core::cell::RefCell;
 use frame_support::{
-	assert_ok, ord_parameter_types, parameter_types,
+	assert_ok, ord_parameter_types,
+	pallet_prelude::DispatchResultWithPostInfo,
+	parameter_types,
 	traits::{LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
 use primitives::traits::RemoteAssetManager;
 use xcm::v0::MultiLocation;
 
+use frame_support::{sp_runtime::DispatchResult, traits::Everything};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -24,7 +27,6 @@ use sp_runtime::{
 	DispatchError,
 };
 use std::collections::HashMap;
-use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -56,7 +58,7 @@ pub(crate) type AssetId = u32;
 pub(crate) type BlockNumber = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
@@ -139,6 +141,8 @@ impl pallet_asset_index::Config for Test {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = MockPriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
@@ -149,8 +153,8 @@ impl pallet_asset_index::Config for Test {
 
 pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> Result<Outcome, DispatchError> {
-		Ok(Outcome::Complete(0))
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+		Ok(())
 	}
 
 	fn deposit(_: AssetId, _: Balance) {}
@@ -186,6 +190,13 @@ impl PriceFeed<AssetId> for MockPriceFeed {
 	}
 }
 
+#[cfg(feature = "runtime-benchmarks")]
+impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+	fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+		Ok(().into())
+	}
+}
+
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
 		Zero::zero()
@@ -201,6 +212,7 @@ impl orml_tokens::Config for Test {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = ();
+	type DustRemovalWhitelist = Everything;
 }
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 1337;
 

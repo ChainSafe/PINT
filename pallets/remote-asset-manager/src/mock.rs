@@ -7,7 +7,7 @@
 use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime, ord_parameter_types, parameter_types,
-	traits::{All, GenesisBuild, LockIdentifier},
+	traits::{Everything, GenesisBuild, LockIdentifier},
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 	PalletId,
 };
@@ -23,9 +23,8 @@ use sp_runtime::{
 };
 use xcm::v0::{
 	Junction::{self, Parachain, Parent},
-	MultiAsset,
 	MultiLocation::{self, X1},
-	NetworkId, Xcm,
+	NetworkId,
 };
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter,
@@ -53,7 +52,6 @@ pub use xcm_test_support::{relay, types::*, Relay};
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
-pub const EMPTY_ACCOUNT: AccountId = AccountId::new([3u8; 32]);
 pub const INITIAL_BALANCE: Balance = 10_000;
 pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
@@ -188,18 +186,19 @@ pub mod para {
 		*,
 	};
 	use codec::Decode;
-	use frame_support::dispatch::DispatchError;
+	use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
 	use orml_currencies::BasicCurrencyAdapter;
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
-	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+	use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
 	use sp_runtime::traits::Convert;
+	use xcm::v0::MultiAsset;
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
 	}
 
 	impl frame_system::Config for Runtime {
-		type BaseCallFilter = ();
+		type BaseCallFilter = Everything;
 		type BlockWeights = ();
 		type BlockLength = ();
 		type Origin = Origin;
@@ -301,7 +300,7 @@ pub mod para {
 	>;
 
 	pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
-	pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+	pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 	pub struct XcmConfig;
 	impl Config for XcmConfig {
@@ -350,6 +349,7 @@ pub mod para {
 		type ExistentialDeposits = ExistentialDeposits;
 		type MaxLocks = MaxLocks;
 		type OnDust = ();
+		type DustRemovalWhitelist = Everything;
 	}
 
 	impl orml_unknown_tokens::Config for Runtime {
@@ -455,6 +455,7 @@ pub mod para {
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;
+		type PriceFeedBenchmarks = MockPriceFeed;
 		type SaftRegistry = SaftRegistry;
 		type TreasuryPalletId = TreasuryPalletId;
 		type StringLimit = StringLimit;
@@ -477,6 +478,13 @@ pub mod para {
 
 		fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 			todo!()
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+		fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+			Ok(().into())
 		}
 	}
 
@@ -549,11 +557,12 @@ pub mod para {
 		type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 		type XcmRouter = XcmRouter;
 		type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-		type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+		type XcmExecuteFilter = Everything;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type XcmTeleportFilter = ();
-		type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+		type XcmTeleportFilter = Everything;
+		type XcmReserveTransferFilter = Everything;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+		type LocationInverter = LocationInverter<Ancestry>;
 	}
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -592,7 +601,6 @@ pub mod statemint {
 	use super::*;
 	use frame_support::{
 		construct_runtime, parameter_types,
-		traits::All,
 		weights::{constants::WEIGHT_PER_SECOND, Weight},
 	};
 	use frame_system::EnsureRoot;
@@ -621,6 +629,7 @@ pub mod statemint {
 	}
 
 	impl frame_system::Config for Runtime {
+		type BaseCallFilter = Everything;
 		type Origin = Origin;
 		type Call = Call;
 		type Index = u64;
@@ -640,7 +649,6 @@ pub mod statemint {
 		type OnNewAccount = ();
 		type OnKilledAccount = ();
 		type DbWeight = ();
-		type BaseCallFilter = ();
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
 		type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
@@ -712,7 +720,7 @@ pub mod statemint {
 		XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
 	pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
-	pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+	pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 	pub struct XcmConfig;
 	impl Config for XcmConfig {
@@ -753,11 +761,12 @@ pub mod statemint {
 		type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 		type XcmRouter = XcmRouter;
 		type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-		type XcmExecuteFilter = All<(MultiLocation, Xcm<Call>)>;
+		type XcmExecuteFilter = Everything;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type XcmTeleportFilter = ();
-		type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+		type XcmReserveTransferFilter = Everything;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
+		type LocationInverter = LocationInverter<Ancestry>;
 	}
 
 	parameter_types! {
