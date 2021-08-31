@@ -54,7 +54,7 @@ mod tests {
 	fn map_asset_price_feed() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(FeedBuilder::new().description(b"X".to_vec()).build_and_store());
-			assert_ok!(test_benchmark_map_asset_price_feed::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_map_asset_price_feed());
 		});
 	}
 
@@ -62,7 +62,7 @@ mod tests {
 	fn unmap_asset_price_feed() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(FeedBuilder::new().description(b"X".to_vec()).build_and_store());
-			assert_ok!(test_benchmark_unmap_asset_price_feed::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_unmap_asset_price_feed());
 		});
 	}
 }

@@ -41,9 +41,8 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
-	use polkadot_parachain::primitives::Id as ParaId;
 	use sp_core::U256;
-	use xcm::v0::{Junction, MultiLocation};
+	use xcm::v0::MultiLocation;
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
@@ -180,7 +179,7 @@ pub mod pallet {
 	pub struct GenesisConfig<T: Config> {
 		/// All the liquid assets together with their parachain id known at
 		/// genesis
-		pub liquid_assets: Vec<(T::AssetId, ParaId)>,
+		pub liquid_assets: Vec<(T::AssetId, polkadot_parachain::primitives::Id)>,
 		/// ALl safts to register at genesis
 		pub saft_assets: Vec<T::AssetId>,
 	}
@@ -195,6 +194,7 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			use xcm::v0::Junction;
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid((Junction::Parent, Junction::Parachain(id.into())).into());
 				Assets::<T>::insert(asset, availability)

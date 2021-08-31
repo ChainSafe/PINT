@@ -12,7 +12,7 @@
 //! `chainlink` price feeds use `USD` as the quote currency to easily calculate how much USD is
 //! needed to purchase one units of the `base` currency, or the value of a certain amount of assets
 //! by multiplying it with the units the assets. Therefore ths price feed pallet sticks to the same
-//! convention, so that the NAV of the indes is the sum of all the assets multiplied with their
+//! convention, so that the NAV of the index is the sum of all the assets multiplied with their
 //! price in form of (Asset/USD) divided by the total supply of index tokens which essentially is
 //! the currency price pair of (PINT/USD).
 

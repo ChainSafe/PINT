@@ -18,14 +18,14 @@ use sp_core::H256;
 use sp_std::cell::RefCell;
 use std::collections::HashMap;
 
+use frame_support::traits::Everything;
 use rand::{thread_rng, Rng};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
-	DispatchError,
+	DispatchError, DispatchResult,
 };
 use std::ops::Range;
-use xcm::v0::Outcome;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -57,7 +57,7 @@ pub(crate) type AssetId = u32;
 pub(crate) type BlockNumber = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type Origin = Origin;
@@ -127,6 +127,7 @@ impl orml_tokens::Config for Test {
 	type ExistentialDeposits = ExistentialDeposits;
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
+	type DustRemovalWhitelist = Everything;
 }
 
 impl pallet_saft_registry::Config for Test {
@@ -176,8 +177,8 @@ impl pallet_asset_index::Config for Test {
 
 pub struct MockRemoteAssetManager;
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> Result<Outcome, DispatchError> {
-		Ok(Outcome::Complete(0))
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+		Ok(())
 	}
 
 	fn deposit(_: AssetId, _: Balance) {}
