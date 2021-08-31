@@ -10,7 +10,7 @@ use frame_support::{
 	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
 	sp_std::result::Result,
 };
-use xcm::v0::{MultiLocation, Outcome};
+use xcm::v0::MultiLocation;
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
@@ -34,11 +34,7 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 	///       asset is a reserve location of PINT (Relay Chain)
 	///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset order will be
 	///       dispatched as XCM ReserveAssetDeposit with an Xcm Deposit order
-	fn transfer_asset(
-		who: AccountId,
-		asset: AssetId,
-		amount: Balance,
-	) -> frame_support::sp_std::result::Result<Outcome, DispatchError>;
+	fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
 
 	/// Notification of deposited funds in the index, ready to be `bond` to earn staking rewards.
 	///

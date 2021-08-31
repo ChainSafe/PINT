@@ -50,6 +50,11 @@ impl<T: frame_system::Config> pallet_chainlink_feed::WeightInfo for WeightInfo<T
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
+
+	fn cancel_ownership_transfer() -> Weight {
+		Default::default()
+	}
+
 	fn accept_ownership() -> Weight {
 		(20_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
@@ -117,6 +122,11 @@ impl<T: frame_system::Config> pallet_chainlink_feed::WeightInfo for WeightInfo<T
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
+
+	fn cancel_admin_transfer() -> Weight {
+		Default::default()
+	}
+
 	fn accept_admin() -> Weight {
 		(19_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
@@ -137,6 +147,11 @@ impl<T: frame_system::Config> pallet_chainlink_feed::WeightInfo for WeightInfo<T
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
+
+	fn cancel_pallet_admin_transfer() -> Weight {
+		Default::default()
+	}
+
 	fn accept_pallet_admin() -> Weight {
 		(18_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(1 as Weight))

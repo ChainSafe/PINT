@@ -394,7 +394,7 @@ fn propose_constituent_works() {
 	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4).execute_with(|| {
 		System::set_block_number(1);
 
-		// propose a new consituent
+		// propose a new constituent
 		assert_ok!(Committee::propose(
 			Origin::signed(PROPOSER_ACCOUNT_ID),
 			Box::new(Call::Committee(crate::Call::add_constituent(42)))
@@ -415,7 +415,7 @@ fn propose_constituent_works() {
 			panic!("Could not get proposal hash from events");
 		}
 
-		// check if counstitent committee contains 42
+		// check if constituent committee contains 42
 		assert!(<pallet::Members<Test>>::contains_key(42));
 	});
 }

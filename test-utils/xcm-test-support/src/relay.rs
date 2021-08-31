@@ -3,11 +3,11 @@
 
 use std::{cell::RefCell, collections::HashSet};
 
-use codec::{Decode, Encode};
+use codec::{Decode, Encode, MaxEncodedLen};
 use frame_support::{
 	construct_runtime, parameter_types,
 	sp_runtime::traits::BlakeTwo256,
-	traits::{All, Currency, FindAuthor, Imbalance, InstanceFilter, MaxEncodedLen, OnUnbalanced, OneSessionHandler},
+	traits::{Currency, Everything, FindAuthor, Imbalance, InstanceFilter, OnUnbalanced, OneSessionHandler},
 	weights::Weight,
 };
 use sp_core::H256;
@@ -22,7 +22,7 @@ use frame_election_provider_support::onchain;
 use pallet_staking as staking;
 use pallet_staking::*;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
-use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
+use xcm::v0::{MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative, ChildParachainConvertsVia,
 	ChildSystemParachainAsSuperuser, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible,
@@ -35,6 +35,7 @@ use super::types::*;
 use frame_support::sp_runtime::AccountId32;
 
 impl frame_system::Config for Runtime {
+	type BaseCallFilter = Everything;
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
@@ -54,7 +55,6 @@ impl frame_system::Config for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type DbWeight = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
@@ -91,7 +91,7 @@ parameter_types! {
 }
 
 pub type XcmRouter = super::super::RelayChainXcmRouter;
-pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
@@ -116,11 +116,12 @@ impl pallet_xcm::Config for Runtime {
 	type XcmRouter = XcmRouter;
 	// Anyone can execute XCM messages locally...
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = ();
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
+	type XcmTeleportFilter = Everything;
+	type XcmReserveTransferFilter = Everything;
 	type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
+	type LocationInverter = LocationInverter<Ancestry>;
 }
 
 parameter_types! {

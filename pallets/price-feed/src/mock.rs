@@ -5,7 +5,9 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_price_feed;
-use frame_support::{dispatch::DispatchResultWithPostInfo, ord_parameter_types, parameter_types, PalletId};
+use frame_support::{
+	dispatch::DispatchResultWithPostInfo, ord_parameter_types, parameter_types, traits::Everything, PalletId,
+};
 use frame_system as system;
 use pallet_chainlink_feed::RoundId;
 use sp_core::H256;
@@ -42,7 +44,7 @@ pub(crate) type AccountId = u64;
 pub(crate) type BlockNumber = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();

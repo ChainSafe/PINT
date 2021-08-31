@@ -354,10 +354,10 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::close())] // TODO: Set weights
 		/// Extrinsic to close and execute a proposal.
 		/// Proposal must have been voted on and have majority approval.
 		/// Only the proposal execution origin can execute.
+		#[pallet::weight(T::WeightInfo::close())]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
 			let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
@@ -390,12 +390,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::add_constituent())] // TODO: Set weights
 		/// Add new constituent to the committee
 		///
 		/// NOTE:
 		///
 		/// This call can only be called after the approval of the committee
+		#[pallet::weight(T::WeightInfo::add_constituent())]
 		pub fn add_constituent(origin: OriginFor<T>, constituent: AccountIdFor<T>) -> DispatchResultWithPostInfo {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
