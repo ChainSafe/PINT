@@ -1,0 +1,30 @@
+{
+  "name": "@pint/types",
+  "version": "1.0.0",
+  "description": "Bundled types to instantiate the Polkadot JS api with PINT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "prepublish": "tsc",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "pint",
+    "types",
+    "polkadot",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChainSafe/PINT.git"
+  },
+  "author": "ChainSafe Systems",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "@polkadot/keyring": "^6.9.1",
+    "@polkadot/types": "^4.15.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.2.4"
+  }
+}

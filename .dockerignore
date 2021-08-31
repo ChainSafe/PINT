@@ -30,3 +30,6 @@ js/**/*/lib
 
 # Unknown
 local-test
+
+# docker
+docker

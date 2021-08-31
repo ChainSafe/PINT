@@ -1,0 +1,57 @@
+[package]
+authors = ['ChainSafe Systems']
+edition = '2018'
+homepage = 'https://github.com/ChainSafe/PINT'
+license = 'LGPL-3.0-only'
+name = 'pint-runtime-common'
+repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
+version = '0.0.1'
+
+[dependencies]
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
+sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
+
+# xcm
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9', default-features = false }
+xcm-calls = { path = "../../primitives/xcm-calls", default-features = false }
+cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.9', default-features = false }
+
+# orml
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+
+# chainlink
+pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.8', default-features = false }
+
+# pint
+primitives = { path = '../../primitives/primitives', default-features = false }
+pallet-committee = {path = '../../pallets/committee', default-features = false }
+pallet-local-treasury = {path = '../../pallets/local-treasury', default-features = false }
+pallet-asset-index = {path = '../../pallets/asset-index', default-features = false }
+pallet-saft-registry = {path = '../../pallets/saft-registry', default-features = false }
+pallet-price-feed = {path = '../../pallets/price-feed', default-features = false }
+pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', default-features = false }
+
+
+[features]
+default = ['std']
+std = [
+    "frame-support/std",
+    'frame-system/std',
+    'sp-std/std',
+    
+    "xcm/std",
+    "xcm-calls/std",
+    "cumulus-pallet-xcm/std",
+    
+    "orml-traits/std",
+    
+    'pallet-asset-index/std',
+	'pallet-committee/std',
+	'pallet-local-treasury/std',
+	'pallet-price-feed/std',
+	'pallet-remote-asset-manager/std',
+	'pallet-saft-registry/std',
+    'pallet-chainlink-feed/std',
+    "primitives/std",
+]

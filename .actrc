@@ -1,0 +1,2 @@
+# When using act to run github actions locally it must use a full image to be able to compile correctly
+-P ubuntu-20.04=nektos/act-environments-ubuntu:20.04
