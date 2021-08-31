@@ -12,7 +12,7 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use pallet_price_feed::PriceFeed;
+use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
 use primitives::{traits::NavProvider, AssetAvailability};
 use xcm::v0::MultiLocation;
 
@@ -96,24 +96,31 @@ benchmarks! {
 	}
 
 	deposit {
-		// ASSET_A_ID
-		let asset_id = 1_u32.into();
+		let asset_id = 2_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
-		));
 		let units = 1_000u32.into();
+
+		assert_ok!(AssetIndex::<T>::add_asset(
+			origin,
+			asset_id,
+			100u32.into(),
+			MultiLocation::Null,
+			admin_deposit,
+		));
+
+		T::PriceFeedBenchmarks::create_feed(Default::default(), asset_id).unwrap();
 		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
-		let nav = AssetIndex::<T>::nav().unwrap();
 	}: _(
 		RawOrigin::Signed(depositor.clone()),
 		asset_id,
 		units
 	) verify {
-			let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-			let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
-			assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
+		let nav = AssetIndex::<T>::nav().unwrap();
+		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
 	}
 
 	remove_asset {

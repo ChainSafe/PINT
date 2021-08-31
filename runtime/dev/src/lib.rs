@@ -56,6 +56,7 @@ use xcm_executor::XcmExecutor;
 
 use frame_support::traits::Everything;
 use pallet_committee::EnsureMember;
+
 pub use pint_runtime_common::{constants::*, types::GovernanceOrigin, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
@@ -467,6 +468,8 @@ impl pallet_asset_index::Config for Runtime {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currencies;
 	type PriceFeed = PriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = PriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;

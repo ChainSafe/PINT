@@ -420,8 +420,8 @@ impl pallet_committee::Config for Runtime {
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;
-	type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
+	type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
 	type ApprovedByCommitteeOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type Event = Event;
 	type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
@@ -466,6 +466,8 @@ impl pallet_asset_index::Config for Runtime {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currencies;
 	type PriceFeed = PriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = PriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;

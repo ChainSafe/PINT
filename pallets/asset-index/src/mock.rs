@@ -6,13 +6,15 @@
 
 use crate as pallet_asset_index;
 use frame_support::{
-	ord_parameter_types, parameter_types,
+	ord_parameter_types,
+	pallet_prelude::DispatchResultWithPostInfo,
+	parameter_types,
 	traits::{GenesisBuild, LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::PriceFeed;
+use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
 use primitives::{fee::FeeRate, traits::RemoteAssetManager, AssetPricePair, Price};
 use sp_core::H256;
 use sp_std::cell::RefCell;
@@ -167,6 +169,8 @@ impl pallet_asset_index::Config for Test {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = MockPriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
@@ -210,6 +214,13 @@ impl MockPriceFeed {
 	pub fn set_random_prices(assets: impl IntoIterator<Item = AssetId>, range: Range<u128>) {
 		let mut rng = thread_rng();
 		Self::set_prices(assets.into_iter().map(|asset| (asset, Price::from(rng.gen_range(range.clone())))))
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+	fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+		Ok(().into())
 	}
 }
 
