@@ -36,7 +36,7 @@ pub mod pallet {
 			ArithmeticError, FixedPointNumber,
 		},
 		sp_std::{
-			convert::{TryFrom, TryInto},
+			convert::TryInto,
 			prelude::*,
 			result::Result,
 		},
@@ -99,7 +99,7 @@ pub mod pallet {
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize ;
 
 		/// The native asset id
 		#[pallet::constant]

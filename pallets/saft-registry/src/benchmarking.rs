@@ -5,7 +5,7 @@
 
 use frame_benchmarking::benchmarks;
 use frame_support::{
-	assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, sp_std::convert::TryFrom,
+	assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero
 	traits::EnsureOrigin,
 };
 use xcm::v0::Junction;
