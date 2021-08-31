@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 /// Origin that approved by committee
-pub type EnsureApprovedByCommittee<AccountId, Runtime> = frame_system::EnsureOneOf<
+pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
 	AccountId,
 	frame_system::EnsureRoot<AccountId>,
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
