@@ -96,7 +96,7 @@ benchmarks! {
 	}
 
 	deposit {
-		let asset_id = 42_u32.into();
+		let asset_id = 2_u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let admin_deposit = 5u32.into();
@@ -117,10 +117,10 @@ benchmarks! {
 		asset_id,
 		units
 	) verify {
-		// let nav = AssetIndex::<T>::nav().unwrap();
-			// let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-			// let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
-			// assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
+		let nav = AssetIndex::<T>::nav().unwrap();
+		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
 	}
 
 	remove_asset {

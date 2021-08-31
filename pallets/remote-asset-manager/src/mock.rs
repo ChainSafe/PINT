@@ -53,7 +53,6 @@ pub use xcm_test_support::{relay, types::*, Relay};
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
-pub const EMPTY_ACCOUNT: AccountId = AccountId::new([3u8; 32]);
 pub const INITIAL_BALANCE: Balance = 10_000;
 pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
@@ -188,10 +187,10 @@ pub mod para {
 		*,
 	};
 	use codec::Decode;
-	use frame_support::dispatch::DispatchError;
+	use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
 	use orml_currencies::BasicCurrencyAdapter;
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
-	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+	use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
 	use sp_runtime::traits::Convert;
 
 	parameter_types! {
@@ -445,6 +444,7 @@ pub mod para {
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;
+		type PriceFeedBenchmarks = MockPriceFeed;
 		type SaftRegistry = SaftRegistry;
 		type TreasuryPalletId = TreasuryPalletId;
 		type StringLimit = StringLimit;
@@ -467,6 +467,13 @@ pub mod para {
 
 		fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 			todo!()
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+		fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+			Ok(().into())
 		}
 	}
 

@@ -7,13 +7,15 @@
 use crate as pallet_saft_registry;
 use core::cell::RefCell;
 use frame_support::{
-	assert_ok, ord_parameter_types, parameter_types,
+	assert_ok, ord_parameter_types,
+	pallet_prelude::DispatchResultWithPostInfo,
+	parameter_types,
 	traits::{LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
 use primitives::traits::RemoteAssetManager;
 use xcm::v0::MultiLocation;
 
@@ -132,6 +134,8 @@ impl pallet_asset_index::Config for Test {
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = MockPriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
@@ -176,6 +180,13 @@ impl PriceFeed<AssetId> for MockPriceFeed {
 
 	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 		todo!()
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+	fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+		Ok(().into())
 	}
 }
 
