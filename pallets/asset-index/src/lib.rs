@@ -309,6 +309,8 @@ pub mod pallet {
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
+		/// Thrown if deposits reach limit
+		TooManyDeposits,
 	}
 
 	#[pallet::hooks]
@@ -500,7 +502,7 @@ pub mod pallet {
 			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
 				deposits
 					.try_push((index_tokens, <frame_system::Pallet<T>>::block_number()))
-					.map_err(|_| Error::<T>::InsufficientDeposit)?;
+					.map_err(|_| Error::<T>::TooManyDeposits)?;
 				Ok(())
 			})?;
 
@@ -614,7 +616,7 @@ pub mod pallet {
 
 			let current_block = frame_system::Pallet::<T>::block_number();
 
-			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
+			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResultWithPostInfo {
 				let pending = maybe_pending.take().ok_or(<Error<T>>::NoPendingWithdrawals)?;
 
 				// try to redeem each redemption, but only close it if all assets could be
@@ -639,10 +641,8 @@ pub mod pallet {
 					*maybe_pending = Some(still_pending);
 				}
 
-				Ok(())
-			})?;
-
-			Ok(Some(10_000).into())
+				Ok(().into())
+			})
 		}
 
 		/// Updates the index token locks of the caller.
