@@ -93,7 +93,7 @@ pub mod pallet {
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy + MaybeSerializeDeserialize;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
 		/// The native asset id
 		#[pallet::constant]
@@ -406,7 +406,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_metadata())]
 		pub fn set_metadata(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
+			id: T::AssetId,
 			name: Vec<u8>,
 			symbol: Vec<u8>,
 			decimals: u8,

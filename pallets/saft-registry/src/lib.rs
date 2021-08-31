@@ -41,7 +41,7 @@ pub mod pallet {
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
 		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-		type AssetId: Parameter + Member + From<u32> + Copy;
+		type AssetId: Parameter + Member + Copy;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
