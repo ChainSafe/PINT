@@ -56,7 +56,7 @@ use xcm_executor::XcmExecutor;
 
 use frame_support::traits::Everything;
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, weights};
+pub use pint_runtime_common::{constants::*, types::GovernanceOrigin, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::{
@@ -382,7 +382,7 @@ impl pallet_session::Config for Runtime {
 impl pallet_collator_selection::Config for Runtime {
 	type Event = Event;
 	type Currency = Balances;
-	type UpdateOrigin = EnsureApprovedByCommittee;
+	type UpdateOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type PotId = PotId;
 	type MaxCandidates = MaxCandidates;
 	type MinCandidates = MinCandidates;
@@ -405,20 +405,13 @@ impl pallet_local_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	// Using signed as the admin origin for now
-	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+	type AdminOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type AssetRecorder = AssetIndex;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Event = Event;
 	type WeightInfo = weights::pallet_saft_registry::WeightInfo<Runtime>;
 }
-
-type EnsureApprovedByCommittee = frame_system::EnsureOneOf<
-	AccountId,
-	frame_system::EnsureRoot<AccountId>,
-	pallet_committee::EnsureApprovedByCommittee<Runtime>,
->;
 
 impl pallet_committee::Config for Runtime {
 	type Origin = Origin;
@@ -429,7 +422,7 @@ impl pallet_committee::Config for Runtime {
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
-	type ApprovedByCommitteeOrigin = EnsureApprovedByCommittee;
+	type ApprovedByCommitteeOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type Event = Event;
 	type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
 }
