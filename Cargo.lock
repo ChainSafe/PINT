@@ -4914,6 +4914,7 @@ dependencies = [
 [[package]]
 name = "orml-currencies"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4929,6 +4930,7 @@ dependencies = [
 [[package]]
 name = "orml-tokens"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "frame-support",
  "frame-system",
@@ -4942,6 +4944,7 @@ dependencies = [
 [[package]]
 name = "orml-traits"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -4972,6 +4975,7 @@ dependencies = [
 [[package]]
 name = "orml-utilities"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -4984,6 +4988,7 @@ dependencies = [
 [[package]]
 name = "orml-xcm-support"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "frame-support",
  "orml-traits",
@@ -4997,6 +5002,7 @@ dependencies = [
 [[package]]
 name = "orml-xtokens"
 version = "0.4.1-dev"
+source = "git+https://github.com/open-web3-stack//open-runtime-module-library?rev=5babe0b71cf60538ca23d41231f9558816c52ae9#5babe0b71cf60538ca23d41231f9558816c52ae9"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -11986,7 +11992,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f559b464de2e2bdabcac6a210d12e9b5a5973c251e102c44c585c71d51bd78e"
 dependencies = [
  "cfg-if 1.0.0",
- "rand 0.8.4",
+ "rand 0.3.23",
  "static_assertions",
 ]
 

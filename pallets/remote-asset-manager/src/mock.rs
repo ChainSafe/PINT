@@ -189,9 +189,9 @@ pub mod para {
 	use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
 	use orml_currencies::BasicCurrencyAdapter;
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
-	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	#[cfg(feature = "runtime-benchmarks")]
 	use pallet_price_feed::PriceFeedBenchmarks;
+	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use sp_runtime::traits::Convert;
 	use xcm::v0::MultiAsset;
 
