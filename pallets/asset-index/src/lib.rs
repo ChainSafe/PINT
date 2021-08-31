@@ -48,6 +48,8 @@ pub mod pallet {
 	use sp_core::U256;
 	use xcm::v0::MultiLocation;
 
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
@@ -109,6 +111,10 @@ pub mod pallet {
 
 		/// The types that provides the necessary asset price pairs
 		type PriceFeed: PriceFeed<Self::AssetId>;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		/// The type that provides benchmark features of pallet_price_feed
+		type PriceFeedBenchmarks: PriceFeedBenchmarks<Self::AccountId, Self::AssetId>;
 
 		/// The type registry that stores all NAV for non liquid assets
 		type SaftRegistry: SaftRegistry<Self::AssetId, Self::Balance>;

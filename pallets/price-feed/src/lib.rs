@@ -39,9 +39,14 @@ mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
 pub mod pallet {
-	pub use crate::{traits::PriceFeed, types::TimestampedValue};
+	#[cfg(feature = "runtime-benchmarks")]
+	pub use crate::traits::PriceFeedBenchmarks;
+	#[cfg(feature = "runtime-benchmarks")]
+	use frame_benchmarking::Zero;
 	#[cfg(feature = "std")]
 	use frame_support::traits::GenesisBuild;
+
+	pub use crate::{traits::PriceFeed, types::TimestampedValue};
 	use frame_support::{
 		pallet_prelude::*,
 		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
@@ -258,6 +263,45 @@ pub mod pallet {
 			let quote_price = Self::get_price(quote.clone())?;
 			let price = base_price.checked_div(&quote_price).ok_or(Error::<T>::ExceededAccuracy)?;
 			Ok(AssetPricePair::new(base, quote, price))
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> PriceFeedBenchmarks<T::AccountId, T::AssetId> for Pallet<T> {
+		fn create_feed(
+			caller: <T as frame_system::Config>::AccountId,
+			asset_id: T::AssetId,
+		) -> DispatchResultWithPostInfo {
+			use frame_benchmarking::vec;
+
+			pallet_chainlink_feed::Pallet::<T>::set_feed_creator(
+				<frame_system::Origin<T>>::Signed(pallet_chainlink_feed::Pallet::<T>::pallet_admin()).into(),
+				caller.clone(),
+			)?;
+
+			pallet_chainlink_feed::Pallet::<T>::create_feed(
+				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
+				100u32.into(),
+				Zero::zero(),
+				(1u8.into(), 100u8.into()),
+				1u8.into(),
+				8u8,
+				vec![1; T::StringLimit::get() as usize],
+				Zero::zero(),
+				vec![(caller.clone(), caller.clone())],
+				None,
+				None,
+			)?;
+
+			let feed_id = <pallet_chainlink_feed::FeedCounter<T>>::get() - 1.into();
+			AssetFeeds::<T>::insert(&asset_id, feed_id);
+			pallet_chainlink_feed::Pallet::<T>::submit(
+				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
+				feed_id,
+				1_u32.into(),
+				42.into(),
+			)?;
+			Ok(().into())
 		}
 	}
 
