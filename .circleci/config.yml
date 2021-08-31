@@ -132,7 +132,7 @@ jobs:
           name: Run Tests
           command: |
             cargo test --all
-            cargo t -p runtimes/dev/Cargo.toml --all-features
+            cargo t -p pint-runtime-dev --all-features
       - save_build_cache
   security:
     executor: test-executor
