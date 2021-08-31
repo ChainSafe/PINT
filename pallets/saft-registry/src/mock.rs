@@ -15,7 +15,9 @@ use frame_support::{
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
+use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
+#[cfg(feature = "runtime-benchmarks")]
+use pallet_price_feed::PriceFeedBenchmarks;
 use primitives::traits::RemoteAssetManager;
 use xcm::v0::MultiLocation;
 

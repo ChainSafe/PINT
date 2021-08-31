@@ -14,7 +14,9 @@ use frame_support::{
 };
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
-use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
+use pallet_price_feed::PriceFeed;
+#[cfg(feature = "runtime-benchmarks")]
+use pallet_price_feed::PriceFeedBenchmarks;
 use primitives::{fee::FeeRate, traits::RemoteAssetManager, AssetPricePair, Price};
 use sp_core::H256;
 use sp_std::cell::RefCell;
