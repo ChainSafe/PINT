@@ -45,6 +45,7 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
 		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
+		sp_std::convert::TryFrom,
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;
@@ -76,7 +77,7 @@ pub mod pallet {
 		type SelfAssetId: Get<Self::AssetId>;
 
 		/// Type used to identify the assets.
-		type AssetId: Parameter + Member + MaybeSerializeDeserialize;
+		type AssetId: Parameter + Member + MaybeSerializeDeserialize + TryFrom<u8>;
 
 		/// Type to keep track of timestamped values
 		type Time: Time;

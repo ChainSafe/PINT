@@ -35,7 +35,11 @@ pub mod pallet {
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
 			ArithmeticError, FixedPointNumber,
 		},
-		sp_std::{convert::TryInto, prelude::*, result::Result},
+		sp_std::{
+			convert::{TryFrom, TryInto},
+			prelude::*,
+			result::Result,
+		},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
 		transactional, PalletId,
 	};
@@ -93,7 +97,7 @@ pub mod pallet {
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
 
 		/// The native asset id
 		#[pallet::constant]
