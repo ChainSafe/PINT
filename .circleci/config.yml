@@ -121,7 +121,7 @@ jobs:
       - build_setup
       - run:
           name: Clippy Check
-          command: cargo clippy --all-features
+          command: cargo clippy --all
       - save_build_cache
   test:
     executor: test-executor
