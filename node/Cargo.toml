@@ -112,5 +112,4 @@ cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus
 polkadot-primitives = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9'}
 polkadot-service = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9'}
 polkadot-cli = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9'}
-polkadot-test-service = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9'}
 polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9'}
