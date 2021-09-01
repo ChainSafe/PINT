@@ -715,46 +715,34 @@ pub mod pallet {
 
 		/// Consolidate and clean deposits while completing withdraw
 		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
-			let withdrawal_amount = amount.clone();
 			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<T::Balance, DispatchError> {
-				let depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
-				let mut start: T::BlockNumber = 0_u32.into();
+				let mut depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
+				let mut total_fee: T::Balance = Default::default();
 
-				let still_depositing: Vec<_> = depositing
-					.into_iter()
-					.filter_map(|(mut index_tokens, block_number)| {
-						// check depositing duration
-						if block_number < start || start == 0_u32.into() {
-							start = block_number;
+				let mut dim: Option<(T::Balance, T::BlockNumber)> = None;
+				depositing.retain(|(index_tokens, block_number)| {
+					if amount >= *index_tokens {
+						amount -= *index_tokens;
+						total_fee += T::RedemptionFee::redemption_fee(*block_number, *index_tokens);
+						false
+					} else {
+						if *index_tokens > amount {
+							dim = Some((*index_tokens - amount, *block_number));
+							total_fee += T::RedemptionFee::redemption_fee(*block_number, amount);
 						}
+						true
+					}
+				});
 
-						// consolidate deposits
-						if block_number > frame_system::Pallet::<T>::block_number() {
-							Some((index_tokens, block_number))
-						} else if amount >= index_tokens {
-							amount = amount.saturating_sub(index_tokens);
-							None
-						} else {
-							index_tokens = index_tokens.saturating_sub(amount);
-							amount = Default::default();
-							Some((index_tokens, block_number))
-						}
-					})
-					.collect();
-
-				if !still_depositing.is_empty() {
-					// still have redemptions pending
-					*maybe_depositing = Some(still_depositing.try_into().map_err(|_| <Error<T>>::InsufficientDeposit)?);
+				if let Some(e) = dim {
+					depositing[0] = e;
 				}
 
 				if amount != Default::default() {
 					return Err(<Error<T>>::InsufficientDeposit.into());
 				}
 
-				Ok(T::RedemptionFee::redemption_fee(
-					frame_system::Pallet::<T>::block_number().saturating_sub(start),
-					withdrawal_amount,
-				))
+				Ok(total_fee)
 			})
 		}
 
