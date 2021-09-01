@@ -717,7 +717,14 @@ pub mod pallet {
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		/// Consolidate and clean deposits while completing withdraw
+		/// While the fee model has not been finalized yet, it will depend on how long LP
+		/// contributions remained in the index. Therefore we need to timestamp (blocknumber)
+		/// and record the LP’s AccountId is whenever PINT is minted to restrict the redemption
+		/// of that PINT to the LP and to calculate fees associated with early redemption of
+		/// the PINT.
+		///
+		/// This function consolidate the oldest deposits (first in the Vec) and remove those
+		/// which are completely withdrawn and update the oldest in the list.
 		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
 			<Deposits<T>>::try_mutate_exists(&caller, |maybe_deposits| -> Result<T::Balance, DispatchError> {
 				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
