@@ -725,21 +725,25 @@ pub mod pallet {
 
 				let mut dim: Option<(T::Balance, T::BlockNumber)> = None;
 				deposits.retain(|(index_tokens, block_number)| {
-					if amount >= *index_tokens {
-						amount -= *index_tokens;
-						total_fee += T::RedemptionFee::redemption_fee(*block_number, *index_tokens);
+					if amount.is_zero() {
+						true
+					} else if amount >= *index_tokens {
+						amount = amount.saturating_sub(*index_tokens);
+						total_fee =
+							total_fee.saturating_add(T::RedemptionFee::redemption_fee(*block_number, *index_tokens));
 						false
 					} else {
-						if *index_tokens > amount {
-							dim = Some((*index_tokens - amount, *block_number));
-							total_fee += T::RedemptionFee::redemption_fee(*block_number, amount);
-							amount = Default::default();
-						}
+						// # SAFTY
+						//
+						// index_tokens are always > 0
+						dim = Some((index_tokens.saturating_sub(amount), *block_number));
+						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(*block_number, amount));
+						amount = T::Balance::zero();
 						true
 					}
 				});
 
-				if !deposits.is_empty() {
+				if deposits.len() > 0 {
 					if let Some(e) = dim {
 						deposits[0] = e;
 					}
