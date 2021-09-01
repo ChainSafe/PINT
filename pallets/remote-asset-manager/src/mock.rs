@@ -181,15 +181,20 @@ pub fn relay_ext() -> sp_io::TestExternalities {
 pub type RelayChainPalletXcm = pallet_xcm::Pallet<relay::Runtime>;
 
 pub mod para {
+	#[cfg(feature = "runtime-benchmarks")]
+	use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
+
 	use super::{
 		xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder},
 		*,
 	};
 	use codec::Decode;
-	use frame_support::dispatch::{DispatchError, DispatchResultWithPostInfo};
+	use frame_support::dispatch::DispatchError;
 	use orml_currencies::BasicCurrencyAdapter;
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
-	use pallet_price_feed::{AssetPricePair, Price, PriceFeed, PriceFeedBenchmarks};
+	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use sp_runtime::traits::Convert;
 	use xcm::v0::MultiAsset;
 
@@ -455,6 +460,7 @@ pub mod para {
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;
+		#[cfg(feature = "runtime-benchmarks")]
 		type PriceFeedBenchmarks = MockPriceFeed;
 		type SaftRegistry = SaftRegistry;
 		type TreasuryPalletId = TreasuryPalletId;

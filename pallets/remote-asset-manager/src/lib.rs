@@ -28,7 +28,7 @@ pub mod pallet {
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
 		sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Saturating, StaticLookup, Zero},
-		sp_std::{self, mem, prelude::*},
+		sp_std::{self, convert::TryFrom, mem, prelude::*},
 		traits::Get,
 		transactional,
 	};
@@ -80,7 +80,7 @@ pub mod pallet {
 			+ Into<u128>;
 
 		/// Asset Id that is used to identify different kinds of assets.
-		type AssetId: Parameter + Member + Clone + Copy + MaybeSerializeDeserialize;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;

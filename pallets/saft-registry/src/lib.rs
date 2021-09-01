@@ -24,7 +24,7 @@ pub mod pallet {
 			traits::{AtLeast32BitUnsigned, CheckedAdd, One, Saturating, Zero},
 			ArithmeticError,
 		},
-		sp_std::{self, prelude::*, result::Result},
+		sp_std::{self, convert::TryFrom, prelude::*, result::Result},
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
@@ -41,7 +41,7 @@ pub mod pallet {
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
 		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-		type AssetId: Parameter + Member + From<u32> + Copy;
+		type AssetId: Parameter + Member + Copy + TryFrom<u8>;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
