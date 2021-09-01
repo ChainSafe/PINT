@@ -739,8 +739,11 @@ pub mod pallet {
 					}
 				});
 
-				if let Some(e) = dim {
-					depositing[0] = e;
+				if depositing.len() > 0 {
+					if let Some(e) = dim {
+						depositing[0] = e;
+					}
+					*maybe_depositing = Some(depositing);
 				}
 
 				if amount != Default::default() {
