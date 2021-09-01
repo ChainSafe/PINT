@@ -18,7 +18,7 @@ mod tests;
 #[allow(clippy::unused_unit)]
 pub mod pallet {
 	use frame_support::{
-		dispatch::DispatchResultWithPostInfo,
+		dispatch::DispatchResult,
 		pallet_prelude::*,
 		sp_runtime::traits::AccountIdConversion,
 		traits::{Currency, ExistenceRequirement::AllowDeath, Get},
@@ -34,8 +34,7 @@ pub mod pallet {
 		/// Origin that is allowed to manage the treasury balance and initiate
 		/// withdrawals
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
-		/// PalletId must be an unique 8 character string.
-		/// It is used to generate the account ID which holds the balance of the
+		/// PalletId used to generate the `AccountId` which holds the balance of the
 		/// treasury.
 		#[pallet::constant]
 		type PalletId: Get<PalletId>;
@@ -52,24 +51,20 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::event]
-	#[pallet::metadata(AccountIdFor<T> = "AccountId", BalanceFor<T> = "AccountId")]
+	#[pallet::metadata(AccountIdFor<T> = "AccountId", BalanceFor<T> = "Balance")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Admin successfully transferred some funds from the treasury to
-		/// another account parameters. \[initiator, recipient, amount\]
-		Withdrawl(AccountIdFor<T>, BalanceFor<T>),
+		/// another account parameters. \[recipient, amount\]
+		Withdrawn(AccountIdFor<T>, BalanceFor<T>),
 	}
-
-	#[pallet::error]
-	pub enum Error<T> {}
 
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
 
 	#[pallet::extra_constants]
 	impl<T: Config> Pallet<T> {
-		/// Returns the accountID for the treasury balance
-		/// Transferring balance to this account funds the treasury
+		/// Returns the `AccountId` of the treasury account.
 		pub fn account_id() -> T::AccountId {
 			T::PalletId::get().into_account()
 		}
@@ -77,25 +72,22 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Transfer balance from the treasury to another account. Only callable
-		/// by the AdminOrigin.
+		/// Transfer balance from the treasury to another account.
+		///
+		/// Only callable by the AdminOrigin.
 		#[pallet::weight(T::WeightInfo::withdraw())]
-		pub fn withdraw(
-			origin: OriginFor<T>,
-			amount: BalanceFor<T>,
-			recipient: AccountIdFor<T>,
-		) -> DispatchResultWithPostInfo {
+		pub fn withdraw(origin: OriginFor<T>, amount: BalanceFor<T>, recipient: AccountIdFor<T>) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
 			T::Currency::transfer(&Self::account_id(), &recipient, amount, AllowDeath)?;
 
-			Self::deposit_event(Event::Withdrawl(recipient, amount));
+			Self::deposit_event(Event::Withdrawn(recipient, amount));
 
-			Ok(().into())
+			Ok(())
 		}
 	}
 
-	/// Trait for the asset-index pallet extrinsic weights.
+	/// Trait for the treasury pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn withdraw() -> Weight;
 	}
