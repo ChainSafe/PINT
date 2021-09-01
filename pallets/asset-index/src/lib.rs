@@ -615,12 +615,12 @@ pub mod pallet {
 		/// can also be closed successfully.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::complete_withdraw())]
-		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
 			let current_block = frame_system::Pallet::<T>::block_number();
 
-			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResultWithPostInfo {
+			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
 				let pending = maybe_pending.take().ok_or(<Error<T>>::NoPendingWithdrawals)?;
 
 				// try to redeem each redemption, but only close it if all assets could be
@@ -645,7 +645,7 @@ pub mod pallet {
 					*maybe_pending = Some(still_pending);
 				}
 
-				Ok(().into())
+				Ok(())
 			})
 		}
 
@@ -719,12 +719,12 @@ pub mod pallet {
 
 		/// Consolidate and clean deposits while completing withdraw
 		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
-			<Deposits<T>>::try_mutate_exists(&caller, |maybe_depositing| -> Result<T::Balance, DispatchError> {
-				let mut depositing = maybe_depositing.take().ok_or(<Error<T>>::NoDeposits)?;
-				let mut total_fee: T::Balance = Default::default();
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_deposits| -> Result<T::Balance, DispatchError> {
+				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
+				let mut total_fee: T::Balance = T::Balance::zero();
 
 				let mut dim: Option<(T::Balance, T::BlockNumber)> = None;
-				depositing.retain(|(index_tokens, block_number)| {
+				deposits.retain(|(index_tokens, block_number)| {
 					if amount >= *index_tokens {
 						amount -= *index_tokens;
 						total_fee += T::RedemptionFee::redemption_fee(*block_number, *index_tokens);
@@ -739,14 +739,14 @@ pub mod pallet {
 					}
 				});
 
-				if depositing.len() > 0 {
+				if !deposits.is_empty() {
 					if let Some(e) = dim {
-						depositing[0] = e;
+						deposits[0] = e;
 					}
-					*maybe_depositing = Some(depositing);
+					*maybe_deposits = Some(deposits);
 				}
 
-				if amount != Default::default() {
+				if !amount.is_zero() {
 					return Err(<Error<T>>::InsufficientDeposit.into());
 				}
 
