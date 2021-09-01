@@ -820,14 +820,14 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
-		fn benchmark_metadata(_extra: bool) -> (
+		fn benchmark_metadata(extra: bool) -> (
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking:: BenchmarkList;
+			use frame_benchmarking:: {BenchmarkList, list_benchmark, Benchmarking};
 			use frame_support::traits::StorageInfoTrait;
 
-			let list = Vec::<BenchmarkList>::new();
+			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, pallet_asset_index, AssetIndex);
 			list_benchmark!(list, extra, pallet_committee, Committee);

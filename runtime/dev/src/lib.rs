@@ -821,14 +821,14 @@ impl_runtime_apis! {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl frame_benchmarking::Benchmark<Block> for Runtime {
-		fn benchmark_metadata(_extra: bool) -> (
+		fn benchmark_metadata(extra: bool) -> (
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking::BenchmarkList;
+			use frame_benchmarking:: {BenchmarkList, list_benchmark, Benchmarking};
 			use frame_support::traits::StorageInfoTrait;
 
-			let list = Vec::<BenchmarkList>::new();
+			let mut list = Vec::<BenchmarkList>::new();
 
 			list_benchmark!(list, extra, pallet_asset_index, AssetIndex);
 			list_benchmark!(list, extra, pallet_committee, Committee);
@@ -843,7 +843,7 @@ impl_runtime_apis! {
 		fn dispatch_benchmark(
 			config: frame_benchmarking::BenchmarkConfig
 		) -> Result<Vec<frame_benchmarking::BenchmarkBatch>, sp_runtime::RuntimeString> {
-			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey, list_benchmark};
+			use frame_benchmarking::{Benchmarking, BenchmarkBatch, add_benchmark, TrackedStorageKey};
 
 			use frame_system_benchmarking::Pallet as SystemBench;
 			impl frame_system_benchmarking::Config for Runtime {}
