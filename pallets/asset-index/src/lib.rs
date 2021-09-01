@@ -730,7 +730,7 @@ pub mod pallet {
 				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
 				let mut total_fee: T::Balance = T::Balance::zero();
 
-				let mut dim: Option<(T::Balance, T::BlockNumber)> = None;
+				let mut rem: Option<(T::Balance, T::BlockNumber)> = None;
 				deposits.retain(|(index_tokens, block_number)| {
 					if amount.is_zero() {
 						true
@@ -743,7 +743,7 @@ pub mod pallet {
 						// # SAFTY
 						//
 						// index_tokens are always > 0
-						dim = Some((index_tokens.saturating_sub(amount), *block_number));
+						rem = Some((index_tokens.saturating_sub(amount), *block_number));
 						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(*block_number, amount));
 						amount = T::Balance::zero();
 						true
@@ -751,7 +751,7 @@ pub mod pallet {
 				});
 
 				if deposits.len() > 0 {
-					if let Some(e) = dim {
+					if let Some(e) = rem {
 						deposits[0] = e;
 					}
 					*maybe_deposits = Some(deposits);
