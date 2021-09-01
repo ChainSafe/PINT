@@ -828,6 +828,12 @@ impl_runtime_apis! {
 
 			let list = Vec::<BenchmarkList>::new();
 
+			list_benchmark!(list, extra, pallet_asset_index, AssetIndex);
+			list_benchmark!(list, extra, pallet_committee, Committee);
+			list_benchmark!(list, extra, pallet_local_treasury, LocalTreasury);
+			list_benchmark!(list, extra, pallet_price_feed, PriceFeed);
+			list_benchmark!(list, extra, pallet_saft_registry, SaftRegistry);
+
 			let storage_info = AllPalletsWithSystem::storage_info();
 			return (list, storage_info)
 		}
