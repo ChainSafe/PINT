@@ -7,7 +7,7 @@
 use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
 use frame_support::{
 	dispatch::DispatchError,
-	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
+	sp_runtime::{app_crypto::sp_core::U256, traits::AtLeast32BitUnsigned, DispatchResult},
 	sp_std::result::Result,
 };
 use xcm::v0::MultiLocation;
@@ -259,8 +259,12 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 }
 
 /// Hook for determining redemption fee
-pub trait RedemptionFee<BlockNumber, Balance: Default> {
+pub trait RedemptionFee<BlockNumber, Balance: AtLeast32BitUnsigned> {
+	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Balance;
+}
+
+impl<BlockNumber, Balance: AtLeast32BitUnsigned> RedemptionFee<BlockNumber, Balance> for () {
 	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Balance {
-		Default::default()
+		Balance::zero()
 	}
 }
