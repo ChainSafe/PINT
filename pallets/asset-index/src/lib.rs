@@ -64,7 +64,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		/// Origin that is allowed to administer the index
-		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		type AdminOrigin: EnsureOrigin<Self::Origin, Success = <Self as frame_system::Config>::AccountId>;
 		/// Currency implementation to use as the index token
 		type IndexToken: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
 		/// The balance type used within this pallet

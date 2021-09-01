@@ -4,6 +4,6 @@
 /// Origin that approved by committee
 pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
 	AccountId,
-	frame_system::EnsureRoot<AccountId>,
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
+	frame_system::EnsureRoot<AccountId>,
 >;
