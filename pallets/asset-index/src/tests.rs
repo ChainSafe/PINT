@@ -431,7 +431,7 @@ fn redemption_fee_works_on_completing_withdraw() {
 		));
 		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
 		for _ in 0..50 {
-			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 20));
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, initial_units / 50));
 		}
 
 		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
@@ -443,10 +443,11 @@ fn redemption_fee_works_on_completing_withdraw() {
 		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit);
 
 		// ensure the redemption fee hook works
-		assert_eq!(
-			<crate::LastRedemption<Test>>::get(),
-			(LockupPeriod::get(), AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap())
-		);
+		let index_token_per_deposit = AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap() / 50;
+		assert_eq!(<crate::LastRedemption<Test>>::get(), (1, index_token_per_deposit));
+
+		// all deposits has been cleaned
+		assert_eq!(<crate::Deposits<Test>>::get(&ASHLEY).len(), 0_usize);
 
 		// can deposit again after withdrawal
 		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));

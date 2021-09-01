@@ -733,6 +733,7 @@ pub mod pallet {
 						if *index_tokens > amount {
 							dim = Some((*index_tokens - amount, *block_number));
 							total_fee += T::RedemptionFee::redemption_fee(*block_number, amount);
+							amount = Default::default();
 						}
 						true
 					}
