@@ -26,7 +26,6 @@ std = [
     'frame-system/std',
     'xcm/std',
 ]
-# this feature is only for compilation now
 runtime-benchmarks = []
 
 [package.metadata.docs.rs]

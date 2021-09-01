@@ -257,3 +257,35 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// the nav from the caller's account
 	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
+
+/// This is a helper trait used for constructing types in Runtime Benchmarks
+pub trait MaybeTryFrom<T>: Sized {
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_from(value: T) -> Option<Self>;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl MaybeTryFrom<u8> for crate::types::AssetId {
+	fn try_from(value: u8) -> Option<Self> {
+		frame_support::sp_std::convert::TryFrom::try_from(value).ok()
+	}
+}
+
+#[cfg(not(feature = "runtime-benchmarks"))]
+impl<T, S> MaybeTryFrom<S> for T {}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::AssetId;
+
+	fn assert_maybe_from<T: MaybeTryFrom<u8>>() {}
+
+	#[test]
+	fn maybe_from_works() {
+		assert_maybe_from::<AssetId>();
+
+		#[cfg(feature = "runtime-benchmarks")]
+		assert_eq!(Some(10 as AssetId), MaybeTryFrom::try_from(10u8));
+	}
+}
