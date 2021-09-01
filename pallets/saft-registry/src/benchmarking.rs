@@ -4,10 +4,8 @@
 #![cfg(feature = "runtime-benchmarks")]
 
 use frame_benchmarking::benchmarks;
-use frame_support::{
-	assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, sp_std::convert::TryFrom,
-	traits::EnsureOrigin,
-};
+use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, traits::EnsureOrigin};
+use primitives::traits::MaybeTryFrom;
 use xcm::v0::Junction;
 
 use crate::Pallet as SaftRegistry;
@@ -18,7 +16,7 @@ const MAX_SAFT_RECORDS: u32 = 100;
 
 benchmarks! {
 	add_saft {
-		let asset= T::AssetId::try_from(0u8).ok().unwrap();
+		let asset= T::AssetId::try_from(0u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let call = Call::<T>::add_saft(
 				asset,
@@ -35,7 +33,7 @@ benchmarks! {
 	}
 
 	remove_saft {
-		let asset= T::AssetId::try_from(0u8).ok().unwrap();
+		let asset= T::AssetId::try_from(0u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, 100u32.into(), 20u32.into()));
 		let call = Call::<T>::remove_saft(
@@ -50,7 +48,7 @@ benchmarks! {
 	}
 
 	report_nav {
-		let asset= T::AssetId::try_from(0u8).ok().unwrap();
+		let asset= T::AssetId::try_from(0u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		assert_ok!(SaftRegistry::<T>::add_saft(
 			origin.clone(),
@@ -74,7 +72,7 @@ benchmarks! {
 	convert_to_liquid {
 		let nav = 1337u32;
 		let units = 1234u32;
-		let asset= T::AssetId::try_from(0u8).ok().unwrap();
+		let asset= T::AssetId::try_from(0u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		// Create saft records
 		for i in 0 .. MAX_SAFT_RECORDS {

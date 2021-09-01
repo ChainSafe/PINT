@@ -28,7 +28,7 @@ pub mod pallet {
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
 		sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Saturating, StaticLookup, Zero},
-		sp_std::{self, convert::TryFrom, mem, prelude::*},
+		sp_std::{self, mem, prelude::*},
 		traits::Get,
 		transactional,
 	};
@@ -36,7 +36,7 @@ pub mod pallet {
 	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
 	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
-	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+	use primitives::traits::{MaybeTryFrom, MultiAssetRegistry, RemoteAssetManager};
 	use xcm_calls::{
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
@@ -80,7 +80,7 @@ pub mod pallet {
 			+ Into<u128>;
 
 		/// Asset Id that is used to identify different kinds of assets.
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaybeTryFrom<u8>;
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
