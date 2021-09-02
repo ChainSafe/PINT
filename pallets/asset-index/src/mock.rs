@@ -146,28 +146,40 @@ impl pallet_saft_registry::Config for Test {
 
 parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
-	pub MinimumRedemption: u32 = 2;
+	pub MinimumRedemption: u32 = 3;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
 	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
+	pub MaxActiveDeposits: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 
 	// No fees for now
 	pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
+pub struct RedemptionFee;
+
+impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
+	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Balance {
+		crate::LastRedemption::<Test>::set((duration, amount));
+		Default::default()
+	}
+}
+
 impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
 	type DOTContributionLimit = DOTContributionLimit;
-	type RemoteAssetManager = MockRemoteAssetManager;
+	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
@@ -180,17 +192,6 @@ impl pallet_asset_index::Config for Test {
 	type Event = Event;
 	type StringLimit = StringLimit;
 	type WeightInfo = ();
-}
-
-pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn deposit(_: AssetId, _: Balance) {}
-
-	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const PINT_ASSET_ID: AssetId = 0u32;

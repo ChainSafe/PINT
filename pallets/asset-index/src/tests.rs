@@ -348,6 +348,77 @@ fn deposit_fails_on_missing_assets() {
 }
 
 #[test]
+fn deposit_fails_on_exceeding_limit() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
+
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
+		}
+
+		assert_eq!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1),
+			Err(pallet::Error::<Test>::TooManyDeposits.into())
+		);
+	})
+}
+
+#[test]
+fn redemption_fee_works_on_completing_withdraw() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, initial_units / 50));
+		}
+
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
+
+		// advance the block number so that the lock expires
+		let total = AssetIndex::index_token_balance(&ASHLEY);
+		let current_block = frame_system::Pallet::<Test>::block_number();
+		let new_block_number = LockupPeriod::get() + 1;
+		frame_system::Pallet::<Test>::set_block_number(new_block_number);
+		assert_ok!(AssetIndex::withdraw(Origin::signed(ASHLEY), total * 99 / 100));
+		assert_ok!(AssetIndex::complete_withdraw(Origin::signed(ASHLEY)));
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit * 99 / 100);
+
+		// ensure the redemption fee hook works
+		let index_token_per_deposit = AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap() / 50;
+		assert_eq!(
+			crate::LastRedemption::<Test>::get(),
+			(new_block_number - current_block, index_token_per_deposit / 2)
+		);
+
+		// all deposits has been cleaned
+		assert_eq!(crate::Deposits::<Test>::get(&ASHLEY)[0], (total / 100, 1_u64));
+
+		// can deposit again after withdrawal
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
+	})
+}
+
+#[test]
 fn can_calculate_nav() {
 	new_test_ext().execute_with(|| {
 		let a_units = 100;
