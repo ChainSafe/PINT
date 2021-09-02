@@ -189,7 +189,20 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(CommitteeOrigin::ApprovedByCommittee(Default::default(), Default::default()))
+		use frame_benchmarking::vec;
+		O::from(CommitteeOrigin::ApprovedByCommittee(
+			Default::default(),
+			VoteAggregate {
+				votes: vec![
+					MemberVote {
+						member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+						vote: Vote::Aye
+					};
+					T::MinCouncilVotes::get() + 1
+				],
+				end: <frame_system::Pallet<T>>::block_number() + 1_u32.into(),
+			},
+		))
 	}
 }
 

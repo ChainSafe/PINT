@@ -57,7 +57,11 @@ use xcm_executor::XcmExecutor;
 use frame_support::traits::Everything;
 use pallet_committee::EnsureMember;
 
-pub use pint_runtime_common::{constants::*, types::GovernanceOrigin, weights};
+pub use pint_runtime_common::{
+	constants::*,
+	types::{CommitteeOrigin, GovernanceOrigin},
+	weights,
+};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::{
@@ -399,7 +403,6 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 impl pallet_local_treasury::Config for Runtime {
-	// Using root as the admin origin for now
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
@@ -422,7 +425,7 @@ impl pallet_remote_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	type AdminOrigin = GovernanceOrigin<AccountId, Runtime>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type AssetRecorder = AssetIndex;
 	type Balance = Balance;
 	type AssetId = AssetId;
@@ -468,8 +471,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 }
 
 impl pallet_asset_index::Config for Runtime {
-	// Using signed as the admin origin for testing now
-	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type MaxActiveDeposits = MaxActiveDeposits;

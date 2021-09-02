@@ -440,7 +440,7 @@ pub mod para {
 	}
 
 	impl pallet_asset_index::Config for Runtime {
-		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+		type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 		type Event = Event;
 		type AssetId = AssetId;
 		type SelfAssetId = PINTAssetId;

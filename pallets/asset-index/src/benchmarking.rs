@@ -34,7 +34,7 @@ fn whitelist_acc<T: Config>(acc: &T::AccountId) {
 
 benchmarks! {
 	add_asset {
-		let asset_id :T::AssetId = T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::Null;
@@ -57,7 +57,7 @@ benchmarks! {
 	}
 
 	complete_withdraw {
-		let asset_id : T::AssetId = T::try_convert(1u8).unwrap();
+		let asset_id : T::AssetId = T::try_convert(2u8).unwrap();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
@@ -96,36 +96,33 @@ benchmarks! {
 	}
 
 	deposit {
-		// ASSET_A_ID
 		let asset_id : T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		let depositor = whitelisted_account::<T>("depositor", 0);
-		let admin_deposit = 5u32.into();
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+		let admin_deposit = 5u32;
 		let units = 1_000u32.into();
 
 		assert_ok!(AssetIndex::<T>::add_asset(
-			origin,
+			origin.clone(),
 			asset_id,
 			100u32.into(),
 			MultiLocation::Null,
-			admin_deposit,
+			admin_deposit.into(),
 		));
 
-		T::PriceFeedBenchmarks::create_feed(Default::default(), asset_id).unwrap();
-		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
-	}: _(
-		RawOrigin::Signed(depositor.clone()),
-		asset_id,
-		units
-	) verify {
+		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+
+		// construct call
+		let call = Call::<T>::deposit(asset_id, units);
+	}: { call.dispatch_bypass_filter(origin)? } verify {
 		let nav = AssetIndex::<T>::nav().unwrap();
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
 		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
-		assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), received + admin_deposit as u128);
 	}
 
 	remove_asset {
-		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let units: u32 = 100;
 		let amount = 500u32.into();
@@ -148,7 +145,7 @@ benchmarks! {
 	}
 
 	register_asset {
-		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let availability = AssetAvailability::Saft;
 		let call = Call::<T>::register_asset(
@@ -182,7 +179,7 @@ benchmarks! {
 	}
 
 	withdraw {
-		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
@@ -216,7 +213,7 @@ benchmarks! {
 	}
 
 	unlock {
-		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let amount = 500u32.into();

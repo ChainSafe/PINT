@@ -87,11 +87,11 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 0;
+pub(crate) const ACCOUNT_ID: AccountId = 0;
 pub(crate) const ASHLEY: AccountId = 1;
 
 ord_parameter_types! {
-	pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
+	pub const AdminAccountId: AccountId = ACCOUNT_ID;
 }
 
 // param types for balances
@@ -169,7 +169,7 @@ impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
 }
 
 impl pallet_asset_index::Config for Test {
-	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type MaxActiveDeposits = MaxActiveDeposits;
@@ -250,9 +250,9 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			balances: vec![
-				(ADMIN_ACCOUNT_ID, ASSET_A_ID, 1_000_000_000_000_000_u128),
-				(ADMIN_ACCOUNT_ID, ASSET_B_ID, 1_000_000_000_000_000_u128),
-				(ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, ASSET_A_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, ASSET_B_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, SAFT_ASSET_ID, 1_000_000_000_000_000_u128),
 			],
 		}
 	}
