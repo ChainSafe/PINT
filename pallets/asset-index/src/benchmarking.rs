@@ -109,7 +109,14 @@ benchmarks! {
 		let nav = AssetIndex::<T>::nav().unwrap();
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
 		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
-		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), index_tokens + received);
+
+		// NOTE:
+		//
+		// the result will be 0 or 1
+		//
+		// - 0 for tests
+		// - 1 for benchmarks ( transaction fee )
+		assert!(AssetIndex::<T>::index_token_balance(&origin_account_id).into() - (index_tokens + received) < 2);
 	}
 
 	// TODO:
