@@ -505,7 +505,7 @@ pub mod pallet {
 			// insert new deposit
 			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
 				deposits
-					.try_push((index_tokens, <frame_system::Pallet<T>>::block_number()))
+					.try_push((index_tokens, frame_system::Pallet::<T>::block_number()))
 					.map_err(|_| Error::<T>::TooManyDeposits)?;
 				Ok(())
 			})?;
@@ -542,7 +542,7 @@ pub mod pallet {
 				free_balance.saturating_sub(amount),
 			)?;
 
-			// amount = fee + redeem
+			// amount = fees + redeem
 			let fee = amount
 				.fee(T::BaseWithdrawalFee::get())
 				.ok_or(Error::<T>::AssetUnitsOverflow)?
@@ -717,42 +717,45 @@ pub mod pallet {
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		/// While the fee model has not been finalized yet, it will depend on how long LP
-		/// contributions remained in the index. Therefore we need to timestamp (blocknumber)
-		/// and record the LP’s AccountId is whenever PINT is minted to restrict the redemption
-		/// of that PINT to the LP and to calculate fees associated with early redemption of
-		/// the PINT.
+		/// The fee model depends on how long LP contributions remained in the index.
+		/// Therefore, LP deposits in `deposit` are time-stamped (block number) so that fees can be
+		/// determined as a function of time spent in the index.
 		///
-		/// This function consolidate the oldest deposits (first in the Vec) and remove those
-		/// which are completely withdrawn and update the oldest in the list.
+		/// This function consolidates the oldest deposits and removes the deposits implicated by
+		/// the transferred withdrawal amount and returns the total redemption fee for the given
+		/// amount.
 		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
 			<Deposits<T>>::try_mutate_exists(&caller, |maybe_deposits| -> Result<T::Balance, DispatchError> {
 				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
 				let mut total_fee: T::Balance = T::Balance::zero();
+				let current_block = frame_system::Pallet::<T>::block_number();
 
 				let mut rem: Option<(T::Balance, T::BlockNumber)> = None;
 				deposits.retain(|(index_tokens, block_number)| {
+					// how long this deposit spent in the index.
+					let time_spent = current_block.saturating_sub(*block_number);
+
 					if amount.is_zero() {
 						true
 					} else if amount >= *index_tokens {
 						amount = amount.saturating_sub(*index_tokens);
 						total_fee =
-							total_fee.saturating_add(T::RedemptionFee::redemption_fee(*block_number, *index_tokens));
+							total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, *index_tokens));
 						false
 					} else {
-						// # SAFTY
-						//
-						// index_tokens are always > 0
+						// the remaining amount is less than the oldest deposit, so we are simply updating the value of
+						// the now oldest deposit
 						rem = Some((index_tokens.saturating_sub(amount), *block_number));
-						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(*block_number, amount));
+						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, amount));
 						amount = T::Balance::zero();
 						true
 					}
 				});
 
-				if deposits.len() > 0 {
-					if let Some(e) = rem {
-						deposits[0] = e;
+				if !deposits.is_empty() {
+					if let Some(rem) = rem {
+						// update the oldest value
+						deposits[0] = rem;
 					}
 					*maybe_deposits = Some(deposits);
 				}

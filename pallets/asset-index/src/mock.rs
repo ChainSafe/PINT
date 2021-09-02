@@ -163,7 +163,7 @@ pub struct RedemptionFee;
 
 impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
 	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Balance {
-		<crate::LastRedemption<Test>>::set((duration, amount));
+		crate::LastRedemption::<Test>::set((duration, amount));
 		Default::default()
 	}
 }

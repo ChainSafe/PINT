@@ -258,13 +258,19 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
-/// Hook for determining redemption fee
+/// Determines the fee upon index token redemptions
 pub trait RedemptionFee<BlockNumber, Balance: AtLeast32BitUnsigned> {
-	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Balance;
+	/// Determines the redemption fee based on how long the given amount were held in the index
+	///
+	/// Parameters:
+	///     - `time_spent`: The number of blocks the amount were held in the index. This is `current
+	///       block -  deposit`.
+	///     - `amount`: The amount of index tokens withdrawn
+	fn redemption_fee(time_spent: BlockNumber, amount: Balance) -> Balance;
 }
 
 impl<BlockNumber, Balance: AtLeast32BitUnsigned> RedemptionFee<BlockNumber, Balance> for () {
-	fn redemption_fee(_duration: BlockNumber, _amount: Balance) -> Balance {
+	fn redemption_fee(_: BlockNumber, _: Balance) -> Balance {
 		Balance::zero()
 	}
 }
