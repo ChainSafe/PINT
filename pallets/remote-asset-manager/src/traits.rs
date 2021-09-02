@@ -40,7 +40,7 @@ pub trait BalanceMeter<Balance, AssetId> {
 }
 
 /// A type to abstract several staking related thresholds
-pub trait StakingThresholds<AssetId, Balance> {
+pub trait StakingCap<AssetId, Balance> {
 	/// The minimum amount that should be held in stash (must remain
 	/// unbonded).
 	/// Withdrawals are only authorized if the updated stash balance does
@@ -56,7 +56,7 @@ pub trait StakingThresholds<AssetId, Balance> {
 }
 
 // Convenience impl for orml `parameter_type_with_key!` impls
-impl<AssetId, Balance, ReserveMinimum, BondExtra> StakingThresholds<AssetId, Balance> for (ReserveMinimum, BondExtra)
+impl<AssetId, Balance, ReserveMinimum, BondExtra> StakingCap<AssetId, Balance> for (ReserveMinimum, BondExtra)
 where
 	ReserveMinimum: GetByKey<AssetId, Balance>,
 	BondExtra: GetByKey<AssetId, Balance>,

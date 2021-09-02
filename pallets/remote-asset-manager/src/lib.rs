@@ -33,10 +33,10 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
+	use orml_traits::{MultiCurrency, XcmTransfer};
 	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
-	use primitives::traits::{MaybeAssetIdConvert, MultiAssetRegistry, RemoteAssetManager};
+	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
 	use xcm_calls::{
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
@@ -46,21 +46,30 @@ pub mod pallet {
 	};
 
 	use crate::{
-		traits::{BalanceMeter, StakingThresholds},
+		traits::{BalanceMeter, StakingCap},
 		types::{AssetLedger, StatemintConfig, XcmStakingMessageCount},
 	};
 	use xcm_calls::staking::UnlockChunk;
 
+	// -------  Various type aliases
+
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-	type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 	type BalanceFor<T> = <T as Config>::Balance;
+
+	/// The lookup source type configured for the chain's runtime
+	type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+
+	/// Simplified type for the `StakingLedger` that keeps track of the chains actively assets
 	type StakingLedgerFor<T> =
 		StakingLedger<LookupSourceFor<T>, <T as Config>::Balance, <T as frame_system::Config>::BlockNumber>;
+
+	/// Simplified type for the staking config
 	type StakingConfigFor<T> = StakingConfig<
 		<T as frame_system::Config>::AccountId,
 		<T as Config>::Balance,
 		<T as frame_system::Config>::BlockNumber,
 	>;
+
 	// A `pallet_staking` dispatchable on another chain
 	type PalletStakingCall<T> = StakingCall<LookupSourceFor<T>, BalanceFor<T>, AccountIdFor<T>>;
 
@@ -84,9 +93,6 @@ pub mod pallet {
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
-
-		/// Convert `Self::Account` to `AccountId32`
-		type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
 
 		/// The encoder to use for encoding when transacting a `pallet_staking`
 		/// Call
@@ -127,7 +133,7 @@ pub mod pallet {
 		type RelayChainAssetId: Get<Self::AssetId>;
 
 		/// Determines the threshold amounts when operating with staked assets.
-		type StakingThreshold: StakingThresholds<Self::AssetId, Self::Balance>;
+		type AssetStakingCap: StakingCap<Self::AssetId, Self::Balance>;
 
 		/// Currency type for deposit/withdraw xcm assets
 		///
@@ -150,9 +156,6 @@ pub mod pallet {
 		type XcmSender: SendXcm;
 
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-		/// Asset registry with all the locations
-		type AssetRegistry: MultiAssetRegistry<Self::AssetId>;
 
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
@@ -332,8 +335,6 @@ pub mod pallet {
 		AlreadyBonded,
 		/// PINT's stash is not bonded yet with  [`bond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond).
 		NotBonded,
-		/// Thrown when no location was found for the given asset.
-		UnknownAsset,
 		/// Thrown if the PINT parachain account is not allowed to executed
 		/// pallet staking extrinsics that require controller origin
 		NoControllerPermission,
@@ -347,7 +348,7 @@ pub mod pallet {
 		/// the minimum reserve balance
 		InusufficientStash,
 		/// Thrown if liquid asset has invalid chain location
-		InvalidChainLocation,
+		InvalidAssetChainLocation,
 		/// Currency is not cross-chain transferable.
 		NotCrossChainTransferableCurrency,
 		/// Thrown if the given amount of PINT to send to statemint is too low
@@ -397,7 +398,7 @@ pub mod pallet {
 					balances.consolidate();
 
 					// check if the additional funds would warrant a bond extra
-					if balances.deposited >= T::StakingThreshold::minimum_bond_extra(asset) {
+					if balances.deposited >= T::AssetStakingCap::minimum_bond_extra(asset) {
 						// TODO: could check against the currently unbonding balance and rebond
 
 						// only if the free remote is above the reserve threshold
@@ -854,10 +855,7 @@ pub mod pallet {
 		}
 
 		fn asset_destination(asset: T::AssetId) -> Result<MultiLocation, DispatchError> {
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAssetChainLocation)?;
 			Ok(dest)
 		}
 	}
@@ -903,7 +901,7 @@ pub mod pallet {
 		}
 
 		fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
-			T::StakingThreshold::minimum_reserve_balance(*asset)
+			T::AssetStakingCap::minimum_reserve_balance(*asset)
 		}
 	}
 

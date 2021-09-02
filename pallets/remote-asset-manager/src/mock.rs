@@ -494,7 +494,6 @@ pub mod para {
 		type Balance = Balance;
 		type AssetId = AssetId;
 		type AssetIdConvert = AssetIdConvert;
-		type AccountId32Convert = xcm_test_support::convert::AccountId32Convert;
 		// Encodes `pallet_staking` calls before transaction them to other chains
 		type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
 		// Encodes `pallet_proxy` calls before transaction them to other chains
@@ -504,7 +503,7 @@ pub mod para {
 		type SelfLocation = SelfLocation;
 		type SelfParaId = parachain_info::Pallet<Runtime>;
 		type RelayChainAssetId = RelayChainAssetId;
-		type StakingThreshold = (MinimumReserve, MinimumBondExtra);
+		type AssetStakingCap = (MinimumReserve, MinimumBondExtra);
 		type Assets = Currency;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type XcmAssetTransfer = XTokens;
@@ -512,7 +511,6 @@ pub mod para {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type XcmSender = XcmRouter;
 		type Event = Event;
-		type AssetRegistry = AssetIndex;
 		type WeightInfo = ();
 	}
 
