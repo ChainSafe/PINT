@@ -8,7 +8,6 @@ use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
 	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
-	sp_std::convert::TryFrom,
 	traits::{Currency as _, EnsureOrigin, Get},
 };
 use frame_system::RawOrigin;
@@ -35,7 +34,7 @@ fn whitelist_acc<T: Config>(acc: &T::AccountId) {
 
 benchmarks! {
 	add_asset {
-		let asset_id =  T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id :T::AssetId = T::try_convert(1u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::Null;
@@ -58,7 +57,7 @@ benchmarks! {
 	}
 
 	complete_withdraw {
-		let asset_id = T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id : T::AssetId = T::try_convert(1u8).unwrap();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
@@ -98,7 +97,7 @@ benchmarks! {
 
 	deposit {
 		// ASSET_A_ID
-		let asset_id = T::AssetId::try_from(2u8).ok().unwrap();
+		let asset_id : T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let admin_deposit = 5u32.into();
@@ -126,7 +125,7 @@ benchmarks! {
 	}
 
 	remove_asset {
-		let asset_id =  T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let units: u32 = 100;
 		let amount = 500u32.into();
@@ -149,7 +148,7 @@ benchmarks! {
 	}
 
 	register_asset {
-		let asset_id =  T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let availability = AssetAvailability::Saft;
 		let call = Call::<T>::register_asset(
@@ -164,7 +163,7 @@ benchmarks! {
 	}
 
 	set_metadata {
-		let asset_id =  T::AssetId::try_from(0u8).ok().unwrap();
+		let asset_id :T::AssetId =  T::try_convert(0u8).unwrap();
 		let name = b"pint".to_vec();
 		let symbol = b"pint".to_vec();
 		let decimals = 8_u8;
@@ -183,7 +182,7 @@ benchmarks! {
 	}
 
 	withdraw {
-		let asset_id =  T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
 		let units = 100_u32.into();
 		let tokens = 500_u32.into();
 		let admin = T::AdminOrigin::successful_origin();
@@ -217,7 +216,7 @@ benchmarks! {
 	}
 
 	unlock {
-		let asset_id =  T::AssetId::try_from(1u8).ok().unwrap();
+		let asset_id :T::AssetId =  T::try_convert(1u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let depositor = whitelisted_account::<T>("depositor", 0);
 		let amount = 500u32.into();

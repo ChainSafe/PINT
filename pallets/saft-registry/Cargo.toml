@@ -59,4 +59,5 @@ runtime-benchmarks = [
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
     'pallet-asset-index/runtime-benchmarks',
+    'primitives/runtime-benchmarks',
 ]

@@ -123,11 +123,11 @@ impl pallet_chainlink_feed::Config for Test {
 	type WeightInfo = ();
 }
 
-pub(crate) type AssetId = u64;
+pub(crate) type AssetId = u32;
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
 
 parameter_types! {
-	pub const PINTAssetId: AssetId = 1u64;
+	pub const PINTAssetId: AssetId = 1u32;
 }
 
 ord_parameter_types! {

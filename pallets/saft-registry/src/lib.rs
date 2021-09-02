@@ -24,24 +24,24 @@ pub mod pallet {
 			traits::{AtLeast32BitUnsigned, CheckedAdd, One, Saturating, Zero},
 			ArithmeticError,
 		},
-		sp_std::{self, convert::TryFrom, prelude::*, result::Result},
+		sp_std::{self, prelude::*, result::Result},
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
 	use primitives::{
-		traits::{AssetRecorder, SaftRegistry},
+		traits::{AssetRecorder, MaybeAssetIdConvert, SaftRegistry},
 		types::AssetAvailability,
 		SAFTId,
 	};
 	use xcm::v0::MultiLocation;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		// Origin that is allowed to manage the SAFTs
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
 		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
-		type AssetId: Parameter + Member + Copy + TryFrom<u8>;
+		type AssetId: Parameter + Member + Copy;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
