@@ -111,7 +111,7 @@ fn pint_testnet_genesis(
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect() },
+		balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 12)).collect() },
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
 		chainlink_feed: ChainlinkFeedConfig { pallet_admin: Some(root_key.clone()), feed_creators: council_members },
 		sudo: SudoConfig { key: root_key },
@@ -139,8 +139,8 @@ fn pint_testnet_genesis(
 			//
 			// this config is only for tests for now
 			balances: vec![
-				endowed_accounts.iter().cloned().map(|k| (k, 42, 1 << 60)).collect::<Vec<_>>(),
-				endowed_accounts.iter().cloned().map(|k| (k, 43, 1 << 60)).collect::<Vec<_>>(),
+				endowed_accounts.iter().cloned().map(|k| (k, 2, 1 << 12)).collect::<Vec<_>>(),
+				endowed_accounts.iter().cloned().map(|k| (k, 3, 1 << 12)).collect::<Vec<_>>(),
 			]
 			.concat(),
 		},

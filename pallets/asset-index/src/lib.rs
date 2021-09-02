@@ -458,7 +458,6 @@ pub mod pallet {
 
 			// the amount of index token the given units of the liquid assets are worth
 			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
-
 			if index_tokens.is_zero() {
 				return Err(Error::<T>::InsufficientDeposit.into());
 			}
@@ -884,15 +883,15 @@ pub mod pallet {
 				Ok(())
 			})?;
 
+			// mint the given units of the SAFT asset into the treasury's account
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+
 			// determine the index token equivalent value of the given saft_nav, or how many index token the
 			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
 			let index_token: T::Balance = Self::nav()?
 				.reciprocal()
 				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
 				.ok_or(ArithmeticError::Overflow)?;
-
-			// mint the given units of the SAFT asset into the treasury's account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, index_token);
@@ -1080,9 +1079,11 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
+
 			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
 				let value =
 					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
+
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)

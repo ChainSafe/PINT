@@ -285,7 +285,7 @@ pub mod pallet {
 				Zero::zero(),
 				(1u8.into(), 100u8.into()),
 				1u8.into(),
-				8u8,
+				0u8,
 				vec![1; T::StringLimit::get() as usize],
 				Zero::zero(),
 				vec![(caller.clone(), caller.clone())],
