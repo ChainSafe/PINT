@@ -621,7 +621,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type XcmSender = XcmRouter;
 	type Event = Event;
-	type AssetRegistry = AssetIndex;
 	type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 

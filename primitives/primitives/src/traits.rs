@@ -24,6 +24,18 @@ pub trait MultiAssetRegistry<AssetId> {
 
 /// Facility for remote asset operations.
 pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
+	/// Transfers the given amount of asset from the account's sovereign account
+	/// on PINT into the account on the asset's destination.
+	///
+	/// This performs the following steps:
+	/// - Ensure the account has enough free balance of the given asset
+	/// - Depending on the asset's location this will execute
+	///     - an XCM InitiateReserveWithdraw followed by XCM Deposit order, if the location of the
+	///       asset is a reserve location of PINT (Relay Chain)
+	///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset order will be
+	///       dispatched as XCM ReserveAssetDeposit with an Xcm Deposit order
+	fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
+
 	/// Notification of deposited funds in the index, ready to be `bond` to earn staking rewards.
 	///
 	/// This is an abstraction over how staking is supported on the `asset`'s native location.
@@ -47,6 +59,9 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 
 // Default implementation that does nothing
 impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for () {
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+		Ok(())
+	}
 
 	fn deposit(_: AssetId, _: Balance) {}
 

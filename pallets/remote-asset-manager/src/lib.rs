@@ -861,6 +861,16 @@ pub mod pallet {
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
+		fn transfer_asset(recipient: T::AccountId, asset: T::AssetId, amount: T::Balance) -> DispatchResult {
+			// asset's native chain location
+			let dest: MultiLocation =
+				T::AssetIdConvert::convert(asset).ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
+
+			// ensures the min stash is still available after the transfer
+			Self::ensure_free_stash(asset, amount)?;
+			T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
+		}
+
 		fn deposit(asset: T::AssetId, amount: T::Balance) {
 			AssetBalance::<T>::mutate(asset, |balance| balance.deposited = balance.deposited.saturating_add(amount))
 		}
