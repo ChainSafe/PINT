@@ -100,7 +100,7 @@ benchmarks! {
 		let asset_id = T::AssetId::try_from(2u8).ok().unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
-		let admin_deposit = 5u32.into();
+		let admin_deposit = 5u32;
 		let units = 1_000u32.into();
 
 		assert_ok!(AssetIndex::<T>::add_asset(
@@ -108,11 +108,10 @@ benchmarks! {
 			asset_id,
 			100u32.into(),
 			MultiLocation::Null,
-			admin_deposit,
+			admin_deposit.into(),
 		));
 
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
-		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 
 		// construct call
 		let call = Call::<T>::deposit(asset_id, units);
@@ -120,7 +119,7 @@ benchmarks! {
 		let nav = AssetIndex::<T>::nav().unwrap();
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
 		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
-		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), received);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), received + admin_deposit as u128);
 	}
 
 	remove_asset {

@@ -285,7 +285,7 @@ pub mod pallet {
 				Zero::zero(),
 				(1u8.into(), 100u8.into()),
 				1u8.into(),
-				8u8,
+				0u8,
 				vec![1; T::StringLimit::get() as usize],
 				Zero::zero(),
 				vec![(caller.clone(), caller.clone())],
@@ -299,7 +299,7 @@ pub mod pallet {
 				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
 				feed_id,
 				1_u32.into(),
-				42.into(),
+				1.into(),
 			)?;
 			Ok(().into())
 		}
