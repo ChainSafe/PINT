@@ -6,13 +6,12 @@
 use super::*;
 use frame_benchmarking::benchmarks;
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_std::convert::TryInto, traits::EnsureOrigin};
-use primitives::traits::MaybeTryFrom;
 
 use crate::Pallet as PriceFeed;
 
 benchmarks! {
 	map_asset_price_feed {
-		let asset_id = T::AssetId::try_from(2u8).unwrap();
+		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let feed_id = 0u32.try_into().ok().unwrap();
 		let call = Call::<T>::map_asset_price_feed(
@@ -27,7 +26,7 @@ benchmarks! {
 	}
 
 	unmap_asset_price_feed {
-		let asset_id = T::AssetId::try_from(2u8).unwrap();
+		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let feed_id = 0u32.try_into().ok().unwrap();
 		assert_ok!(PriceFeed::<T>::map_asset_price_feed(origin.clone(), asset_id.clone(), feed_id));

@@ -54,12 +54,12 @@ pub mod pallet {
 	};
 
 	use crate::types::{AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption};
-	use primitives::traits::MaybeTryFrom;
+	use primitives::traits::MaybeAssetIdConvert;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		/// Origin that is allowed to administer the index
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		/// Currency implementation to use as the index token
@@ -96,7 +96,7 @@ pub mod pallet {
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaybeTryFrom<u8>;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
 		/// The native asset id
 		#[pallet::constant]

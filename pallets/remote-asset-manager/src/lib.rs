@@ -36,7 +36,7 @@ pub mod pallet {
 	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
 	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
-	use primitives::traits::{MaybeTryFrom, MultiAssetRegistry, RemoteAssetManager};
+	use primitives::traits::{MaybeAssetIdConvert, MultiAssetRegistry, RemoteAssetManager};
 	use xcm_calls::{
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
@@ -69,7 +69,7 @@ pub mod pallet {
 	type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		/// The balance type for cross chain transfers
 		type Balance: Parameter
 			+ Member
@@ -80,7 +80,7 @@ pub mod pallet {
 			+ Into<u128>;
 
 		/// Asset Id that is used to identify different kinds of assets.
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + MaybeTryFrom<u8>;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
