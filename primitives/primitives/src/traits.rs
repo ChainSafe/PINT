@@ -57,6 +57,17 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 	fn announce_withdrawal(asset: AssetId, amount: Balance);
 }
 
+// Default implementation that does nothing
+impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for () {
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn deposit(_: AssetId, _: Balance) {}
+
+	fn announce_withdrawal(_: AssetId, _: Balance) {}
+}
+
 /// Abstracts net asset value (`NAV`) related calculations
 pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// Calculates the amount of index tokens that the given units of the asset

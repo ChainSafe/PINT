@@ -132,7 +132,7 @@ impl pallet_asset_index::Config for Test {
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
 	type DOTContributionLimit = DOTContributionLimit;
-	type RemoteAssetManager = MockRemoteAssetManager;
+	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
@@ -145,17 +145,6 @@ impl pallet_asset_index::Config for Test {
 	type Event = Event;
 	type StringLimit = StringLimit;
 	type WeightInfo = ();
-}
-
-pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn deposit(_: AssetId, _: Balance) {}
-
-	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const LIQUID_ASSET_ID: AssetId = 42u32;
