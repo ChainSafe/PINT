@@ -58,7 +58,7 @@ pub mod pallet {
 		type RelayChainAssetId: Get<Self::AssetId>;
 
 		/// The interface to Cross-chain transfer.
-		type XcmTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
+		type XcmAssetTransfer: XcmTransfer<Self::AccountId, Self::Balance, Self::AssetId>;
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
@@ -119,7 +119,7 @@ pub mod pallet {
 				return Err(Error::<T>::InvalidAsset.into());
 			}
 
-			T::XcmTransfer::transfer(
+			T::XcmAssetTransfer::transfer(
 				Self::treasury_account(),
 				asset,
 				amount,
@@ -147,7 +147,7 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin)?;
 
 			let asset = T::RelayChainAssetId::get();
-			T::XcmTransfer::transfer(
+			T::XcmAssetTransfer::transfer(
 				Self::treasury_account(),
 				asset,
 				amount,
