@@ -3,12 +3,12 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, vec};
+use frame_benchmarking::{benchmarks, vec};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
 	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
-	traits::{Currency as _, EnsureOrigin, Get},
+	traits::{EnsureOrigin, Get},
 };
 use orml_traits::MultiCurrency;
 use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
@@ -18,18 +18,6 @@ use xcm::v0::MultiLocation;
 use crate::Pallet as AssetIndex;
 
 use super::*;
-
-const SEED: u32 = 0;
-
-fn whitelisted_account<T: Config>(name: &'static str, counter: u32) -> T::AccountId {
-	let acc = account(name, counter, SEED);
-	whitelist_acc::<T>(&acc);
-	acc
-}
-
-fn whitelist_acc<T: Config>(acc: &T::AccountId) {
-	frame_benchmarking::benchmarking::add_to_whitelist(frame_system::Account::<T>::hashed_key_for(acc).into());
-}
 
 benchmarks! {
 	add_asset {
@@ -111,7 +99,7 @@ benchmarks! {
 			admin_deposit.into(),
 		));
 
-		let current_balance = AssetIndex::<T>::index_token_balance(&origin_account_id).into();
+		let index_tokens = AssetIndex::<T>::index_token_balance(&origin_account_id).into();
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 
@@ -120,37 +108,41 @@ benchmarks! {
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		let nav = AssetIndex::<T>::nav().unwrap();
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
-
-		// `-1` is about the transaction fee
-		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), current_balance + received);
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), index_tokens + received);
 	}
 
-	remove_asset {
-		let asset_id =  T::try_convert(2u8).unwrap();
-		let units = 100_u32.into();
-		let amount = 1_000u32.into();
-		let origin = T::AdminOrigin::successful_origin();
-		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
-		let receiver = whitelisted_account::<T>("receiver", 0);
-
-		// create liquid assets
-		assert_ok!(<AssetIndex<T>>::add_asset(
-			origin.clone(),
-			asset_id,
-			units,
-			MultiLocation::Null,
-			amount
-		));
-
-		// create price feed
-		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
-
-		// construct call
-		let call = Call::<T>::remove_asset(asset_id, units, Some(receiver));
-	}: { call.dispatch_bypass_filter(origin.clone())? } verify {
-		assert_eq!(T::IndexToken::total_balance(&origin_account_id), 0u32.into());
-	}
+	// TODO:
+	//
+	// This extrinsic requires `remote-asset-manager`
+	//
+	// ----
+	//
+	// remove_asset {
+	// 	let asset_id =  T::try_convert(2u8).unwrap();
+	// 	let units = 100_u32.into();
+	// 	let amount = 1_000u32.into();
+	// 	let origin = T::AdminOrigin::successful_origin();
+	// 	let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+	// 	let receiver = whitelisted_account::<T>("receiver", 0);
+	//
+	// 	// create liquid assets
+	// 	assert_ok!(<AssetIndex<T>>::add_asset(
+	// 		origin.clone(),
+	// 		asset_id,
+	// 		units,
+	// 		MultiLocation::Null,
+	// 		amount
+	// 	));
+	//
+	// 	// create price feed
+	// 	T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+	//
+	// 	// construct call
+	// 	let call = Call::<T>::remove_asset(asset_id, units, Some(receiver));
+	// }: { call.dispatch_bypass_filter(origin.clone())? } verify {
+	// 	assert_eq!(T::IndexToken::total_balance(&origin_account_id), 0u32.into());
+	// }
 
 	register_asset {
 		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
@@ -288,12 +280,12 @@ mod tests {
 		});
 	}
 
-	#[test]
-	fn remove_asset() {
-		new_test_ext().execute_with(|| {
-			assert_ok!(Pallet::<Test>::test_benchmark_remove_asset());
-		});
-	}
+	// #[test]
+	// fn remove_asset() {
+	// 	new_test_ext().execute_with(|| {
+	// 		assert_ok!(Pallet::<Test>::test_benchmark_remove_asset());
+	// 	});
+	// }
 
 	#[test]
 	fn unlock() {
