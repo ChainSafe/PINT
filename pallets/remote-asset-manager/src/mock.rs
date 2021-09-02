@@ -511,7 +511,6 @@ pub mod para {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type XcmSender = XcmRouter;
 		type Event = Event;
-		type AssetRegistry = AssetIndex;
 		type WeightInfo = ();
 	}
 

@@ -33,10 +33,10 @@ pub mod pallet {
 		transactional,
 	};
 	use frame_system::pallet_prelude::*;
-	use orml_traits::{location::Parse, MultiCurrency, XcmTransfer};
+	use orml_traits::{MultiCurrency, XcmTransfer};
 	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
-	use primitives::traits::{MultiAssetRegistry, RemoteAssetManager};
+	use primitives::traits::RemoteAssetManager;
 	use xcm_calls::{
 		proxy::{ProxyCall, ProxyCallEncoder, ProxyConfig, ProxyParams, ProxyState, ProxyType, ProxyWeights},
 		staking::{
@@ -156,9 +156,6 @@ pub mod pallet {
 		type XcmSender: SendXcm;
 
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-
-		/// Asset registry with all the locations
-		type AssetRegistry: MultiAssetRegistry<Self::AssetId>;
 
 		/// The weight for this pallet's extrinsics.
 		type WeightInfo: WeightInfo;
@@ -338,8 +335,6 @@ pub mod pallet {
 		AlreadyBonded,
 		/// PINT's stash is not bonded yet with  [`bond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.bond).
 		NotBonded,
-		/// Thrown when no location was found for the given asset.
-		UnknownAsset,
 		/// Thrown if the PINT parachain account is not allowed to executed
 		/// pallet staking extrinsics that require controller origin
 		NoControllerPermission,
@@ -353,7 +348,7 @@ pub mod pallet {
 		/// the minimum reserve balance
 		InusufficientStash,
 		/// Thrown if liquid asset has invalid chain location
-		InvalidChainLocation,
+		InvalidAssetChainLocation,
 		/// Currency is not cross-chain transferable.
 		NotCrossChainTransferableCurrency,
 		/// Thrown if the given amount of PINT to send to statemint is too low
@@ -860,16 +855,12 @@ pub mod pallet {
 		}
 
 		fn asset_destination(asset: T::AssetId) -> Result<MultiLocation, DispatchError> {
-			let dest = T::AssetRegistry::native_asset_location(&asset)
-				.ok_or(Error::<T>::UnknownAsset)?
-				.chain_part()
-				.ok_or(Error::<T>::InvalidChainLocation)?;
+			let dest = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAssetChainLocation)?;
 			Ok(dest)
 		}
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
-
 		fn deposit(asset: T::AssetId, amount: T::Balance) {
 			AssetBalance::<T>::mutate(asset, |balance| balance.deposited = balance.deposited.saturating_add(amount))
 		}
