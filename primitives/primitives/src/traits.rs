@@ -7,7 +7,7 @@
 use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
 use frame_support::{
 	dispatch::DispatchError,
-	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
+	sp_runtime::{app_crypto::sp_core::U256, traits::AtLeast32BitUnsigned, DispatchResult},
 	sp_std::result::Result,
 };
 use xcm::v0::MultiLocation;
@@ -267,4 +267,21 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// Burns the given amount of SAFT token from the index and
 	/// the nav from the caller's account
 	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
+}
+
+/// Determines the fee upon index token redemptions
+pub trait RedemptionFee<BlockNumber, Balance: AtLeast32BitUnsigned> {
+	/// Determines the redemption fee based on how long the given amount were held in the index
+	///
+	/// Parameters:
+	///     - `time_spent`: The number of blocks the amount were held in the index. This is `current
+	///       block -  deposit`.
+	///     - `amount`: The amount of index tokens withdrawn
+	fn redemption_fee(time_spent: BlockNumber, amount: Balance) -> Balance;
+}
+
+impl<BlockNumber, Balance: AtLeast32BitUnsigned> RedemptionFee<BlockNumber, Balance> for () {
+	fn redemption_fee(_: BlockNumber, _: Balance) -> Balance {
+		Balance::zero()
+	}
 }

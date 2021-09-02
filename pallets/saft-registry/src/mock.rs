@@ -113,6 +113,7 @@ parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 0;
 	pub MinimumRedemption: u32 = 2;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
+	pub MaxActiveDeposits: u32 = 50;
 	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
@@ -127,6 +128,8 @@ impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;

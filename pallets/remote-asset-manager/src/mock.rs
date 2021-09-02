@@ -435,6 +435,10 @@ pub mod para {
 		type WeightInfo = ();
 	}
 
+	parameter_types! {
+		pub MaxActiveDeposits: u32 = 50;
+	}
+
 	impl pallet_asset_index::Config for Runtime {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type Event = Event;
@@ -443,6 +447,8 @@ pub mod para {
 		type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 		type IndexToken = Balances;
 		type Balance = Balance;
+		type MaxActiveDeposits = MaxActiveDeposits;
+		type RedemptionFee = ();
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;
 		type WithdrawalPeriod = WithdrawalPeriod;

@@ -53,7 +53,7 @@ pub mod pallet {
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
-		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RedemptionFee, RemoteAssetManager, SaftRegistry},
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
@@ -101,6 +101,13 @@ pub mod pallet {
 		/// Type used to identify assets
 		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
 
+		/// Restricts how many deposits can be active
+		#[pallet::constant]
+		type MaxActiveDeposits: Get<u32>;
+
+		/// Determines the redemption fee in complete_withdraw
+		type RedemptionFee: RedemptionFee<Self::BlockNumber, Self::Balance>;
+
 		/// The native asset id
 		#[pallet::constant]
 		type SelfAssetId: Get<Self::AssetId>;
@@ -142,10 +149,26 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
+	/// Testing storage for RedemptionFee
+	#[cfg(test)]
+	#[pallet::storage]
+	#[pallet::getter(fn last_redemption)]
+	pub type LastRedemption<T: Config> = StorageValue<_, (T::BlockNumber, T::Balance), ValueQuery>;
+
 	/// (AssetId) -> AssetAvailability
 	#[pallet::storage]
 	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn deposits)]
+	pub type Deposits<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<(T::Balance, T::BlockNumber), T::MaxActiveDeposits>,
+		ValueQuery,
+	>;
 
 	///  (AccountId) -> Vec<PendingRedemption>
 	#[pallet::storage]
@@ -265,6 +288,8 @@ pub mod pallet {
 		EmptyNav,
 		/// Thrown when trying to remove liquid assets without recipient
 		NoRecipient,
+		/// Thrown when trying to remove deposits with no deposits
+		NoDeposits,
 		/// Invalid metadata given.
 		BadMetadata,
 		/// Thrown if no index could be found for an asset identifier.
@@ -288,6 +313,8 @@ pub mod pallet {
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
+		/// Thrown if deposits reach limit
+		TooManyDeposits,
 	}
 
 	#[pallet::hooks]
@@ -448,6 +475,7 @@ pub mod pallet {
 			if units.is_zero() {
 				return Ok(());
 			}
+
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
 			// only liquid assets can be deposited
@@ -473,6 +501,14 @@ pub mod pallet {
 
 			// tell the remote asset manager that assets are available to bond
 			T::RemoteAssetManager::deposit(asset_id, units);
+
+			// insert new deposit
+			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
+				deposits
+					.try_push((index_tokens, frame_system::Pallet::<T>::block_number()))
+					.map_err(|_| Error::<T>::TooManyDeposits)?;
+				Ok(())
+			})?;
 
 			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
@@ -506,8 +542,11 @@ pub mod pallet {
 				free_balance.saturating_sub(amount),
 			)?;
 
-			// amount = fee + redeem
-			let fee = amount.fee(T::BaseWithdrawalFee::get()).ok_or(Error::<T>::AssetUnitsOverflow)?;
+			// amount = fees + redeem
+			let fee = amount
+				.fee(T::BaseWithdrawalFee::get())
+				.ok_or(Error::<T>::AssetUnitsOverflow)?
+				.saturating_add(Self::do_consolidate_deposits(&caller, amount)?);
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
 			// calculate the payout for each asset based on the redeem amount
@@ -574,8 +613,9 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
+		#[transactional]
 		#[pallet::weight(T::WeightInfo::complete_withdraw())]
-		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let caller = ensure_signed(origin)?;
 
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -604,9 +644,9 @@ pub mod pallet {
 					// still have redemptions pending
 					*maybe_pending = Some(still_pending);
 				}
+
 				Ok(())
-			})?;
-			Ok(().into())
+			})
 		}
 
 		/// Updates the index token locks of the caller.
@@ -675,6 +715,57 @@ pub mod pallet {
 			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		/// The fee model depends on how long LP contributions remained in the index.
+		/// Therefore, LP deposits in `deposit` are time-stamped (block number) so that fees can be
+		/// determined as a function of time spent in the index.
+		///
+		/// This function consolidates the oldest deposits and removes the deposits implicated by
+		/// the transferred withdrawal amount and returns the total redemption fee for the given
+		/// amount.
+		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_deposits| -> Result<T::Balance, DispatchError> {
+				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
+				let mut total_fee: T::Balance = T::Balance::zero();
+				let current_block = frame_system::Pallet::<T>::block_number();
+
+				let mut rem: Option<(T::Balance, T::BlockNumber)> = None;
+				deposits.retain(|(index_tokens, block_number)| {
+					// how long this deposit spent in the index.
+					let time_spent = current_block.saturating_sub(*block_number);
+
+					if amount.is_zero() {
+						true
+					} else if amount >= *index_tokens {
+						amount = amount.saturating_sub(*index_tokens);
+						total_fee =
+							total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, *index_tokens));
+						false
+					} else {
+						// the remaining amount is less than the oldest deposit, so we are simply updating the value of
+						// the now oldest deposit
+						rem = Some((index_tokens.saturating_sub(amount), *block_number));
+						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, amount));
+						amount = T::Balance::zero();
+						true
+					}
+				});
+
+				if !deposits.is_empty() {
+					if let Some(rem) = rem {
+						// update the oldest value
+						deposits[0] = rem;
+					}
+					*maybe_deposits = Some(deposits);
+				}
+
+				if !amount.is_zero() {
+					return Err(<Error<T>>::InsufficientDeposit.into());
+				}
+
+				Ok(total_fee)
+			})
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
