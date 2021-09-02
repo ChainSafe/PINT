@@ -603,7 +603,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
-	type AccountId32Convert = AccountId32Convert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
 	type PalletStakingCallEncoder = PalletStakingEncoder;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
@@ -613,7 +612,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type RelayChainAssetId = RelayChainAssetId;
-	type StakingThreshold = (MinimumRemoteReserveBalance, MinimumBondExtra);
+	type AssetStakingCap = (MinimumRemoteReserveBalance, MinimumBondExtra);
 	type Assets = Currencies;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmAssetTransfer = XTokens;

@@ -46,21 +46,30 @@ pub mod pallet {
 	};
 
 	use crate::{
-		traits::{BalanceMeter, StakingThresholds},
+		traits::{BalanceMeter, StakingCap},
 		types::{AssetLedger, StatemintConfig, XcmStakingMessageCount},
 	};
 	use xcm_calls::staking::UnlockChunk;
 
+	// -------  Various type aliases
+
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
-	type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
 	type BalanceFor<T> = <T as Config>::Balance;
+
+	/// The lookup source type configured for the chain's runtime
+	type LookupSourceFor<T> = <<T as frame_system::Config>::Lookup as StaticLookup>::Source;
+
+	/// Simplified type for the `StakingLedger` that keeps track of the chains actively assets
 	type StakingLedgerFor<T> =
 		StakingLedger<LookupSourceFor<T>, <T as Config>::Balance, <T as frame_system::Config>::BlockNumber>;
+
+	/// Simplified type for the staking config
 	type StakingConfigFor<T> = StakingConfig<
 		<T as frame_system::Config>::AccountId,
 		<T as Config>::Balance,
 		<T as frame_system::Config>::BlockNumber,
 	>;
+
 	// A `pallet_staking` dispatchable on another chain
 	type PalletStakingCall<T> = StakingCall<LookupSourceFor<T>, BalanceFor<T>, AccountIdFor<T>>;
 
@@ -84,9 +93,6 @@ pub mod pallet {
 
 		/// Convert a `T::AssetId` to its relative `MultiLocation` identifier.
 		type AssetIdConvert: Convert<Self::AssetId, Option<MultiLocation>>;
-
-		/// Convert `Self::Account` to `AccountId32`
-		type AccountId32Convert: Convert<Self::AccountId, [u8; 32]>;
 
 		/// The encoder to use for encoding when transacting a `pallet_staking`
 		/// Call
@@ -127,7 +133,7 @@ pub mod pallet {
 		type RelayChainAssetId: Get<Self::AssetId>;
 
 		/// Determines the threshold amounts when operating with staked assets.
-		type StakingThreshold: StakingThresholds<Self::AssetId, Self::Balance>;
+		type AssetStakingCap: StakingCap<Self::AssetId, Self::Balance>;
 
 		/// Currency type for deposit/withdraw xcm assets
 		///
@@ -397,7 +403,7 @@ pub mod pallet {
 					balances.consolidate();
 
 					// check if the additional funds would warrant a bond extra
-					if balances.deposited >= T::StakingThreshold::minimum_bond_extra(asset) {
+					if balances.deposited >= T::AssetStakingCap::minimum_bond_extra(asset) {
 						// TODO: could check against the currently unbonding balance and rebond
 
 						// only if the free remote is above the reserve threshold
@@ -863,15 +869,6 @@ pub mod pallet {
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
-		fn transfer_asset(recipient: T::AccountId, asset: T::AssetId, amount: T::Balance) -> DispatchResult {
-			// asset's native chain location
-			let dest: MultiLocation =
-				T::AssetIdConvert::convert(asset).ok_or(Error::<T>::NotCrossChainTransferableCurrency)?;
-
-			// ensures the min stash is still available after the transfer
-			Self::ensure_free_stash(asset, amount)?;
-			T::XcmAssetTransfer::transfer(recipient, asset, amount, dest, 100_000_000)
-		}
 
 		fn deposit(asset: T::AssetId, amount: T::Balance) {
 			AssetBalance::<T>::mutate(asset, |balance| balance.deposited = balance.deposited.saturating_add(amount))
@@ -903,7 +900,7 @@ pub mod pallet {
 		}
 
 		fn minimum_free_stash_balance(asset: &T::AssetId) -> T::Balance {
-			T::StakingThreshold::minimum_reserve_balance(*asset)
+			T::AssetStakingCap::minimum_reserve_balance(*asset)
 		}
 	}
 
