@@ -53,7 +53,7 @@ native_executor_instance!(
 	frame_benchmarking::benchmarking::HostFunctions,
 );
 
-#[cfg(feature = "kusama")]
+#[cfg(feature = "polkadot")]
 native_executor_instance!(
 	pub PolkadotExecutor,
 	pint_runtime_polkadot::api::dispatch,

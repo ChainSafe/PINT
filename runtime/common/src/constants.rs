@@ -69,6 +69,7 @@ parameter_types! {
 	// `T::BaseXcmWeight  + T::Weigher::weight(&msg)`
 	pub const BaseXcmWeight: Weight = 100_000_000;
 	pub const BlockHashCount: BlockNumber = 250;
+	pub const MaxActiveDeposits: u32 = 5;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
 	pub const DOTContributionLimit: Balance = 999;
 	/// Same as Polkadot Relay Chain.

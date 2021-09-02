@@ -407,6 +407,20 @@ impl pallet_local_treasury::Config for Runtime {
 	type WeightInfo = weights::pallet_local_treasury::WeightInfo<Self>;
 }
 
+impl pallet_remote_treasury::Config for Runtime {
+	type Event = Event;
+	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type PalletId = TreasuryPalletId;
+	type SelfAssetId = PINTAssetId;
+	type RelayChainAssetId = RelayChainAssetId;
+	type XcmAssetTransfer = XTokens;
+	type AssetIdConvert = AssetIdConvert;
+	type AccountId32Convert = AccountId32Convert;
+	type WeightInfo = ();
+}
+
 impl pallet_saft_registry::Config for Runtime {
 	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type AssetRecorder = AssetIndex;
@@ -457,6 +471,8 @@ impl pallet_asset_index::Config for Runtime {
 	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
@@ -601,7 +617,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
-	type AccountId32Convert = AccountId32Convert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
 	type PalletStakingCallEncoder = PalletStakingEncoder;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
@@ -611,7 +626,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type RelayChainAssetId = RelayChainAssetId;
-	type StakingThreshold = (MinimumRemoteReserveBalance, MinimumBondExtra);
+	type AssetStakingCap = (MinimumRemoteReserveBalance, MinimumBondExtra);
 	type Assets = Currencies;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmAssetTransfer = XTokens;
@@ -619,7 +634,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type XcmSender = XcmRouter;
 	type Event = Event;
-	type AssetRegistry = AssetIndex;
 	type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
@@ -658,10 +672,11 @@ construct_runtime!(
 		AssetIndex: pallet_asset_index::{Pallet, Call, Storage, Event<T>} = 80,
 		Committee: pallet_committee::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 81,
 		LocalTreasury: pallet_local_treasury::{Pallet, Call, Storage, Event<T>} = 82,
-		SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>} = 83,
-		RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>} = 84,
-		PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>} = 85,
-		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>} = 86,
+		RemoteTreasury: pallet_remote_treasury::{Pallet, Call, Storage, Event<T>} = 83,
+		SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>} = 84,
+		RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>} = 85,
+		PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>} = 86,
+		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>} = 90,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 100,

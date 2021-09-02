@@ -18,7 +18,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::PriceFeed;
-use primitives::{fee::FeeRate, traits::RemoteAssetManager, AssetPricePair, Price};
+use primitives::{fee::FeeRate, AssetPricePair, Price};
 use sp_core::H256;
 use sp_std::cell::RefCell;
 use std::collections::HashMap;
@@ -28,7 +28,7 @@ use rand::{thread_rng, Rng};
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
-	DispatchError, DispatchResult,
+	DispatchError,
 };
 use std::ops::Range;
 
@@ -87,11 +87,11 @@ impl system::Config for Test {
 	type OnSetCode = ();
 }
 
-pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 0;
+pub(crate) const ACCOUNT_ID: AccountId = 0;
 pub(crate) const ASHLEY: AccountId = 1;
 
 ord_parameter_types! {
-	pub const AdminAccountId: AccountId = ADMIN_ACCOUNT_ID;
+	pub const AdminAccountId: AccountId = ACCOUNT_ID;
 }
 
 // param types for balances
@@ -146,28 +146,40 @@ impl pallet_saft_registry::Config for Test {
 
 parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
-	pub MinimumRedemption: u32 = 2;
+	pub MinimumRedemption: u32 = 3;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
 	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
+	pub MaxActiveDeposits: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 
 	// No fees for now
 	pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
+pub struct RedemptionFee;
+
+impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
+	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Balance {
+		crate::LastRedemption::<Test>::set((duration, amount));
+		Default::default()
+	}
+}
+
 impl pallet_asset_index::Config for Test {
-	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
 	type DOTContributionLimit = DOTContributionLimit;
-	type RemoteAssetManager = MockRemoteAssetManager;
+	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
@@ -180,17 +192,6 @@ impl pallet_asset_index::Config for Test {
 	type Event = Event;
 	type StringLimit = StringLimit;
 	type WeightInfo = ();
-}
-
-pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn deposit(_: AssetId, _: Balance) {}
-
-	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const PINT_ASSET_ID: AssetId = 0u32;
@@ -249,9 +250,9 @@ impl Default for ExtBuilder {
 	fn default() -> Self {
 		Self {
 			balances: vec![
-				(ADMIN_ACCOUNT_ID, ASSET_A_ID, 1_000_000_000_000_000_u128),
-				(ADMIN_ACCOUNT_ID, ASSET_B_ID, 1_000_000_000_000_000_u128),
-				(ADMIN_ACCOUNT_ID, SAFT_ASSET_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, ASSET_A_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, ASSET_B_ID, 1_000_000_000_000_000_u128),
+				(ACCOUNT_ID, SAFT_ASSET_ID, 1_000_000_000_000_000_u128),
 			],
 		}
 	}

@@ -435,14 +435,20 @@ pub mod para {
 		type WeightInfo = ();
 	}
 
+	parameter_types! {
+		pub MaxActiveDeposits: u32 = 50;
+	}
+
 	impl pallet_asset_index::Config for Runtime {
-		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+		type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 		type Event = Event;
 		type AssetId = AssetId;
 		type SelfAssetId = PINTAssetId;
 		type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 		type IndexToken = Balances;
 		type Balance = Balance;
+		type MaxActiveDeposits = MaxActiveDeposits;
+		type RedemptionFee = ();
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;
 		type WithdrawalPeriod = WithdrawalPeriod;
@@ -488,7 +494,6 @@ pub mod para {
 		type Balance = Balance;
 		type AssetId = AssetId;
 		type AssetIdConvert = AssetIdConvert;
-		type AccountId32Convert = xcm_test_support::convert::AccountId32Convert;
 		// Encodes `pallet_staking` calls before transaction them to other chains
 		type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
 		// Encodes `pallet_proxy` calls before transaction them to other chains
@@ -498,7 +503,7 @@ pub mod para {
 		type SelfLocation = SelfLocation;
 		type SelfParaId = parachain_info::Pallet<Runtime>;
 		type RelayChainAssetId = RelayChainAssetId;
-		type StakingThreshold = (MinimumReserve, MinimumBondExtra);
+		type AssetStakingCap = (MinimumReserve, MinimumBondExtra);
 		type Assets = Currency;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type XcmAssetTransfer = XTokens;
@@ -506,7 +511,6 @@ pub mod para {
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type XcmSender = XcmRouter;
 		type Event = Event;
-		type AssetRegistry = AssetIndex;
 		type WeightInfo = ();
 	}
 

@@ -19,10 +19,9 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::traits::RemoteAssetManager;
 use xcm::v0::MultiLocation;
 
-use frame_support::{sp_runtime::DispatchResult, traits::Everything};
+use frame_support::traits::Everything;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -113,6 +112,7 @@ parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 0;
 	pub MinimumRedemption: u32 = 2;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
+	pub MaxActiveDeposits: u32 = 50;
 	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
@@ -127,12 +127,14 @@ impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
 	type DOTContributionLimit = DOTContributionLimit;
-	type RemoteAssetManager = MockRemoteAssetManager;
+	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
@@ -145,17 +147,6 @@ impl pallet_asset_index::Config for Test {
 	type Event = Event;
 	type StringLimit = StringLimit;
 	type WeightInfo = ();
-}
-
-pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn deposit(_: AssetId, _: Balance) {}
-
-	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 pub const LIQUID_ASSET_ID: AssetId = 42u32;

@@ -50,11 +50,11 @@ pub mod pallet {
 	use frame_support::{
 		pallet_prelude::*,
 		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
-		sp_std::convert::TryFrom,
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
+	use primitives::traits::MaybeAssetIdConvert;
 	pub use primitives::{AssetPricePair, Price};
 
 	pub type FeedIdFor<T> = <T as pallet_chainlink_feed::Config>::FeedId;
@@ -73,7 +73,9 @@ pub mod pallet {
 	/// (`quote`/`asset`) from the oracle, its price is given by
 	/// means of the asset pair `(base / quote)`. (e.g. DOT/PINT)
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_chainlink_feed::Config {
+	pub trait Config:
+		frame_system::Config + pallet_chainlink_feed::Config + MaybeAssetIdConvert<u8, Self::AssetId>
+	{
 		/// The origin that is allowed to insert asset -> feed mappings
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 
@@ -82,7 +84,7 @@ pub mod pallet {
 		type SelfAssetId: Get<Self::AssetId>;
 
 		/// Type used to identify the assets.
-		type AssetId: Parameter + Member + MaybeSerializeDeserialize + TryFrom<u8>;
+		type AssetId: Parameter + Member + MaybeSerializeDeserialize;
 
 		/// Type to keep track of timestamped values
 		type Time: Time;
@@ -299,7 +301,7 @@ pub mod pallet {
 				<frame_system::Origin<T>>::Signed(caller.clone()).into(),
 				feed_id,
 				1_u32.into(),
-				42.into(),
+				1.into(),
 			)?;
 			Ok(().into())
 		}

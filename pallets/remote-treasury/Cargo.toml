@@ -1,72 +1,63 @@
 [package]
 authors = ['ChainSafe Systems']
-description = 'FRAME pallet to implement PINT asset index.'
+description = 'FRAME pallet to implement PINT remote treasury.'
 edition = '2018'
 license = 'LGPL-3.0-only'
-name = 'pallet-asset-index'
+name = 'pallet-remote-treasury'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
+log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.101", features = ["derive"], optional = true }
+codec = { package = 'parity-scale-codec', version = '2.2.0', default-features = false, features = ['derive', 'max-encoded-len']}
 
 # Substrate Dependencies
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false, optional = true }
 
 # Polkadot Dependencies
-polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9', default-features = false }
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9', default-features = false }
 xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.9', default-features = false }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.8', default-features = false }
-pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
-# ORML Dependencies
+# orml Dependencies
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 [dev-dependencies]
 serde = { version = "1.0.101" }
 
-sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
 
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9' }
-
-pallet-saft-registry = { path = "../saft-registry" }
-
-orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
-rand = "0.8.4"
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.9', default-features = false }
 
 [features]
 default = ['std']
 std = [
     'serde',
     'codec/std',
-    'sp-core/std',
+    'log/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-price-feed/std',
-    'primitives/std',
 
-    'polkadot-parachain/std',
     'xcm/std',
     'xcm-executor/std',
 
+    'primitives/std',
+
     'orml-traits/std',
+    'orml-xtokens/std',
 ]
 runtime-benchmarks = [
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
-    'pallet-price-feed/runtime-benchmarks',
-#    'pallet-chainlink-feed/runtime-benchmarks',
     'primitives/runtime-benchmarks',
 ]
 
