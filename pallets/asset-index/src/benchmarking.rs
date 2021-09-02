@@ -97,10 +97,10 @@ benchmarks! {
 	}
 
 	deposit {
-		let asset_id = T::AssetId::try_convert(2u8).ok().unwrap();
+		let asset_id = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
-		let admin_deposit = 1_000_000u32.into();
+		let admin_deposit = 1_000_000u32;
 		let units = 1_000u32.into();
 
 		assert_ok!(AssetIndex::<T>::add_asset(
@@ -123,11 +123,11 @@ benchmarks! {
 		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value).saturating_add(1u128);
 
 		// `-1` is about the transaction fee
-		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), current_balance + received - 1u128);
+		assert_eq!(AssetIndex::<T>::index_token_balance(&origin_account_id).into(), current_balance + received);
 	}
 
 	remove_asset {
-		let asset_id =  T::AssetId::try_from(2u8).ok().unwrap();
+		let asset_id =  T::try_convert(2u8).unwrap();
 		let units = 100_u32.into();
 		let amount = 1_000u32.into();
 		let origin = T::AdminOrigin::successful_origin();
@@ -147,7 +147,7 @@ benchmarks! {
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
 
 		// construct call
-		let call = Call::<T>::remove_asset(asset_id, 1_u32.into(), Some(receiver));
+		let call = Call::<T>::remove_asset(asset_id, units, Some(receiver));
 	}: { call.dispatch_bypass_filter(origin.clone())? } verify {
 		assert_eq!(T::IndexToken::total_balance(&origin_account_id), 0u32.into());
 	}
@@ -240,7 +240,7 @@ benchmarks! {
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(<pallet::IndexTokenLocks<T>>::get(&origin_account_id), vec![types::IndexTokenLock{
 			locked: <AssetIndex<T>>::index_token_equivalent(asset_id, units).unwrap(),
-			end_block: <frame_system::Pallet<T>>::block_number() + T::LockupPeriod::get() - 1_u32.into(),
+			end_block: <frame_system::Pallet<T>>::block_number() + T::LockupPeriod::get() - 1u32.into()
 		}]);
 	}
 }
@@ -249,7 +249,7 @@ benchmarks! {
 mod tests {
 	use frame_support::assert_ok;
 
-	use crate::mock::{new_test_ext, Test};
+	use crate::mock::{new_test_ext, new_test_ext_from_genesis, Test};
 
 	use super::*;
 
@@ -297,7 +297,7 @@ mod tests {
 
 	#[test]
 	fn unlock() {
-		new_test_ext().execute_with(|| {
+		new_test_ext_from_genesis().execute_with(|| {
 			assert_ok!(Pallet::<Test>::test_benchmark_unlock());
 		});
 	}

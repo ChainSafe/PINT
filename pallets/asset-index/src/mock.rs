@@ -298,3 +298,13 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 
 	ext
 }
+
+pub fn new_test_ext_from_genesis() -> sp_io::TestExternalities {
+	let ext = ExtBuilder::default().build();
+	MockPriceFeed::set_prices(vec![
+		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
+		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
+	]);
+
+	ext
+}
