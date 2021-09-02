@@ -7,3 +7,6 @@ pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
 	frame_system::EnsureRoot<AccountId>,
 >;
+
+/// committee origin only
+pub type CommitteeOrigin<Runtime> = pallet_committee::EnsureApprovedByCommittee<Runtime>;

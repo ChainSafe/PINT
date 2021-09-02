@@ -313,8 +313,7 @@ pub mod pallet {
 			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			if units.is_zero() {
 				return Ok(().into());
 			}

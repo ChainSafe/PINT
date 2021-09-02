@@ -56,7 +56,11 @@ use xcm_executor::XcmExecutor;
 
 use frame_support::traits::Everything;
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::GovernanceOrigin, weights};
+pub use pint_runtime_common::{
+	constants::*,
+	types::{CommitteeOrigin, GovernanceOrigin},
+	weights,
+};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::{
@@ -452,7 +456,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 }
 
 impl pallet_asset_index::Config for Runtime {
-	type AdminOrigin = GovernanceOrigin<AccountId, Runtime>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type LockupPeriod = LockupPeriod;
