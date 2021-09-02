@@ -5748,6 +5748,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-remote-treasury"
+version = "0.0.1"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "log",
+ "orml-traits",
+ "orml-xtokens",
+ "pallet-balances",
+ "parity-scale-codec",
+ "primitives",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
 name = "pallet-saft-registry"
 version = "0.0.1"
 dependencies = [

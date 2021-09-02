@@ -65,7 +65,7 @@ pub mod pallet {
 	#[pallet::extra_constants]
 	impl<T: Config> Pallet<T> {
 		/// Returns the `AccountId` of the treasury account.
-		pub fn account_id() -> T::AccountId {
+		pub fn treasury_account() -> T::AccountId {
 			T::PalletId::get().into_account()
 		}
 	}
@@ -79,7 +79,7 @@ pub mod pallet {
 		pub fn withdraw(origin: OriginFor<T>, amount: BalanceFor<T>, recipient: AccountIdFor<T>) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
-			T::Currency::transfer(&Self::account_id(), &recipient, amount, AllowDeath)?;
+			T::Currency::transfer(&Self::treasury_account(), &recipient, amount, AllowDeath)?;
 
 			Self::deposit_event(Event::Withdrawn(recipient, amount));
 
