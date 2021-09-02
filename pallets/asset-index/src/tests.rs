@@ -354,7 +354,7 @@ fn deposit_fails_on_exceeding_limit() {
 
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
 			100,
 			MultiLocation::Null,
@@ -381,7 +381,7 @@ fn redemption_fee_works_on_completing_withdraw() {
 
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
 			100,
 			MultiLocation::Null,

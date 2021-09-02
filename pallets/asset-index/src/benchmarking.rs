@@ -34,7 +34,7 @@ fn whitelist_acc<T: Config>(acc: &T::AccountId) {
 
 benchmarks! {
 	add_asset {
-		let asset_id :T::AssetId = T::try_convert(1u8).unwrap();
+		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::Null;

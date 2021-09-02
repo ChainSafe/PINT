@@ -610,7 +610,7 @@ pub mod pallet {
 		/// can also be closed successfully.
 		#[transactional]
 		#[pallet::weight(T::WeightInfo::complete_withdraw())]
-		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 
