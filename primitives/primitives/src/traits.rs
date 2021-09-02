@@ -270,3 +270,32 @@ impl<BlockNumber, Balance: AtLeast32BitUnsigned> RedemptionFee<BlockNumber, Bala
 		Balance::zero()
 	}
 }
+
+/// This is a helper trait only used for constructing `AssetId` types in Runtime Benchmarks
+pub trait MaybeAssetIdConvert<A, B>: Sized {
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_convert(value: A) -> Option<B>;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<T> MaybeAssetIdConvert<u8, crate::types::AssetId> for T {
+	fn try_convert(value: u8) -> Option<crate::types::AssetId> {
+		frame_support::sp_std::convert::TryFrom::try_from(value).ok()
+	}
+}
+
+#[cfg(not(feature = "runtime-benchmarks"))]
+impl<T, A, B> MaybeAssetIdConvert<A, B> for T {}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::AssetId;
+
+	fn assert_maybe_from<T: MaybeAssetIdConvert<u8, AssetId>>() {}
+
+	#[test]
+	fn maybe_from_works() {
+		assert_maybe_from::<()>();
+	}
+}

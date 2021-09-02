@@ -67,6 +67,7 @@ runtime-benchmarks = [
     'frame-support/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
 #    'pallet-chainlink-feed/runtime-benchmarks',
+    'primitives/runtime-benchmarks',
 ]
 
 [package.metadata.docs.rs]

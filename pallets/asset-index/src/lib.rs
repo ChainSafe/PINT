@@ -35,11 +35,7 @@ pub mod pallet {
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
 			ArithmeticError, FixedPointNumber,
 		},
-		sp_std::{
-			convert::{TryFrom, TryInto},
-			prelude::*,
-			result::Result,
-		},
+		sp_std::{convert::TryInto, prelude::*, result::Result},
 		traits::{Currency, ExistenceRequirement, Get, LockIdentifier, LockableCurrency, WithdrawReasons},
 		transactional, PalletId,
 	};
@@ -58,11 +54,12 @@ pub mod pallet {
 	};
 
 	use crate::types::{AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption};
+	use primitives::traits::MaybeAssetIdConvert;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		/// Origin that is allowed to administer the index
 		type AdminOrigin: EnsureOrigin<Self::Origin>;
 		/// Currency implementation to use as the index token
@@ -99,7 +96,7 @@ pub mod pallet {
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize + TryFrom<u8>;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
 
 		/// Restricts how many deposits can be active
 		#[pallet::constant]

@@ -118,12 +118,12 @@ runtime-benchmarks = [
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
-	'pallet-timestamp/runtime-benchmarks',
     'pallet-committee/runtime-benchmarks',
     'pallet-xcm/runtime-benchmarks',
     'pallet-saft-registry/runtime-benchmarks',
     'pallet-remote-asset-manager/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
+	'primitives/runtime-benchmarks',
 
 	'orml-tokens/runtime-benchmarks',
 ]
