@@ -38,7 +38,7 @@ pub mod pallet {
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
 		// Origin that is allowed to manage the SAFTs
-		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		type AdminOrigin: EnsureOrigin<Self::Origin, Success = <Self as frame_system::Config>::AccountId>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
 		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 		type AssetId: Parameter + Member + Copy + TryFrom<u8>;
@@ -154,8 +154,7 @@ pub mod pallet {
 			nav: T::Balance,
 			units: T::Balance,
 		) -> DispatchResult {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -196,8 +195,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_saft())]
 		#[transactional]
 		pub fn remove_saft(origin: OriginFor<T>, asset_id: T::AssetId, saft_id: SAFTId) -> DispatchResult {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let who = ensure_signed(origin)?;
+			let who = T::AdminOrigin::ensure_origin(origin.clone())?;
 
 			// remove the SAFT record
 			let saft = ActiveSAFTs::<T>::take(asset_id, saft_id).ok_or(Error::<T>::SAFTNotFound)?;

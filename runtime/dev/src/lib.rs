@@ -403,7 +403,6 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 impl pallet_local_treasury::Config for Runtime {
-	// Using root as the admin origin for now
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
@@ -412,7 +411,7 @@ impl pallet_local_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	type AdminOrigin = GovernanceOrigin<AccountId, Runtime>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type AssetRecorder = AssetIndex;
 	type Balance = Balance;
 	type AssetId = AssetId;

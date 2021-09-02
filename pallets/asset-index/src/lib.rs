@@ -358,8 +358,7 @@ pub mod pallet {
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			if units.is_zero() {
 				return Ok(().into());
 			}
@@ -443,7 +442,7 @@ pub mod pallet {
 		/// available price pairs
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -491,7 +490,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		#[transactional]
 		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			ensure!(amount >= T::MinimumRedemption::get(), Error::<T>::MinimumRedemption);
 
 			// update the locks of prior deposits
@@ -575,8 +574,7 @@ pub mod pallet {
 		/// can also be closed successfully.
 		#[pallet::weight(T::WeightInfo::complete_withdraw())]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
-
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 
 			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
@@ -614,7 +612,7 @@ pub mod pallet {
 		/// balance accordingly.
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			Self::do_update_index_token_locks(&caller);
 			Ok(())
 		}
