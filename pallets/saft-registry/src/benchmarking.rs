@@ -95,9 +95,11 @@ benchmarks! {
 	}
 
 	convert_to_liquid {
+		let i in 0 .. MAX_SAFT_RECORDS;
+
 		let nav = 1337u32;
 		let units = 1234u32;
-		let asset:T::AssetId = T::try_convert(2u8).unwrap();
+		let asset:T::AssetId = T::try_convert(5u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
@@ -108,7 +110,7 @@ benchmarks! {
 		));
 
 		// Create saft records
-		for i in 0 .. MAX_SAFT_RECORDS {
+		for _ in 0 .. i {
 				assert_ok!(SaftRegistry::<T>::add_saft(
 				origin.clone(),
 				asset,
@@ -120,9 +122,7 @@ benchmarks! {
 					asset,
 			(Junction::Parent, Junction::Parachain(100)).into()
 		);
-	}: {
-		call.dispatch_bypass_filter(origin)? }
-	verify {
+	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			SaftRegistry::<T>::saft_counter(asset),
 			0
