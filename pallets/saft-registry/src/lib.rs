@@ -18,6 +18,9 @@ mod tests;
 #[allow(clippy::unused_unit)]
 #[allow(clippy::large_enum_variant)]
 pub mod pallet {
+	#[cfg(feature = "runtime-benchmarks")]
+	use primitives::traits::AssetRecorderBenchmarks;
+
 	use frame_support::{
 		pallet_prelude::*,
 		sp_runtime::{
@@ -40,6 +43,8 @@ pub mod pallet {
 		// Origin that is allowed to manage the SAFTs
 		type AdminOrigin: EnsureOrigin<Self::Origin, Success = <Self as frame_system::Config>::AccountId>;
 		type AssetRecorder: AssetRecorder<Self::AccountId, Self::AssetId, Self::Balance>;
+		#[cfg(feature = "runtime-benchmarks")]
+		type AssetRecorderBenchmarks: AssetRecorderBenchmarks<Self::AssetId, Self::Balance>;
 		type Balance: Parameter + Member + AtLeast32BitUnsigned + Default + Copy;
 		type AssetId: Parameter + Member + Copy;
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;

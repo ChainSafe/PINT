@@ -28,6 +28,11 @@ pub mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant, clippy::type_complexity)]
 pub mod pallet {
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
+	#[cfg(feature = "runtime-benchmarks")]
+	use primitives::traits::AssetRecorderBenchmarks;
+
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
@@ -44,8 +49,6 @@ pub mod pallet {
 	use sp_core::U256;
 	use xcm::v0::MultiLocation;
 
-	#[cfg(feature = "runtime-benchmarks")]
-	use pallet_price_feed::PriceFeedBenchmarks;
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
@@ -1033,6 +1036,18 @@ pub mod pallet {
 			T::IndexToken::slash(&who, nav);
 
 			Ok(())
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> AssetRecorderBenchmarks<T::AssetId, T::Balance> for Pallet<T> {
+		fn add_asset(
+			asset_id: T::AssetId,
+			units: T::Balance,
+			location: MultiLocation,
+			amount: T::Balance,
+		) -> DispatchResultWithPostInfo {
+			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
 		}
 	}
 

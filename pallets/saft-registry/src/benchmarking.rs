@@ -5,7 +5,8 @@
 
 use frame_benchmarking::benchmarks;
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, traits::EnsureOrigin};
-use xcm::v0::Junction;
+use primitives::traits::AssetRecorderBenchmarks;
+use xcm::v0::{Junction, MultiLocation};
 
 use crate::Pallet as SaftRegistry;
 
@@ -15,8 +16,17 @@ const MAX_SAFT_RECORDS: u32 = 100;
 
 benchmarks! {
 	add_saft {
-		let asset: T::AssetId = T::try_convert(0u8).unwrap();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
+
+		// adds asset first
+		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
+			T::try_convert(3u8).unwrap(),
+			100u32.into(),
+			MultiLocation::Null,
+			1000u32.into()
+		));
+
 		let call = Call::<T>::add_saft(
 				asset,
 				100u32.into(),
@@ -32,7 +42,7 @@ benchmarks! {
 	}
 
 	remove_saft {
-		let asset: T::AssetId = T::try_convert(0u8).unwrap();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, 100u32.into(), 20u32.into()));
 		let call = Call::<T>::remove_saft(
@@ -47,7 +57,7 @@ benchmarks! {
 	}
 
 	report_nav {
-		let asset: T::AssetId = T::try_convert(0u8).unwrap();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		assert_ok!(SaftRegistry::<T>::add_saft(
 			origin.clone(),
@@ -71,7 +81,7 @@ benchmarks! {
 	convert_to_liquid {
 		let nav = 1337u32;
 		let units = 1234u32;
-		let asset:T::AssetId = T::try_convert(0u8).unwrap();
+		let asset:T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		// Create saft records
 		for i in 0 .. MAX_SAFT_RECORDS {
