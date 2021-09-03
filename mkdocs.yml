@@ -19,14 +19,14 @@ markdown_extensions:
 theme:
   name: material
   palette:
-    primary: yellow
-    accent: brown
+    primary: brown
+    accent: yellow
     theme:
     # Light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: yellow
-      accent: brown
+      primary: brown
+      accent: yellow
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
@@ -34,8 +34,8 @@ theme:
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: yellow
-      accent: brown
+      primary: brown
+      accent: yellow
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
@@ -50,28 +50,20 @@ nav:
   - Getting Started:
     - Overview: ./index.md
     - Architecture: ./getting-started/overview/architecture.md
-    - Package Library: ./getting-started/overview/package-library.md
     - Installation: ./getting-started/installation.md
     - General Resources: ./getting-started/resources/general-resources.md
     - Developer Resources: ./getting-started/resources/developer-resources.md
   - Usage:
-    - Running Nodes: ./usage/running-nodes.md
     - Command Line: ./usage/command-line.md
     - Configuration: ./usage/configuration.md
-    - Import Runtime: ./usage/import-runtime.md
-    - Import State: ./usage/import-state.md
-  # - Integrate:
-  #   - Connect to Polkadot.js: ./integrate/connect-to-polkadot-js.md
   # - Testing and Debugging: 
   #   - Test Suite: ./testing-and-debugging/test-suite.md
   #   - Debugging: ./testing-and-debugging/debugging.md
   # - Contributing: 
   #   - Overview: ./contributing.md
-extra_css:
-  - stylesheets/extra.css
 extra:
   social:
     - icon: fontawesome/brands/github-alt
-      link: https://github.com/ChainSafe/gossamer
+      link: https://github.com/ChainSafe/pint
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/ChainSafeth

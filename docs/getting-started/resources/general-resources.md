@@ -6,11 +6,11 @@ permalink: /getting-started/resources/general-resources
 
 ## Welcome
 
-Here you will find resources to help facilitate your learning about _Polkadot_, the _Polkadot Host_, and _Gossamer_. Don't worry if you are unfamiliar with these <a target="_blank" rel="noopener noreferrer" href="https://wiki.polkadot.network/docs/en/glossary">terms</a>, the resources listed here assume no prior knowledge about them. That being said, it would be helpful to have a basic understanding of existing blockchains such as Bitcoin and Ethereum. 
+Here you will find resources to help facilitate your learning about _Polkadot_. Don't worry if you are unfamiliar with these <a target="_blank" rel="noopener noreferrer" href="https://wiki.polkadot.network/docs/en/glossary">terms</a>, the resources listed here assume no prior knowledge about them.
 
 ## Polkadot
 
-To start, it would be extremely beneficial to have an understanding of the Polkadot Network. For a high-level introduction to Polkadot, check out the  <a target="_blank" rel="noopener noreferrer" href="https://polkadot.network/Polkadot-lightpaper.pdf">lightpaper</a>. To understand the motivation behind Polkadot's creation and what makes it unique, check out this great blog post <a target="_blank" rel="noopener noreferrer" href="https://medium.com/polkadot-network/a-brief-summary-of-everything-substrate-and-polkadot-f1f21071499d">A brief summary of everything Substrate and Polkadot</a>. While reading, it would be helpful to note that <a target="_blank" rel="noopener noreferrer" href="https://github.com/paritytech/substrate">Substrate</a> and <a target="_blank" rel="noopener noreferrer" href="https://github.com/ChainSafe/gossamer">Gossamer</a> are both implementations of the Polkadot Host. 
+To start, it would be extremely beneficial to have an understanding of the Polkadot Network. For a high-level introduction to Polkadot, check out the  <a target="_blank" rel="noopener noreferrer" href="https://polkadot.network/Polkadot-lightpaper.pdf">lightpaper</a>. To understand the motivation behind Polkadot's creation and what makes it unique, check out this great blog post <a target="_blank" rel="noopener noreferrer" href="https://medium.com/polkadot-network/a-brief-summary-of-everything-substrate-and-polkadot-f1f21071499d">A brief summary of everything Substrate and Polkadot</a>. While reading, it would be helpful to note that <a target="_blank" rel="noopener noreferrer" href="https://github.com/paritytech/substrate">Substrate</a>.
 
 ### Additional Resources
 
@@ -32,55 +32,7 @@ To start, it would be extremely beneficial to have an understanding of the Polka
 
 - <a target="_blank" rel="noopener noreferrer" href="https://telemetry.polkadot.io/#/Kusama">Polkadot Telemetry Service</a>
 
-## Polkadot Host
-
-[_Please Note: The "Polkadot Host" was formerly known as the "Polkadot Runtime Environment"_]
-
-The Polkadot Host plays two important roles within the Polkadot ecosystem.
-
-- The Polkadot Host implements the **fundamental components for a blockchain**, ie networking and consensus. These components are not expected to change, and as such, they host part of the blockchain that is expected to change, the Runtime. For more details, check out <a target="_blank" rel="noopener noreferrer" href="https://wiki.polkadot.network/docs/en/learn-polkadot-host">Polkadot Host</a>.
-
-- The Polkadot Host is **a blockchain development framework**, similar to how React and Angular are web development frameworks, but rather than helping developers build web applications, implementations of the Polkadot Host help developers build blockchains. 
-
-As mentioned above, both <a target="_blank" rel="noopener noreferrer" href="https://github.com/paritytech/substrate">Substrate</a> and <a target="_blank" rel="noopener noreferrer" href="https://github.com/ChainSafe/gossamer">Gossamer</a> are implementations of the Polkadot Host. If you're interested in the nitty-gritty technical details, check out the <a target="_blank" rel="noopener noreferrer" href="https://github.com/w3f/polkadot-spec/blob/master/polkadot-host-spec/polkadot_host_spec.pdf">Polkadot Host specification</a>.
-
-## Gossamer
-
-Gossamer is an implementation of the Polkadot Host in Go. To learn more about Gossamer, we recommend the following resources:
-
-- To understand the vision behind Gossamer and how it fits into the Polkadot ecosystem, please read this blog post: <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/the-future-of-polkadot-in-golang-gossamer-3345f0d6143d">"The Future of Polkadot in Golang: Gossamer"</a>.
-
-- For a more technical explanation, we recommend watching this <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/the-future-of-polkadot-in-golang-gossamer-3345f0d6143d">video</a>.
-
 ### Additional Resources
-
-#### Videos
-
-- <a target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=vqluOY-ysFI">Web3 Builders: ChainSafe - GoLang Implementation of Polkadot Host</a>
-
-#### Articles
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer0-2ccf51ad0c91">Gossamer Update: Introducing Gossamer</a> - March 20th 2019
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer-update-1-merkle-patricia-trie-6320588efedd">Gossamer Update: Merkle-Patricia Trie</a> - June 5th 2019
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/towards-a-better-internet-web3-polkadot-and-gossamer-68eb559dd2c5">Towards a Better Internet: Web3, Polkadot, and Gossamer</a> - September 25th, 2019
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/building-the-future-with-gossamer-ccb8c4530299">Building the Future with Gossamer</a> - October 23rd 2019
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/chainsafe-releases-go-schnorrkel-487b6b5e3b87">ChainSafe Releases Go-Schnorrkel</a> - January 23rd 2020
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/the-future-of-polkadot-in-golang-gossamer-3345f0d6143d">The Future of Polkadot in Golang: Gossamer</a> - February 24th 2020
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer-update-august-2020-179e19a24e02">Gossamer Update: August 2020</a> - August 25th 2020
-  
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer-update-september-2020-c00d1c47d3aa">Gossamer Update: September 2020</a> - October 6th 2020
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer-update-november-2020-c8d00327b68b">Gossamer Update: November 2020</a> - November 27th 2020
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/gossamer-into-the-polkadot-verse-pt-1-361a1d90091">Gossamer: Into the Polkadot-verse Pt.1</a> - February 26th 2021
-
-- <a target="_blank" rel="noopener noreferrer" href="https://medium.com/chainsafe-systems/building-parachains-with-go-cumulus-9998735fa5a4">Building parachains with go-cumulus</a> - April 20th 2021
 
 ## Substrate
 

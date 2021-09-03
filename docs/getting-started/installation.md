@@ -8,119 +8,73 @@ permalink: /getting-started/installation
 
 ## Prerequisites
 
-Install <a target="_blank" rel="noopener noreferrer" href="https://golang.org/">Go</a> version `>=1.15`
+This project currently builds against Rust nightly-2021-01-26. Assuming you have rustup already insatlled set up your local environment:
 
-## Installation
+```shell
+rustup install nightly-2021-01-26
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-01-26
+rustup override set nightly-2021-01-26
+``` 
 
-Get the <a target="_blank" rel="noopener noreferrer" href="https://github.com/ChainSafe/gossamer">ChainSafe/gossamer</a> repository:
-```
-git clone git@github.com:ChainSafe/gossamer
-cd gossamer
-```
+## Build
 
-Run the following command to build the Gossamer binary:
-```
-make gossamer
-```
+Once the development environment is set up, build the node template. This command will build the
+[Wasm](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
+[native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) code:
 
-### Run Development Node
-
-To initialise a development node:
-
-```
-./bin/gossamer --chain dev init
+```bash
+cargo build --release
 ```
 
-To start the development node:
-```
-./bin/gossamer --chain dev
-```
+Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run out of memory. Try freeing some memory or build on another machine.
 
-The development node is configured to produce a block every slot and to finalise a block every round (as there is only one authority, `alice`.) 
+## Run
 
-### Run Gossamer Node
+### Local Testnet
 
-The gossamer node runs by default as an authority with 9 authorites set at genesis. The built-in keys, corresponding to the authorities, that are available for the node are `alice`, `bob`, `charlie`, `dave`, `eve`, `ferdie`, `george`, and `ian`.
-
-To initialise a gossamer node:
-```
-./bin/gossamer --chain gssmr init
-```
-
-To start the gossamer node:
-```
-./bin/gossamer --chain gssmr --key alice
-```
-
-Note: If you only run one gossamer node, the node will not build blocks every slot or finalize blocks; it will appear that the node is doing nothing, but it is actually waiting for a slot to build a block. This is because there are 9 authorities set, so at least 6 of the authorities should be run for a functional network. If you wish to reduce the number of authorities, you can modify the genesis file in `chain/gssmr/genesis-spec.json`.
-
-If you wish to run the default node as a non-authority, you can specify `roles=1`:
-```
-./bin/gossamer --chain gssmr --roles 1
-```
-
-## Run Kusama Node
-
-To run a Kusama node, first initialise the node:
-```
-./bin/gossamer --chain kusama init
-```
-
-Then run the node selecting the Kusama chain:
-```
-./bin/gossamer --chain kusama
-```
-
-The node may not appear to do anything for the first minute or so (it's bootstrapping to the network.) If you wish to see what is it doing in this time, you can turn on debug logs in `chain/kusama/config.toml`:
+Polkadot (release-v0.9.x branch)
 
 ```
-[log]
-network = "debug"
+cargo build --release
+
+./target/release/polkadot build-spec --chain rococo-local --raw --disable-default-bootnode > rococo_local.json
+
+./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay0 --validator --alice --port 9844
+
+./target/release/polkadot --chain ./rococo_local.json -d cumulus_relay1 --validator --bob --port 9955
 ```
 
-After it's finished bootstrapping, the node should begin to sync. 
-
-## Run Polkadot Node 
-
-Initialise polkadot node:
-```
-./bin/gossamer --chain polkadot init
-```
-
-Start polkadot node:
-```
-./bin/gossamer --chain polkadot
-```
-
-## Run Gossamer Node with Docker
-
-Gossamer can also be installed on GNU/Linux, MacOS systems with Docker. 
-
-### Dependencies
-
-- Install the latest release of [Docker](https://docs.docker.com/get-docker/)
-
-Ensure you are running the most recent version of Docker by issuing the command: 
+##### PINT Parachain:
 
 ```
-docker -v
+# this command assumes the chain spec is in a directory named polkadot that is a sibling of the pint directory
+./target/release/pint --collator --alice --chain pint-dev --ws-port 9945 --parachain-id 200 --rpc-cors all -- --execution wasm --chain ../polkadot/rococo_local.json --ws-port 9977 --rpc-cors all
 ```
 
-Pull the latest Gossamer images from DockerHub Registry: 
+### Registering on Local Relay Chain
+
+In order to produce blocks you will need to register the parachain as detailed in the [Substrate Cumulus Workshop](https://substrate.dev/cumulus-workshop/#/en/3-parachains/2-register) by going to
+
+Developer -> sudo -> paraSudoWrapper -> sudoScheduleParaInitialize(id, genesis)
+
+Ensure you set the `ParaId` to `200` and the `parachain: Bool` to `Yes`.
 
 ```
-docker pull chainsafe/gossamer:latest
+cargo build --release
+# Build the Chain spec
+./target/release/pint build-spec --disable-default-bootnode > ./pint-local-plain.json
+# Build the raw file
+./target/release/pint build-spec --chain=./pint-local-plain.json --raw --disable-default-bootnode > ./pint-local.json
+
+
+# export genesis state and wasm
+./target/release/pint export-genesis-state --parachain-id 200 > ./resources/para-200-genesis
+./target/release/pint export-genesis-wasm > ./para-200.wasm
 ```
 
-The above command will install all required dependencies.  
-
-Next, we need override the default entrypoint so we can run the node as an authority node
-
-```
-docker run -it --entrypoint /bin/bash chainsafe/gossamer:latest
-```
-
-The built-in authorities are `alice`, `bob`, `charlie`, `dave`, `eve`, `ferdie`, `george`, and `ian`. To start the node as an authority, provide it with a built-in key:
-```
-./bin/gossamer --chain gssmr --key alice
-```
+* [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in the  `./bin` folder and
+    * Run globally
+        * `polkadot-launch config.json`
+    * Run locally, navigate into polkadot-launch,
+        * ``` yarn ```
+        * ``` yarn start ```
