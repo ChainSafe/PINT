@@ -28,6 +28,11 @@ pub mod types;
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant, clippy::type_complexity)]
 pub mod pallet {
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
+	#[cfg(feature = "runtime-benchmarks")]
+	use primitives::traits::AssetRecorderBenchmarks;
+
 	use frame_support::{
 		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
@@ -44,8 +49,6 @@ pub mod pallet {
 	use sp_core::U256;
 	use xcm::v0::MultiLocation;
 
-	#[cfg(feature = "runtime-benchmarks")]
-	use pallet_price_feed::PriceFeedBenchmarks;
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
 		fee::{BaseFee, FeeRate},
@@ -483,7 +486,6 @@ pub mod pallet {
 
 			// the amount of index token the given units of the liquid assets are worth
 			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
-
 			if index_tokens.is_zero() {
 				return Err(Error::<T>::InsufficientDeposit.into());
 			}
@@ -1037,6 +1039,21 @@ pub mod pallet {
 		}
 	}
 
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> AssetRecorderBenchmarks<T::AssetId, T::Balance> for Pallet<T> {
+		fn add_asset(
+			asset_id: T::AssetId,
+			units: T::Balance,
+			location: MultiLocation,
+			amount: T::Balance,
+		) -> DispatchResultWithPostInfo {
+			let origin = T::AdminOrigin::successful_origin();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
+			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
+		}
+	}
+
 	impl<T: Config> MultiAssetRegistry<T::AssetId> for Pallet<T> {
 		fn native_asset_location(asset: &T::AssetId) -> Option<MultiLocation> {
 			Assets::<T>::get(asset).and_then(|availability| {
@@ -1168,9 +1185,11 @@ pub mod pallet {
 			if total_issuance.is_zero() {
 				return Ok(Ratio::zero());
 			}
+
 			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
 				let value =
 					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
+
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
