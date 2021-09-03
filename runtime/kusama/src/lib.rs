@@ -424,6 +424,8 @@ impl pallet_remote_treasury::Config for Runtime {
 impl pallet_saft_registry::Config for Runtime {
 	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type AssetRecorder = AssetIndex;
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetRecorderBenchmarks = AssetIndex;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type Event = Event;

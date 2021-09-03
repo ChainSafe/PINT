@@ -136,6 +136,8 @@ impl orml_tokens::Config for Test {
 }
 
 impl pallet_saft_registry::Config for Test {
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetRecorderBenchmarks = AssetIndex;
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type Event = Event;
 	type Balance = Balance;
@@ -291,6 +293,16 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 	let mut ext = ExtBuilder::default().with_balances(balances).build();
 	ext.execute_with(|| System::set_block_number(1));
 
+	MockPriceFeed::set_prices(vec![
+		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
+		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
+	]);
+
+	ext
+}
+
+pub fn new_test_ext_from_genesis() -> sp_io::TestExternalities {
+	let ext = ExtBuilder::default().build();
 	MockPriceFeed::set_prices(vec![
 		(ASSET_A_ID, Price::from(ASSET_A_PRICE_MULTIPLIER)),
 		(ASSET_B_ID, Price::from(ASSET_B_PRICE_MULTIPLIER)),
