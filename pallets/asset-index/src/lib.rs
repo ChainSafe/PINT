@@ -971,15 +971,15 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// mint the given units of the SAFT asset into the treasury's account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
-
 			// determine the index token equivalent value of the given saft_nav, or how many index token the
 			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
 			let index_token: T::Balance = Self::nav()?
 				.reciprocal()
 				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
 				.ok_or(ArithmeticError::Overflow)?;
+
+			// mint the given units of the SAFT asset into the treasury's account
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, index_token);
