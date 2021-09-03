@@ -149,7 +149,7 @@ impl pallet_asset_index::Config for Test {
 	type WeightInfo = ();
 }
 
-pub const LIQUID_ASSET_ID: AssetId = 42u32;
+pub const LIQUID_ASSET_ID: AssetId = 3u32;
 pub const SAFT_ASSET_ID: AssetId = 43u32;
 pub const LIQUID_ASSET_MULTIPLIER: Balance = 2;
 pub const SAFT_ASSET_MULTIPLIER: Balance = 3;
@@ -208,8 +208,6 @@ ord_parameter_types! {
 }
 
 impl pallet_saft_registry::Config for Test {
-	#[cfg(feature = "runtime-benchmarks")]
-	type PriceFeedBenchmarks = MockPriceFeed;
 	#[cfg(feature = "runtime-benchmarks")]
 	type AssetRecorderBenchmarks = AssetIndex;
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;

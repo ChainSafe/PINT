@@ -136,6 +136,8 @@ impl orml_tokens::Config for Test {
 }
 
 impl pallet_saft_registry::Config for Test {
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetRecorderBenchmarks = AssetIndex;
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type Event = Event;
 	type Balance = Balance;

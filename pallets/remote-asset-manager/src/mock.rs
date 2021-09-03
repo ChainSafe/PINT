@@ -427,6 +427,8 @@ pub mod para {
 	}
 
 	impl pallet_saft_registry::Config for Runtime {
+		#[cfg(feature = "runtime-benchmarks")]
+		type AssetRecorderBenchmarks = AssetIndex;
 		type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 		type Event = Event;
 		type Balance = Balance;
