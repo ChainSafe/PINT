@@ -208,6 +208,10 @@ ord_parameter_types! {
 }
 
 impl pallet_saft_registry::Config for Test {
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = MockPriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetRecorderBenchmarks = AssetIndex;
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type Event = Event;
 	type Balance = Balance;

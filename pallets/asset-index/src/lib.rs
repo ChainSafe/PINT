@@ -1047,6 +1047,9 @@ pub mod pallet {
 			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
+			let origin = T::AdminOrigin::successful_origin();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
 			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
 		}
 	}
