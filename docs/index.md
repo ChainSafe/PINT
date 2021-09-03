@@ -46,6 +46,5 @@ Increased token demand - Investors looking to gain diversified ecosystem exposur
 
 Let us know if you have any feedback or ideas that might help us improve our documentation or if you have any resources that you would like to see added. If you are planning to use PINT or any of the PINT pallets, please say hello!
 
-## [Installation](https://github.com/ChainSafe/PINT/blob/db/docs/docs/getting-started/installation.md)
 
-## [Architecture](https://github.com/ChainSafe/PINT/blob/matt/more-docs/docs/architecture.md)
+
