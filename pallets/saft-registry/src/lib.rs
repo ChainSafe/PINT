@@ -1,6 +1,14 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # SAFT Registry pallet
+//!
+//! This pallet consists of records of off-chain SAFTs that are placed on-chain. Each SAFT consists
+//! of:
+//!    - Asset ID - a unique identifier for the asset
+//!    - Units - how many units of the asset are included in the SAFT
+//!    - NAV - Net asset value of the SAFT record
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -50,7 +58,7 @@ pub mod pallet {
 	/// Represents off-chain SAFT
 	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 	pub struct SAFTRecord<Balance, NAV> {
-		/// Net asset value of the SAFT, or the total value of `units`
+		/// Net asset value of the SAFT.
 		nav: NAV,
 		/// How many units of the asset are included in the SAFT
 		units: Balance,

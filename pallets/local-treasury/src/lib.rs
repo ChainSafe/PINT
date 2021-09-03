@@ -1,6 +1,15 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # Local Treasury Pallet
+//!
+//! At a high-level the Treasury is simply an AccountId. It maintains ownership of various assets
+//! and is controlled by the Governance Committee. Deposits to the Treasury can be done by simply
+//! transferring funds to its AccountId. The committee can execute proposals to withdraw funds from
+//! the Treasury.
+//!
+//! The Local treasury manages PINT exclusively.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;

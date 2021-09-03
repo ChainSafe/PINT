@@ -3,12 +3,12 @@
 
 //! # AssetIndex Pallet
 //!
-//! Tracks all the assets in the PINT index, composed of multiple assets
+//! Tracks all the assets in the PINT index.
 //!
 //! The value of the assets is determined depending on their class.
 //! The value of liquid assets is calculated by multiplying their current unit price by the amount
 //! held in the index. Whereas the value of an asset secured by SAFTs is measured by the total value
-//! of all SAFTs.
+//! of all SAFT records.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
