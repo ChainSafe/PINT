@@ -37,8 +37,10 @@ GenesisConfig {
 
 To run the chain with a custom chainspec we need to provide the path to your chainspec json file:
 
+*NOTE:* the id of your custom chain spec should contain `dev` in order to run it as standalone chain. 
+
 ```
-./target/release/pint --tmp --chain=<custom-chainspec.json> --rpc-cors all
+./target/release/pint --tmp --chain=<custom-chainspec.json>
 ```
 
 Read more about substrate's [Chain Specification](https://substrate.dev/docs/en/knowledgebase/integrate/chain-spec)
