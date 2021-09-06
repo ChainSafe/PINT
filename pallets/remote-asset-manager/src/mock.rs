@@ -408,7 +408,6 @@ pub mod para {
 		pub MinimumRedemption: u32 = 0;
 		pub MinimumStatemintTransferAmount: Balance = 1;
 		pub WithdrawalPeriod: <Runtime as system::Config>::BlockNumber = 10;
-		pub DOTContributionLimit: Balance = 999;
 		pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 		pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 		pub ParaTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
@@ -454,7 +453,6 @@ pub mod para {
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;
 		type WithdrawalPeriod = WithdrawalPeriod;
-		type DOTContributionLimit = DOTContributionLimit;
 		type RemoteAssetManager = RemoteAssetManager;
 		type Currency = Currency;
 		type PriceFeed = MockPriceFeed;

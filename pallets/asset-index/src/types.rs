@@ -3,9 +3,11 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	sp_runtime::{traits::Zero, RuntimeDebug},
+	sp_runtime::{
+		traits::{AtLeast32BitUnsigned, Zero},
+		RuntimeDebug,
+	},
 	sp_std::vec::Vec,
-	sp_runtime::traits::AtLeast32BitUnsigned
 };
 
 /// Abstraction over the lock of minted index token that are locked up for
@@ -77,9 +79,6 @@ pub struct DepositRange<Balance> {
 // Default implementation for bounds [0, MAX]
 impl<Balance: AtLeast32BitUnsigned> Default for DepositRange<Balance> {
 	fn default() -> Self {
-		Self {
-			minimum: Balance::one(),
-			maximum: Balance::max_value()
-		}
+		Self { minimum: Balance::one(), maximum: Balance::max_value() }
 	}
 }

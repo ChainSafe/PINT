@@ -7,8 +7,11 @@ use frame_benchmarking::{benchmarks, vec};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
-	sp_runtime::{traits::{AccountIdConversion, One, Bounded}, FixedPointNumber},
-	traits::{EnsureOrigin, Get,},
+	sp_runtime::{
+		traits::{AccountIdConversion, Bounded, One},
+		FixedPointNumber,
+	},
+	traits::{EnsureOrigin, Get},
 };
 use orml_traits::MultiCurrency;
 use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};

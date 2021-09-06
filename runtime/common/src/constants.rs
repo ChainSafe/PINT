@@ -71,7 +71,6 @@ parameter_types! {
 	pub const BlockHashCount: BlockNumber = 250;
 	pub const MaxActiveDeposits: u32 = 5;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
-	pub const DOTContributionLimit: Balance = 999;
 	/// Same as Polkadot Relay Chain.
 	pub const ExistentialDeposit: Balance = 500;
 	// Used to determine the account for storing the funds used to pay the oracles.

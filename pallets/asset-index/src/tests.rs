@@ -14,8 +14,7 @@ use primitives::{
 };
 
 use crate as pallet;
-use crate::mock::*;
-use crate::types::DepositRange;
+use crate::{mock::*, types::DepositRange};
 
 #[test]
 fn can_add_asset() {
@@ -358,27 +357,29 @@ fn ensure_valid_deposit_range() {
 			DepositRange { minimum: 1, maximum: Balance::MAX }
 		));
 
-		assert_noop!(AssetIndex::set_deposit_range(
-			Origin::signed(ACCOUNT_ID),
-			DepositRange { minimum: Balance::MAX, maximum: Balance::MAX }
-		),
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: Balance::MAX, maximum: Balance::MAX }
+			),
 			pallet::Error::<Test>::InvalidDepositRange
 		);
 
-		assert_noop!(AssetIndex::set_deposit_range(
-			Origin::signed(ACCOUNT_ID),
-			DepositRange { minimum: Balance::MAX, maximum: Balance::MAX - 1 }
-		),
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: Balance::MAX, maximum: Balance::MAX - 1 }
+			),
 			pallet::Error::<Test>::InvalidDepositRange
 		);
 
-		assert_noop!(AssetIndex::set_deposit_range(
-			Origin::signed(ACCOUNT_ID),
-			DepositRange { minimum: 0, maximum: Balance::MAX  }
-		),
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: 0, maximum: Balance::MAX }
+			),
 			pallet::Error::<Test>::InvalidDepositRange
 		);
-
 	});
 }
 
@@ -407,15 +408,14 @@ fn deposit_fails_on_invalid_deposit_range() {
 			Origin::signed(ACCOUNT_ID),
 			DepositRange { minimum: Balance::MAX - 1, maximum: Balance::MAX }
 		));
-		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
 			pallet::Error::<Test>::DepositAmountBelowMinimum
 		);
 
-		assert_ok!(AssetIndex::set_deposit_range(
-			Origin::signed(ACCOUNT_ID),
-			DepositRange { minimum: 1, maximum: 2 }
-		));
-		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+		assert_ok!(AssetIndex::set_deposit_range(Origin::signed(ACCOUNT_ID), DepositRange { minimum: 1, maximum: 2 }));
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
 			pallet::Error::<Test>::DepositExceedsMaximum
 		);
 	})

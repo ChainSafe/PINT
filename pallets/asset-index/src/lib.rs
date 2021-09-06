@@ -56,7 +56,9 @@ pub mod pallet {
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
-	use crate::types::{AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption, DepositRange};
+	use crate::types::{
+		AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption,
+	};
 	use primitives::traits::MaybeAssetIdConvert;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -93,9 +95,6 @@ pub mod pallet {
 		/// and being able to withdraw the awarded assets
 		#[pallet::constant]
 		type WithdrawalPeriod: Get<Self::BlockNumber>;
-		/// The maximum amount of DOT that can exist in the index
-		#[pallet::constant]
-		type DOTContributionLimit: Get<Self::Balance>;
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
@@ -195,14 +194,12 @@ pub mod pallet {
 	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
-
 	/// The range of the index token equivalent a deposit must be in in order to be allowed.
 	///
 	/// A valid deposit lies within `[deposit_bounds.minimum, deposit_bounds.maximum]`.
 	#[pallet::storage]
 	#[pallet::getter(fn deposit_bounds)]
 	pub type IndexTokenDepositRange<T: Config> = StorageValue<_, DepositRange<T::Balance>, ValueQuery>;
-
 
 	/// Metadata of an asset ( for reversed usage now ).
 	#[pallet::storage]
@@ -231,7 +228,11 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { deposit_range: Default::default(), liquid_assets: Default::default(), saft_assets: Default::default() }
+			Self {
+				deposit_range: Default::default(),
+				liquid_assets: Default::default(),
+				saft_assets: Default::default(),
+			}
 		}
 	}
 
@@ -445,8 +446,8 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Updates the range for how much a deposit must be worth in index token in order to be accpedted.
-		/// Requires `T::AdminOrigin`
+		/// Updates the range for how much a deposit must be worth in index token in order to be
+		/// accpedted. Requires `T::AdminOrigin`
 		///
 		/// Parameters:
 		/// - `new_range`: The new valid range for deposits.
@@ -459,7 +460,6 @@ pub mod pallet {
 			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
 			Ok(())
 		}
-
 
 		/// Force the metadata for an asset to some value.
 		///
