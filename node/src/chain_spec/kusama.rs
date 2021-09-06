@@ -111,7 +111,7 @@ fn pint_testnet_genesis(
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect() },
+		balances: BalancesConfig { balances: vec![(root_key.clone(), 1 << 60)] },
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
 		chainlink_feed: ChainlinkFeedConfig { pallet_admin: Some(root_key.clone()), feed_creators: council_members },
 		sudo: SudoConfig { key: root_key },
