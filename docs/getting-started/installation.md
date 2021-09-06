@@ -38,16 +38,16 @@ You can start a standalone development chain with:
 cargo run -- --dev --instant-sealing
 ```
 
-For docker:
-
-```
-docker run chainsafe/pint --dev --instant-sealing
-```
-
-Or if already built
+Or if already built:
 
 ```bash
 ./target/release/pint --dev --instant-sealing
+```
+
+For [docker](https://github.com/ChainSafe/PINT/blob/main/docker/release.Dockerfile):
+
+```
+docker run chainsafe/pint --dev --instant-sealing
 ```
 
 This will use the [`node/src/chain_spec/dev.rs`](../../node/src/chain_spec/dev.rs) chain spec.
@@ -94,6 +94,7 @@ cargo build --release
 ./target/release/pint export-genesis-wasm --chain=pint-dev > ./para-200.wasm
 ```
 
+
 ### Start a Parachain Node (Collator)
 
 From the parachain template working directory:
@@ -121,6 +122,25 @@ From the parachain template working directory:
         * ``` yarn ```
         * ``` yarn start ```
 
+
+## Test
+
+### Testing PINT with cargo
+
+```
+cargo test --all-features
+```
+
+Will run the tests of PINT with cargo.
+
+### Testing PINT with polkadot.js
+
+```
+cd js/e2e
+yarn && yarn start
+```
+
+Will start the e2e tests of PINT with `polkadot.js`.
 
 ## Learn More
 
