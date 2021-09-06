@@ -62,15 +62,35 @@ Ensure you set the `ParaId` to `200` and the `parachain: Bool` to `Yes`.
 ```
 cargo build --release
 # Build the Chain spec
-./target/release/pint build-spec --disable-default-bootnode > ./pint-local-plain.json
+./target/release/pint build-spec --chain=pint-dev --disable-default-bootnode > ./pint-local-plain.json
 # Build the raw file
 ./target/release/pint build-spec --chain=./pint-local-plain.json --raw --disable-default-bootnode > ./pint-local.json
 
 
 # export genesis state and wasm
-./target/release/pint export-genesis-state --parachain-id 200 > ./resources/para-200-genesis
-./target/release/pint export-genesis-wasm > ./para-200.wasm
+./target/release/pint export-genesis-state --chain=pint-dev --parachain-id 200 > para-200-genesis
+./target/release/pint export-genesis-wasm --chain=pint-dev > ./para-200.wasm
 ```
+
+### Start a Parachain Node (Collator)
+
+From the parachain template working directory:
+
+```bash
+# This assumes a ParaId of 200. Change as needed.
+./target/release/pint \
+-d /tmp/parachain/alice \
+--collator \
+--alice \
+--force-authoring \
+--ws-port 9945 \
+--parachain-id 200 \
+-- \
+--execution wasm \
+--chain pint_local.json
+```
+
+
 
 * [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in the  `./bin` folder and
     * Run globally
