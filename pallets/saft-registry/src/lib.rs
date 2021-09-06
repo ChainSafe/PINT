@@ -1,6 +1,17 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # SAFT Registry Pallet
+//!
+//! This pallet consists of records of off-chain SAFTs. An SAFT asset can have multiple SAFT
+//! Records. Each `SAFTRecord` holds the number of units of its asset and their value. This value is
+//! expected to in the same currency the liquid assets use for their price feeds, so that the NAV
+//! can easily be calculated according to the NAV formula. The SAFT registry pallet requires the
+//! `AssetRecorder` trait which is an abstraction over the features for adding/removing assets,
+//! which is implemented for the `AssetIndex`. Adding a SAFT record will call into the
+//! `AssetRecorder::add_saft` function, in mints new PINT according to the value of the SAFT record.
+//! SAFTs can be converted to liquid tokens once they're available in the network with a location.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -52,7 +63,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 	}
 
-	/// Represents off-chain SAFT
+	/// Represents a single off-chain SAFT Record of a non liquid asset
 	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 	pub struct SAFTRecord<Balance, NAV> {
 		/// Net asset value of the SAFT, or the total value of `units`
@@ -89,7 +100,7 @@ pub mod pallet {
 		OptionQuery,
 	>;
 
-	/// A running counter used to determine the next SAFT id.
+	/// A running counter used to determine the next SAFT id for a specific asset.
 	#[pallet::storage]
 	#[pallet::getter(fn saft_counter)]
 	pub type SAFTCounter<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, SAFTId, ValueQuery>;
