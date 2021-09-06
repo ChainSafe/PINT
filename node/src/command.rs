@@ -311,7 +311,7 @@ pub fn run() -> Result<()> {
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let chain_spec = &runner.config().chain_spec;
-			let is_pint_dev = chain_spec.is_dev();
+			let is_pint_dev = cli.run.base.shared_params.dev || cli.instant_sealing;
 
 			set_default_ss58_version(chain_spec);
 

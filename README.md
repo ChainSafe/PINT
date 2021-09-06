@@ -49,7 +49,7 @@ build on another machine.
 
 ### Development Chain
 
-You can start a standalone development chain with:
+You can start a standalone development chain with instant sealing:
 
 ```bash
 cargo run -- --tmp --dev --instant-sealing

@@ -79,7 +79,7 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 	}
 
 	fn is_dev(&self) -> bool {
-		self.id().contains("dev")
+		self.id().starts_with("pint_dev")
 	}
 }
 
