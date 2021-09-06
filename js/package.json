@@ -1,4 +1,7 @@
 {
   "private": true,
-  "workspaces": ["e2e", "pint-types-bundle", "finalize"]
+  "workspaces": ["e2e", "pint-types-bundle", "finalize"],
+  "scripts": {
+    "update-pint-types": "ts-node scripts/update_pint_types.ts"
+  }
 }
