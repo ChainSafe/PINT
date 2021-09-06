@@ -1,18 +1,21 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate as pallet;
-use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, traits::Currency as _};
 use orml_traits::MultiCurrency;
+use rand::Rng;
+use sp_runtime::{traits::Zero, FixedPointNumber};
+use xcm::v0::MultiLocation;
+
 use pallet_price_feed::PriceFeed;
 use primitives::{
 	traits::{AssetRecorder, NavProvider},
 	AssetAvailability, Price,
 };
-use rand::Rng;
-use sp_runtime::{traits::Zero, FixedPointNumber};
-use xcm::v0::MultiLocation;
+
+use crate as pallet;
+use crate::mock::*;
+use crate::types::DepositRange;
 
 #[test]
 fn can_add_asset() {
@@ -348,6 +351,77 @@ fn deposit_fails_on_missing_assets() {
 }
 
 #[test]
+fn ensure_valid_deposit_range() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: 1, maximum: Balance::MAX }
+		));
+
+		assert_noop!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: Balance::MAX, maximum: Balance::MAX }
+		),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+
+		assert_noop!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: Balance::MAX, maximum: Balance::MAX - 1 }
+		),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+
+		assert_noop!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: 0, maximum: Balance::MAX  }
+		),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+
+	});
+}
+
+#[test]
+fn deposit_fails_on_invalid_deposit_range() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			100,
+			MultiLocation::Null,
+			initial_units
+		));
+
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 100_000));
+
+		// fund account to cover index deposits
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit));
+
+		assert_ok!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: Balance::MAX - 1, maximum: Balance::MAX }
+		));
+		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+			pallet::Error::<Test>::DepositAmountBelowMinimum
+		);
+
+		assert_ok!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: 1, maximum: 2 }
+		));
+		assert_noop!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+			pallet::Error::<Test>::DepositExceedsMaximum
+		);
+	})
+}
+
+#[test]
 fn deposit_fails_on_exceeding_limit() {
 	let deposit = 1_000;
 	let initial_units = 1_000;
@@ -361,6 +435,7 @@ fn deposit_fails_on_exceeding_limit() {
 			initial_units
 		));
 
+		// fund account to cover index deposits
 		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
 
 		for _ in 0..50 {
