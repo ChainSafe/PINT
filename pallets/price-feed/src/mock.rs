@@ -241,9 +241,13 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		.assimilate_storage(&mut t)
 		.unwrap();
 
-	pallet_chainlink_feed::GenesisConfig::<Test> { pallet_admin: Some(ADMIN_ACCOUNT_ID), feed_creators: vec![1] }
-		.assimilate_storage(&mut t)
-		.unwrap();
+	pallet_chainlink_feed::GenesisConfig::<Test> {
+		feeds: Default::default(),
+		pallet_admin: Some(ADMIN_ACCOUNT_ID),
+		feed_creators: vec![1],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 
 	t.into()
 }

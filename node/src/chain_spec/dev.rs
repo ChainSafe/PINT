@@ -113,7 +113,11 @@ fn pint_testnet_genesis(
 		},
 		balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 12)).collect() },
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
-		chainlink_feed: ChainlinkFeedConfig { pallet_admin: Some(root_key.clone()), feed_creators: council_members },
+		chainlink_feed: ChainlinkFeedConfig {
+			feeds: Default::default(),
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: council_members,
+		},
 		sudo: SudoConfig { key: root_key },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
