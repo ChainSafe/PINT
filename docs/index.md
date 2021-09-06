@@ -46,5 +46,19 @@ Increased token demand - Investors looking to gain diversified ecosystem exposur
 
 Let us know if you have any feedback or ideas that might help us improve our documentation or if you have any resources that you would like to see added. If you are planning to use PINT or any of the PINT pallets, please say hello!
 
+## [General Resources](./getting-started/resources/general-resources.md)
 
+## [Architecture](./getting-started/overview/architecture.md)
 
+## [Installation](./getting-started/installation.md)
+
+## [Configuration](./usage/configuration.md)
+
+## [Developer Resources](./getting-started/resources/developer-resources.md)
+
+## [ Command Line:](./usage/command-line.md)
+
+# Testing and Debugging: 
+  ## [Test Suite]()
+  ## [Debugging]()
+  ## [Overview]()
