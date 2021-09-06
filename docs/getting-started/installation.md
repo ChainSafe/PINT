@@ -136,7 +136,7 @@ Will run the tests of PINT with cargo.
 ### Testing PINT with polkadot.js
 
 ```
-# the e2e tests using polkadot-launch as a git submodule
+# the e2e tests require `polkadot-launch` as a git submodule
 git submodule update --recursive
 
 # install dependencies and run e2e tests

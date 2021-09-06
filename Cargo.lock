@@ -9166,10 +9166,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff#91061a7d925b5bc597804293da283477512ba4ff"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
 dependencies = [
  "sc-client-api",
- "sp-authorship 4.0.0-dev (git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff)",
+ "sp-authorship 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
  "sp-runtime",
  "thiserror",
 ]
@@ -9177,10 +9177,10 @@ dependencies = [
 [[package]]
 name = "sc-consensus-uncles"
 version = "0.10.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
+source = "git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff#91061a7d925b5bc597804293da283477512ba4ff"
 dependencies = [
  "sc-client-api",
- "sp-authorship 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9)",
+ "sp-authorship 4.0.0-dev (git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff)",
  "sp-runtime",
  "thiserror",
 ]
@@ -10314,7 +10314,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff#91061a7d925b5bc597804293da283477512ba4ff"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
@@ -10326,7 +10326,7 @@ dependencies = [
 [[package]]
 name = "sp-authorship"
 version = "4.0.0-dev"
-source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.9#91061a7d925b5bc597804293da283477512ba4ff"
+source = "git+https://github.com/paritytech//substrate?rev=91061a7d925b5bc597804293da283477512ba4ff#91061a7d925b5bc597804293da283477512ba4ff"
 dependencies = [
  "async-trait",
  "parity-scale-codec",
