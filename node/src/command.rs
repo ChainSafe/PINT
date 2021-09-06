@@ -24,7 +24,7 @@ use std::{io::Write, net::SocketAddr};
 fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
 		"pint-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
-		"pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
+		"dev" | "pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
 		#[cfg(feature = "kusama")]
 		"pint-kusama-local" => Box::new(chain_spec::kusama::pint_local_config(para_id)),
 		#[cfg(feature = "kusama")]
@@ -296,9 +296,17 @@ pub fn run() -> Result<()> {
 		}
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
+			let chain_spec = &runner.config().chain_spec;
+			let is_pint_dev = chain_spec.is_dev();
 
 			runner.run_node_until_exit(|config| async move {
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+
+				if is_pint_dev {
+					return service::pint_dev(config, cli.instant_sealing).map_err(Into::into);
+				} else if cli.instant_sealing {
+					return Err("Instant sealing can be turned on only in `--dev` mode".into());
+				}
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
