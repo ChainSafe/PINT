@@ -85,12 +85,7 @@
   },
   "ProposalNonce": "u32",
   "ProxyType": {
-    "_enum": [
-      "Any",
-      "NonTransfer",
-      "Governance",
-      "Staking"
-    ]
+    "_enum": ["Any", "NonTransfer", "Governance", "Staking"]
   },
   "ProxyState": {
     "added": "Vec<ProxyType>"

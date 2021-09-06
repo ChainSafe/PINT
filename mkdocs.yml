@@ -1,0 +1,69 @@
+# Copyright 2020 ChainSafe Systems
+# SPDX-License-Identifier: LGPL-3.0-only
+
+site_name: PINT Docs
+site_description: The Official Documentation for PINT | A Polkadot ecosystem index for investors
+
+repo_name: chainsafe/pint
+repo_url: https://github.com/ChainSafe/pint
+edit_uri: edit/development/docs/
+
+# Configuration
+markdown_extensions:
+  - meta
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+
+theme:
+  name: material
+  palette:
+    primary: brown
+    accent: yellow
+    theme:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: brown
+      accent: yellow
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: brown
+      accent: yellow
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  favicon: ./assets/favicon.ico
+  features:
+    # - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+nav:
+  - Getting Started:
+    - Overview: ./index.md
+    - Architecture: ./getting-started/overview/architecture.md
+    - Installation: ./getting-started/installation.md
+    - General Resources: ./getting-started/resources/general-resources.md
+    - Developer Resources: ./getting-started/resources/developer-resources.md
+  - Usage:
+    - Command Line: ./usage/command-line.md
+    - Configuration: ./usage/configuration.md
+  # - Testing and Debugging: 
+  #   - Test Suite: ./testing-and-debugging/test-suite.md
+  #   - Debugging: ./testing-and-debugging/debugging.md
+  # - Contributing: 
+  #   - Overview: ./contributing.md
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/ChainSafe/pint
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/ChainSafeth
