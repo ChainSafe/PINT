@@ -38,6 +38,12 @@ You can start a standalone development chain with:
 cargo run -- --dev --instant-sealing
 ```
 
+For docker:
+
+```
+docker run chainsafe/pint --dev --instant-sealing
+```
+
 Or if already built
 
 ```bash
