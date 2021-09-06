@@ -10,6 +10,8 @@ In order to use [polkadot.js UI](https://polkadot.js.org/apps/#/explorer) to int
 the custom PINT is using by copying the [types.json](../../resources/types.json) object into the input
 at `Settings > Devoloper` in the polkadot js UI menu.
 
+<div style="text-align:center"><img src="../assets/img/set-custom-types.png"  alt="Add custom types"/></div>
+
 ## Chain Spec
 
 By default, PINT uses the [dev chain spec](../../node/src/chain_spec/dev.rs).
@@ -28,7 +30,7 @@ GenesisConfig {
     balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map( | k| (k, 1 < < 12)).collect() },
     // This configures the comittee
     committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default () },
-    // all council members can create feeds
+    // all council members can create feeds and no feeds in genesis
     chainlink_feed: ChainlinkFeedConfig { feeds: Default::default(), pallet_admin: Some(root_key.clone()), feed_creators: council_members },
     sudo: SudoConfig { key: root_key },
     parachain_info: ParachainInfoConfig { parachain_id: id },
