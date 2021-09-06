@@ -140,7 +140,9 @@ cd js/e2e
 yarn && yarn start
 ```
 
-Will start the e2e tests of PINT with `polkadot.js`.
+Will bootstrap `PINT` with `polkadot-launch` and run all calls of PINT with `polkadot.js`
+to test both `PINT` can connect to `rococo` and PINT calls are workable with `polkadot.js`.
+
 
 ## Learn More
 
