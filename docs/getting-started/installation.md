@@ -136,8 +136,11 @@ Will run the tests of PINT with cargo.
 ### Testing PINT with polkadot.js
 
 ```
-cd js/e2e
-yarn && yarn start
+# the e2e tests using polkadot-launch as a git submodule
+git submodule update --recursive
+
+# install dependencies and run e2e tests
+cd js && yarn && yarn e2e
 ```
 
 Will bootstrap `PINT` with `polkadot-launch` and run all calls of PINT with `polkadot.js`
