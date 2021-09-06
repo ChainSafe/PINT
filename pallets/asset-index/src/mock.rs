@@ -150,7 +150,6 @@ parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 10;
 	pub MinimumRedemption: u32 = 3;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
-	pub DOTContributionLimit: Balance = 999;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
@@ -180,7 +179,6 @@ impl pallet_asset_index::Config for Test {
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
-	type DOTContributionLimit = DOTContributionLimit;
 	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;

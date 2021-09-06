@@ -483,7 +483,6 @@ impl pallet_asset_index::Config for Runtime {
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
-	type DOTContributionLimit = DOTContributionLimit;
 	type RemoteAssetManager = RemoteAssetManager;
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;

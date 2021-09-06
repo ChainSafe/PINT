@@ -56,7 +56,9 @@ pub mod pallet {
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
-	use crate::types::{AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption};
+	use crate::types::{
+		AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption,
+	};
 	use primitives::traits::MaybeAssetIdConvert;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
@@ -93,9 +95,6 @@ pub mod pallet {
 		/// and being able to withdraw the awarded assets
 		#[pallet::constant]
 		type WithdrawalPeriod: Get<Self::BlockNumber>;
-		/// The maximum amount of DOT that can exist in the index
-		#[pallet::constant]
-		type DOTContributionLimit: Get<Self::Balance>;
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
@@ -195,6 +194,13 @@ pub mod pallet {
 	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
 
+	/// The range of the index token equivalent a deposit must be in in order to be allowed.
+	///
+	/// A valid deposit lies within `[deposit_bounds.minimum, deposit_bounds.maximum]`.
+	#[pallet::storage]
+	#[pallet::getter(fn deposit_bounds)]
+	pub type IndexTokenDepositRange<T: Config> = StorageValue<_, DepositRange<T::Balance>, ValueQuery>;
+
 	/// Metadata of an asset ( for reversed usage now ).
 	#[pallet::storage]
 	#[pallet::getter(fn asset_metadata)]
@@ -210,6 +216,8 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		/// The range that determines valid deposits.
+		pub deposit_range: DepositRange<T::Balance>,
 		/// All the liquid assets together with their parachain id known at
 		/// genesis
 		pub liquid_assets: Vec<(T::AssetId, polkadot_parachain::primitives::Id)>,
@@ -220,7 +228,11 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { liquid_assets: Default::default(), saft_assets: Default::default() }
+			Self {
+				deposit_range: Default::default(),
+				liquid_assets: Default::default(),
+				saft_assets: Default::default(),
+			}
 		}
 	}
 
@@ -232,9 +244,12 @@ pub mod pallet {
 				let availability = AssetAvailability::Liquid((Junction::Parent, Junction::Parachain(id.into())).into());
 				Assets::<T>::insert(asset, availability)
 			}
+
 			for asset in self.saft_assets.iter().cloned() {
 				Assets::<T>::insert(asset, AssetAvailability::Saft)
 			}
+
+			IndexTokenDepositRange::<T>::put(self.deposit_range.clone());
 		}
 	}
 
@@ -267,6 +282,8 @@ pub mod pallet {
 		/// New metadata has been set for an asset. \[asset_id, name, symbol,
 		/// decimals\]
 		MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
+		/// The index token deposit range was updated.\[new_range\]
+		IndexTokenDepositRangeUpdated(DepositRange<T::Balance>),
 	}
 
 	#[pallet::error]
@@ -315,6 +332,12 @@ pub mod pallet {
 		InsufficientIndexTokens,
 		/// Thrown if deposits reach limit
 		TooManyDeposits,
+		/// Thrown when the given DepositRange is invalid
+		InvalidDepositRange,
+		/// The deposited amount is below the minimum value required.
+		DepositAmountBelowMinimum,
+		/// The deposited amount exceeded the cap allowed.
+		DepositExceedsMaximum,
 	}
 
 	#[pallet::hooks]
@@ -340,7 +363,7 @@ pub mod pallet {
 			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			if units.is_zero() {
 				return Ok(().into());
 			}
@@ -423,6 +446,21 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Updates the range for how much a deposit must be worth in index token in order to be
+		/// accpedted. Requires `T::AdminOrigin`
+		///
+		/// Parameters:
+		/// - `new_range`: The new valid range for deposits.
+		#[pallet::weight(T::WeightInfo::set_deposit_range())]
+		pub fn set_deposit_range(origin: OriginFor<T>, new_range: DepositRange<T::Balance>) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			ensure!(!new_range.minimum.is_zero(), Error::<T>::InvalidDepositRange);
+			ensure!(new_range.maximum > new_range.minimum, Error::<T>::InvalidDepositRange);
+			IndexTokenDepositRange::<T>::put(new_range.clone());
+			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
+			Ok(())
+		}
+
 		/// Force the metadata for an asset to some value.
 		///
 		/// Origin must be ForceOrigin.
@@ -469,7 +507,7 @@ pub mod pallet {
 		/// available price pairs
 		#[pallet::weight(T::WeightInfo::deposit())]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResult {
-			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -486,9 +524,9 @@ pub mod pallet {
 
 			// the amount of index token the given units of the liquid assets are worth
 			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
-			if index_tokens.is_zero() {
-				return Err(Error::<T>::InsufficientDeposit.into());
-			}
+
+			// ensure the index token equivalent worth is within the set bounds
+			Self::ensure_deposit_in_bounds(index_tokens)?;
 
 			// transfer from the caller's sovereign account into the treasury's account
 			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
@@ -931,6 +969,14 @@ pub mod pallet {
 			}
 			all_withdrawn
 		}
+
+		/// Ensures the given lies within the configured deposit range
+		pub fn ensure_deposit_in_bounds(amount: T::Balance) -> DispatchResult {
+			let bounds = IndexTokenDepositRange::<T>::get();
+			ensure!(amount >= bounds.minimum, Error::<T>::DepositAmountBelowMinimum);
+			ensure!(amount <= bounds.maximum, Error::<T>::DepositExceedsMaximum);
+			Ok(())
+		}
 	}
 
 	impl<T: Config> AssetRecorder<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
@@ -1284,6 +1330,7 @@ pub mod pallet {
 		fn unlock() -> Weight;
 		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
+		fn set_deposit_range() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1317,6 +1364,9 @@ pub mod pallet {
 		}
 
 		fn withdraw() -> Weight {
+			Default::default()
+		}
+		fn set_deposit_range() -> Weight {
 			Default::default()
 		}
 	}

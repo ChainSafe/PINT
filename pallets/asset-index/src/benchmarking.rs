@@ -7,7 +7,10 @@ use frame_benchmarking::{benchmarks, vec};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
-	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
+	sp_runtime::{
+		traits::{AccountIdConversion, Bounded, One},
+		FixedPointNumber,
+	},
 	traits::{EnsureOrigin, Get},
 };
 use orml_traits::MultiCurrency;
@@ -18,6 +21,7 @@ use xcm::v0::MultiLocation;
 use crate::Pallet as AssetIndex;
 
 use super::*;
+use crate::types::DepositRange;
 
 benchmarks! {
 	add_asset {
@@ -185,6 +189,16 @@ benchmarks! {
 		assert_eq!(metadata.decimals, decimals);
 	}
 
+	set_deposit_range {
+		let origin = T::AdminOrigin::successful_origin();
+		let range = DepositRange {minimum : T::Balance::one(), maximum: T::Balance::max_value()};
+		let call = Call::<T>::set_deposit_range(
+						range.clone()
+		);
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(range, IndexTokenDepositRange::<T>::get());
+	}
+
 	withdraw {
 		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let units = 100_u32.into();
@@ -270,6 +284,13 @@ mod tests {
 	fn set_metadata() {
 		new_test_ext().execute_with(|| {
 			assert_ok!(Pallet::<Test>::test_benchmark_set_metadata());
+		});
+	}
+
+	#[test]
+	fn set_deposit_range() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(Pallet::<Test>::test_benchmark_set_deposit_range());
 		});
 	}
 
