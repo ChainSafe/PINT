@@ -8,12 +8,12 @@ permalink: /getting-started/installation
 
 ## Prerequisites
 
-This project currently builds against Rust nightly-2021-01-26. Assuming you have rustup already insatlled set up your local environment:
+This project currently builds against Rust nightly-2021-08-01. Assuming you have rustup already insatlled set up your local environment:
 
 ```shell
-rustup install nightly-2021-01-26
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-01-26
-rustup override set nightly-2021-01-26
+rustup install nightly-2021-08-01
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-08-01
+rustup override set nightly-2021-08-01
 ``` 
 
 ## Build
