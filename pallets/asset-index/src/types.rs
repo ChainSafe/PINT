@@ -3,7 +3,10 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	sp_runtime::{traits::Zero, RuntimeDebug},
+	sp_runtime::{
+		traits::{AtLeast32BitUnsigned, Zero},
+		RuntimeDebug,
+	},
 	sp_std::vec::Vec,
 };
 
@@ -60,5 +63,22 @@ pub struct AssetRedemption<AssetId, Balance> {
 impl<AssetId, Balance: Zero> Default for AssetRedemption<AssetId, Balance> {
 	fn default() -> Self {
 		Self { asset_amounts: Vec::new(), redeemed_index_tokens: Balance::zero() }
+	}
+}
+
+/// Limits the amount of deposits
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct DepositRange<Balance> {
+	/// Minimum amount of index tokens a deposit must be worth
+	pub minimum: Balance,
+	/// Maximum amount of index tokens a deposit must be worth
+	pub maximum: Balance,
+}
+
+// Default implementation for bounds [0, MAX]
+impl<Balance: AtLeast32BitUnsigned> Default for DepositRange<Balance> {
+	fn default() -> Self {
+		Self { minimum: Balance::one(), maximum: Balance::max_value() }
 	}
 }

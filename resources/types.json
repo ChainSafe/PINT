@@ -92,6 +92,10 @@
     "votes": "Vec<MemberVote>",
     "end": "BlockNumber"
   },
+  "DepositRange": {
+    "minimum": "Balance",
+    "maximum": "Balance"
+  },
   "SpecIndex": "Vec<u8>",
   "RequestIdentifier": "u64",
   "DataVersion": "u64",
