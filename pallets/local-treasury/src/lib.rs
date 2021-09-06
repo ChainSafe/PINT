@@ -1,6 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! # Local Treasury Pallet
+//!
+//! Manages PINT exclusively. The treasury is a single account which is derived from the configured
+//! `PalletId`. It maintains ownership of various assets and is controlled by the Governance
+//! Committee. Deposits to the Treasury can be done by simply transferring funds to its AccountId.
+//! The committee can execute proposals to withdraw funds from the Treasury.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub use pallet::*;
@@ -13,9 +20,9 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 
-#[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit)]
+#[frame_support::pallet]
 pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResult,
