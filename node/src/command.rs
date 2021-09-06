@@ -150,6 +150,20 @@ impl SubstrateCli for RelayChainCli {
 	}
 }
 
+fn set_default_ss58_version(spec: &Box<dyn sc_chain_spec::ChainSpec>) {
+	use sp_core::crypto::Ss58AddressFormat;
+
+	let ss58_version = if spec.is_kusama() {
+		Ss58AddressFormat::KusamaAccount
+	} else if spec.is_polkadot() {
+		Ss58AddressFormat::PolkadotAccount
+	} else {
+		Ss58AddressFormat::SubstrateAccount
+	};
+
+	sp_core::crypto::set_default_ss58_version(ss58_version);
+}
+
 fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
 	let mut storage = chain_spec.build_storage()?;
 
@@ -298,6 +312,8 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let chain_spec = &runner.config().chain_spec;
 			let is_pint_dev = chain_spec.is_dev();
+
+			set_default_ss58_version(chain_spec);
 
 			runner.run_node_until_exit(|config| async move {
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);

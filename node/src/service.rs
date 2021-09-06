@@ -507,7 +507,7 @@ pub fn new_chain_ops(
 		Err(POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		let PartialComponents { client, backend, import_queue, task_manager, .. } =
-			new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(config, false, false)?;
+			new_partial(config, config.chain_spec.is_dev(), false)?;
 		Ok((Arc::new(Client::Dev(client)), backend, import_queue, task_manager))
 	}
 }
