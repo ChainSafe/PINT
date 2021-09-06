@@ -29,7 +29,7 @@ GenesisConfig {
     // This configures the comittee
     committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default () },
     // all council members can create feeds
-    chainlink_feed: ChainlinkFeedConfig { pallet_admin: Some(root_key.clone()), feed_creators: council_members },
+    chainlink_feed: ChainlinkFeedConfig { feeds: Default::default(), pallet_admin: Some(root_key.clone()), feed_creators: council_members },
     sudo: SudoConfig { key: root_key },
     parachain_info: ParachainInfoConfig { parachain_id: id },
 }
