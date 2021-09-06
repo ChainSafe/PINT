@@ -32,7 +32,7 @@ cargo test --all-features
 ### Start the PINT chain
 
 ```
-./target/release/pint --tmp --dev --alice --rpc-cors all
+./target/release/pint --dev --instant-sealing
 ```
 
-`--rpc-cors all` ensures that you can connect to the node via the [polkadot.js UI](https://polkadot.js.org/apps/#/explorer)
+If the [polkadot.js UI](https://polkadot.js.org/apps/#/explorer) fails to connect try adding `--rpc-cors all`.

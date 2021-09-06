@@ -30,6 +30,22 @@ Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run o
 
 ## Run
 
+### Development Chain
+
+You can start a standalone development chain with:
+
+```bash
+cargo run -- --dev --instant-sealing
+```
+
+Or if already built
+
+```bash
+./target/release/pint --dev --instant-sealing
+```
+
+This will use the [`node/src/chain_spec/dev.rs`](../../node/src/chain_spec/dev.rs) chain spec.
+
 ### Local Testnet
 
 Polkadot (release-v0.9.x branch)
