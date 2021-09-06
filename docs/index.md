@@ -40,7 +40,7 @@ Increased token demand - Investors looking to gain diversified ecosystem exposur
 
 ***PINT Docs*** is an evolving set of documents and resources to help you understand PINT, the Polkadot ecosystem, and how to build and interact with PINT. 
 
-- If you are already familiar with PINT and the Polkadot ecosystem, or you just want to dive in, head over to [Get Started](/getting-started/installation).
+- If you are already familiar with PINT and the Polkadot ecosystem, or you just want to dive in, head over to [Get Started](./getting-started/installation).
 
 ## Connect
 

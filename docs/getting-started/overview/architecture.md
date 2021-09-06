@@ -1,7 +1,5 @@
 ---
-layout: default
-title: Architecture
-permalink: /architecture/
+layout: default title: Architecture permalink: /architecture/
 ---
 
 # Architecture
@@ -67,6 +65,13 @@ with the chainlink pallet internal price feed identifiers (`AssetId -> FeedId`).
 all asset values are measured in the same currency. All price feeds are expected to be configured with the same quote
 currency (e.g. USD). This currency will then also be the currency the NAV is measured in, since the NAV of the index is
 then `PINT/USD`, effectively the on-chain price of PINT.
+
+*Note:* All the core functionality of the `asset-index`, like depositing and redeeming, relies on price feeds and a
+mapping from `AssetId -> ChainlinkFeed` in the `price-feed` pallet.
+
+The chainlink pallet is managed by the `PalletAdmin` account which can assign accounts the role of `FeedCreator`. In
+the `pint-dev` chainspec `Alice` is the `PalletAdmin` and the council accounts (`Alice`, `Bob`, `Charlie`, `Dave`)
+are `FeedCreators` and are allowed to create feeds.
 
 ### SAFT Registry Pallet
 

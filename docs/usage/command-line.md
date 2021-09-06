@@ -6,49 +6,33 @@ permalink: /usage/command-line/
 
 ## Commands
 
+### Build
 
-### Accepted Formats
-
-```
-
-```
-
-```
+This will build the
+[Wasm Runtime](https://substrate.dev/docs/en/knowledgebase/advanced/executor#wasm-execution) and
+[native](https://substrate.dev/docs/en/knowledgebase/advanced/executor#native-execution) of PINT:
 
 ```
-
-### Global flags
-
-The global flags...
-
+cargo build --release
 ```
 
+### Test
+
+Run all tests
+```
+cargo test
 ```
 
-### Local flags
-
-These are the local flags...
-
+Run all tests, including benchmarks
 ```
-
+cargo test --all-features
 ```
 
 
-## Subcommands
-
-List of available ***subcommands***:
+### Start the PINT chain
 
 ```
-
+./target/release/pint --tmp --dev --alice --rpc-cors all
 ```
 
-### Accepted Formats
-
-```
-command [--global-flags] [subcommand] [--local-flags]
-```
-
-### Invalid Formats
-
-_please note that `[--local-flags]` must come after `[subcommand]`_
-
+`--rpc-cors all` ensures that you can connect to the node via the [polkadot.js UI](https://polkadot.js.org/apps/#/explorer)
