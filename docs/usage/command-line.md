@@ -35,4 +35,6 @@ cargo test --all-features
 ./target/release/pint --dev --instant-sealing
 ```
 
+This will seal blocks instantly. The node will never produce blocks
+
 If the [polkadot.js UI](https://polkadot.js.org/apps/#/explorer) fails to connect try adding `--rpc-cors all`.
