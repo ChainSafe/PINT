@@ -48,11 +48,14 @@ and [creating private networks](https://substrate.dev/docs/en/tutorials/start-a-
 
 #### Build the chainspec
 
+```
 ./target/release/pint build-spec \
 --disable-default-bootnode > pint-local-plain.json
+```
 
 #### Build the raw chainspec file
-
+```
 ./target/release/pint build-spec \
 --chain=./pint-local-plain.json \
 --raw --disable-default-bootnode > pint-local-raw.json
+```
