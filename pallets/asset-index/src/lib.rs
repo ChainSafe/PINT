@@ -747,6 +747,17 @@ pub mod pallet {
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
+		/// Determine the index token equivalent value of the given saft_nav
+		///
+		/// Essentially how many index token the given `saft_nav` is worth we get this via `saft_nav
+		/// / NAV` or `NAV^-1 * saft_nav`
+		fn saft_equivalent(saft_nav: T::Balance) -> Result<T::Balance, DispatchError> {
+			Self::nav()?
+				.reciprocal()
+				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
+				.ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
 		/// The fee model depends on how long LP contributions remained in the index.
 		/// Therefore, LP deposits in `deposit` are time-stamped (block number) so that fees can be
 		/// determined as a function of time spent in the index.
@@ -1016,12 +1027,8 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// determine the index token equivalent value of the given saft_nav, or how many index token the
-			// given `saft_nav` is worth we get this via `saft_nav / NAV` or `NAV^-1 * saft_nav`
-			let index_token: T::Balance = Self::nav()?
-				.reciprocal()
-				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
-				.ok_or(ArithmeticError::Overflow)?;
+			// the current index token equivalent value of the given saft nav
+			let index_token = Self::saft_equivalent(saft_nav)?;
 
 			// mint the given units of the SAFT asset into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
@@ -1062,20 +1069,28 @@ pub mod pallet {
 			Ok(())
 		}
 
-		fn remove_saft(who: T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn remove_saft(
+			who: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
 			// native asset can't be processed here
 			Self::ensure_not_native_asset(&asset_id)?;
 
+			// the current index token equivalent value of the given saft nav
+			let index_token = Self::saft_equivalent(saft_nav)?;
+
 			ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
-			ensure!(T::IndexToken::can_slash(&who, nav), Error::<T>::InsufficientDeposit);
+			ensure!(T::IndexToken::can_slash(&who, index_token), Error::<T>::InsufficientDeposit);
 
 			// burn SAFT by withdrawing from the index
 			T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
 			// burn index token accordingly, no index token changes in the meantime
-			T::IndexToken::slash(&who, nav);
+			T::IndexToken::slash(&who, index_token);
 
 			Ok(())
 		}
