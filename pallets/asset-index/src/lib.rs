@@ -288,9 +288,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Thrown if adding units to an asset holding causes its numerical type
-		/// to overflow
-		AssetUnitsOverflow,
 		/// The given asset ID is unknown.
 		UnknownAsset,
 		/// Thrown if the given asset was the native asset and is disallowed
@@ -319,8 +316,6 @@ pub mod pallet {
 		/// Thrown when the redeemer does not have enough PINT as is requested
 		/// for withdrawal.
 		InsufficientDeposit,
-		/// Thrown when calculating the NAV resulted in a overflow
-		NAVOverflow,
 		/// Thrown when to withdrawals are available to complete
 		NoPendingWithdrawals,
 		/// Thrown if the asset that should be added is already registered
@@ -408,7 +403,7 @@ pub mod pallet {
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
-			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			if units.is_zero() {
 				return Ok(().into());
 			}
@@ -447,7 +442,8 @@ pub mod pallet {
 		}
 
 		/// Updates the range for how much a deposit must be worth in index token in order to be
-		/// accpedted. Requires `T::AdminOrigin`
+		/// accpedted.
+		/// Only callable by the admin origin
 		///
 		/// Parameters:
 		/// - `new_range`: The new valid range for deposits.
@@ -580,7 +576,7 @@ pub mod pallet {
 			// amount = fees + redeem
 			let fee = amount
 				.fee(T::BaseWithdrawalFee::get())
-				.ok_or(Error::<T>::AssetUnitsOverflow)?
+				.ok_or(ArithmeticError::Overflow)?
 				.saturating_add(Self::do_consolidate_deposits(&caller, amount)?);
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
@@ -689,7 +685,7 @@ pub mod pallet {
 		/// balance accordingly.
 		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
-			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			Self::do_update_index_token_locks(&caller);
 			Ok(())
 		}
@@ -858,7 +854,7 @@ pub mod pallet {
 
 			Ok(AssetRedemption {
 				asset_amounts,
-				redeemed_index_tokens: redeemed_index_tokens.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)?,
+				redeemed_index_tokens: redeemed_index_tokens.try_into().map_err(|_| ArithmeticError::Overflow)?,
 			})
 		}
 
@@ -1195,7 +1191,7 @@ pub mod pallet {
 			Self::liquid_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth
 					.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
-					.ok_or_else(|| Error::<T>::NAVOverflow.into())
+					.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 
@@ -1203,7 +1199,7 @@ pub mod pallet {
 			Self::saft_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth
 					.checked_add(U256::from(Self::net_saft_value(asset).into()))
-					.ok_or_else(|| Error::<T>::NAVOverflow.into())
+					.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 
@@ -1214,7 +1210,7 @@ pub mod pallet {
 				} else {
 					value.checked_add(U256::from(Self::net_saft_value(asset).into()))
 				}
-				.ok_or_else(|| Error::<T>::NAVOverflow.into())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 

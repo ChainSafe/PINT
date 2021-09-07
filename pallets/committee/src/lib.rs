@@ -24,11 +24,11 @@ mod tests;
 mod types;
 mod utils;
 
-#[frame_support::pallet]
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates
 // this lint requires boxed_local exception as extrinsics must accept boxed calls but clippy only
 // sees the local function
 #[allow(clippy::unused_unit, clippy::boxed_local)]
+#[frame_support::pallet]
 pub mod pallet {
 	pub use crate::types::*;
 	use crate::utils;
@@ -80,7 +80,7 @@ pub mod pallet {
 			Success = <Self as frame_system::Config>::AccountId,
 		>;
 
-		/// Origin that is permitted to execute `add_constituent`
+		/// Origin that is permitted to execute priviliged extrinsics
 		type ApprovedByCommitteeOrigin: EnsureOrigin<<Self as frame_system::Config>::Origin>;
 
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -98,30 +98,30 @@ pub mod pallet {
 
 	// Storage defs
 
-	#[pallet::storage]
 	/// Stores a vector of the hashes of currently active proposals for
 	/// iteration
+	#[pallet::storage]
 	pub type ActiveProposals<T: Config> = StorageValue<_, Vec<HashFor<T>>, ValueQuery>;
 
-	#[pallet::storage]
 	/// Increments with each new proposal. Used to produce a unique nonce per
 	/// proposal instance
+	#[pallet::storage]
 	pub type ProposalCount<T: Config> = StorageValue<_, T::ProposalNonce, ValueQuery>;
 
-	#[pallet::storage]
 	/// Store a mapping (hash) -> Proposal for all existing proposals.
+	#[pallet::storage]
 	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
 
-	#[pallet::storage]
 	/// Store a mapping (hash) -> () for all proposals that have been executed
+	#[pallet::storage]
 	pub type ExecutedProposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
 
-	#[pallet::storage]
 	/// Maps accountIDs to their member type (council or constituent)
+	#[pallet::storage]
 	pub type Members<T: Config> = StorageMap<_, Blake2_128Concat, AccountIdFor<T>, MemberType, OptionQuery>;
 
-	#[pallet::storage]
 	/// Store a mapping (hash) -> VoteAggregate for all existing proposals.
+	#[pallet::storage]
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
 
@@ -299,11 +299,11 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(T::WeightInfo::propose())] // TODO: Set weights
 		/// Extrinsic to propose a new action to be voted upon in the next
 		/// voting period. The provided action will be turned into a
 		/// proposal and added to the list of current active proposals
 		/// to be voted on in the next voting period.
+		#[pallet::weight(T::WeightInfo::propose())]
 		pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
 			let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
 
@@ -328,12 +328,12 @@ pub mod pallet {
 			Ok(().into())
 		}
 
-		#[pallet::weight(T::WeightInfo::vote())] // TODO: Set weights
 		/// Extrinsic to vote on an existing proposal.
 		/// This can only be called by members of the committee.
 		/// Successfully cast votes will be recorded in the state and a proposal
 		/// meeting voting requirements can be executed.
-		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: Vote) -> DispatchResultWithPostInfo {
+		#[pallet::weight(T::WeightInfo::vote())]
+		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: Vote) -> DispatchResult {
 			// Only members can vote
 			let voter = Self::ensure_member(origin)?;
 
@@ -351,7 +351,7 @@ pub mod pallet {
 				}
 			})?;
 
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Extrinsic to close and execute a proposal.
@@ -392,14 +392,12 @@ pub mod pallet {
 
 		/// Add new constituent to the committee
 		///
-		/// NOTE:
-		///
 		/// This call can only be called after the approval of the committee
 		#[pallet::weight(T::WeightInfo::add_constituent())]
-		pub fn add_constituent(origin: OriginFor<T>, constituent: AccountIdFor<T>) -> DispatchResultWithPostInfo {
+		pub fn add_constituent(origin: OriginFor<T>, constituent: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-			<Members<T>>::try_mutate(constituent.clone(), |member| -> Result<(), DispatchError> {
+			Members::<T>::try_mutate(constituent.clone(), |member| -> Result<(), DispatchError> {
 				if let Some(ty) = member {
 					Err(match ty {
 						MemberType::Council => <Error<T>>::AlreadyCouncilMember,
@@ -413,7 +411,7 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::NewConstituent(constituent));
-			Ok(().into())
+			Ok(())
 		}
 	}
 
