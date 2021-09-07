@@ -144,20 +144,28 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Adds a new SAFT to the index and mints the given amount of
-		/// IndexToken to reflect the added NAV of this SAFT.
+		/// Adds a new SAFT to the index and mints the amount of
+		/// IndexToken according to the record's `nav` to reflect the added value of this SAFT
+		/// record.
 		///
 		/// Parameters:
 		///   - `asset_id`: The identifier of the asset secured by the SAFT. If the asset
 		///     identifying the SAFT's asset does not exist yet, it will get created.
 		///   - `nav`: The NAV for the asset being secured by the SAFT at time of submission. This
-		///     is essentially the amount of index token to mint to reflect the value the new SAFT
-		///     secures.
-		///   - `units`: Amount of assets being attested to
-		/// the total value in index tokens the SAFT is worth. The `nav` of
-		/// index token minted and awarded to the LP is specified as part of the
-		/// associated proposal The id that was assigned to the SAFT when it was
-		/// added with `add_saft`
+		///     will be used to determine the amount of index token this record is worth based on
+		///     the current `NAV` of the index.
+		///   - `units`: Amount of assets being attested to the total value in index tokens the SAFT
+		///     is worth.
+		///
+		/// The amount of token minted and awarded to the LP is determined via the current on chain
+		/// NAV of the index token and the `nav` of the record that was part of the associated
+		/// proposal The id that was assigned to the SAFT when it was added with `add_saft`.
+		///
+		/// *NOTE:* For the purpose of calculating the "NAV" of the index, the value
+		/// (`SAFTRecord::nav`) of each record is considered to be denominated in the same currency
+		/// pair as the price feeds used for the liquid assets. For example if all price feeds use a
+		/// `Liquid/USD` pair, then the `SAFTRecord::nav` would describe the USD value of the
+		/// record.
 		///
 		/// Callable by the governance committee.
 		///
@@ -230,8 +238,12 @@ pub mod pallet {
 		///
 		/// The NAV of a SAFT is subject to change over time, and will be
 		/// updated at regular intervals via governance proposals. Changing the
-		/// NAV will also be reflected in the `asset-index`. This is a noop if
-		/// the given `latest_nav` is equal to the current nav of the SAFT.
+		/// NAV of the record will also be reflected in the `asset-index`, because this does not
+		/// burn any index tokens but rather represents a "changed price" of the future token.
+		///
+		///
+		/// This is a noop if the given `latest_nav` is equal to the current nav of the SAFT.
+		///
 		///
 		/// Parameters:
 		///   - `asset_id`: The identifier of the SAFT
@@ -278,6 +290,8 @@ pub mod pallet {
 		///
 		/// Weight: `O(C)` where C is the number of SAFTs for the asset as tracked by the
 		/// `SAFTCounter`.
+		///
+		/// TODO: appropriate fees
 		#[pallet::weight(T::WeightInfo::convert_to_liquid(SAFTCounter::<T>::get(asset_id).saturating_sub(1)))]
 		#[transactional]
 		pub fn convert_to_liquid(
@@ -303,6 +317,7 @@ pub mod pallet {
 		}
 	}
 
+	// implementation of NAV reporting for SAFT records
 	impl<T: Config> SaftRegistry<T::AssetId, T::Balance> for Pallet<T> {
 		fn net_saft_value(asset: T::AssetId) -> T::Balance {
 			SAFTNetAssetValue::<T>::get(asset)

@@ -159,6 +159,11 @@ pub mod pallet {
 	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
+	/// All timestamped deposits of an account.
+	///
+	/// This tracks all deposits, the index token a LP received upon `deposit`.
+	/// This will be used to calculate a withdrawal fee depending on how long the deposit remained
+	/// in the index.
 	#[pallet::storage]
 	#[pallet::getter(fn deposits)]
 	pub type Deposits<T: Config> = StorageMap<
@@ -169,7 +174,10 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
-	///  (AccountId) -> Vec<PendingRedemption>
+	/// All currently pending withdrawal sets for an account.
+	/// Where a single `PendingRedemption` is the result of a `withdraw` call.
+	///
+	/// (AccountId) -> Vec<PendingRedemption>
 	#[pallet::storage]
 	#[pallet::getter(fn pending_withrawals)]
 	pub type PendingWithdrawals<T: Config> = StorageMap<
@@ -288,8 +296,6 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// The given asset ID is unknown.
-		UnknownAsset,
 		/// Thrown if the given asset was the native asset and is disallowed
 		NativeAssetDisallowed,
 		/// Thrown if a SAFT asset operation was requested for a registered
@@ -298,19 +304,12 @@ pub mod pallet {
 		/// Thrown if a liquid asset operation was requested for a registered
 		/// SAFT asset.
 		ExpectedLiquid,
-		/// Thrown if adding saft when total nav is empty
-		EmptyNav,
-		/// Thrown when trying to remove liquid assets without recipient
-		NoRecipient,
 		/// Thrown when trying to remove deposits with no deposits
 		NoDeposits,
 		/// Invalid metadata given.
 		BadMetadata,
 		/// Thrown if no index could be found for an asset identifier.
 		UnsupportedAsset,
-		/// Thrown if calculating the volume of units of an asset with it's
-		/// price overflows.
-		AssetVolumeOverflow,
 		/// Thrown if the given amount of PINT to redeem is too low
 		MinimumRedemption,
 		/// Thrown when the redeemer does not have enough PINT as is requested
@@ -320,8 +319,6 @@ pub mod pallet {
 		NoPendingWithdrawals,
 		/// Thrown if the asset that should be added is already registered
 		AssetAlreadyExists,
-		/// Thrown when adding assets with zero amount or units
-		InvalidPrice,
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,

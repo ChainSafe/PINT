@@ -24,10 +24,11 @@ pub struct RuntimeCall<Call> {
 	/// annotation.
 	pub pallet_index: u8,
 
-	/// The actual that should be dispatched
+	/// The actual dispatchable call of a pallet, like `system::Call::remark(..)`
 	pub call: Call,
 }
 
+/// Abstraction over a dispatchable call in a pallet
 pub trait PalletCall: Sized {
 	/// Returns the index of the call within its pallet
 	fn pallet_call_index(&self) -> u8;
@@ -42,12 +43,13 @@ pub trait PalletCall: Sized {
 
 /// Common trait for encoders of pallet calls
 pub trait PalletCallEncoder {
+	/// The type used to determine whether this encoder can be applied.
 	type Context;
 	/// Whether the encoder can be applied
 	fn can_encode(ctx: &Self::Context) -> bool;
 }
 
-/// Helps encoding the inner call with additional context
+/// Helps encoding the inner call based on the context used.
 pub struct CallEncoder<'a, 'b, Call, Config: PalletCallEncoder> {
 	/// The call to encode
 	pub call: &'a Call,

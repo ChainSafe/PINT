@@ -1,5 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
+
+//! Fee types used in PINT pallets
+
 use codec::{Decode, Encode};
 
 /// Represents the fee rate where fee_rate = numerator / denominator
