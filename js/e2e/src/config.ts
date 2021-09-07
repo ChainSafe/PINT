@@ -12,6 +12,7 @@ export interface Config {
     api: ApiPromise;
     pair: KeyringPair;
     exs: Extrinsic[];
+    config: ExtrinsicConfig;
 }
 
 /**

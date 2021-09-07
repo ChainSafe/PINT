@@ -98,9 +98,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 ASSET_ID_A_VALUE,
             ],
             verify: async () => {
-                console.log(
-                    (await api.query.assetIndex.assets(ASSET_ID_A)).toHuman()
-                );
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isSome,
@@ -249,128 +246,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         // },
         /* committee */
         {
-            signed: config.alice,
-            pallet: "committee",
-            call: "propose",
-            args: [api.tx.balances.transfer(config.bob.address, 1000000)],
-            verify: async () => {
-                const proposals = await api.query.committee.activeProposals();
-                assert(
-                    (proposals as any).length > 0,
-                    "no proposal found after committe.propose"
-                );
-            },
-        },
-        {
-            required: ["committee.propose"],
-            shared: async () => {
-                return new Promise(async (resolve) => {
-                    await waitBlock(1);
-                    const hash = (
-                        (await api.query.committee.activeProposals()) as any
-                    )[0];
-                    const currentBlock = (
-                        await api.derive.chain.bestNumber()
-                    ).toNumber();
-
-                    const end = (
-                        (await api.query.committee.votes(hash)).toJSON() as any
-                    ).end as number;
-
-                    const needsToWait =
-                        end - currentBlock > VOTING_PERIOD
-                            ? end - currentBlock - VOTING_PERIOD
-                            : 0;
-
-                    console.log(
-                        `\t | waiting for the voting peirod (around ${Math.floor(
-                            (needsToWait * 12) / 60
-                        )} mins)...`
-                    );
-
-                    await waitBlock(needsToWait);
-                    resolve(hash);
-                });
-            },
-            signed: config.alice,
-            pallet: "committee",
-            call: "vote",
-            args: [(hash: string) => hash, api.createType("Vote" as any)],
-            with: [
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.bob,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.charlie,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-                async (hash: string): Promise<IExtrinsic> => {
-                    return {
-                        signed: config.dave,
-                        pallet: "committee",
-                        call: "vote",
-                        args: [hash, api.createType("Vote" as any)],
-                    };
-                },
-            ],
-            verify: async (hash: string) => {
-                assert(
-                    ((await api.query.committee.votes(hash)).toJSON() as any)
-                        .votes[0].vote === "Aye",
-                    "committee.vote failed"
-                );
-            },
-        },
-        {
-            required: ["committee.vote"],
-            shared: async () => {
-                return new Promise(async (resolve) => {
-                    await waitBlock(1);
-                    const hash = (
-                        (await api.query.committee.activeProposals()) as any
-                    )[0];
-                    const currentBlock = (
-                        await api.derive.chain.bestNumber()
-                    ).toNumber();
-
-                    const end = (
-                        (await api.query.committee.votes(hash)).toJSON() as any
-                    ).end as number;
-
-                    const needsToWait = end - currentBlock;
-                    console.log(
-                        `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
-                    );
-
-                    await waitBlock(needsToWait > 0 ? needsToWait : 0);
-                    resolve(hash);
-                });
-            },
-            signed: config.alice,
-            pallet: "committee",
-            call: "close",
-            args: [(hash: string) => hash],
-            verify: async (hash: string) => {
-                const proposals = await api.query.committee.executedProposals(
-                    hash
-                );
-
-                assert(
-                    (proposals as any).isSome,
-                    "no proposal executed after committe.close"
-                );
-            },
-        },
-        {
+            proposal: true,
             pallet: "committee",
             call: "addConstituent",
             args: [config.ziggy.address],

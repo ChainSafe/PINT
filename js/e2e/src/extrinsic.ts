@@ -29,6 +29,8 @@ export class Extrinsic {
     id?: string;
     // use signed origin
     signed?: KeyringPair;
+    // default origin
+    pair?: KeyringPair;
     pallet: string;
     call: string;
     args: any[];
@@ -41,7 +43,7 @@ export class Extrinsic {
     /// Calls or functions with this extrinsic
     with?: (IExtrinsic | ((shared?: any) => Promise<IExtrinsic>))[];
 
-    constructor(e: IExtrinsic, api: ApiPromise) {
+    constructor(e: IExtrinsic, api: ApiPromise, pair: KeyringPair) {
         this.api = api;
         this.id = e.id;
         this.signed = e.signed;
@@ -50,6 +52,7 @@ export class Extrinsic {
         this.args = e.args;
         this.shared = e.shared;
         this.verify = e.verify;
+        this.pair = pair;
         this.required = e.required;
         this.with = e.with;
     }
@@ -89,7 +92,7 @@ export class Extrinsic {
     private async send(
         se: SubmittableExtrinsic<"promise", ISubmittableResult>,
         nonce: number,
-        signed = this.signed
+        signed = this.pair
     ): Promise<TxResult> {
         return new Promise((resolve, reject) => {
             const unsub: any = se.signAndSend(
@@ -168,7 +171,8 @@ export class Extrinsic {
                 call: "propose",
                 args: [this.api.tx[this.pallet][this.call](...this.args)],
             },
-            this.api
+            this.api,
+            this.pair
         );
 
         // propose extrinsic
@@ -190,7 +194,7 @@ export class Extrinsic {
         queue.push(
             new Extrinsic(
                 {
-                    id: `propose.${this.pallet}.${this.call}`,
+                    id: `votes.${this.pallet}.${this.call}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
                             await waitBlock(1);
@@ -262,7 +266,8 @@ export class Extrinsic {
                         },
                     ],
                 },
-                this.api
+                this.api,
+                this.pair
             )
         );
 
@@ -270,7 +275,7 @@ export class Extrinsic {
         queue.push(
             new Extrinsic(
                 {
-                    required: [`propose.${this.pallet}.${this.call}`],
+                    required: [`votes.${this.pallet}.${this.call}`],
                     id: `close.${this.pallet}.${this.call}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
@@ -302,7 +307,8 @@ export class Extrinsic {
                     args: [(hash: string) => hash],
                     verify: this.verify,
                 },
-                this.api
+                this.api,
+                this.pair
             )
         );
     }

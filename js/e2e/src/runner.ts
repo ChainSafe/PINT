@@ -46,6 +46,7 @@ export default class Runner implements Config {
     public errors: string[];
     public finished: string[];
     public nonce: number;
+    public config: ExtrinsicConfig;
 
     /**
      * run E2E tests
@@ -114,6 +115,13 @@ export default class Runner implements Config {
         const charlie = keyring.addFromUri("//Charlie");
         const dave = keyring.addFromUri("//Dave");
         const ziggy = keyring.addFromUri("//Ziggy");
+        const config = {
+            alice,
+            bob,
+            charlie,
+            dave,
+            ziggy,
+        };
 
         // create api
         const api = await ApiPromise.create({
@@ -137,13 +145,8 @@ export default class Runner implements Config {
         return new Runner({
             api,
             pair,
-            exs: exs(api, {
-                alice,
-                bob,
-                charlie,
-                dave,
-                ziggy,
-            }),
+            exs: exs(api, config),
+            config,
         });
     }
 
@@ -154,6 +157,7 @@ export default class Runner implements Config {
         this.errors = [];
         this.nonce = 0;
         this.finished = [];
+        this.config = config.config;
     }
 
     /**
@@ -254,7 +258,11 @@ export default class Runner implements Config {
                         n = Number(currentNonce);
                         currentNonce += 1;
                     }
-                    return e.run(this.errors, n);
+                    if (e.proposal) {
+                        return e.propose(this.errors, n, this.exs, this.config);
+                    } else {
+                        return e.run(this.errors, n);
+                    }
                 })
         ).then(() => {
             this.nonce = currentNonce;
