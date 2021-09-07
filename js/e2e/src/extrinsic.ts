@@ -171,7 +171,11 @@ export class Extrinsic {
         // thisecute verify script
         if (this.verify) {
             console.log(`\t | verify: ${this.pallet}.${this.call}`);
-            await this.verify(this.shared);
+            await this.verify(this.shared).catch((err: any) => {
+                errors.push(
+                    `====> Error: ${this.pallet}.${this.call} verify failed: ${err}`
+                );
+            });
         }
 
         if (res && res.unsub) {
