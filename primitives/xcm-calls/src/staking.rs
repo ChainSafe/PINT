@@ -6,11 +6,12 @@
 //! This module provides support for calling into the FRAME `pallet_staking` pallet of a remote
 //! chain via XCM.
 //!
-//! Staking involves bonding funds for a certain amount of blocks.
-//! The `pallet_staking` pallet is configured with [`Config::BondingDuration`] (in number of eras)
-//! must pass until the funds can actually be removed (`withdraw_unbonded`), after they were
-//! `unbonded`.
-//! - An **Era** is defined as  (whole) number of sessions, which is the period that the validator
+//! Staking involves the bonding of funds for a certain amount of blocks.
+//!
+//! The `pallet_staking` pallet is configured with the [`Config::BondingDuration`], the in number of
+//! eras that must pass until the funds can actually be removed (`withdraw_unbonded`), after they
+//! were `unbonded`.
+//! - An **Era** is defined as (whole) number of sessions, which is the period that the validator
 //!   set (and each validator's active nominator set) is recalculated and where rewards are paid
 //!   out. An era is ~7 days (relay chain) and the `BondingDuration` on polkadot is 28 Eras and 7
 //!   Eras on Kusama.
