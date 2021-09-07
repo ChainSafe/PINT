@@ -98,6 +98,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 ASSET_ID_A_VALUE,
             ],
             verify: async () => {
+                console.log(
+                    (await api.query.assetIndex.assets(ASSET_ID_A)).toHuman()
+                );
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isSome,
@@ -128,25 +131,25 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["assetIndex.deposit"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "withdraw",
-            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
-            verify: async () => {
-                // assert(
-                //     (
-                //         (
-                //             await api.query.assetIndex.pendingWithdrawals(
-                //                 config.alice.address
-                //             )
-                //         ).toHuman() as any
-                //     ).length === 1,
-                //     "assetIndex.withdraw failed"
-                // );
-            },
-        },
+        // {
+        //     required: ["assetIndex.deposit"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "withdraw",
+        //     args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (
+        //                     await api.query.assetIndex.pendingWithdrawals(
+        //                         config.alice.address
+        //                     )
+        //                 ).toHuman() as any
+        //             ).length === 1,
+        //             "assetIndex.withdraw failed"
+        //         );
+        //     },
+        // },
         // {
         //     required: ["assetIndex.withdraw"],
         //     shared: async () => {
@@ -497,20 +500,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //                 )
         //             )) as any
         //         ).toJSON();
-        //         // const expect = {
-        //         //     nav: 336,
-        //         //     units: 42,
-        //         // };
-        //         // assert(
-        //         //     JSON.stringify(saft[0]) ===
-        //         //         JSON.stringify({
-        //         //             nav: 336,
-        //         //             units: 42,
-        //         //         }),
-        //         //     `Report nav failed, expect: ${JSON.stringify(
-        //         //         expect
-        //         //     )}, result: ${JSON.stringify(saft[0])}`
-        //         // );
+        //         const expect = {
+        //             nav: 336,
+        //             units: 42,
+        //         };
+        //         assert(
+        //             JSON.stringify(saft[0]) ===
+        //                 JSON.stringify({
+        //                     nav: 336,
+        //                     units: 42,
+        //                 }),
+        //             `Report nav failed, expect: ${JSON.stringify(
+        //                 expect
+        //             )}, result: ${JSON.stringify(saft[0])}`
+        //         );
         //     },
         // },
         /* asset-index */
