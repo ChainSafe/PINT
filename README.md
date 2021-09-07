@@ -49,16 +49,26 @@ build on another machine.
 
 ### Development Chain
 
-You can start a standalone development chain with:
+You can start a standalone development chain with instant sealing:
 
 ```bash
-cargo run -- --dev --instant-sealing
+cargo run -- --tmp --dev --instant-sealing
 ```
+
+Use a chain spec file with pre funded Developer accounts
+
+```bash
+cargo run -- --tmp --chain ./resources/pint-dev.json --instant-sealing
+```
+
+__NOTE: the amount of PINT in all the endowed accounts (dev accounts) of the balances pallet (
+see [pint-dev.json](resources/pint-dev.json)) directly affects the NAV, since this is the total amount of PINT in
+curculation at genesis__
 
 Or if already built
 
 ```bash
-./target/release/pint --dev --instant-sealing
+./target/release/pint --tmp --dev --instant-sealing
 ```
 
 This will use the [`node/src/chain_spec/dev.rs`](node/src/chain_spec/dev.rs) chain spec.

@@ -18,7 +18,9 @@ use sc_consensus_aura::ImportQueueParams;
 pub use sc_executor::NativeExecutor;
 use sc_executor::{native_executor_instance, NativeExecutionDispatch};
 use sc_network::NetworkService;
-use sc_service::{Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager};
+use sc_service::{
+	error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager,
+};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
 use sc_transaction_pool::BasicPool;
 use sp_api::ConstructRuntimeApi;
@@ -69,15 +71,15 @@ pub trait IdentifyVariant {
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
 	fn is_kusama(&self) -> bool {
-		self.id().starts_with("kusama")
+		self.id().contains("kusama")
 	}
 
 	fn is_polkadot(&self) -> bool {
-		self.id().starts_with("polkadot")
+		self.id().contains("polkadot")
 	}
 
 	fn is_dev(&self) -> bool {
-		self.id().starts_with("dev")
+		self.id().starts_with("pint_dev")
 	}
 }
 
@@ -87,7 +89,7 @@ type FullBackend = TFullBackend<Block>;
 /// PINT's full client.
 type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
 
-/// Maybe Mandala Dev full select chain.
+/// Maybe PINT Dev full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
 
 fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
@@ -505,7 +507,159 @@ pub fn new_chain_ops(
 		Err(POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		let PartialComponents { client, backend, import_queue, task_manager, .. } =
-			new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(config, false, false)?;
+			new_partial(config, config.chain_spec.is_dev(), false)?;
 		Ok((Arc::new(Client::Dev(client)), backend, import_queue, task_manager))
 	}
+}
+
+fn inner_pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskManager, ServiceError> {
+	use futures::stream::StreamExt;
+
+	let sc_service::PartialComponents {
+		client,
+		backend,
+		mut task_manager,
+		import_queue,
+		keystore_container,
+		select_chain: maybe_select_chain,
+		transaction_pool,
+		other: (mut telemetry, _),
+	} = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(&config, true, instant_sealing)?;
+
+	let (network, system_rpc_tx, network_starter) = sc_service::build_network(sc_service::BuildNetworkParams {
+		config: &config,
+		client: client.clone(),
+		transaction_pool: transaction_pool.clone(),
+		spawn_handle: task_manager.spawn_handle(),
+		import_queue,
+		on_demand: None,
+		block_announce_validator_builder: None,
+		warp_sync: None,
+	})?;
+
+	if config.offchain_worker.enabled {
+		sc_service::build_offchain_workers(&config, task_manager.spawn_handle(), client.clone(), network.clone());
+	}
+
+	let prometheus_registry = config.prometheus_registry().cloned();
+
+	let role = config.role.clone();
+	let force_authoring = config.force_authoring;
+	let backoff_authoring_blocks: Option<()> = None;
+
+	let select_chain =
+		maybe_select_chain.expect("In pint dev mode, `new_partial` will return some `select_chain`; qed");
+
+	if role.is_authority() {
+		let proposer_factory = sc_basic_authorship::ProposerFactory::new(
+			task_manager.spawn_handle(),
+			client.clone(),
+			transaction_pool.clone(),
+			prometheus_registry.as_ref(),
+			telemetry.as_ref().map(|x| x.handle()),
+		);
+
+		if instant_sealing {
+			let pool = transaction_pool.pool().clone();
+			let commands_stream = pool.validated_pool().import_notification_stream().map(|_| {
+				sc_consensus_manual_seal::rpc::EngineCommand::SealNewBlock {
+					create_empty: false,
+					finalize: true,
+					parent_hash: None,
+					sender: None,
+				}
+			});
+
+			let authorship_future =
+				sc_consensus_manual_seal::run_manual_seal(sc_consensus_manual_seal::ManualSealParams {
+					block_import: client.clone(),
+					env: proposer_factory,
+					client: client.clone(),
+					pool: transaction_pool.clone(),
+					commands_stream,
+					select_chain,
+					consensus_data_provider: None,
+					create_inherent_data_providers: |_, _| async {
+						Ok((
+							sp_timestamp::InherentDataProvider::from_system_time(),
+							default_mock_parachain_inherent_data_provider(),
+						))
+					},
+				});
+			// we spawn the future on a background thread managed by service.
+			task_manager.spawn_essential_handle().spawn_blocking("instant-seal", authorship_future);
+		} else {
+			// aura
+			let can_author_with = sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
+			let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
+			let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(
+				sc_consensus_aura::StartAuraParams {
+					slot_duration: sc_consensus_aura::slot_duration(&*client)?,
+					client: client.clone(),
+					select_chain,
+					block_import: client.clone(),
+					proposer_factory,
+					create_inherent_data_providers: move |_, ()| async move {
+						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+
+						let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+							*timestamp,
+							slot_duration,
+						);
+
+						Ok((timestamp, slot, default_mock_parachain_inherent_data_provider()))
+					},
+					force_authoring,
+					backoff_authoring_blocks,
+					keystore: keystore_container.sync_keystore(),
+					can_author_with,
+					sync_oracle: network.clone(),
+					justification_sync_link: network.clone(),
+					// We got around 500ms for proposing
+					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+					// And a maximum of 750ms if slots are skipped
+					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+					telemetry: telemetry.as_ref().map(|x| x.handle()),
+				},
+			)?;
+
+			// the AURA authoring task is considered essential, i.e. if it
+			// fails we take down the service with it.
+			task_manager.spawn_essential_handle().spawn_blocking("aura", aura);
+		}
+	}
+
+	let rpc_extensions_builder = {
+		let client = client.clone();
+		let transaction_pool = transaction_pool.clone();
+
+		Box::new(move |deny_unsafe, _| {
+			let deps = pint_rpc::FullDeps { client: client.clone(), pool: transaction_pool.clone(), deny_unsafe };
+
+			Ok(pint_rpc::create_full(deps))
+		})
+	};
+
+	sc_service::spawn_tasks(sc_service::SpawnTasksParams {
+		on_demand: None,
+		remote_blockchain: None,
+		rpc_extensions_builder,
+		client,
+		transaction_pool,
+		task_manager: &mut task_manager,
+		config,
+		keystore: keystore_container.sync_keystore(),
+		backend,
+		network,
+		system_rpc_tx,
+		telemetry: telemetry.as_mut(),
+	})?;
+
+	network_starter.start_network();
+
+	Ok(task_manager)
+}
+
+pub fn pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskManager, ServiceError> {
+	inner_pint_dev(config, instant_sealing)
 }
