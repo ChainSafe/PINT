@@ -283,9 +283,6 @@ export class Extrinsic {
                     id: `close.${this.pallet}.${this.call}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
-                            const hash = (
-                                (await this.api.query.committee.activeProposals()) as any
-                            )[0];
                             const currentBlock = (
                                 await this.api.derive.chain.bestNumber()
                             ).toNumber();
@@ -323,27 +320,21 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      */
     public async run(errors: string[], nonce: number): Promise<void | string> {
-        console.log(
-            `-> queue extrinsic ${nonce}: ${this.pallet}.${this.call}...`
-        );
+        console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
         const tx = this.build();
 
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
             (err: any) => {
-                errors.push(
-                    `====> Error: ${this.pallet}.${this.call} failed: ${err}`
-                );
+                errors.push(`====> Error: ${this.id} failed: ${err}`);
             }
         )) as TxResult;
 
         // thisecute verify script
         if (this.verify) {
-            console.log(`\t | verify: ${this.pallet}.${this.call}`);
+            console.log(`\t | verify: ${this.id}`);
             await this.verify(this.shared).catch((err: any) => {
-                errors.push(
-                    `====> Error: ${this.pallet}.${this.call} verify failed: ${err}`
-                );
+                errors.push(`====> Error: ${this.id} verify failed: ${err}`);
             });
         }
 
