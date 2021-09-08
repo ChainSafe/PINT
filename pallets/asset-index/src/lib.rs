@@ -355,32 +355,21 @@ pub mod pallet {
 			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			let caller = T::AdminOrigin::ensure_origin(origin)?;
-			if units.is_zero() {
-				return Ok(().into());
-			}
+			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, location, amount)
+		}
 
-			let availability = AssetAvailability::Liquid(location);
-
-			// check whether this is a new asset and make sure locations match otherwise
-			let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
-				ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
-				false
-			} else {
-				true
-			};
-
-			// transfer the caller's fund into the treasury account
-			Self::add_liquid(&caller, asset_id, units, amount)?;
-
-			// register asset if not yet known
-			if is_new_asset {
-				Assets::<T>::insert(asset_id, availability.clone());
-				Self::deposit_event(Event::AssetRegistered(asset_id, availability));
-			}
-
-			Self::deposit_event(Event::AssetAdded(asset_id, units, caller, amount));
-			Ok(().into())
+		/// Add liquid asset with root origin, see `add_asset`
+		#[pallet::weight(T::WeightInfo::add_asset())]
+		pub fn force_add_asset(
+			origin: OriginFor<T>,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			location: MultiLocation,
+			amount: T::Balance,
+			recipient: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			Self::do_add_asset(recipient, asset_id, units, location, amount)
 		}
 
 		/// Dispatches transfer to move assets out of the index’s account,
@@ -400,20 +389,20 @@ pub mod pallet {
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
 		) -> DispatchResultWithPostInfo {
-			let caller = T::AdminOrigin::ensure_origin(origin)?;
-			if units.is_zero() {
-				return Ok(().into());
-			}
-			Self::ensure_not_native_asset(&asset_id)?;
+			Self::do_remove_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, recipient)
+		}
 
-			// the amount of index token the given units of the liquid assets are worth
-			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
-
-			// transfer the caller's fund into the treasury account
-			Self::remove_liquid(caller.clone(), asset_id, units, index_tokens, recipient.clone())?;
-
-			Self::deposit_event(Event::AssetRemoved(asset_id, units, caller, recipient, index_tokens));
-			Ok(().into())
+		/// Remove liquid asset with root origin
+		#[pallet::weight(T::WeightInfo::remove_asset())]
+		pub fn force_remove_asset(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			recipient: Option<T::AccountId>,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+			Self::do_remove_asset(who, asset_id, units, recipient)
 		}
 
 		/// Registers a new asset in the index together with its availability
@@ -753,6 +742,66 @@ pub mod pallet {
 				.reciprocal()
 				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
 				.ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		/// Adds liquid asset
+		///
+		/// - If asset not exists, create asset
+		/// - If asset exists, deposit more units into matched asset
+		fn do_add_asset(
+			recipient: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			location: MultiLocation,
+			amount: T::Balance,
+		) -> DispatchResultWithPostInfo {
+			if units.is_zero() {
+				return Ok(().into());
+			}
+
+			let availability = AssetAvailability::Liquid(location);
+
+			// check whether this is a new asset and make sure locations match otherwise
+			let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
+				ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
+				false
+			} else {
+				true
+			};
+
+			// transfer the caller's fund into the treasury account
+			Self::add_liquid(&recipient, asset_id, units, amount)?;
+
+			// register asset if not yet known
+			if is_new_asset {
+				Assets::<T>::insert(asset_id, availability.clone());
+				Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+			}
+
+			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
+			Ok(().into())
+		}
+
+		/// Removes liquid assets
+		fn do_remove_asset(
+			who: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			recipient: Option<T::AccountId>,
+		) -> DispatchResultWithPostInfo {
+			if units.is_zero() {
+				return Ok(().into());
+			}
+			Self::ensure_not_native_asset(&asset_id)?;
+
+			// the amount of index token the given units of the liquid assets are worth
+			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
+
+			// transfer the caller's fund into the treasury account
+			Self::remove_liquid(who.clone(), asset_id, units, index_tokens, recipient.clone())?;
+
+			Self::deposit_event(Event::AssetRemoved(asset_id, units, who, recipient, index_tokens));
+			Ok(().into())
 		}
 
 		/// The fee model depends on how long LP contributions remained in the index.

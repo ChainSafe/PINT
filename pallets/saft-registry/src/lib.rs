@@ -171,37 +171,26 @@ pub mod pallet {
 		///
 		/// Weight: `O(1)`
 		#[pallet::weight(T::WeightInfo::add_saft())]
-		#[transactional]
 		pub fn add_saft(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			nav: T::Balance,
 			units: T::Balance,
 		) -> DispatchResult {
-			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
-			if units.is_zero() {
-				return Ok(());
-			}
-			// mint SAFT units into the index and credit the caller's account with PINT
-			T::AssetRecorder::add_saft(&caller, asset_id, units, nav)?;
+			Self::do_add_saft(T::AdminOrigin::ensure_origin(origin.clone())?, asset_id, nav, units)
+		}
 
-			// keep track of total nav
-			SAFTNetAssetValue::<T>::try_mutate(asset_id, |val| -> Result<_, DispatchError> {
-				*val = val.checked_add(&nav).ok_or(ArithmeticError::Overflow)?;
-				Ok(())
-			})?;
-
-			// Determine the next id for the SAFT
-			let saft_id = SAFTCounter::<T>::try_mutate(asset_id, |counter| -> Result<_, DispatchError> {
-				let id = *counter;
-				*counter = counter.checked_add(SAFTId::one()).ok_or(ArithmeticError::Overflow)?;
-				Ok(id)
-			})?;
-
-			// insert the new record
-			ActiveSAFTs::<T>::insert(asset_id, saft_id, SAFTRecord::new(nav, units));
-			Self::deposit_event(Event::<T>::SAFTAdded(asset_id, saft_id));
-			Ok(())
+		/// Adds saft with root origin
+		#[pallet::weight(T::WeightInfo::add_saft())]
+		pub fn force_add_saft(
+			origin: OriginFor<T>,
+			recipient: T::AccountId,
+			asset_id: T::AssetId,
+			nav: T::Balance,
+			units: T::Balance,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::do_add_saft(recipient, asset_id, nav, units)
 		}
 
 		/// Removes the SAFT from the registry by purging it from the
@@ -219,18 +208,19 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_saft())]
 		#[transactional]
 		pub fn remove_saft(origin: OriginFor<T>, asset_id: T::AssetId, saft_id: SAFTId) -> DispatchResult {
-			let who = T::AdminOrigin::ensure_origin(origin.clone())?;
+			Self::do_remove_saft(T::AdminOrigin::ensure_origin(origin.clone())?, asset_id, saft_id)
+		}
 
-			// remove the SAFT record
-			let saft = ActiveSAFTs::<T>::take(asset_id, saft_id).ok_or(Error::<T>::SAFTNotFound)?;
-
-			// reflect the change in NAV
-			T::AssetRecorder::remove_saft(who, asset_id, saft.units, saft.nav)?;
-			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| *nav = nav.saturating_sub(saft.nav));
-
-			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id));
-
-			Ok(())
+		/// Removes saft assets with root origin
+		#[pallet::weight(T::WeightInfo::remove_saft())]
+		pub fn force_remove_saft(
+			origin: OriginFor<T>,
+			asset_id: T::AssetId,
+			saft_id: SAFTId,
+			who: T::AccountId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::do_remove_saft(who, asset_id, saft_id)
 		}
 
 		/// Called to update the Net Asset Value (NAV) associated with
@@ -313,6 +303,59 @@ pub mod pallet {
 			}
 
 			Self::deposit_event(Event::<T>::ConvertedToLiquid(asset_id, location));
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T> {
+		/// Adds saft asset
+		///
+		/// - If asset not exists, create asset
+		/// - If asset exists, deposit more units into matched asset
+		#[transactional]
+		fn do_add_saft(
+			recipient: T::AccountId,
+			asset_id: T::AssetId,
+			nav: T::Balance,
+			units: T::Balance,
+		) -> DispatchResult {
+			if units.is_zero() {
+				return Ok(());
+			}
+			// mint SAFT units into the index and credit the recipient's account with PINT
+			T::AssetRecorder::add_saft(&recipient, asset_id, units, nav)?;
+
+			// keep track of total nav
+			SAFTNetAssetValue::<T>::try_mutate(asset_id, |val| -> Result<_, DispatchError> {
+				*val = val.checked_add(&nav).ok_or(ArithmeticError::Overflow)?;
+				Ok(())
+			})?;
+
+			// Determine the next id for the SAFT
+			let saft_id = SAFTCounter::<T>::try_mutate(asset_id, |counter| -> Result<_, DispatchError> {
+				let id = *counter;
+				*counter = counter.checked_add(SAFTId::one()).ok_or(ArithmeticError::Overflow)?;
+				Ok(id)
+			})?;
+
+			// insert the new record
+			ActiveSAFTs::<T>::insert(asset_id, saft_id, SAFTRecord::new(nav, units));
+			Self::deposit_event(Event::<T>::SAFTAdded(asset_id, saft_id));
+			Ok(())
+		}
+
+		/// Removes saft assets
+		#[transactional]
+		fn do_remove_saft(who: T::AccountId, asset_id: T::AssetId, saft_id: SAFTId) -> DispatchResult {
+			// remove the SAFT record
+			let saft = ActiveSAFTs::<T>::take(asset_id, saft_id).ok_or(Error::<T>::SAFTNotFound)?;
+
+			// reflect the change in NAV
+			T::AssetRecorder::remove_saft(who, asset_id, saft.units, saft.nav)?;
+			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| *nav = nav.saturating_sub(saft.nav));
+
+			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id));
+
 			Ok(())
 		}
 	}
