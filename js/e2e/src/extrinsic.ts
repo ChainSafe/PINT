@@ -55,6 +55,7 @@ export class Extrinsic {
         this.pair = pair;
         this.required = e.required;
         this.with = e.with;
+        this.proposal = e.proposal;
     }
 
     /**
@@ -213,6 +214,9 @@ export class Extrinsic {
                                     ? end - currentBlock - VOTING_PERIOD
                                     : 0;
 
+                            console.log(
+                                `\t | voting ${this.pallet}.${this.call}}`
+                            );
                             console.log(
                                 `\t | waiting for the voting peirod (around ${Math.floor(
                                     (needsToWait * 12) / 60
