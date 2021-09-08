@@ -159,52 +159,57 @@ export class Extrinsic {
      * Run extrinsic with proposal
      */
     public async propose(
-        finished: string[],
+        proposals: Record<string, string>,
         errors: string[],
-        nonce: number,
         queue: Extrinsic[],
         config: ExtrinsicConfig
     ): Promise<void | string> {
-        const proposal = new Extrinsic(
-            {
-                id: `propose.${this.pallet}.${this.call}`,
-                signed: this.signed,
-                pallet: "committee",
-                call: "propose",
-                args: [this.api.tx[this.pallet][this.call](...this.args)],
-            },
-            this.api,
-            this.pair
-        );
-
-        // propose extrinsic
-        await proposal.run(finished, errors, nonce);
-
-        // get the proposal hash
-        const proposals =
-            (await this.api.query.committee.activeProposals()) as any;
-
-        // check if proposed
-        if (!proposals || proposals.length < 1) {
-            errors.push(`====> Error: ${this.id} failed: propose failed`);
-        }
-
-        // get the proposal hash
-        const hash = proposals[proposals.length - 1];
+        const id = `${this.pallet}.${this.call}`;
         queue.push(
             new Extrinsic(
                 {
+                    id: `propose.${id}`,
+                    signed: this.signed,
+                    pallet: "committee",
+                    call: "propose",
+                    args: [this.api.tx[this.pallet][this.call](...this.args)],
+                    verify: async () => {
+                        const activeProposals =
+                            (await this.api.query.committee.activeProposals()) as any;
+
+                        // check if proposed
+                        if (!proposals || activeProposals.length < 1) {
+                            errors.push(
+                                `====> Error: ${this.id} failed: propose failed`
+                            );
+                        }
+
+                        const hash =
+                            activeProposals[activeProposals.length - 1];
+                        proposals[id] = hash;
+                    },
+                },
+                this.api,
+                this.pair
+            )
+        );
+
+        queue.push(
+            new Extrinsic(
+                {
+                    required: [`propose.${id}`],
                     id: `votes.${this.pallet}.${this.call}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
-                            await waitBlock(1);
                             const currentBlock = (
                                 await this.api.derive.chain.bestNumber()
                             ).toNumber();
 
                             const end = (
                                 (
-                                    await this.api.query.committee.votes(hash)
+                                    await this.api.query.committee.votes(
+                                        proposals[id]
+                                    )
                                 ).toJSON() as any
                             ).end as number;
 
@@ -223,16 +228,13 @@ export class Extrinsic {
                             );
 
                             await waitBlock(needsToWait);
-                            resolve(hash);
+                            resolve(proposals[id]);
                         });
                     },
                     signed: config.alice,
                     pallet: "committee",
                     call: "vote",
-                    args: [
-                        (hash: string) => hash,
-                        this.api.createType("Vote" as any),
-                    ],
+                    args: [proposals[id], this.api.createType("Vote" as any)],
                     with: [
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
@@ -291,7 +293,9 @@ export class Extrinsic {
 
                             const end = (
                                 (
-                                    await this.api.query.committee.votes(hash)
+                                    await this.api.query.committee.votes(
+                                        proposals[id]
+                                    )
                                 ).toJSON() as any
                             ).end as number;
 
@@ -301,7 +305,7 @@ export class Extrinsic {
                             );
 
                             await waitBlock(needsToWait > 0 ? needsToWait : 0);
-                            resolve(hash);
+                            resolve(proposals[id]);
                         });
                     },
                     signed: config.alice,
