@@ -248,7 +248,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
-                                id: `votes.${this.pallet}.${this.call}.bob`,
+                                id: `votes.${this.pallet}.${this.call}.charlie`,
                                 signed: config.charlie,
                                 pallet: "committee",
                                 call: "vote",
@@ -260,7 +260,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
-                                id: `votes.${this.pallet}.${this.call}.bob`,
+                                id: `votes.${this.pallet}.${this.call}.dave`,
                                 signed: config.dave,
                                 pallet: "committee",
                                 call: "vote",
