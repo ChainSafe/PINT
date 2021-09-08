@@ -69,6 +69,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             proposal: true,
             signed: config.alice,
+            required: ["votes.assetIndex.addAsset"],
             pallet: "assetIndex",
             call: "setMetadata",
             args: [ASSET_ID_A, "PINT_TEST", "P", 9],
