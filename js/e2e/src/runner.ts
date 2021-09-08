@@ -224,6 +224,17 @@ export default class Runner implements Config {
             }
         }
 
+        if (queue.length === 0) {
+            console.error(
+                `Error: some required extrinsics missed: \n\t ${JSON.stringify(
+                    this.finished,
+                    null,
+                    2
+                )}`
+            );
+            process.exit(1);
+        }
+
         // 3. register transactions
         await this.batch(queue);
 

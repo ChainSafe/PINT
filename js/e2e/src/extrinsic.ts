@@ -198,7 +198,7 @@ export class Extrinsic {
             new Extrinsic(
                 {
                     required: [`propose.${id}`],
-                    id: `votes.${this.pallet}.${this.call}`,
+                    id: `votes.${id}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
                             const currentBlock = (
@@ -238,7 +238,7 @@ export class Extrinsic {
                     with: [
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
-                                id: `votes.${this.pallet}.${this.call}.bob`,
+                                id: `votes.${id}.bob`,
                                 signed: config.bob,
                                 pallet: "committee",
                                 call: "vote",
@@ -250,7 +250,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
-                                id: `votes.${this.pallet}.${this.call}.charlie`,
+                                id: `votes.${id}.charlie`,
                                 signed: config.charlie,
                                 pallet: "committee",
                                 call: "vote",
@@ -262,7 +262,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
-                                id: `votes.${this.pallet}.${this.call}.dave`,
+                                id: `votes.${id}.dave`,
                                 signed: config.dave,
                                 pallet: "committee",
                                 call: "vote",
@@ -283,7 +283,7 @@ export class Extrinsic {
         queue.push(
             new Extrinsic(
                 {
-                    required: [`votes.${this.pallet}.${this.call}`],
+                    required: [`votes.${id}.dave`],
                     id: `close.${this.pallet}.${this.call}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
@@ -350,7 +350,8 @@ export class Extrinsic {
 
         if (res && res.unsub) {
             (await res.unsub)();
-            finished.push(this.id);
         }
+
+        finished.push(this.id);
     }
 }
