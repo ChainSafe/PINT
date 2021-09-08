@@ -215,7 +215,7 @@ export class Extrinsic {
                                     : 0;
 
                             console.log(
-                                `\t | voting ${this.pallet}.${this.call}}`
+                                `\t | voting ${this.pallet}.${this.call}`
                             );
                             console.log(
                                 `\t | waiting for the voting peirod (around ${Math.floor(

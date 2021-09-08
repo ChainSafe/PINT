@@ -99,9 +99,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 ASSET_ID_A_VALUE,
             ],
             verify: async () => {
-                console.log(
-                    (await api.query.assetIndex.assets(ASSET_ID_A)).toHuman()
-                );
                 assert(
                     ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
                         .isSome,
@@ -109,29 +106,30 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        // {
-        //     required: ["priceFeed.mapAssetPriceFeed"],
-        //     shared: async () => {
-        //         return (await api.query.system.account(config.alice.address))
-        //             .data.free;
-        //     },
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "deposit",
-        //     args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
-        //     verify: async (before: Balance) => {
-        //         const current = (
-        //             await api.query.system.account(config.alice.address)
-        //         ).data.free;
-        //
-        //         // cover weight fee
-        //         assert(
-        //             current.sub(before).div(PINT).toNumber() ===
-        //                 ASSET_ID_A_DEPOSIT.toNumber() - 1,
-        //             "assetIndex.deposit failed"
-        //         );
-        //     },
-        // },
+        {
+            proposal: true,
+            required: ["priceFeed.mapAssetPriceFeed"],
+            shared: async () => {
+                return (await api.query.system.account(config.alice.address))
+                    .data.free;
+            },
+            signed: config.alice,
+            pallet: "assetIndex",
+            call: "deposit",
+            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
+
+                // cover weight fee
+                assert(
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
+                    "assetIndex.deposit failed"
+                );
+            },
+        },
         // {
         //     required: ["assetIndex.deposit"],
         //     signed: config.alice,
@@ -283,61 +281,61 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //         );
         //     },
         // },
-        // /* chainlink_feed */
-        // {
-        //     signed: config.alice,
-        //     pallet: "chainlinkFeed",
-        //     call: "createFeed",
-        //     args: [
-        //         100000000000,
-        //         0,
-        //         [100000000000, 100000000000],
-        //         1,
-        //         9,
-        //         "test_feed",
-        //         0,
-        //         [[config.alice.address, config.bob.address]],
-        //         null,
-        //         null,
-        //     ],
-        //     verify: async () => {
-        //         assert(
-        //             (await api.query.chainlinkFeed.feeds.entries()).length ===
-        //                 1,
-        //             "Create feed failed"
-        //         );
-        //     },
-        // },
-        // {
-        //     required: ["chainlinkFeed.createFeed"],
-        //     signed: config.alice,
-        //     pallet: "chainlinkFeed",
-        //     call: "submit",
-        //     args: [0, 1, 100000000000],
-        //     verify: async () => {
-        //         assert(
-        //             (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
-        //             "Create feed failed"
-        //         );
-        //     },
-        // },
+        /* chainlink_feed */
+        {
+            signed: config.alice,
+            pallet: "chainlinkFeed",
+            call: "createFeed",
+            args: [
+                100000000000,
+                0,
+                [100000000000, 100000000000],
+                1,
+                9,
+                "test_feed",
+                0,
+                [[config.alice.address, config.bob.address]],
+                null,
+                null,
+            ],
+            verify: async () => {
+                assert(
+                    (await api.query.chainlinkFeed.feeds.entries()).length ===
+                        1,
+                    "Create feed failed"
+                );
+            },
+        },
+        {
+            required: ["chainlinkFeed.createFeed"],
+            signed: config.alice,
+            pallet: "chainlinkFeed",
+            call: "submit",
+            args: [0, 1, 100000000000],
+            verify: async () => {
+                assert(
+                    (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
+                    "Create feed failed"
+                );
+            },
+        },
         /* price-feed */
-        // {
-        //     required: ["chainlinkFeed.submit"],
-        //     pallet: "priceFeed",
-        //     call: "mapAssetPriceFeed",
-        //     args: [ASSET_ID_A, 0],
-        //     verify: async () => {
-        //         assert(
-        //             Number(
-        //                 (
-        //                     await api.query.priceFeed.assetFeeds(ASSET_ID_A)
-        //                 ).toHuman()
-        //             ) === 0,
-        //             "map feed failed"
-        //         );
-        //     },
-        // },
+        {
+            required: ["chainlinkFeed.submit"],
+            pallet: "priceFeed",
+            call: "mapAssetPriceFeed",
+            args: [ASSET_ID_A, 0],
+            verify: async () => {
+                assert(
+                    Number(
+                        (
+                            await api.query.priceFeed.assetFeeds(ASSET_ID_A)
+                        ).toHuman()
+                    ) === 0,
+                    "map feed failed"
+                );
+            },
+        },
         // {
         //     required: ["assetIndex.deposit"],
         //     pallet: "priceFeed",
