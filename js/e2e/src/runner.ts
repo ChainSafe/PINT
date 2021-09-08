@@ -193,7 +193,7 @@ export default class Runner implements Config {
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
-                    if (this.exs.map((i) => i.id).includes(r)) {
+                    if (!this.finished.includes(r)) {
                         requiredFinished = false;
                         break;
                     }
@@ -259,9 +259,15 @@ export default class Runner implements Config {
                         currentNonce += 1;
                     }
                     if (e.proposal) {
-                        return e.propose(this.errors, n, this.exs, this.config);
+                        return e.propose(
+                            this.finished,
+                            this.errors,
+                            n,
+                            this.exs,
+                            this.config
+                        );
                     } else {
-                        return e.run(this.errors, n);
+                        return e.run(this.finished, this.errors, n);
                     }
                 })
         ).then(() => {

@@ -112,10 +112,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             proposal: true,
             required: ["priceFeed.mapAssetPriceFeed"],
             shared: async () => {
-                console.log(
-                    (await api.query.system.account(config.alice.address)).data
-                        .free
-                );
                 return (await api.query.system.account(config.alice.address))
                     .data.free;
             },
@@ -258,11 +254,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             call: "addConstituent",
             args: [config.ziggy.address],
             verify: async () => {
-                console.log(
-                    (
-                        await api.query.committee.members(config.ziggy.address)
-                    ).toHuman()
-                );
                 assert(
                     (
                         (await api.query.committee.members(
@@ -327,7 +318,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
-            required: ["chainlinkFeed.submit"],
+            proposal: true,
+            required: ["votes.assetIndex.addAsset"],
             pallet: "priceFeed",
             call: "mapAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -342,19 +334,19 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            required: ["close.assetIndex.deposit"],
-            pallet: "priceFeed",
-            call: "unmapAssetPriceFeed",
-            args: [ASSET_ID_A],
-            verify: async () => {
-                assert(
-                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-                        .isNone,
-                    "unmap price feed failed"
-                );
-            },
-        },
+        // {
+        //     required: ["close.assetIndex.deposit"],
+        //     pallet: "priceFeed",
+        //     call: "unmapAssetPriceFeed",
+        //     args: [ASSET_ID_A],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "unmap price feed failed"
+        //         );
+        //     },
+        // },
         /* saft-registry */
         // {
         //     signed: config.alice,

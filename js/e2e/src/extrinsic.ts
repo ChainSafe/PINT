@@ -159,6 +159,7 @@ export class Extrinsic {
      * Run extrinsic with proposal
      */
     public async propose(
+        finished: string[],
         errors: string[],
         nonce: number,
         queue: Extrinsic[],
@@ -177,7 +178,7 @@ export class Extrinsic {
         );
 
         // propose extrinsic
-        await proposal.run(errors, nonce);
+        await proposal.run(finished, errors, nonce);
 
         // get the proposal hash
         const proposals =
@@ -185,9 +186,7 @@ export class Extrinsic {
 
         // check if proposed
         if (!proposals || proposals.length < 1) {
-            errors.push(
-                `====> Error: ${this.pallet}.${this.call} failed: propose failed`
-            );
+            errors.push(`====> Error: ${this.id} failed: propose failed`);
         }
 
         // get the proposal hash
@@ -237,6 +236,7 @@ export class Extrinsic {
                     with: [
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
+                                id: `votes.${this.pallet}.${this.call}.bob`,
                                 signed: config.bob,
                                 pallet: "committee",
                                 call: "vote",
@@ -248,6 +248,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
+                                id: `votes.${this.pallet}.${this.call}.bob`,
                                 signed: config.charlie,
                                 pallet: "committee",
                                 call: "vote",
@@ -259,6 +260,7 @@ export class Extrinsic {
                         },
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
+                                id: `votes.${this.pallet}.${this.call}.bob`,
                                 signed: config.dave,
                                 pallet: "committee",
                                 call: "vote",
@@ -319,7 +321,11 @@ export class Extrinsic {
      *
      * @param {ex} Extrinsic
      */
-    public async run(errors: string[], nonce: number): Promise<void | string> {
+    public async run(
+        finished: string[],
+        errors: string[],
+        nonce: number
+    ): Promise<void | string> {
         console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
         const tx = this.build();
 
@@ -340,6 +346,7 @@ export class Extrinsic {
 
         if (res && res.unsub) {
             (await res.unsub)();
+            finished.push(this.id);
         }
     }
 }
