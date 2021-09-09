@@ -18,6 +18,8 @@ const ASSET_ID_A: number = 42;
 const ASSET_ID_A_UNITS: BN = new BN(100);
 const ASSET_ID_A_AMOUNT: BN = new BN(100);
 const ASSET_ID_B: number = 43;
+const ASSET_ID_B_NAV: BN = new BN(100);
+const ASSET_ID_B_UNITS: BN = new BN(100);
 const BALANCE_THOUSAND: BN = new BN(1000);
 const VOTING_PERIOD: number = 10;
 const WITHDRAWALS_PERIOD: number = 10;
@@ -257,12 +259,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         ? end - currentBlock - WITHDRAWALS_PERIOD
                         : 0;
 
-                console.log(
-                    `\t | waiting for the withdrawls peirod (around ${Math.floor(
-                        (needsToWait * 12) / 60
-                    )} mins)...`
-                );
-
                 await waitBlock(needsToWait);
             },
             signed: config.alice,
@@ -284,7 +280,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             // proposal: true,
             signed: config.alice,
             // required: ["votes.priceFeed.mapAssetPriceFeed"],
-            required: ["priceFeed.mapAssetPriceFeed"],
+            required: ["assetIndex.completeWithdraw"],
             pallet: "assetIndex",
             call: "setMetadata",
             args: [ASSET_ID_A, "PINT_TEST", "P", 9],
@@ -304,7 +300,64 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        /* remote-asset-manager*/
+        // TODO: XCM
+        //
+        // {
+        //     // proposal: true,
+        //     // required: ["votes.priceFeed.unmapAssetPriceFeed"],
+        //     required: ["assetIndex.setMetadata"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "removeAsset",
+        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+        // },
+        /* saft-registry */
+        {
+            required: ["assetIndex.deposit"],
+            signed: config.alice,
+            pallet: "saftRegistry",
+            call: "addSaft",
+            args: [ASSET_ID_B, ASSET_ID_B_NAV, ASSET_ID_B_UNITS],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
+                        .isSome,
+                    "Add saft failed"
+                );
+            },
+        },
+        {
+            required: ["saftRegistry.addSaft"],
+            signed: config.alice,
+            pallet: "saftRegistry",
+            call: "reportNav",
+            args: [ASSET_ID_B, 0, ASSET_ID_B_NAV],
+            verify: async () => {
+                const saft = (
+                    (await api.query.saftRegistry.activeSAFTs(
+                        ASSET_ID_B,
+                        0
+                    )) as any
+                ).toJSON();
+
+                console.log(saft);
+                // const expect = {
+                //     nav: 336,
+                //     units: 42,
+                // };
+                // assert(
+                //     JSON.stringify(saft[0]) ===
+                //         JSON.stringify({
+                //             nav: 336,
+                //             units: 42,
+                //         }),
+                //     `Report nav failed, expect: ${JSON.stringify(
+                //         expect
+                //     )}, result: ${JSON.stringify(saft[0])}`
+                // );
+            },
+        },
+        /* remote-asset-manager */
         // {
         //     required: ["assetIndex.addAsset"],
         //     signed: config.alice,
@@ -358,71 +411,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //                 }),
         //
         //             "remoteAssetManager.sendBond failed"
-        //         );
-        //     },
-        // },
-        /* saft-registry */
-        // {
-        //     signed: config.alice,
-        //     pallet: "saftRegistry",
-        //     call: "addSaft",
-        //     args: [ASSET_ID_B, 168, 42],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
-        //                 .isSome,
-        //             "Add saft failed"
-        //         );
-        //     },
-        // },
-        // {
-        //     required: ["saftRegistry.addSaft"],
-        //     signed: config.alice,
-        //     pallet: "saftRegistry",
-        //     call: "reportNav",
-        //     args: [ASSET_ID_B, 0, 336],
-        //     verify: async () => {
-        //         const saft = (
-        //             (await api.query.saftRegistry.activeSAFTs(
-        //                 ASSET_ID_B,
-        //                 Number(
-        //                     (
-        //                         await api.query.saftRegistry.sAFTCounter(
-        //                             ASSET_ID_B
-        //                         )
-        //                     ).toHuman()
-        //                 )
-        //             )) as any
-        //         ).toJSON();
-        //         const expect = {
-        //             nav: 336,
-        //             units: 42,
-        //         };
-        //         assert(
-        //             JSON.stringify(saft[0]) ===
-        //                 JSON.stringify({
-        //                     nav: 336,
-        //                     units: 42,
-        //                 }),
-        //             `Report nav failed, expect: ${JSON.stringify(
-        //                 expect
-        //             )}, result: ${JSON.stringify(saft[0])}`
-        //         );
-        //     },
-        // },
-        /* asset-index */
-        // {
-        //     proposal: true,
-        //     required: ["votes.priceFeed.unmapAssetPriceFeed"],
-        //     signed: config.alice,
-        //     pallet: "assetIndex",
-        //     call: "removeAsset",
-        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-        //                 .isNone,
-        //             "assetIndex.removeAsset failed"
         //         );
         //     },
         // },

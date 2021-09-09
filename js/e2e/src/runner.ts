@@ -170,15 +170,15 @@ export default class Runner implements Config {
             await this.queue().catch(console.error);
         }
 
-        // if (this.errors.length > 0) {
-        //     console.log(`Failed tests: ${this.errors.length}`);
-        //     for (const error of this.errors) {
-        //         console.log(error);
-        //     }
-        //     process.exit(1);
-        // }
-        // console.log("COMPLETE TESTS!");
-        // process.exit(0);
+        if (this.errors.length > 0) {
+            console.log(`Failed tests: ${this.errors.length}`);
+            for (const error of this.errors) {
+                console.log(error);
+            }
+            process.exit(1);
+        }
+        console.log("COMPLETE TESTS!");
+        process.exit(0);
     }
 
     /**
