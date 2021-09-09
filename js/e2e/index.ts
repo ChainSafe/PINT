@@ -16,10 +16,11 @@ import BN from "bn.js";
 
 const ASSET_ID_A: number = 42;
 const ASSET_ID_A_UNITS: number = 1;
-const ASSET_ID_A_VALUE: number = 1;
+const ASSET_ID_A_VALUE: BN = new BN(10000);
 const ASSET_ID_A_DEPOSIT: BN = new BN(10000);
 const ASSET_ID_B: number = 43;
 const BALANCE_THOUSAND: BN = new BN(1000);
+const BALANCE_HUNDRED: BN = new BN(100);
 const VOTING_PERIOD: number = 10;
 const WITHDRAWALS_PERIOD: number = 10;
 
@@ -65,30 +66,109 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 },
             ],
         },
+        /* committee */
+        {
+            pallet: "committee",
+            call: "addConstituent",
+            args: [config.ziggy.address],
+            verify: async () => {
+                assert(
+                    (
+                        (await api.query.committee.members(
+                            config.ziggy.address
+                        )) as any
+                    ).isSome,
+                    "Add constituent failed"
+                );
+            },
+        },
+        /* local_treasury */
+        {
+            pallet: "localTreasury",
+            call: "withdraw",
+            args: [500000000000, config.ziggy.address],
+            verify: async () => {
+                assert(
+                    (
+                        await api.derive.balances.all(config.ziggy.address)
+                    ).freeBalance.toNumber() === 500000000000,
+                    "localTreasury.withdraw failed"
+                );
+            },
+        },
+        /* chainlink_feed */
+        {
+            signed: config.alice,
+            pallet: "chainlinkFeed",
+            call: "createFeed",
+            args: [
+                100000000000,
+                0,
+                [100000000000, 100000000000],
+                1,
+                9,
+                "test_feed",
+                0,
+                [[config.alice.address, config.bob.address]],
+                null,
+                null,
+            ],
+            verify: async () => {
+                assert(
+                    (await api.query.chainlinkFeed.feeds.entries()).length ===
+                        1,
+                    "Create feed failed"
+                );
+            },
+        },
+        {
+            required: ["chainlinkFeed.createFeed"],
+            signed: config.alice,
+            pallet: "chainlinkFeed",
+            call: "submit",
+            args: [0, 1, 100000000000],
+            verify: async () => {
+                assert(
+                    (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
+                    "Create feed failed"
+                );
+            },
+        },
+        /* price-feed */
+        {
+            proposal: true,
+            signed: config.alice,
+            required: ["votes.assetIndex.addAsset"],
+            pallet: "priceFeed",
+            call: "mapAssetPriceFeed",
+            args: [ASSET_ID_A, 0],
+            verify: async () => {
+                assert(
+                    Number(
+                        (
+                            await api.query.priceFeed.assetFeeds(ASSET_ID_A)
+                        ).toHuman()
+                    ) === 0,
+                    "map feed failed"
+                );
+            },
+        },
+        {
+            proposal: true,
+            required: ["votes.assetIndex.withdraw"],
+            pallet: "priceFeed",
+            call: "unmapAssetPriceFeed",
+            args: [ASSET_ID_A],
+            verify: async () => {
+                assert(
+                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+                        .isNone,
+                    "unmap price feed failed"
+                );
+            },
+        },
         /* asset-index */
-        // {
-        //     proposal: true,
-        //     signed: config.alice,
-        //     required: ["votes.priceFeed.mapAssetPriceFeed"],
-        //     pallet: "assetIndex",
-        //     call: "setMetadata",
-        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-        //     verify: async () => {
-        //         assert(
-        //             JSON.stringify(
-        //                 (
-        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
-        //                 ).toHuman()
-        //             ) ===
-        //                 JSON.stringify({
-        //                     name: "PINT_TEST",
-        //                     symbol: "P",
-        //                     decimals: "9",
-        //                 }),
-        //             "assetIndex.setMetadata failed"
-        //         );
-        //     },
-        // },
+
         {
             proposal: true,
             signed: config.alice,
@@ -118,42 +198,46 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
-            args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
-            verify: async (_before: Balance) => {
-                // const current = (
-                //     await api.query.system.account(config.alice.address)
-                // ).data.free;
-                //
-                // // cover weight fee
-                // assert(
-                //     current.sub(before).div(PINT).toNumber() ===
-                //         ASSET_ID_A_DEPOSIT.toNumber() - 1,
-                //     "assetIndex.deposit failed"
-                // );
-            },
-        },
-        {
-            proposal: true,
-            required: ["close.assetIndex.deposit"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "withdraw",
-            args: [PINT.mul(BALANCE_THOUSAND).div(new BN(4))],
-            verify: async () => {
-                // assert(
-                //     (
-                //         (
-                //             await api.query.assetIndex.pendingWithdrawals(
-                //                 config.alice.address
-                //             )
-                //         ).toHuman() as any
-                //     ).length === 1,
-                //     "assetIndex.withdraw failed"
-                // );
+            args: [ASSET_ID_A, ASSET_ID_A_DEPOSIT],
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
+
+                console.log(before);
+                console.log(current);
+
+                // cover weight fee
+                assert(
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
+                    "assetIndex.deposit failed"
+                );
             },
         },
         // {
-        //     required: ["assetIndex.withdraw"],
+        //     proposal: true,
+        //     required: ["close.assetIndex.deposit"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "withdraw",
+        //     args: [PINT.mul(BALANCE_HUNDRED)],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (
+        //                     await api.query.assetIndex.pendingWithdrawals(
+        //                         config.alice.address
+        //                     )
+        //                 ).toHuman() as any
+        //             ).length === 1,
+        //             "assetIndex.withdraw failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     proposal: true,
+        //     required: ["close.assetIndex.withdraw"],
         //     shared: async () => {
         //         const currentBlock = (
         //             await api.derive.chain.bestNumber()
@@ -182,14 +266,37 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     call: "completeWithdraw",
         //     args: [],
         //     verify: async () => {
-        //         // assert(
-        //         //     (
-        //         //         (await api.query.assetIndex.pendingWithdrawals(
-        //         //             config.alice.address
-        //         //         )) as any
-        //         //     ).isNone,
-        //         //     "assetIndex.completeWithdraw failed"
-        //         // );
+        //         assert(
+        //             (
+        //                 (await api.query.assetIndex.pendingWithdrawals(
+        //                     config.alice.address
+        //                 )) as any
+        //             ).isNone,
+        //             "assetIndex.completeWithdraw failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     proposal: true,
+        //     signed: config.alice,
+        //     required: ["votes.priceFeed.mapAssetPriceFeed"],
+        //     pallet: "assetIndex",
+        //     call: "setMetadata",
+        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+        //     verify: async () => {
+        //         assert(
+        //             JSON.stringify(
+        //                 (
+        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
+        //                 ).toHuman()
+        //             ) ===
+        //                 JSON.stringify({
+        //                     name: "PINT_TEST",
+        //                     symbol: "P",
+        //                     decimals: "9",
+        //                 }),
+        //             "assetIndex.setMetadata failed"
+        //         );
         //     },
         // },
         /* remote-asset-manager*/
@@ -246,107 +353,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //                 }),
         //
         //             "remoteAssetManager.sendBond failed"
-        //         );
-        //     },
-        // },
-        /* committee */
-        // {
-        //     pallet: "committee",
-        //     call: "addConstituent",
-        //     args: [config.ziggy.address],
-        //     verify: async () => {
-        //         assert(
-        //             (
-        //                 (await api.query.committee.members(
-        //                     config.ziggy.address
-        //                 )) as any
-        //             ).isSome,
-        //             "Add constituent failed"
-        //         );
-        //     },
-        // },
-        /* local_treasury */
-        // {
-        //     pallet: "localTreasury",
-        //     call: "withdraw",
-        //     args: [500000000000, config.ziggy.address],
-        //     verify: async () => {
-        //         assert(
-        //             (
-        //                 await api.derive.balances.all(config.ziggy.address)
-        //             ).freeBalance.toNumber() === 500000000000,
-        //             "localTreasury.withdraw failed"
-        //         );
-        //     },
-        // },
-        /* chainlink_feed */
-        {
-            signed: config.alice,
-            pallet: "chainlinkFeed",
-            call: "createFeed",
-            args: [
-                100000000000,
-                0,
-                [100000000000, 100000000000],
-                1,
-                9,
-                "test_feed",
-                0,
-                [[config.alice.address, config.bob.address]],
-                null,
-                null,
-            ],
-            verify: async () => {
-                assert(
-                    (await api.query.chainlinkFeed.feeds.entries()).length ===
-                        1,
-                    "Create feed failed"
-                );
-            },
-        },
-        {
-            required: ["chainlinkFeed.createFeed"],
-            signed: config.alice,
-            pallet: "chainlinkFeed",
-            call: "submit",
-            args: [0, 1, 100000000000],
-            verify: async () => {
-                assert(
-                    (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
-                    "Create feed failed"
-                );
-            },
-        },
-        /* price-feed */
-        {
-            proposal: true,
-            signed: config.alice,
-            required: ["votes.assetIndex.addAsset"],
-            pallet: "priceFeed",
-            call: "mapAssetPriceFeed",
-            args: [ASSET_ID_A, 0],
-            verify: async () => {
-                // assert(
-                //     Number(
-                //         (
-                //             await api.query.priceFeed.assetFeeds(ASSET_ID_A)
-                //         ).toHuman()
-                //     ) === 0,
-                //     "map feed failed"
-                // );
-            },
-        },
-        // {
-        //     proposal: true,
-        //     required: ["votes.assetIndex.withdraw"],
-        //     pallet: "priceFeed",
-        //     call: "unmapAssetPriceFeed",
-        //     args: [ASSET_ID_A],
-        //     verify: async () => {
-        //         assert(
-        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-        //                 .isNone,
-        //             "unmap price feed failed"
         //         );
         //     },
         // },
