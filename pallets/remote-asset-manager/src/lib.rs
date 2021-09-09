@@ -610,6 +610,28 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Disallow further remote transfers and halt remote staking.
+		///
+		/// - `asset_id`: The identifier of the asset to be frozen.
+		///
+		/// Callable by the admin origin
+		#[pallet::weight(10_000)] // TODO: Set weights
+		pub fn freeze(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			Ok(())
+		}
+
+		/// Allow remote transfers and enable remote staking again.
+		///
+		/// - `asset_id`: The identifier of the asset to be frozen.
+		///
+		/// Callable by the admin origin
+		#[pallet::weight(10_000)] // TODO: Set weights
+		pub fn thaw(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			Ok(())
+		}
+
 		/// Enables XCM transactions for the statemint parachain, if configured.
 		///
 		/// This is a noop if it's already enabled
