@@ -400,21 +400,21 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     },
         // },
         /* asset-index */
-        {
-            proposal: true,
-            required: ["votes.priceFeed.unmapAssetPriceFeed"],
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "removeAsset",
-            args: [ASSET_ID_A, BALANCE_THOUSAND, null],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-                        .isNone,
-                    "assetIndex.removeAsset failed"
-                );
-            },
-        },
+        // {
+        //     proposal: true,
+        //     required: ["votes.priceFeed.unmapAssetPriceFeed"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "removeAsset",
+        //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "assetIndex.removeAsset failed"
+        //         );
+        //     },
+        // },
     ].map((e) => new Extrinsic(expandId(e), api, config.alice));
 };
 
