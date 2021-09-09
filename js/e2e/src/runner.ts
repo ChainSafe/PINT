@@ -47,7 +47,6 @@ export default class Runner implements Config {
     public finished: string[];
     public nonce: number;
     public config: ExtrinsicConfig;
-    public proposals: Record<string, string>;
 
     /**
      * run E2E tests
@@ -159,7 +158,6 @@ export default class Runner implements Config {
         this.nonce = 0;
         this.finished = [];
         this.config = config.config;
-        this.proposals = {};
     }
 
     /**
@@ -274,7 +272,6 @@ export default class Runner implements Config {
 
                     if (e.proposal) {
                         return e.propose(
-                            this.proposals,
                             this.finished,
                             this.errors,
                             n,

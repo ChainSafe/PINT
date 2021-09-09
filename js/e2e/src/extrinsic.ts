@@ -156,10 +156,25 @@ export class Extrinsic {
     }
 
     /**
+     * Get the latest proposal hash
+     */
+    private async getLastestProposal(): Promise<string> {
+        const activeProposals =
+            (await this.api.query.committee.activeProposals()) as any;
+
+        // check if proposed
+        if (activeProposals.length < 1) {
+            await waitBlock(1);
+            return this.getLastestProposal();
+        }
+
+        return activeProposals[activeProposals.length - 1];
+    }
+
+    /**
      * Run extrinsic with proposal
      */
     public async propose(
-        proposals: Record<string, string>,
         finished: string[],
         errors: string[],
         nonce: number,
@@ -180,17 +195,7 @@ export class Extrinsic {
         );
 
         await proposal.run(finished, errors, nonce);
-
-        const activeProposals =
-            (await this.api.query.committee.activeProposals()) as any;
-
-        // check if proposed
-        if (!proposals || activeProposals.length < 1) {
-            errors.push(`====> Error: ${this.id} failed: propose failed`);
-        }
-
-        const hash = activeProposals[activeProposals.length - 1];
-        proposals[id] = hash;
+        const hash = await this.getLastestProposal();
 
         queue.push(
             new Extrinsic(
@@ -203,7 +208,6 @@ export class Extrinsic {
                                 await this.api.derive.chain.bestNumber()
                             ).toNumber();
 
-                            const hash = proposals[id];
                             const end = (
                                 (
                                     await this.api.query.committee.votes(hash)
@@ -231,7 +235,7 @@ export class Extrinsic {
                     signed: config.alice,
                     pallet: "committee",
                     call: "vote",
-                    args: [proposals[id], this.api.createType("Vote" as any)],
+                    args: [hash, this.api.createType("Vote" as any)],
                     with: [
                         async (hash: string): Promise<IExtrinsic> => {
                             return {
@@ -288,7 +292,6 @@ export class Extrinsic {
                                 await this.api.derive.chain.bestNumber()
                             ).toNumber();
 
-                            const hash = proposals[id];
                             const end = (
                                 (
                                     await this.api.query.committee.votes(hash)

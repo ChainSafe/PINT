@@ -402,7 +402,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         /* asset-index */
         {
             proposal: true,
-            required: ["votes.priceFeed.mapAssetPriceFeed"],
+            required: ["votes.priceFeed.unmapAssetPriceFeed"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "removeAsset",
