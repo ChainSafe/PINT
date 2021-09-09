@@ -182,11 +182,15 @@ impl frame_system::Config for Runtime {
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
+parameter_types! {
+	pub const MinimumPeriodDev: u64 = MILLISECS_PER_BLOCK / 6;
+}
+
 impl pallet_timestamp::Config for Runtime {
 	/// A timestamp: milliseconds since the unix epoch.
 	type Moment = u64;
 	type OnTimestampSet = ();
-	type MinimumPeriod = MinimumPeriod;
+	type MinimumPeriod = MinimumPeriodDev;
 	type WeightInfo = ();
 }
 

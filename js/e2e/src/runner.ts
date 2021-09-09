@@ -46,6 +46,7 @@ export default class Runner implements Config {
     public errors: string[];
     public finished: string[];
     public nonce: number;
+    public config: ExtrinsicConfig;
 
     /**
      * run E2E tests
@@ -114,6 +115,13 @@ export default class Runner implements Config {
         const charlie = keyring.addFromUri("//Charlie");
         const dave = keyring.addFromUri("//Dave");
         const ziggy = keyring.addFromUri("//Ziggy");
+        const config = {
+            alice,
+            bob,
+            charlie,
+            dave,
+            ziggy,
+        };
 
         // create api
         const api = await ApiPromise.create({
@@ -137,13 +145,8 @@ export default class Runner implements Config {
         return new Runner({
             api,
             pair,
-            exs: exs(api, {
-                alice,
-                bob,
-                charlie,
-                dave,
-                ziggy,
-            }),
+            exs: exs(api, config),
+            config,
         });
     }
 
@@ -154,6 +157,7 @@ export default class Runner implements Config {
         this.errors = [];
         this.nonce = 0;
         this.finished = [];
+        this.config = config.config;
     }
 
     /**
@@ -189,7 +193,7 @@ export default class Runner implements Config {
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
-                    if (this.exs.map((i) => i.id).includes(r)) {
+                    if (!this.finished.includes(r)) {
                         requiredFinished = false;
                         break;
                     }
@@ -216,6 +220,17 @@ export default class Runner implements Config {
                     queue.push(new Extrinsic(ex, this.api, this.pair));
                 }
             }
+        }
+
+        if (queue.length === 0) {
+            console.error(
+                `Error: some required extrinsics missed: \n\t ${JSON.stringify(
+                    this.finished,
+                    null,
+                    2
+                )}`
+            );
+            process.exit(1);
         }
 
         // 3. register transactions
@@ -254,7 +269,18 @@ export default class Runner implements Config {
                         n = Number(currentNonce);
                         currentNonce += 1;
                     }
-                    return e.run(this.errors, n);
+
+                    if (e.proposal) {
+                        return e.propose(
+                            this.finished,
+                            this.errors,
+                            n,
+                            this.exs,
+                            this.config
+                        );
+                    } else {
+                        return e.run(this.finished, this.errors, n);
+                    }
                 })
         ).then(() => {
             this.nonce = currentNonce;

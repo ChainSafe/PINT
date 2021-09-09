@@ -12,6 +12,7 @@ export interface Config {
     api: ApiPromise;
     pair: KeyringPair;
     exs: Extrinsic[];
+    config: ExtrinsicConfig;
 }
 
 /**
@@ -38,6 +39,7 @@ export interface IExtrinsic {
     args: any[];
     shared?: () => Promise<any>;
     verify?: (shared?: any) => Promise<void>;
+    proposal?: boolean;
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
