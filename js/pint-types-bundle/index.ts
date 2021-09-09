@@ -93,6 +93,10 @@ export const definitions = {
                     end_block: "BlockNumber",
                     assets: "Vec<AssetWithdrawal>",
                 },
+                Proposal: {
+                    nonce: "ProposalNonce",
+                    action: "Call",
+                },
                 ProposalNonce: "u32",
                 ProxyType: {
                     _enum: ["Any", "NonTransfer", "Governance", "Staking"],

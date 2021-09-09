@@ -266,22 +266,22 @@ export default class Runner implements Config {
                     return isFunction;
                 })
                 .map((e) => {
+                    let n = -1;
+                    if (!e.signed || e.signed.address === this.pair.address) {
+                        n = Number(currentNonce);
+                        currentNonce += 1;
+                    }
+
                     if (e.proposal) {
                         return e.propose(
                             this.proposals,
+                            this.finished,
                             this.errors,
+                            n,
                             this.exs,
                             this.config
                         );
                     } else {
-                        let n = -1;
-                        if (
-                            !e.signed ||
-                            e.signed.address === this.pair.address
-                        ) {
-                            n = Number(currentNonce);
-                            currentNonce += 1;
-                        }
                         return e.run(this.finished, this.errors, n);
                     }
                 })
