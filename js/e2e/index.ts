@@ -15,9 +15,8 @@ import { Balance } from "@polkadot/types/interfaces/runtime";
 import BN from "bn.js";
 
 const ASSET_ID_A: number = 42;
-const ASSET_ID_A_UNITS: number = 1;
-const ASSET_ID_A_VALUE: BN = new BN(10000);
-const ASSET_ID_A_DEPOSIT: BN = new BN(10000);
+const ASSET_ID_A_UNITS: BN = new BN(100);
+const ASSET_ID_A_AMOUNT: BN = new BN(1000000);
 const ASSET_ID_B: number = 43;
 const BALANCE_THOUSAND: BN = new BN(1000);
 const BALANCE_HUNDRED: BN = new BN(100);
@@ -40,59 +39,73 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
 
     return [
         /* balance */
+        // {
+        //     signed: config.alice,
+        //     pallet: "balances",
+        //     call: "transfer",
+        //     args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
+        //     with: [
+        //         {
+        //             signed: config.alice,
+        //             pallet: "balances",
+        //             call: "transfer",
+        //             args: [config.bob.address, PINT.mul(BALANCE_THOUSAND)],
+        //         },
+        //         {
+        //             signed: config.alice,
+        //             pallet: "balances",
+        //             call: "transfer",
+        //             args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
+        //         },
+        //         {
+        //             signed: config.alice,
+        //             pallet: "balances",
+        //             call: "transfer",
+        //             args: [config.dave.address, PINT.mul(BALANCE_THOUSAND)],
+        //         },
+        //     ],
+        // },
+        // /* committee */
+        // {
+        //     pallet: "committee",
+        //     call: "addConstituent",
+        //     args: [config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (await api.query.committee.members(
+        //                     config.ziggy.address
+        //                 )) as any
+        //             ).isSome,
+        //             "Add constituent failed"
+        //         );
+        //     },
+        // },
+        // /* local_treasury */
+        // {
+        //     pallet: "localTreasury",
+        //     call: "withdraw",
+        //     args: [500000000000, config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 await api.derive.balances.all(config.ziggy.address)
+        //             ).freeBalance.toNumber() === 500000000000,
+        //             "localTreasury.withdraw failed"
+        //         );
+        //     },
+        // },
+        /* orml_tokens */
         {
-            signed: config.alice,
-            pallet: "balances",
-            call: "transfer",
-            args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-            with: [
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.bob.address, PINT.mul(BALANCE_THOUSAND)],
-                },
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.charlie.address, PINT.mul(BALANCE_THOUSAND)],
-                },
-                {
-                    signed: config.alice,
-                    pallet: "balances",
-                    call: "transfer",
-                    args: [config.dave.address, PINT.mul(BALANCE_THOUSAND)],
-                },
-            ],
-        },
-        /* committee */
-        {
-            pallet: "committee",
-            call: "addConstituent",
-            args: [config.ziggy.address],
+            required: ["assetIndex.addAsset"],
+            pallet: "tokens",
+            call: "setBalance",
+            args: [config.alice.address, ASSET_ID_A, PINT.mul(new BN(100)), 0],
             verify: async () => {
-                assert(
+                console.log(
                     (
-                        (await api.query.committee.members(
-                            config.ziggy.address
-                        )) as any
-                    ).isSome,
-                    "Add constituent failed"
-                );
-            },
-        },
-        /* local_treasury */
-        {
-            pallet: "localTreasury",
-            call: "withdraw",
-            args: [500000000000, config.ziggy.address],
-            verify: async () => {
-                assert(
-                    (
-                        await api.derive.balances.all(config.ziggy.address)
-                    ).freeBalance.toNumber() === 500000000000,
-                    "localTreasury.withdraw failed"
+                        await api.query.tokens.accounts(config.alice.address)
+                    ).toHuman()
                 );
             },
         },
@@ -102,11 +115,11 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             pallet: "chainlinkFeed",
             call: "createFeed",
             args: [
-                100000000000,
+                PINT.mul(new BN(100)),
                 0,
-                [100000000000, 100000000000],
+                [1, 100],
                 1,
-                9,
+                0,
                 "test_feed",
                 0,
                 [[config.alice.address, config.bob.address]],
@@ -126,7 +139,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             signed: config.alice,
             pallet: "chainlinkFeed",
             call: "submit",
-            args: [0, 1, 100000000000],
+            args: [0, 1, 1],
             verify: async () => {
                 assert(
                     (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
@@ -136,9 +149,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
-            proposal: true,
-            signed: config.alice,
-            required: ["votes.assetIndex.addAsset"],
+            // required: ["votes.assetIndex.addAsset"],
+            required: ["assetIndex.addAsset"],
             pallet: "priceFeed",
             call: "mapAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -153,32 +165,31 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            proposal: true,
-            required: ["votes.assetIndex.withdraw"],
-            pallet: "priceFeed",
-            call: "unmapAssetPriceFeed",
-            args: [ASSET_ID_A],
-            verify: async () => {
-                assert(
-                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-                        .isNone,
-                    "unmap price feed failed"
-                );
-            },
-        },
+        // {
+        //     // required: ["votes.assetIndex.withdraw"],
+        //     required: ["assetIndex.withdraw"],
+        //     pallet: "priceFeed",
+        //     call: "unmapAssetPriceFeed",
+        //     args: [ASSET_ID_A],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "unmap price feed failed"
+        //         );
+        //     },
+        // },
         /* asset-index */
-
         {
-            proposal: true,
+            // proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
             args: [
                 ASSET_ID_A,
-                ASSET_ID_A_UNITS,
+                PINT.mul(ASSET_ID_A_UNITS),
                 PARENT_LOCATION,
-                ASSET_ID_A_VALUE,
+                PINT.mul(ASSET_ID_A_AMOUNT),
             ],
             verify: async () => {
                 assert(
@@ -188,36 +199,28 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
-        {
-            proposal: true,
-            required: ["votes.priceFeed.mapAssetPriceFeed"],
-            shared: async () => {
-                return (await api.query.system.account(config.alice.address))
-                    .data.free;
-            },
-            signed: config.alice,
-            pallet: "assetIndex",
-            call: "deposit",
-            args: [ASSET_ID_A, ASSET_ID_A_DEPOSIT],
-            verify: async (before: Balance) => {
-                const current = (
-                    await api.query.system.account(config.alice.address)
-                ).data.free;
-
-                console.log(before);
-                console.log(current);
-
-                // cover weight fee
-                assert(
-                    current.sub(before).div(PINT).toNumber() ===
-                        ASSET_ID_A_DEPOSIT.toNumber() - 1,
-                    "assetIndex.deposit failed"
-                );
-            },
-        },
         // {
-        //     proposal: true,
-        //     required: ["close.assetIndex.deposit"],
+        //     // proposal: true,
+        //     // required: ["votes.priceFeed.mapAssetPriceFeed"],
+        //     required: ["priceFeed.mapAssetPriceFeed"],
+        //     signed: config.alice,
+        //     pallet: "assetIndex",
+        //     call: "deposit",
+        //     args: [ASSET_ID_A, PINT.mul(ASSET_ID_A_DEPOSIT)],
+        //     verify: async () => {
+        //         console.log(
+        //             (
+        //                 await api.query.assetIndex.deposits(
+        //                     config.alice.address
+        //                 )
+        //             ).toHuman()
+        //         );
+        //     },
+        // },
+        // {
+        //     // proposal: true,
+        //     // required: ["close.assetIndex.deposit"],
+        //     required: ["assetIndex.deposit"],
         //     signed: config.alice,
         //     pallet: "assetIndex",
         //     call: "withdraw",

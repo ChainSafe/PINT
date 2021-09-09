@@ -170,15 +170,15 @@ export default class Runner implements Config {
             await this.queue().catch(console.error);
         }
 
-        if (this.errors.length > 0) {
-            console.log(`Failed tests: ${this.errors.length}`);
-            for (const error of this.errors) {
-                console.log(error);
-            }
-            process.exit(1);
-        }
-        console.log("COMPLETE TESTS!");
-        process.exit(0);
+        // if (this.errors.length > 0) {
+        //     console.log(`Failed tests: ${this.errors.length}`);
+        //     for (const error of this.errors) {
+        //         console.log(error);
+        //     }
+        //     process.exit(1);
+        // }
+        // console.log("COMPLETE TESTS!");
+        // process.exit(0);
     }
 
     /**
@@ -188,12 +188,14 @@ export default class Runner implements Config {
      */
     public async queue(): Promise<void> {
         const queue: Extrinsic[] = [];
+        let missed = [];
         for (const e of this.exs) {
             // 0. check if required ex with ids has finished
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
                     if (!this.finished.includes(r)) {
+                        missed.push(r);
                         requiredFinished = false;
                         break;
                     }
@@ -223,13 +225,7 @@ export default class Runner implements Config {
         }
 
         if (queue.length === 0) {
-            console.error(
-                `Error: some required extrinsics missed: \n\t ${JSON.stringify(
-                    this.finished,
-                    null,
-                    2
-                )}`
-            );
+            console.error(`Error: required extrinsics missed: ${missed}`);
             process.exit(1);
         }
 

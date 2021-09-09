@@ -335,6 +335,7 @@ export class Extrinsic {
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
             (err: any) => {
+                console.log(`====> Error: ${this.id} failed: ${err}`);
                 errors.push(`====> Error: ${this.id} failed: ${err}`);
             }
         )) as TxResult;
@@ -343,6 +344,7 @@ export class Extrinsic {
         if (this.verify) {
             console.log(`\t | verify: ${this.id}`);
             await this.verify(this.shared).catch((err: any) => {
+                console.log(`====> Error: ${this.id} verify failed: ${err}`);
                 errors.push(`====> Error: ${this.id} verify failed: ${err}`);
             });
         }
