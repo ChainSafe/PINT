@@ -66,29 +66,29 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             ],
         },
         /* asset-index */
-        {
-            proposal: true,
-            signed: config.alice,
-            required: ["votes.priceFeed.mapAssetPriceFeed"],
-            pallet: "assetIndex",
-            call: "setMetadata",
-            args: [ASSET_ID_A, "PINT_TEST", "P", 9],
-            verify: async () => {
-                assert(
-                    JSON.stringify(
-                        (
-                            await api.query.assetIndex.metadata(ASSET_ID_A)
-                        ).toHuman()
-                    ) ===
-                        JSON.stringify({
-                            name: "PINT_TEST",
-                            symbol: "P",
-                            decimals: "9",
-                        }),
-                    "assetIndex.setMetadata failed"
-                );
-            },
-        },
+        // {
+        //     proposal: true,
+        //     signed: config.alice,
+        //     required: ["votes.priceFeed.mapAssetPriceFeed"],
+        //     pallet: "assetIndex",
+        //     call: "setMetadata",
+        //     args: [ASSET_ID_A, "PINT_TEST", "P", 9],
+        //     verify: async () => {
+        //         assert(
+        //             JSON.stringify(
+        //                 (
+        //                     await api.query.assetIndex.metadata(ASSET_ID_A)
+        //                 ).toHuman()
+        //             ) ===
+        //                 JSON.stringify({
+        //                     name: "PINT_TEST",
+        //                     symbol: "P",
+        //                     decimals: "9",
+        //                 }),
+        //             "assetIndex.setMetadata failed"
+        //         );
+        //     },
+        // },
         {
             proposal: true,
             signed: config.alice,
@@ -110,7 +110,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["votes.assetIndex.setMetadata"],
+            required: ["votes.priceFeed.mapAssetPriceFeed"],
             shared: async () => {
                 return (await api.query.system.account(config.alice.address))
                     .data.free;
@@ -250,35 +250,35 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     },
         // },
         /* committee */
-        {
-            pallet: "committee",
-            call: "addConstituent",
-            args: [config.ziggy.address],
-            verify: async () => {
-                assert(
-                    (
-                        (await api.query.committee.members(
-                            config.ziggy.address
-                        )) as any
-                    ).isSome,
-                    "Add constituent failed"
-                );
-            },
-        },
+        // {
+        //     pallet: "committee",
+        //     call: "addConstituent",
+        //     args: [config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 (await api.query.committee.members(
+        //                     config.ziggy.address
+        //                 )) as any
+        //             ).isSome,
+        //             "Add constituent failed"
+        //         );
+        //     },
+        // },
         /* local_treasury */
-        {
-            pallet: "localTreasury",
-            call: "withdraw",
-            args: [500000000000, config.ziggy.address],
-            verify: async () => {
-                assert(
-                    (
-                        await api.derive.balances.all(config.ziggy.address)
-                    ).freeBalance.toNumber() === 500000000000,
-                    "localTreasury.withdraw failed"
-                );
-            },
-        },
+        // {
+        //     pallet: "localTreasury",
+        //     call: "withdraw",
+        //     args: [500000000000, config.ziggy.address],
+        //     verify: async () => {
+        //         assert(
+        //             (
+        //                 await api.derive.balances.all(config.ziggy.address)
+        //             ).freeBalance.toNumber() === 500000000000,
+        //             "localTreasury.withdraw failed"
+        //         );
+        //     },
+        // },
         /* chainlink_feed */
         {
             signed: config.alice,
@@ -336,20 +336,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 // );
             },
         },
-        {
-            proposal: true,
-            required: ["close.assetIndex.withdraw"],
-            pallet: "priceFeed",
-            call: "unmapAssetPriceFeed",
-            args: [ASSET_ID_A],
-            verify: async () => {
-                assert(
-                    ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
-                        .isNone,
-                    "unmap price feed failed"
-                );
-            },
-        },
+        // {
+        //     proposal: true,
+        //     required: ["votes.assetIndex.withdraw"],
+        //     pallet: "priceFeed",
+        //     call: "unmapAssetPriceFeed",
+        //     args: [ASSET_ID_A],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.priceFeed.assetFeeds(ASSET_ID_A)) as any)
+        //                 .isNone,
+        //             "unmap price feed failed"
+        //         );
+        //     },
+        // },
         /* saft-registry */
         // {
         //     signed: config.alice,
