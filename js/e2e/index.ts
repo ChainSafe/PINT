@@ -339,22 +339,17 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                         0
                     )) as any
                 ).toJSON();
+                const expect = {
+                    nav: 100,
+                    units: 100,
+                };
 
-                console.log(saft);
-                // const expect = {
-                //     nav: 336,
-                //     units: 42,
-                // };
-                // assert(
-                //     JSON.stringify(saft[0]) ===
-                //         JSON.stringify({
-                //             nav: 336,
-                //             units: 42,
-                //         }),
-                //     `Report nav failed, expect: ${JSON.stringify(
-                //         expect
-                //     )}, result: ${JSON.stringify(saft[0])}`
-                // );
+                assert(
+                    JSON.stringify(saft[0]) === JSON.stringify(expect),
+                    `Report nav failed, expect: ${JSON.stringify(
+                        expect
+                    )}, result: ${JSON.stringify(saft[0])}`
+                );
             },
         },
         /* remote-asset-manager */
