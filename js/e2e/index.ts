@@ -20,6 +20,9 @@ const ASSET_ID_A_AMOUNT: BN = new BN(100);
 const ASSET_ID_B: number = 43;
 const ASSET_ID_B_NAV: BN = new BN(100);
 const ASSET_ID_B_UNITS: BN = new BN(100);
+const ASSET_ID_C: number = 43;
+const ASSET_ID_C_NAV: BN = new BN(100);
+const ASSET_ID_C_UNITS: BN = new BN(100);
 const BALANCE_THOUSAND: BN = new BN(1000);
 const VOTING_PERIOD: number = 10;
 const WITHDRAWALS_PERIOD: number = 10;
@@ -373,6 +376,25 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     "Add saft failed"
                 );
             },
+            with: [
+                {
+                    id: "saftRegistry.addSaft.C",
+                    signed: config.alice,
+                    pallet: "saftRegistry",
+                    call: "addSaft",
+                    args: [ASSET_ID_C, ASSET_ID_C_NAV, ASSET_ID_C_UNITS],
+                    verify: async () => {
+                        assert(
+                            (
+                                (await api.query.assetIndex.assets(
+                                    ASSET_ID_C
+                                )) as any
+                            ).isSome,
+                            "Add saft failed"
+                        );
+                    },
+                },
+            ],
         },
         {
             required: ["saftRegistry.addSaft"],
@@ -397,6 +419,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     `Report nav failed, expect: ${JSON.stringify(
                         expect
                     )}, result: ${JSON.stringify(saft[0])}`
+                );
+            },
+        },
+        {
+            required: ["saftRegistry.reportNav"],
+            signed: config.alice,
+            pallet: "saftRegistry",
+            call: "removeSaft",
+            args: [ASSET_ID_B, 0],
+            verify: async () => {
+                assert(
+                    (await api.query.saftRegistry.activeSAFTs(ASSET_ID_B, 0))
+                        .isEmpty,
+                    "verify saftRegistry.removeSaft failed"
                 );
             },
         },
