@@ -183,17 +183,43 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             // proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
+            call: "registerAsset",
+            args: [
+                ASSET_ID_A,
+                api.createType("AssetAvailability" as any, {
+                    Liquid: PARENT_LOCATION,
+                }),
+            ],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
+                        .isSome,
+                    "assetIndex.addAsset failed"
+                );
+            },
+        },
+        {
+            // proposal: true,
+            signed: config.alice,
+            pallet: "assetIndex",
             call: "addAsset",
+            shared: async () => {
+                return (await api.query.system.account(config.alice.address))
+                    .data.free;
+            },
             args: [
                 ASSET_ID_A,
                 PINT.mul(ASSET_ID_A_UNITS),
                 PARENT_LOCATION,
                 PINT.mul(ASSET_ID_A_AMOUNT),
             ],
-            verify: async () => {
+            verify: async (before: Balance) => {
+                const current = (
+                    await api.query.system.account(config.alice.address)
+                ).data.free;
                 assert(
-                    ((await api.query.assetIndex.assets(ASSET_ID_A)) as any)
-                        .isSome,
+                    current.sub(before).div(PINT).toNumber() ===
+                        ASSET_ID_A_AMOUNT.sub(new BN(1)).toNumber(),
                     "assetIndex.addAsset failed"
                 );
             },

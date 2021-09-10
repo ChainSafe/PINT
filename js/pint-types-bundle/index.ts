@@ -63,6 +63,10 @@ export const definitions = {
                 },
                 CurrencyId: "AssetId",
                 CurrencyIdOf: "CurrencyId",
+                DepositRange: {
+                    minimum: "Balance",
+                    maximum: "Balance",
+                },
                 FeeRate: {
                     numerator: "u32",
                     denominator: "u32",
