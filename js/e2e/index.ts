@@ -378,6 +378,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
             with: [
                 {
+                    required: ["saftRegistry.addSaft"],
                     id: "saftRegistry.addSaft.C",
                     signed: config.alice,
                     pallet: "saftRegistry",
@@ -433,6 +434,20 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                     (await api.query.saftRegistry.activeSAFTs(ASSET_ID_B, 0))
                         .isEmpty,
                     "verify saftRegistry.removeSaft failed"
+                );
+            },
+        },
+        {
+            required: ["saftRegistry.removeSaft"],
+            signed: config.alice,
+            pallet: "saftRegistry",
+            call: "convertToLiquid",
+            args: [ASSET_ID_C, PARENT_LOCATION],
+            verify: async () => {
+                assert(
+                    ((await api.query.assetIndex.assets(ASSET_ID_C)) as any)
+                        .isSome,
+                    "assetIndex.addAsset failed"
                 );
             },
         },
