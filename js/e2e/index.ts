@@ -202,6 +202,28 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             // proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
+            call: "setDepositRange",
+            args: [
+                api.createType("DepositRange" as any, {
+                    minimum: PINT.mul(new BN(1)),
+                    maximum: PINT.mul(new BN(10000000)),
+                }),
+            ],
+            verify: async () => {
+                const range = (
+                    await api.query.assetIndex.indexTokenDepositRange()
+                ).toHuman() as any;
+                assert(
+                    range.minimum === "1.0000 Unit" &&
+                        range.maximum === "10.0000 MUnit",
+                    "verify assetIndex.setDepositRange failed"
+                );
+            },
+        },
+        {
+            // proposal: true,
+            signed: config.alice,
+            pallet: "assetIndex",
             call: "addAsset",
             shared: async () => {
                 return (await api.query.system.account(config.alice.address))
