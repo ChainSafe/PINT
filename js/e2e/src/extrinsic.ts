@@ -181,10 +181,11 @@ export class Extrinsic {
         queue: Extrinsic[],
         config: ExtrinsicConfig
     ): Promise<void | string> {
-        const id = `${this.pallet}.${this.call}`;
+        const id = this.id ? this.id : `${this.pallet}.${this.call}`;
         const proposal = new Extrinsic(
             {
                 id: `propose.${id}`,
+                required: this.required,
                 signed: this.signed,
                 pallet: "committee",
                 call: "propose",
@@ -200,6 +201,7 @@ export class Extrinsic {
         queue.push(
             new Extrinsic(
                 {
+                    required: [`propose.${id}`],
                     id: `votes.${id}`,
                     shared: async () => {
                         return new Promise(async (resolve) => {
