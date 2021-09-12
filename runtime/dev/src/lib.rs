@@ -429,8 +429,7 @@ impl pallet_remote_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	// type AdminOrigin = CommitteeOrigin<Runtime>;
-	type AdminOrigin = EnsureSigned<AccountId>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type AssetRecorder = AssetIndex;
 	#[cfg(feature = "runtime-benchmarks")]
 	type AssetRecorderBenchmarks = AssetIndex;
@@ -478,7 +477,7 @@ impl pallet_chainlink_feed::Config for Runtime {
 }
 
 impl pallet_asset_index::Config for Runtime {
-	type AdminOrigin = EnsureSigned<AccountId>;
+	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type MaxActiveDeposits = MaxActiveDeposits;

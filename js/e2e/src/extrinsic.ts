@@ -41,7 +41,7 @@ export class Extrinsic {
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
-    with?: (IExtrinsic | ((shared?: any) => Promise<IExtrinsic>))[];
+    with?: IExtrinsic[];
 
     constructor(e: IExtrinsic, api: ApiPromise, pair: KeyringPair) {
         this.api = api;
@@ -237,41 +237,26 @@ export class Extrinsic {
                     call: "vote",
                     args: [hash, this.api.createType("Vote" as any)],
                     with: [
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.bob`,
-                                signed: config.bob,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
+                        {
+                            id: `votes.${id}.bob`,
+                            signed: config.bob,
+                            pallet: "committee",
+                            call: "vote",
+                            args: [hash, this.api.createType("Vote" as any)],
                         },
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.charlie`,
-                                signed: config.charlie,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
+                        {
+                            id: `votes.${id}.charlie`,
+                            signed: config.charlie,
+                            pallet: "committee",
+                            call: "vote",
+                            args: [hash, this.api.createType("Vote" as any)],
                         },
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.dave`,
-                                signed: config.dave,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
+                        {
+                            id: `votes.${id}.dave`,
+                            signed: config.dave,
+                            pallet: "committee",
+                            call: "vote",
+                            args: [hash, this.api.createType("Vote" as any)],
                         },
                     ],
                 },
@@ -287,30 +272,30 @@ export class Extrinsic {
                     required: [`votes.${id}.dave`],
                     id: `close.${this.pallet}.${this.call}`,
                     shared: async () => {
-                        return new Promise(async (resolve) => {
-                            const currentBlock = (
-                                await this.api.derive.chain.bestNumber()
-                            ).toNumber();
+                        const currentBlock = (
+                            await this.api.derive.chain.bestNumber()
+                        ).toNumber();
 
-                            const end = (
-                                (
-                                    await this.api.query.committee.votes(hash)
-                                ).toJSON() as any
-                            ).end as number;
+                        const end = (
+                            (
+                                await this.api.query.committee.votes(hash)
+                            ).toJSON() as any
+                        ).end as number;
 
-                            const needsToWait = end - currentBlock;
-                            console.log(
-                                `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
-                            );
+                        const needsToWait = end - currentBlock;
+                        console.log(
+                            `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
+                        );
 
-                            await waitBlock(needsToWait > 0 ? needsToWait : 0);
-                            resolve(hash);
-                        });
+                        await waitBlock(needsToWait > 0 ? needsToWait : 0);
+                        if (this.shared && typeof this.shared === "function") {
+                            return await this.shared();
+                        }
                     },
                     signed: config.alice,
                     pallet: "committee",
                     call: "close",
-                    args: [(hash: string) => hash],
+                    args: [hash],
                     verify: this.verify,
                 },
                 this.api,
@@ -337,6 +322,11 @@ export class Extrinsic {
             (err: any) => {
                 console.log(`====> Error: ${this.id} failed: ${err}`);
                 errors.push(`====> Error: ${this.id} failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             }
         )) as TxResult;
 
@@ -346,6 +336,11 @@ export class Extrinsic {
             await this.verify(this.shared).catch((err: any) => {
                 console.log(`====> Error: ${this.id} verify failed: ${err}`);
                 errors.push(`====> Error: ${this.id} verify failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             });
         }
 

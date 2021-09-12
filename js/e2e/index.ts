@@ -7,7 +7,6 @@ import {
     expandId,
     Extrinsic,
     ExtrinsicConfig,
-    IExtrinsic,
     waitBlock,
 } from "./src";
 import { ApiPromise } from "@polkadot/api";
@@ -24,7 +23,6 @@ const ASSET_ID_C: number = 43;
 const ASSET_ID_C_NAV: BN = new BN(100);
 const ASSET_ID_C_UNITS: BN = new BN(100);
 const BALANCE_THOUSAND: BN = new BN(1000);
-const VOTING_PERIOD: number = 10;
 const WITHDRAWALS_PERIOD: number = 10;
 
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
@@ -101,7 +99,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* orml_tokens */
         {
-            required: ["assetIndex.addAsset"],
+            required: ["close.assetIndex.addAsset"],
             pallet: "tokens",
             call: "setBalance",
             args: [
@@ -151,8 +149,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* price-feed */
         {
-            // required: ["votes.assetIndex.addAsset"],
-            required: ["assetIndex.addAsset"],
+            required: ["propose.assetIndex.addAsset"],
             pallet: "priceFeed",
             call: "mapAssetPriceFeed",
             args: [ASSET_ID_A, 0],
@@ -168,8 +165,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // required: ["votes.assetIndex.withdraw"],
-            required: ["assetIndex.setMetadata"],
+            required: ["propose.assetIndex.setMetadata"],
             pallet: "priceFeed",
             call: "unmapAssetPriceFeed",
             args: [ASSET_ID_A],
@@ -183,7 +179,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         /* asset-index */
         {
-            // proposal: true,
+            proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
             call: "registerAsset",
@@ -202,7 +198,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
+            required: ["propose.assetIndex.registerAsset"],
+            proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
             call: "setDepositRange",
@@ -224,7 +221,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
+            required: ["propose.assetIndex.setDepositRange"],
+            proposal: true,
             signed: config.alice,
             pallet: "assetIndex",
             call: "addAsset",
@@ -250,9 +248,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
-            // required: ["votes.priceFeed.mapAssetPriceFeed"],
-            required: ["priceFeed.mapAssetPriceFeed"],
+            proposal: true,
+            required: ["tokens.setBalance"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
@@ -271,13 +268,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
-            // required: ["close.assetIndex.deposit"],
-            required: ["assetIndex.deposit"],
+            proposal: true,
+            required: ["close.assetIndex.deposit"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
-            args: [PINT.mul(BALANCE_THOUSAND)],
+            args: [PINT.mul(ASSET_ID_A_AMOUNT)],
             verify: async () => {
                 assert(
                     (
@@ -292,17 +288,23 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
-            // required: ["close.assetIndex.withdraw"],
-            required: ["assetIndex.withdraw"],
+            proposal: true,
+            required: ["propose.assetIndex.withdraw"],
             shared: async () => {
                 const currentBlock = (
                     await api.derive.chain.bestNumber()
                 ).toNumber();
-                const pendingWithdrawls =
+                let pendingWithdrawls =
                     await api.query.assetIndex.pendingWithdrawals(
                         config.alice.address
                     );
+
+                while (!pendingWithdrawls) {
+                    pendingWithdrawls =
+                        await api.query.assetIndex.pendingWithdrawals(
+                            config.alice.address
+                        );
+                }
 
                 const end = (pendingWithdrawls as any).toHuman()[0].end_block;
                 const needsToWait =
@@ -328,10 +330,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
-            // proposal: true,
+            proposal: true,
             signed: config.alice,
-            // required: ["votes.priceFeed.mapAssetPriceFeed"],
-            required: ["assetIndex.completeWithdraw"],
+            required: ["propose.assetIndex.completeWithdraw"],
             pallet: "assetIndex",
             call: "setMetadata",
             args: [ASSET_ID_A, "PINT_TEST", "P", 9],
@@ -363,94 +364,94 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         //     args: [ASSET_ID_A, BALANCE_THOUSAND, null],
         // },
         /* saft-registry */
-        {
-            required: ["assetIndex.deposit"],
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "addSaft",
-            args: [ASSET_ID_B, ASSET_ID_B_NAV, ASSET_ID_B_UNITS],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
-                        .isSome,
-                    "Add saft failed"
-                );
-            },
-            with: [
-                {
-                    required: ["saftRegistry.addSaft"],
-                    id: "saftRegistry.addSaft.C",
-                    signed: config.alice,
-                    pallet: "saftRegistry",
-                    call: "addSaft",
-                    args: [ASSET_ID_C, ASSET_ID_C_NAV, ASSET_ID_C_UNITS],
-                    verify: async () => {
-                        assert(
-                            (
-                                (await api.query.assetIndex.assets(
-                                    ASSET_ID_C
-                                )) as any
-                            ).isSome,
-                            "Add saft failed"
-                        );
-                    },
-                },
-            ],
-        },
-        {
-            required: ["saftRegistry.addSaft"],
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "reportNav",
-            args: [ASSET_ID_B, 0, ASSET_ID_B_NAV],
-            verify: async () => {
-                const saft = (
-                    (await api.query.saftRegistry.activeSAFTs(
-                        ASSET_ID_B,
-                        0
-                    )) as any
-                ).toJSON();
-                const expect = {
-                    nav: 100,
-                    units: 100,
-                };
-
-                assert(
-                    JSON.stringify(saft[0]) === JSON.stringify(expect),
-                    `Report nav failed, expect: ${JSON.stringify(
-                        expect
-                    )}, result: ${JSON.stringify(saft[0])}`
-                );
-            },
-        },
-        {
-            required: ["saftRegistry.reportNav"],
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "removeSaft",
-            args: [ASSET_ID_B, 0],
-            verify: async () => {
-                assert(
-                    (await api.query.saftRegistry.activeSAFTs(ASSET_ID_B, 0))
-                        .isEmpty,
-                    "verify saftRegistry.removeSaft failed"
-                );
-            },
-        },
-        {
-            required: ["saftRegistry.removeSaft"],
-            signed: config.alice,
-            pallet: "saftRegistry",
-            call: "convertToLiquid",
-            args: [ASSET_ID_C, PARENT_LOCATION],
-            verify: async () => {
-                assert(
-                    ((await api.query.assetIndex.assets(ASSET_ID_C)) as any)
-                        .isSome,
-                    "assetIndex.addAsset failed"
-                );
-            },
-        },
+        // {
+        //     required: ["assetIndex.deposit"],
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "addSaft",
+        //     args: [ASSET_ID_B, ASSET_ID_B_NAV, ASSET_ID_B_UNITS],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.assets(ASSET_ID_B)) as any)
+        //                 .isSome,
+        //             "Add saft failed"
+        //         );
+        //     },
+        //     with: [
+        //         {
+        //             required: ["saftRegistry.addSaft"],
+        //             id: "saftRegistry.addSaft.C",
+        //             signed: config.alice,
+        //             pallet: "saftRegistry",
+        //             call: "addSaft",
+        //             args: [ASSET_ID_C, ASSET_ID_C_NAV, ASSET_ID_C_UNITS],
+        //             verify: async () => {
+        //                 assert(
+        //                     (
+        //                         (await api.query.assetIndex.assets(
+        //                             ASSET_ID_C
+        //                         )) as any
+        //                     ).isSome,
+        //                     "Add saft failed"
+        //                 );
+        //             },
+        //         },
+        //     ],
+        // },
+        // {
+        //     required: ["saftRegistry.addSaft"],
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "reportNav",
+        //     args: [ASSET_ID_B, 0, ASSET_ID_B_NAV],
+        //     verify: async () => {
+        //         const saft = (
+        //             (await api.query.saftRegistry.activeSAFTs(
+        //                 ASSET_ID_B,
+        //                 0
+        //             )) as any
+        //         ).toJSON();
+        //         const expect = {
+        //             nav: 100,
+        //             units: 100,
+        //         };
+        //
+        //         assert(
+        //             JSON.stringify(saft[0]) === JSON.stringify(expect),
+        //             `Report nav failed, expect: ${JSON.stringify(
+        //                 expect
+        //             )}, result: ${JSON.stringify(saft[0])}`
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["saftRegistry.reportNav"],
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "removeSaft",
+        //     args: [ASSET_ID_B, 0],
+        //     verify: async () => {
+        //         assert(
+        //             (await api.query.saftRegistry.activeSAFTs(ASSET_ID_B, 0))
+        //                 .isEmpty,
+        //             "verify saftRegistry.removeSaft failed"
+        //         );
+        //     },
+        // },
+        // {
+        //     required: ["saftRegistry.removeSaft"],
+        //     signed: config.alice,
+        //     pallet: "saftRegistry",
+        //     call: "convertToLiquid",
+        //     args: [ASSET_ID_C, PARENT_LOCATION],
+        //     verify: async () => {
+        //         assert(
+        //             ((await api.query.assetIndex.assets(ASSET_ID_C)) as any)
+        //                 .isSome,
+        //             "assetIndex.addAsset failed"
+        //         );
+        //     },
+        // },
         /* remote-asset-manager */
         // {
         //     required: ["assetIndex.addAsset"],
