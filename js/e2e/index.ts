@@ -381,7 +381,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.saftRegistry.addSaft.C"],
+            required: ["propose.saftRegistry.addSaft"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "reportNav",
@@ -409,7 +409,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         {
             proposal: true,
             required: ["propose.saftRegistry.reportNav"],
-            signed: config.alice,
+            signed: config.bob,
             pallet: "saftRegistry",
             call: "removeSaft",
             args: [ASSET_ID_B, 0],
@@ -425,7 +425,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             proposal: true,
             required: ["propose.saftRegistry.removeSaft"],
             id: "saftRegistry.addSaft.C",
-            signed: config.alice,
+            signed: config.bob,
             pallet: "saftRegistry",
             call: "addSaft",
             args: [ASSET_ID_C, ASSET_ID_C_NAV, ASSET_ID_C_UNITS],
@@ -439,8 +439,8 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["saftRegistry.addSaft.C"],
-            signed: config.alice,
+            required: ["propose.saftRegistry.addSaft.C"],
+            signed: config.bob,
             pallet: "saftRegistry",
             call: "convertToLiquid",
             args: [ASSET_ID_C, PARENT_LOCATION],
