@@ -46,6 +46,7 @@ export default class Runner implements Config {
     public finished: string[];
     public nonce: number;
     public config: ExtrinsicConfig;
+    public proposals: Record<string, any>;
 
     /**
      * run E2E tests
@@ -157,6 +158,7 @@ export default class Runner implements Config {
         this.nonce = 0;
         this.finished = [];
         this.config = config.config;
+        this.proposals = {};
     }
 
     /**
@@ -249,22 +251,29 @@ export default class Runner implements Config {
                     return isFunction;
                 })
                 .map((e) => {
-                    let n = -1;
-                    if (!e.signed || e.signed.address === this.pair.address) {
-                        n = Number(currentNonce);
-                        currentNonce += 1;
-                    }
-
                     if (e.proposal) {
                         return e.propose(
+                            this.proposals,
                             this.finished,
                             this.errors,
-                            n,
                             this.exs,
                             this.config
                         );
                     } else {
-                        return e.run(this.finished, this.errors, n);
+                        let n = -1;
+                        if (
+                            !e.signed ||
+                            e.signed.address === this.pair.address
+                        ) {
+                            n = Number(currentNonce);
+                            currentNonce += 1;
+                        }
+                        return e.run(
+                            this.proposals,
+                            this.finished,
+                            this.errors,
+                            n
+                        );
                     }
                 })
         ).then(() => {

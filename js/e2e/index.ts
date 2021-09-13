@@ -223,7 +223,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.saftRegistry.completeWithdraw"],
+            required: ["propose.assetIndex.completeWithdraw"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "removeSaft",
@@ -382,7 +382,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["votes.saftRegistry.addSaft"],
+            required: ["close.saftRegistry.addSaft"],
             shared: async () => {
                 const currentBlock = (
                     await api.derive.chain.bestNumber()
