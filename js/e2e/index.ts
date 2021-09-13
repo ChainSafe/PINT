@@ -269,7 +269,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["close.assetIndex.deposit"],
+            required: ["close.saftRegistry.convertToLiquid"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
@@ -366,7 +366,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         /* saft-registry */
         {
             proposal: true,
-            required: ["propose.assetIndex.setMetadata"],
+            required: ["propose.assetIndex.deposit"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "addSaft",
@@ -381,7 +381,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["close.saftRegistry.addSaft"],
+            required: ["propose.saftRegistry.addSaft"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "reportNav",
@@ -408,7 +408,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["close.assetIndex.reportNav"],
+            required: ["propose.saftRegistry.reportNav"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "removeSaft",
@@ -423,7 +423,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.assetIndex.reportNav"],
+            required: ["propose.saftRegistry.removeSaft"],
             id: "saftRegistry.addSaft.C",
             signed: config.alice,
             pallet: "saftRegistry",
