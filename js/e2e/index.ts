@@ -439,7 +439,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.saftRegistry.removeSaft"],
+            required: ["saftRegistry.addSaft.C"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "convertToLiquid",
