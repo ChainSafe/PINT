@@ -223,7 +223,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.assetIndex.completeWithdraw"],
+            required: ["propose.assetIndex.setMetadata"],
             signed: config.alice,
             pallet: "saftRegistry",
             call: "removeSaft",
