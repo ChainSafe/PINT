@@ -314,8 +314,17 @@ export class Extrinsic {
     public async run(
         finished: string[],
         errors: string[],
-        nonce: number
+        nonce: number,
+        voting?: boolean
     ): Promise<void | string> {
+        while (voting) {
+            await waitBlock(1);
+        }
+
+        if (this.id.includes("votes")) {
+            voting = true;
+        }
+
         console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
         const tx = this.build();
 
