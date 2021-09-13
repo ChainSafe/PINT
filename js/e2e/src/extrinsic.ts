@@ -314,15 +314,10 @@ export class Extrinsic {
     public async run(
         finished: string[],
         errors: string[],
-        nonce: number,
-        voting?: boolean
+        nonce: number
     ): Promise<void | string> {
-        while (voting) {
-            await waitBlock(1);
-        }
-
-        if (this.id.includes("votes")) {
-            voting = true;
+        if (typeof this.shared === "function") {
+            this.shared = await this.shared();
         }
 
         console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
