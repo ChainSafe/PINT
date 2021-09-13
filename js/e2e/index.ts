@@ -445,14 +445,13 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             call: "convertToLiquid",
             args: [ASSET_ID_C, PARENT_LOCATION],
             verify: async () => {
-                console.log(
-                    (await api.query.assetIndex.assets(ASSET_ID_C)).toHuman()
+                assert(
+                    (
+                        (
+                            await api.query.assetIndex.assets(ASSET_ID_C)
+                        ).toHuman() as any
+                    ).Liquid && true
                 );
-                // assert(
-                //     ((await api.query.assetIndex.assets(ASSET_ID_C)) as any)
-                //         .isSome,
-                //     "assetIndex.addAsset failed"
-                // );
             },
         },
         /* remote-asset-manager */

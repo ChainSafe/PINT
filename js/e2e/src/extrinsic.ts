@@ -272,7 +272,7 @@ export class Extrinsic {
             new Extrinsic(
                 {
                     required: [`votes.${id}.dave`],
-                    id: `close.${this.pallet}.${this.call}`,
+                    id: `close.${id}`,
                     shared: async () => {
                         const currentBlock = (
                             await this.api.derive.chain.bestNumber()
