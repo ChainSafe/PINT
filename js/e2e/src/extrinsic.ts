@@ -284,12 +284,12 @@ export class Extrinsic {
                             ).toJSON() as any
                         ).end as number;
 
-                        const needsToWait = end - currentBlock;
+                        const needsToWait = end - currentBlock + 1;
                         console.log(
                             `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
                         );
 
-                        await waitBlock(needsToWait > 0 ? needsToWait : 0);
+                        await waitBlock(needsToWait > 0 ? needsToWait : 1);
                         if (this.shared && typeof this.shared === "function") {
                             return await this.shared();
                         }
