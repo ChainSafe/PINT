@@ -205,6 +205,8 @@ pub struct StakingConfig<AccountId, Balance, BlockNumber> {
 	///    BondDuration * EPOCH_DURATION_IN_BLOCKS * SessionsPerEra * (MILLISEC_PER_BLOCK_other / MILLISEC_PER_BLOCK_pint)
 	/// ```
 	pub bonding_duration: BlockNumber,
+	/// Whether the asset is frozen for xcm related transfers.
+	pub is_frozen: bool,
 }
 
 // Counter for the number of eras that have passed
