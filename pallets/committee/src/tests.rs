@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::{mock::*, CommitteeMember, MemberType, Vote, VoteAggregate};
+use crate::{mock::*, CommitteeMember, MemberType, VoteAggregate, VoteKind};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};
@@ -114,7 +114,7 @@ fn non_member_cannot_vote() {
 		let proposal = submit_proposal(123);
 		let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			<pallet::Error<Test>>::NotMember,
 		);
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
@@ -127,7 +127,7 @@ fn cannot_vote_for_non_existent_proposal() {
 		let action = make_action(123);
 		let proposal = pallet::Proposal::<Test>::new(0, action);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NoProposalWithHash
 		);
 	});
@@ -138,7 +138,7 @@ fn member_cannot_vote_before_voting_period() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
 		let proposal = submit_proposal(123);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 	});
@@ -153,13 +153,13 @@ fn member_can_vote_in_voting_period() {
 		run_to_block(START_OF_S1 - 1);
 		// still not in voting period
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 
 		run_to_block(START_OF_S1);
 		// first block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -171,7 +171,7 @@ fn member_can_vote_aye() {
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
 		// first block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -182,7 +182,7 @@ fn member_can_vote_nay() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![], vec![ASHLEY_COUNCIL], vec![], START_OF_V1);
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Nay));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Nay));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -193,7 +193,7 @@ fn member_can_vote_abstain() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![], vec![], vec![ASHLEY_COUNCIL], START_OF_V1);
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Abstain));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Abstain));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -205,12 +205,12 @@ fn member_cannot_vote_after_voting_period() {
 
 		run_to_block(START_OF_V1 - 1);
 		// last block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 
 		run_to_block(START_OF_V1);
 		// first block after voting period
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 	});
@@ -223,9 +223,9 @@ fn member_cannot_vote_multiple_times() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::DuplicateVote
 		);
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
@@ -237,7 +237,7 @@ fn member_cannot_vote_multiple_times() {
 //
 
 // iterates through accounts and vote a particular way on a proposal
-fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: Vote)
+fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: VoteKind)
 where
 	I: IntoIterator<Item = AccountId>,
 {
@@ -263,7 +263,7 @@ fn non_execution_origin_cannot_close() {
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
 
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(Committee::close(Origin::signed(non_execution_origin), proposal.hash()), BadOrigin);
@@ -276,7 +276,7 @@ fn cannot_close_until_voting_period_elapsed() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		assert_noop!(
 			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
@@ -291,7 +291,7 @@ fn cannot_close_if_insufficent_council_votes() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(), proposal.hash(), Vote::Aye);
+		vote_with_each(0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(), proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(
@@ -307,7 +307,7 @@ fn cannot_close_if_council_rejects() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..(MIN_COUNCIL_VOTES).try_into().unwrap(), proposal.hash(), Vote::Nay);
+		vote_with_each(0..(MIN_COUNCIL_VOTES).try_into().unwrap(), proposal.hash(), VoteKind::Nay);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(
@@ -325,8 +325,8 @@ fn cannot_close_if_constituents_veto() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
-		vote_with_each(4..8, proposal.hash(), Vote::Nay);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
+		vote_with_each(4..8, proposal.hash(), VoteKind::Nay);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(
@@ -342,7 +342,7 @@ fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()));
@@ -355,7 +355,7 @@ fn cannot_execute_proposal_twice() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()));
@@ -406,7 +406,7 @@ fn propose_constituent_works() {
 
 			// vote Aye on adding new constituent
 			run_to_block(START_OF_S1);
-			vote_with_each(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4, hash, Vote::Aye);
+			vote_with_each(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4, hash, VoteKind::Aye);
 
 			// close proposal
 			run_to_block(START_OF_V1 + 1);

@@ -243,7 +243,7 @@ export class Extrinsic {
                         call: "vote",
                         args: [
                             () => proposals[this.id],
-                            this.api.createType("Vote" as any),
+                            this.api.createType("VoteKind" as any),
                         ],
                     },
                     this.api,

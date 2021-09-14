@@ -162,7 +162,7 @@ pub mod pallet {
 		Proposed(AccountIdFor<T>, T::ProposalNonce, T::Hash),
 		/// A vote was cast
 		/// \[voter_address, proposal_hash, vote\]
-		VoteCast(CommitteeMember<AccountIdFor<T>>, T::Hash, Vote),
+		VoteCast(CommitteeMember<AccountIdFor<T>>, T::Hash, VoteKind),
 		/// A proposal was closed and executed. Any errors for calling the
 		/// proposal action are included
 		/// \[proposal_hash, result\]
@@ -333,7 +333,7 @@ pub mod pallet {
 		/// Successfully cast votes will be recorded in the state and a proposal
 		/// meeting voting requirements can be executed.
 		#[pallet::weight(T::WeightInfo::vote())]
-		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: Vote) -> DispatchResult {
+		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			// Only members can vote
 			let voter = Self::ensure_member(origin)?;
 
