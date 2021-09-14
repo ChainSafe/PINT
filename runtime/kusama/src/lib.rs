@@ -440,7 +440,7 @@ impl pallet_committee::Config for Runtime {
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
-	type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
+	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ApprovedByCommitteeOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type Event = Event;
 	type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
