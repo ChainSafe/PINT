@@ -43,6 +43,8 @@ benchmarks! {
 	remove_saft {
 		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
+		let nav = 100u32.into();
+		let units = 20u32.into();
 
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
 			T::try_convert(3u8).unwrap(),
@@ -51,7 +53,9 @@ benchmarks! {
 			1000u32.into()
 		));
 
-		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, 100u32.into(), 20u32.into()));
+		assert_ok!(T::AssetRecorderBenchmarks::deposit_saft_equivalent(nav));
+		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, nav, units));
+
 		let call = Call::<T>::remove_saft(
 				asset,
 				0u32
