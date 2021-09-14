@@ -17,8 +17,15 @@ use crate as pallet;
 use crate::{mock::*, types::DepositRange};
 
 #[test]
+fn can_register_asset() {
+	assert_ok!(AssetIndex::register_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, MultiLocation::Null));
+	assert_eq!(<Assets<T>>::get(ASSET_A_ID), MultiLocation::Null);
+}
+
+#[test]
 fn can_add_asset() {
 	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, MultiLocation::Null));
 		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
 		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::Null)));
 		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);

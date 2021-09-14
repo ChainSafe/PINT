@@ -319,6 +319,8 @@ pub mod pallet {
 		NoPendingWithdrawals,
 		/// Thrown if the asset that should be added is already registered
 		AssetAlreadyExists,
+		/// Thrown if the asset that should be added has not been registered.
+		AssetNotExists,
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
@@ -414,6 +416,9 @@ pub mod pallet {
 			availability: AssetAvailability,
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
+
+			// native asset can't be added
+			Self::ensure_not_native_asset(&asset_id)?;
 
 			Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
 				// allow new assets only
@@ -754,6 +759,8 @@ pub mod pallet {
 			units: T::Balance,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
+			<Assets<T>>::get(&asset_id).ok_or(<Error<T>>::AssetNotExists)?;
+
 			if units.is_zero() {
 				return Ok(().into());
 			}
@@ -1136,6 +1143,7 @@ pub mod pallet {
 			let origin = T::AdminOrigin::successful_origin();
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
+			Self::register_asset(T::AdminOrigin::successful_origin(), asset_id, location)?;
 			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
 		}
 	}
