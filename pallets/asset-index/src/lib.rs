@@ -468,10 +468,12 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
+			ensure!(!name.is_empty(), Error::<T>::BadMetadata);
+			ensure!(!symbol.is_empty(), Error::<T>::BadMetadata);
 			let bounded_name: BoundedVec<u8, T::StringLimit> =
-				name.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
+				name.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
-				symbol.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
+				symbol.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 
 			Metadata::<T>::try_mutate_exists(id, |metadata| {
 				*metadata = Some(AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
