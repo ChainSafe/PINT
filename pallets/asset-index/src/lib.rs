@@ -352,10 +352,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, location, amount)
+			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, amount)
 		}
 
 		/// Add liquid asset with root origin, see `add_asset`
@@ -364,12 +363,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 			recipient: T::AccountId,
 		) -> DispatchResultWithPostInfo {
 			ensure_root(origin)?;
-			Self::do_add_asset(recipient, asset_id, units, location, amount)
+			Self::do_add_asset(recipient, asset_id, units, amount)
 		}
 
 		/// Dispatches transfer to move assets out of the index’s account,
@@ -647,8 +645,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -754,31 +752,14 @@ pub mod pallet {
 			recipient: T::AccountId,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
 			if units.is_zero() {
 				return Ok(().into());
 			}
 
-			let availability = AssetAvailability::Liquid(location);
-
-			// check whether this is a new asset and make sure locations match otherwise
-			let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
-				ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
-				false
-			} else {
-				true
-			};
-
 			// transfer the caller's fund into the treasury account
 			Self::add_liquid(&recipient, asset_id, units, amount)?;
-
-			// register asset if not yet known
-			if is_new_asset {
-				Assets::<T>::insert(asset_id, availability.clone());
-				Self::deposit_event(Event::AssetRegistered(asset_id, availability));
-			}
 
 			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
 			Ok(().into())
