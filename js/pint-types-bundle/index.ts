@@ -86,7 +86,7 @@ export const definitions = {
                 },
                 MemberVote: {
                     member: "CommitteeMember",
-                    vote: "Vote",
+                    vote: "VoteKind",
                 },
                 OrmlAccountData: {
                     free: "Balance",
@@ -146,7 +146,7 @@ export const definitions = {
                     value: "Balance",
                     end: "BlockNumber",
                 },
-                Vote: {
+                VoteKind: {
                     _enum: {
                         Aye: null,
                         Nay: null,
