@@ -1133,10 +1133,6 @@ pub mod pallet {
 			let index_token = Self::saft_equivalent(saft_nav)?;
 
 			ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
-			frame_support::sp_std::if_std! {
-				println!("current tokens: {:?}", T::IndexToken::total_balance(&who));
-				println!("expected tokens: {:?}", index_token);
-			}
 			ensure!(T::IndexToken::can_slash(&who, index_token), Error::<T>::InsufficientDeposit);
 
 			// burn SAFT by withdrawing from the index
