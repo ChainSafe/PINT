@@ -63,6 +63,10 @@ export const definitions = {
                 },
                 CurrencyId: "AssetId",
                 CurrencyIdOf: "CurrencyId",
+                DepositRange: {
+                    minimum: "Balance",
+                    maximum: "Balance",
+                },
                 FeeRate: {
                     numerator: "u32",
                     denominator: "u32",
@@ -92,6 +96,10 @@ export const definitions = {
                 PendingRedemption: {
                     end_block: "BlockNumber",
                     assets: "Vec<AssetWithdrawal>",
+                },
+                Proposal: {
+                    nonce: "ProposalNonce",
+                    action: "Call",
                 },
                 ProposalNonce: "u32",
                 ProxyType: {

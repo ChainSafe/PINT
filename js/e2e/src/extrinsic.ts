@@ -2,11 +2,14 @@
  * Extrinsic
  */
 import { KeyringPair } from "@polkadot/keyring/types";
-import { IExtrinsic } from "./config";
+import { ExtrinsicConfig, IExtrinsic } from "./config";
 import { ISubmittableResult } from "@polkadot/types/types";
 import { DispatchError, EventRecord } from "@polkadot/types/interfaces/types";
 import { SubmittableExtrinsic } from "@polkadot/api/types";
 import { ApiPromise } from "@polkadot/api";
+import { waitBlock } from "./util";
+
+const VOTING_PERIOD: number = 10;
 
 // Substrate transaction
 export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
@@ -22,24 +25,26 @@ interface TxResult {
  */
 export class Extrinsic {
     api: ApiPromise;
-    pair: KeyringPair;
     // extrinsic id
     id?: string;
     // use signed origin
     signed?: KeyringPair;
+    // default origin
+    pair?: KeyringPair;
     pallet: string;
     call: string;
     args: any[];
     shared?: () => Promise<any>;
     verify?: (shared?: any) => Promise<void>;
+    /// if this call starts with a proposal
+    proposal?: boolean;
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
-    with?: (IExtrinsic | ((shared?: any) => Promise<IExtrinsic>))[];
+    with?: IExtrinsic[];
 
     constructor(e: IExtrinsic, api: ApiPromise, pair: KeyringPair) {
         this.api = api;
-        this.pair = pair;
         this.id = e.id;
         this.signed = e.signed;
         this.pallet = e.pallet;
@@ -47,8 +52,10 @@ export class Extrinsic {
         this.args = e.args;
         this.shared = e.shared;
         this.verify = e.verify;
+        this.pair = pair;
         this.required = e.required;
         this.with = e.with;
+        this.proposal = e.proposal;
     }
 
     /**
@@ -57,7 +64,11 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      * @returns {Transaction}
      */
-    public build(): Transaction {
+    public async build(): Promise<Transaction> {
+        if (typeof this.shared === "function") {
+            this.shared = await this.shared();
+        }
+
         // flush arguments
         const args: any[] = [];
         for (const arg of this.args) {
@@ -149,37 +160,189 @@ export class Extrinsic {
     }
 
     /**
+     * Get the latest proposal hash
+     */
+    private async getLastestProposal(): Promise<string> {
+        const activeProposals =
+            (await this.api.query.committee.activeProposals()) as any;
+
+        // check if proposed
+        if (activeProposals.length < 1) {
+            await waitBlock(1);
+            return this.getLastestProposal();
+        }
+
+        return activeProposals[activeProposals.length - 1];
+    }
+
+    /**
+     * Run extrinsic with proposal
+     */
+    public async propose(
+        proposals: Record<string, string>,
+        finished: string[],
+        errors: string[],
+        queue: Extrinsic[],
+        config: ExtrinsicConfig
+    ): Promise<void | string> {
+        const id = this.id ? this.id : `${this.pallet}.${this.call}`;
+        queue.push(
+            new Extrinsic(
+                {
+                    id: `propose.${id}`,
+                    required: this.required,
+                    signed: this.signed,
+                    pallet: "committee",
+                    call: "propose",
+                    args: [this.api.tx[this.pallet][this.call](...this.args)],
+                },
+                this.api,
+                this.pair
+            )
+        );
+
+        for (const account of ["alice", "bob", "charlie", "dave"]) {
+            queue.push(
+                new Extrinsic(
+                    {
+                        required: [`propose.${id}`],
+                        id: `votes.${id}.${account}`,
+                        shared: async () => {
+                            return new Promise(async (resolve) => {
+                                const hash = proposals[this.id];
+                                const currentBlock = (
+                                    await this.api.derive.chain.bestNumber()
+                                ).toNumber();
+
+                                const end = (
+                                    (
+                                        await this.api.query.committee.votes(
+                                            hash
+                                        )
+                                    ).toJSON() as any
+                                ).end as number;
+
+                                const needsToWait =
+                                    end - currentBlock > VOTING_PERIOD
+                                        ? end - currentBlock - VOTING_PERIOD
+                                        : 0;
+
+                                console.log(`\t | voting ${id}...`);
+                                console.log(
+                                    `\t | waiting for the voting peirod (around ${Math.floor(
+                                        (needsToWait * 12) / 60
+                                    )} mins)...`
+                                );
+
+                                await waitBlock(needsToWait);
+                                resolve(hash);
+                            });
+                        },
+                        signed: (config as any)[account],
+                        pallet: "committee",
+                        call: "vote",
+                        args: [
+                            () => proposals[this.id],
+                            this.api.createType("Vote" as any),
+                        ],
+                    },
+                    this.api,
+                    this.pair
+                )
+            );
+        }
+
+        // push close and verification
+        queue.push(
+            new Extrinsic(
+                {
+                    required: [`votes.${id}.dave`],
+                    id: `close.${id}`,
+                    shared: async () => {
+                        const hash = proposals[this.id];
+                        const currentBlock = (
+                            await this.api.derive.chain.bestNumber()
+                        ).toNumber();
+
+                        const end = (
+                            (
+                                await this.api.query.committee.votes(hash)
+                            ).toJSON() as any
+                        ).end as number;
+
+                        const needsToWait = end - currentBlock + 1;
+                        console.log(
+                            `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
+                        );
+
+                        await waitBlock(needsToWait > 0 ? needsToWait : 1);
+                        if (this.shared && typeof this.shared === "function") {
+                            return await this.shared();
+                        }
+                    },
+                    signed: config.alice,
+                    pallet: "committee",
+                    call: "close",
+                    args: [() => proposals[this.id]],
+                    verify: this.verify,
+                },
+                this.api,
+                this.pair
+            )
+        );
+    }
+
+    /**
      * Run Extrinsic
      *
      * @param {ex} Extrinsic
      */
-    public async run(errors: string[], nonce: number): Promise<void | string> {
-        console.log(
-            `-> queue extrinsic ${nonce}: ${this.pallet}.${this.call}...`
-        );
-        const tx = this.build();
+    public async run(
+        proposals: Record<string, any>,
+        finished: string[],
+        errors: string[],
+        nonce: number
+    ): Promise<void | string> {
+        console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
+        const tx = await this.build();
 
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
             (err: any) => {
-                errors.push(
-                    `====> Error: ${this.pallet}.${this.call} failed: ${err}`
-                );
+                console.log(`====> Error: ${this.id} failed: ${err}`);
+                errors.push(`====> Error: ${this.id} failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             }
         )) as TxResult;
 
         // thisecute verify script
         if (this.verify) {
-            console.log(`\t | verify: ${this.pallet}.${this.call}`);
+            console.log(`\t | verify: ${this.id}`);
             await this.verify(this.shared).catch((err: any) => {
-                errors.push(
-                    `====> Error: ${this.pallet}.${this.call} verify failed: ${err}`
-                );
+                console.log(`====> Error: ${this.id} verify failed: ${err}`);
+                errors.push(`====> Error: ${this.id} verify failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             });
         }
 
         if (res && res.unsub) {
             (await res.unsub)();
         }
+
+        // push hash if is proposal
+        if (this.id.includes("propose.")) {
+            proposals[this.id.split("propose.")[1]] =
+                await this.getLastestProposal();
+        }
+
+        finished.push(this.id);
     }
 }
