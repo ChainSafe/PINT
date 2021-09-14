@@ -20,7 +20,6 @@ pub use frame_support::{
 	},
 	PalletId, StorageValue,
 };
-use frame_system::EnsureSigned;
 
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
