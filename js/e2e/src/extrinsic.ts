@@ -41,7 +41,7 @@ export class Extrinsic {
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
-    with?: (IExtrinsic | ((shared?: any) => Promise<IExtrinsic>))[];
+    with?: IExtrinsic[];
 
     constructor(e: IExtrinsic, api: ApiPromise, pair: KeyringPair) {
         this.api = api;
@@ -64,7 +64,11 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      * @returns {Transaction}
      */
-    public build(): Transaction {
+    public async build(): Promise<Transaction> {
+        if (typeof this.shared === "function") {
+            this.shared = await this.shared();
+        }
+
         // flush arguments
         const args: any[] = [];
         for (const arg of this.args) {
@@ -175,142 +179,111 @@ export class Extrinsic {
      * Run extrinsic with proposal
      */
     public async propose(
+        proposals: Record<string, string>,
         finished: string[],
         errors: string[],
-        nonce: number,
         queue: Extrinsic[],
         config: ExtrinsicConfig
     ): Promise<void | string> {
-        const id = `${this.pallet}.${this.call}`;
-        const proposal = new Extrinsic(
-            {
-                id: `propose.${id}`,
-                signed: this.signed,
-                pallet: "committee",
-                call: "propose",
-                args: [this.api.tx[this.pallet][this.call](...this.args)],
-            },
-            this.api,
-            this.pair
-        );
-
-        await proposal.run(finished, errors, nonce);
-        const hash = await this.getLastestProposal();
-
+        const id = this.id ? this.id : `${this.pallet}.${this.call}`;
         queue.push(
             new Extrinsic(
                 {
-                    id: `votes.${id}`,
-                    shared: async () => {
-                        return new Promise(async (resolve) => {
-                            await waitBlock(1);
-                            const currentBlock = (
-                                await this.api.derive.chain.bestNumber()
-                            ).toNumber();
-
-                            const end = (
-                                (
-                                    await this.api.query.committee.votes(hash)
-                                ).toJSON() as any
-                            ).end as number;
-
-                            const needsToWait =
-                                end - currentBlock > VOTING_PERIOD
-                                    ? end - currentBlock - VOTING_PERIOD
-                                    : 0;
-
-                            console.log(
-                                `\t | voting ${this.pallet}.${this.call}`
-                            );
-                            console.log(
-                                `\t | waiting for the voting peirod (around ${Math.floor(
-                                    (needsToWait * 12) / 60
-                                )} mins)...`
-                            );
-
-                            await waitBlock(needsToWait);
-                            resolve(hash);
-                        });
-                    },
-                    signed: config.alice,
+                    id: `propose.${id}`,
+                    required: this.required,
+                    signed: this.signed,
                     pallet: "committee",
-                    call: "vote",
-                    args: [hash, this.api.createType("Vote" as any)],
-                    with: [
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.bob`,
-                                signed: config.bob,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
-                        },
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.charlie`,
-                                signed: config.charlie,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
-                        },
-                        async (hash: string): Promise<IExtrinsic> => {
-                            return {
-                                id: `votes.${id}.dave`,
-                                signed: config.dave,
-                                pallet: "committee",
-                                call: "vote",
-                                args: [
-                                    hash,
-                                    this.api.createType("Vote" as any),
-                                ],
-                            };
-                        },
-                    ],
+                    call: "propose",
+                    args: [this.api.tx[this.pallet][this.call](...this.args)],
                 },
                 this.api,
                 this.pair
             )
         );
 
+        for (const account of ["alice", "bob", "charlie", "dave"]) {
+            queue.push(
+                new Extrinsic(
+                    {
+                        required: [`propose.${id}`],
+                        id: `votes.${id}.${account}`,
+                        shared: async () => {
+                            return new Promise(async (resolve) => {
+                                const hash = proposals[this.id];
+                                const currentBlock = (
+                                    await this.api.derive.chain.bestNumber()
+                                ).toNumber();
+
+                                const end = (
+                                    (
+                                        await this.api.query.committee.votes(
+                                            hash
+                                        )
+                                    ).toJSON() as any
+                                ).end as number;
+
+                                const needsToWait =
+                                    end - currentBlock > VOTING_PERIOD
+                                        ? end - currentBlock - VOTING_PERIOD
+                                        : 0;
+
+                                console.log(`\t | voting ${id}...`);
+                                console.log(
+                                    `\t | waiting for the voting peirod (around ${Math.floor(
+                                        (needsToWait * 12) / 60
+                                    )} mins)...`
+                                );
+
+                                await waitBlock(needsToWait);
+                                resolve(hash);
+                            });
+                        },
+                        signed: (config as any)[account],
+                        pallet: "committee",
+                        call: "vote",
+                        args: [
+                            () => proposals[this.id],
+                            this.api.createType("Vote" as any),
+                        ],
+                    },
+                    this.api,
+                    this.pair
+                )
+            );
+        }
+
         // push close and verification
         queue.push(
             new Extrinsic(
                 {
                     required: [`votes.${id}.dave`],
-                    id: `close.${this.pallet}.${this.call}`,
+                    id: `close.${id}`,
                     shared: async () => {
-                        return new Promise(async (resolve) => {
-                            const currentBlock = (
-                                await this.api.derive.chain.bestNumber()
-                            ).toNumber();
+                        const hash = proposals[this.id];
+                        const currentBlock = (
+                            await this.api.derive.chain.bestNumber()
+                        ).toNumber();
 
-                            const end = (
-                                (
-                                    await this.api.query.committee.votes(hash)
-                                ).toJSON() as any
-                            ).end as number;
+                        const end = (
+                            (
+                                await this.api.query.committee.votes(hash)
+                            ).toJSON() as any
+                        ).end as number;
 
-                            const needsToWait = end - currentBlock;
-                            console.log(
-                                `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
-                            );
+                        const needsToWait = end - currentBlock + 1;
+                        console.log(
+                            `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
+                        );
 
-                            await waitBlock(needsToWait > 0 ? needsToWait : 0);
-                            resolve(hash);
-                        });
+                        await waitBlock(needsToWait > 0 ? needsToWait : 1);
+                        if (this.shared && typeof this.shared === "function") {
+                            return await this.shared();
+                        }
                     },
                     signed: config.alice,
                     pallet: "committee",
                     call: "close",
-                    args: [(hash: string) => hash],
+                    args: [() => proposals[this.id]],
                     verify: this.verify,
                 },
                 this.api,
@@ -325,17 +298,24 @@ export class Extrinsic {
      * @param {ex} Extrinsic
      */
     public async run(
+        proposals: Record<string, any>,
         finished: string[],
         errors: string[],
         nonce: number
     ): Promise<void | string> {
         console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
-        const tx = this.build();
+        const tx = await this.build();
 
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
             (err: any) => {
+                console.log(`====> Error: ${this.id} failed: ${err}`);
                 errors.push(`====> Error: ${this.id} failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             }
         )) as TxResult;
 
@@ -343,12 +323,24 @@ export class Extrinsic {
         if (this.verify) {
             console.log(`\t | verify: ${this.id}`);
             await this.verify(this.shared).catch((err: any) => {
+                console.log(`====> Error: ${this.id} verify failed: ${err}`);
                 errors.push(`====> Error: ${this.id} verify failed: ${err}`);
+
+                // FIX ME:
+                //
+                // for test now
+                process.exit(1);
             });
         }
 
         if (res && res.unsub) {
             (await res.unsub)();
+        }
+
+        // push hash if is proposal
+        if (this.id.includes("propose.")) {
+            proposals[this.id.split("propose.")[1]] =
+                await this.getLastestProposal();
         }
 
         finished.push(this.id);

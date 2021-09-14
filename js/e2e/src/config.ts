@@ -43,5 +43,5 @@ export interface IExtrinsic {
     /// Required calls or functions before this extrinsic
     required?: string[];
     /// Calls or functions with this extrinsic
-    with?: (IExtrinsic | ((shared?: any) => Promise<IExtrinsic>))[];
+    with?: IExtrinsic[];
 }

@@ -9,7 +9,6 @@ import { definitions } from "@pint/types";
 import { Config, ExtrinsicConfig } from "./config";
 import { Extrinsic } from "./extrinsic";
 import { launch } from "./launch";
-import { expandId } from "./util";
 import { ChildProcess } from "child_process";
 import OrmlTypes from "@open-web3/orml-types";
 
@@ -47,6 +46,7 @@ export default class Runner implements Config {
     public finished: string[];
     public nonce: number;
     public config: ExtrinsicConfig;
+    public proposals: Record<string, any>;
 
     /**
      * run E2E tests
@@ -158,6 +158,7 @@ export default class Runner implements Config {
         this.nonce = 0;
         this.finished = [];
         this.config = config.config;
+        this.proposals = {};
     }
 
     /**
@@ -188,12 +189,14 @@ export default class Runner implements Config {
      */
     public async queue(): Promise<void> {
         const queue: Extrinsic[] = [];
+        let missed = [];
         for (const e of this.exs) {
             // 0. check if required ex with ids has finished
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
                     if (!this.finished.includes(r)) {
+                        missed.push(r);
                         requiredFinished = false;
                         break;
                     }
@@ -204,32 +207,16 @@ export default class Runner implements Config {
                 continue;
             }
 
-            // 1. Build shared data
-            if (typeof e.shared === "function") {
-                e.shared = await e.shared.call(this);
-            }
-
-            // 2. Pend transactions
             queue.push(e);
             if (e.with) {
                 for (const w of e.with) {
-                    const ex =
-                        typeof w === "function"
-                            ? expandId(await w(e.shared))
-                            : w;
-                    queue.push(new Extrinsic(ex, this.api, this.pair));
+                    queue.push(new Extrinsic(w, this.api, this.pair));
                 }
             }
         }
 
         if (queue.length === 0) {
-            console.error(
-                `Error: some required extrinsics missed: \n\t ${JSON.stringify(
-                    this.finished,
-                    null,
-                    2
-                )}`
-            );
+            console.error(`Error: required extrinsics missed: ${missed}`);
             process.exit(1);
         }
 
@@ -264,22 +251,29 @@ export default class Runner implements Config {
                     return isFunction;
                 })
                 .map((e) => {
-                    let n = -1;
-                    if (!e.signed || e.signed.address === this.pair.address) {
-                        n = Number(currentNonce);
-                        currentNonce += 1;
-                    }
-
                     if (e.proposal) {
                         return e.propose(
+                            this.proposals,
                             this.finished,
                             this.errors,
-                            n,
                             this.exs,
                             this.config
                         );
                     } else {
-                        return e.run(this.finished, this.errors, n);
+                        let n = -1;
+                        if (
+                            !e.signed ||
+                            e.signed.address === this.pair.address
+                        ) {
+                            n = Number(currentNonce);
+                            currentNonce += 1;
+                        }
+                        return e.run(
+                            this.proposals,
+                            this.finished,
+                            this.errors,
+                            n
+                        );
                     }
                 })
         ).then(() => {
