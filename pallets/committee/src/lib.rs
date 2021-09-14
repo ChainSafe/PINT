@@ -222,13 +222,18 @@ pub mod pallet {
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
 		fn on_initialize(n: BlockNumberFor<T>) -> Weight {
 			// perform upkeep only at the start of a new cycle
-			if Self::get_next_voting_period_end(&n) ==
-				Ok(n + T::VotingPeriod::get() + T::ProposalSubmissionPeriod::get())
-			{
-				Self::upkeep(n);
+			match Self::get_next_voting_period_end(&n) {
+				Ok(end) => {
+					if end == n + T::VotingPeriod::get() + T::ProposalSubmissionPeriod::get() {
+						return Self::upkeep(n);
+					}
+				}
+				Err(err) => {
+					// this can only happen due to misconfig, in which case we log the error
+					log::error!("Failed to determine next voting period end: {:?}", err);
+				}
 			}
-			0 // TODO: Calcualte the non-negotiable weight consumed by
-			 // performing upkeep
+			0
 		}
 	}
 
@@ -278,11 +283,24 @@ pub mod pallet {
 		/// Function executed at the initialization of the first block in
 		/// a new voting period cycle. Used to maintain the active proposals
 		/// store.
-		fn upkeep(n: BlockNumberFor<T>) {
+		///
+		/// Returns the consumed weight:
+		///
+		/// `Storage: ActiveProposals (r:1 w:1) + Votes (r1) * len(proposals)`
+		fn upkeep(n: BlockNumberFor<T>) -> Weight {
+			// ActiveProposals.retain (r:1 w:1)
+			let mut consumed = T::DbWeight::get().reads_writes(1, 1);
+
 			// clear out proposals that are no longer active
 			ActiveProposals::<T>::mutate(|proposals| {
+				// consumed weight for all `Storage: Votes (r1)` lookups
+				let read_vote = T::DbWeight::get().reads(1);
+				consumed = consumed.saturating_add(read_vote.saturating_mul(proposals.len() as Weight));
+
 				proposals.retain(|hash| if let Some(votes) = Self::get_votes_for(hash) { votes.end > n } else { false })
-			})
+			});
+
+			consumed
 		}
 
 		/// Used to check if an origin is signed and the signer is a member of
