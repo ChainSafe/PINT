@@ -125,6 +125,7 @@ pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 					withdraw_unbonded: 1000_u64,
 				},
 				bonding_duration: 1_000,
+				is_frozen: false
 			},
 		)],
 		proxy_configs: vec![(

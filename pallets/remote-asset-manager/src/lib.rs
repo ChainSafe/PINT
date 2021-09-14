@@ -300,6 +300,10 @@ pub mod pallet {
 		SetStatemintConfig(StatemintConfig<u32>),
 		/// Transfer to statemint succeeded. \[account, value\]
 		StatemintTransfer(T::AccountId, T::Balance),
+		/// The asset is frozen for XCM related operations.  \[asset id\]
+		Frozen(T::AssetId),
+		/// The asset was thawed for XCM related operations.  \[asset id\]
+		Thawed(T::AssetId),
 	}
 
 	#[pallet::error]
@@ -614,10 +618,22 @@ pub mod pallet {
 		///
 		/// - `asset_id`: The identifier of the asset to be frozen.
 		///
-		/// Callable by the admin origin
-		#[pallet::weight(10_000)] // TODO: Set weights
-		pub fn freeze(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResult {
+		/// Callable by the admin origin.
+		///
+		/// Emits `Frozen`.
+		///
+		/// Weight: `O(1)`
+		#[pallet::weight(T::WeightInfo::freeze())]
+		pub fn freeze(origin: OriginFor<T>, asset: T::AssetId) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
+
+			PalletStakingConfig::<T>::try_mutate(&asset, |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+				let config = maybe_config.as_mut().ok_or(Error::<T>::NoPalletConfigFound)?;
+				config.is_frozen = true;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::<T>::Frozen(asset));
 			Ok(())
 		}
 
@@ -626,9 +642,21 @@ pub mod pallet {
 		/// - `asset_id`: The identifier of the asset to be frozen.
 		///
 		/// Callable by the admin origin
-		#[pallet::weight(10_000)] // TODO: Set weights
-		pub fn thaw(origin: OriginFor<T>, asset_id: T::AssetId) -> DispatchResult {
+		///
+		/// Emits `Thawed`.
+		///
+		/// Weight: `O(1)`
+		#[pallet::weight(T::WeightInfo::thaw())]
+		pub fn thaw(origin: OriginFor<T>, asset: T::AssetId) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
+
+			PalletStakingConfig::<T>::try_mutate(&asset, |maybe_config| -> sp_std::result::Result<_, DispatchError> {
+				let config = maybe_config.as_mut().ok_or(Error::<T>::NoPalletConfigFound)?;
+				config.is_frozen = false;
+				Ok(())
+			})?;
+
+			Self::deposit_event(Event::<T>::Thawed(asset));
 			Ok(())
 		}
 
@@ -930,11 +958,19 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn transfer() -> Weight;
+		fn freeze() -> Weight;
+		fn thaw() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
 	impl WeightInfo for () {
 		fn transfer() -> Weight {
+			Default::default()
+		}
+		fn freeze() -> Weight {
+			Default::default()
+		}
+		fn thaw() -> Weight {
 			Default::default()
 		}
 	}

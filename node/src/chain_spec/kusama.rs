@@ -162,6 +162,7 @@ fn pint_testnet_genesis(
 					minimum_balance: 0,
 					weights: StakingWeights::polkadot(),
 					bonding_duration: KUSAMA_BONDING_DURATION_IN_BLOCKS,
+					is_frozen: true,
 				},
 			)],
 			proxy_configs: vec![(42, ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() })],
