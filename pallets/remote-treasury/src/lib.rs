@@ -16,7 +16,7 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::DispatchResult,
 		pallet_prelude::*,
-		sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert},
+		sp_runtime::traits::{AccountIdConversion, AtLeast32BitUnsigned, Convert, Zero},
 		traits::Get,
 		transactional, PalletId,
 	};
@@ -105,7 +105,11 @@ pub mod pallet {
 		/// Transfer the amount of the given asset from the parachain's account into the recipient
 		/// account on it's native location.
 		///
+		/// This will be a noop for `amount == 0`.
+		///
 		/// Only callable by the AdminOrigin.
+		///
+		/// Emits `Withdrawn`.
 		#[pallet::weight(T::WeightInfo::transfer())]
 		#[transactional]
 		pub fn transfer(
@@ -117,6 +121,10 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin)?;
 			if asset == T::SelfAssetId::get() {
 				return Err(Error::<T>::InvalidAsset.into());
+			}
+
+			if amount.is_zero() {
+				return Ok(());
 			}
 
 			T::XcmAssetTransfer::transfer(
@@ -136,7 +144,11 @@ pub mod pallet {
 		/// Transfer the amount of the relay chain asset from the parachain's account into the
 		/// recipient account on the relay chain.
 		///
+		/// This will be a noop for `amount == 0`.
+		///
 		/// Only callable by the AdminOrigin.
+		///
+		/// Emits `Withdrawn`.
 		#[pallet::weight(T::WeightInfo::transfer_relaychain_asset())]
 		#[transactional]
 		pub fn transfer_relaychain_asset(
@@ -145,6 +157,10 @@ pub mod pallet {
 			recipient: T::AccountId,
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
+
+			if amount.is_zero() {
+				return Ok(());
+			}
 
 			let asset = T::RelayChainAssetId::get();
 			T::XcmAssetTransfer::transfer(
