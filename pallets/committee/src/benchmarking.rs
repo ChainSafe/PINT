@@ -40,7 +40,7 @@ benchmarks! {
 		);
 
 		// construct call
-		let call = <Call<T>>::vote(proposal.hash(), Vote::Abstain);
+		let call = <Call<T>>::vote(proposal.hash(), VoteKind::Abstain);
 	}: {
 		call.dispatch_bypass_filter(origin)?
 	} verify {
@@ -59,7 +59,7 @@ benchmarks! {
 			assert_ok!(Votes::<T>::try_mutate(&proposal.hash(), |votes| {
 				if let Some(votes) = votes {
 					votes.cast_vote(
-						MemberVote::new(CommitteeMember::new(voter, MemberType::Council), Vote::Aye),
+						MemberVote::new(CommitteeMember::new(voter, MemberType::Council), VoteKind::Aye),
 					);
 					Ok(())
 				} else {

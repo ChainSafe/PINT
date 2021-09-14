@@ -49,7 +49,7 @@ impl<AccountId> CommitteeMember<AccountId> {
 		Self { account_id, member_type }
 	}
 
-	pub fn into_vote(self, vote: Vote) -> MemberVote<AccountId> {
+	pub fn into_vote(self, vote: VoteKind) -> MemberVote<AccountId> {
 		MemberVote { member: self, vote }
 	}
 }
@@ -58,11 +58,11 @@ impl<AccountId> CommitteeMember<AccountId> {
 /// A committee member together with their cast vote.
 pub struct MemberVote<AccountId> {
 	pub member: CommitteeMember<AccountId>,
-	pub vote: Vote,
+	pub vote: VoteKind,
 }
 
 impl<AccountId> MemberVote<AccountId> {
-	pub fn new(member: CommitteeMember<AccountId>, vote: Vote) -> Self {
+	pub fn new(member: CommitteeMember<AccountId>, vote: VoteKind) -> Self {
 		Self { member, vote }
 	}
 }
@@ -101,9 +101,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 		end: BlockNumber,
 	) -> Self {
 		let votes = sp_std::iter::empty()
-			.chain(ayes.into_iter().map(|x| x.into_vote(Vote::Aye)))
-			.chain(nays.into_iter().map(|x| x.into_vote(Vote::Nay)))
-			.chain(abstentions.into_iter().map(|x| x.into_vote(Vote::Abstain)))
+			.chain(ayes.into_iter().map(|x| x.into_vote(VoteKind::Aye)))
+			.chain(nays.into_iter().map(|x| x.into_vote(VoteKind::Nay)))
+			.chain(abstentions.into_iter().map(|x| x.into_vote(VoteKind::Abstain)))
 			.collect();
 		Self { votes, end }
 	}
@@ -133,9 +133,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 		self.votes.iter().filter(|x| if let Some(m) = member_type { &x.member.member_type == m } else { true }).fold(
 			(0, 0, 0),
 			|(ayes, nays, abs), x| match x.vote {
-				Vote::Aye => (ayes + 1, nays, abs),
-				Vote::Nay => (ayes, nays + 1, abs),
-				Vote::Abstain => (ayes, nays, abs + 1),
+				VoteKind::Aye => (ayes + 1, nays, abs),
+				VoteKind::Nay => (ayes, nays + 1, abs),
+				VoteKind::Abstain => (ayes, nays, abs + 1),
 			},
 		)
 	}
@@ -159,9 +159,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Possible votes a member can cast
-pub enum Vote {
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum VoteKind {
 	Aye,
 	Nay,
 	Abstain,
@@ -196,7 +196,7 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 				votes: vec![
 					MemberVote {
 						member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
-						vote: Vote::Aye
+						vote: VoteKind::Aye
 					};
 					T::MinCouncilVotes::get() + 1
 				],
