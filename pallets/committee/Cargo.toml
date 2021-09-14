@@ -9,6 +9,7 @@ repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
+log = { version = "0.4.14", default-features = false }
 codec = { package = 'parity-scale-codec', version = '2.2.0', default-features = false, features = ['derive', 'max-encoded-len']}
 
 # Substrate Dependencies
@@ -22,6 +23,7 @@ sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-
 [features]
 default = ['std']
 std = [
+    'log/std',
     'codec/std',
     'frame-support/std',
     'frame-system/std',
