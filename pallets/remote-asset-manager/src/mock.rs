@@ -438,6 +438,7 @@ pub mod para {
 	}
 
 	parameter_types! {
+		pub MaxDecimals: u8 = 12;
 		pub MaxActiveDeposits: u32 = 50;
 	}
 
@@ -450,6 +451,7 @@ pub mod para {
 		type IndexToken = Balances;
 		type Balance = Balance;
 		type MaxActiveDeposits = MaxActiveDeposits;
+		type MaxDecimals = MaxDecimals;
 		type RedemptionFee = ();
 		type LockupPeriod = LockupPeriod;
 		type MinimumRedemption = MinimumRedemption;

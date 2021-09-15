@@ -153,6 +153,7 @@ parameter_types! {
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
+	pub MaxDecimals: u8 = 12;
 	pub MaxActiveDeposits: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 
@@ -173,6 +174,7 @@ impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxDecimals = MaxDecimals;
 	type MaxActiveDeposits = MaxActiveDeposits;
 	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
