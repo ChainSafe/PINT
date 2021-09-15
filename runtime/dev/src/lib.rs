@@ -20,7 +20,6 @@ pub use frame_support::{
 	},
 	PalletId, StorageValue,
 };
-use frame_system::EnsureSigned;
 
 // orml imports
 use orml_currencies::BasicCurrencyAdapter;
@@ -446,7 +445,7 @@ impl pallet_committee::Config for Runtime {
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;
-	type ProposalSubmissionOrigin = EnsureSigned<AccountId>;
+	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
 	type ApprovedByCommitteeOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type Event = Event;

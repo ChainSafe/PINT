@@ -1134,6 +1134,7 @@ pub mod pallet {
 
 	#[cfg(feature = "runtime-benchmarks")]
 	impl<T: Config> AssetRecorderBenchmarks<T::AssetId, T::Balance> for Pallet<T> {
+		/// create feed and add new liquid asset
 		fn add_asset(
 			asset_id: T::AssetId,
 			units: T::Balance,
@@ -1142,9 +1143,18 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let origin = T::AdminOrigin::successful_origin();
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
 			Self::register_asset(T::AdminOrigin::successful_origin(), asset_id, AssetAvailability::Liquid(location))?;
 			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
+		}
+
+		/// deposit index tokens to the testing account with saft_nav
+		fn deposit_saft_equivalent(saft_nav: T::Balance) -> DispatchResult {
+			let origin = T::AdminOrigin::successful_origin();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+			T::IndexToken::deposit_creating(&origin_account_id, Self::saft_equivalent(saft_nav)?);
+			Ok(())
 		}
 	}
 

@@ -292,6 +292,8 @@ pub trait AssetRecorderBenchmarks<AssetId, Balance> {
 		localtion: MultiLocation,
 		amount: Balance,
 	) -> DispatchResultWithPostInfo;
+
+	fn deposit_saft_equivalent(saft_nav: Balance) -> DispatchResult;
 }
 
 /// Determines the fee upon index token redemptions

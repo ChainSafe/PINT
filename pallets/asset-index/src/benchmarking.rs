@@ -42,7 +42,7 @@ benchmarks! {
 					million,
 					million
 		);
-
+		let balance = T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account());
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			AssetIndex::<T>::assets(asset_id),
@@ -50,7 +50,7 @@ benchmarks! {
 		);
 	   assert_eq!(
 			T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account()),
-			million
+			million + balance
 		);
 	}
 
