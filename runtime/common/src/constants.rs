@@ -118,6 +118,7 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
 	pub const LockupPeriod: BlockNumber = 10;
 	pub const MaxCandidates: u32 = 200;
+	pub const MaxDecimals: u8 = 18;
 	pub const MaxInvulnerables: u32 = 50;
 	// For weight estimation, we assume that the most locks on an individual account will be 50.
 	// This number may need to be adjusted in the future if this assumption no longer holds true.

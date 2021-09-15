@@ -71,6 +71,11 @@ fn can_set_metadata() {
 			AssetIndex::set_metadata(Origin::signed(ACCOUNT_ID), ASSET_A_ID, b"dot".to_vec(), b"".to_vec(), 8,),
 			pallet::Error::<Test>::BadMetadata
 		);
+
+		assert_noop!(
+			AssetIndex::set_metadata(Origin::signed(ACCOUNT_ID), ASSET_A_ID, b"dot".to_vec(), b"dot".to_vec(), 13),
+			pallet::Error::<Test>::InvalidDecimals
+		);
 	});
 }
 

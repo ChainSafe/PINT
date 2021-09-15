@@ -104,6 +104,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxActiveDeposits: Get<u32>;
 
+		/// Restricts the max limit of decimals in metadata
+		#[pallet::constant]
+		type MaxDecimals: Get<u8>;
+
 		/// Determines the redemption fee in complete_withdraw
 		type RedemptionFee: RedemptionFee<Self::BlockNumber, Self::Balance>;
 
@@ -324,6 +328,8 @@ pub mod pallet {
 		InsufficientIndexTokens,
 		/// Thrown if deposits reach limit
 		TooManyDeposits,
+		/// Thrown when the given decimals is zero or too high
+		InvalidDecimals,
 		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
 		/// The deposited amount is below the minimum value required.
@@ -470,6 +476,8 @@ pub mod pallet {
 
 			ensure!(!name.is_empty(), Error::<T>::BadMetadata);
 			ensure!(!symbol.is_empty(), Error::<T>::BadMetadata);
+			ensure!(decimals <= T::MaxDecimals::get(), Error::<T>::InvalidDecimals);
+
 			let bounded_name: BoundedVec<u8, T::StringLimit> =
 				name.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
