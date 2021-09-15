@@ -104,7 +104,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxActiveDeposits: Get<u32>;
 
-		/// Restricts how many deposits can be active
+		/// Restricts the max limit of decimals in metadata
 		#[pallet::constant]
 		type MaxDecimals: Get<u8>;
 
@@ -328,9 +328,9 @@ pub mod pallet {
 		InsufficientIndexTokens,
 		/// Thrown if deposits reach limit
 		TooManyDeposits,
-		/// Thrown when the given DepositRange is invalid
-		InvalidDecimals,
 		/// Thrown when the given decimals is zero or too high
+		InvalidDecimals,
+		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
 		/// The deposited amount is below the minimum value required.
 		DepositAmountBelowMinimum,
