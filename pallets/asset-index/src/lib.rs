@@ -1145,7 +1145,15 @@ pub mod pallet {
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
-			Self::register_asset(T::AdminOrigin::successful_origin(), asset_id, AssetAvailability::Liquid(location))?;
+
+			// the tests of benchmarks register assets by default
+			if <Assets<T>>::get(asset_id).is_none() {
+				Self::register_asset(
+					T::AdminOrigin::successful_origin(),
+					asset_id,
+					AssetAvailability::Liquid(location),
+				)?;
+			}
 			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
 		}
 

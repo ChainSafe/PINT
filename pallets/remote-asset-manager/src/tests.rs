@@ -21,7 +21,7 @@ use crate::{
 };
 use frame_support::traits::Hooks;
 use pallet_price_feed::PriceFeed;
-use primitives::traits::NavProvider;
+use primitives::{traits::NavProvider, AssetAvailability};
 
 #[allow(unused)]
 fn print_events<T: frame_system::Config>(context: &str) {
@@ -50,11 +50,15 @@ fn register_relay() {
 	// prepare index fund so NAV is available
 	let deposit = 1_000;
 	assert_ok!(orml_tokens::Pallet::<para::Runtime>::deposit(RELAY_CHAIN_ASSET, &ADMIN_ACCOUNT, 1_000));
+	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::register_asset(
+		para::Origin::signed(ADMIN_ACCOUNT),
+		RELAY_CHAIN_ASSET,
+		AssetAvailability::Liquid(X1(Parent)),
+	));
 	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::add_asset(
 		para::Origin::signed(ADMIN_ACCOUNT),
 		RELAY_CHAIN_ASSET,
 		deposit,
-		X1(Parent),
 		deposit
 	));
 	assert!(pallet_asset_index::Pallet::<para::Runtime>::is_liquid_asset(&RELAY_CHAIN_ASSET));

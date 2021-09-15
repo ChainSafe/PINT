@@ -22,6 +22,7 @@ use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use xcm::v0::MultiLocation;
 
 use frame_support::traits::Everything;
+use primitives::AssetAvailability;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -226,11 +227,15 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.execute_with(|| {
 		// mint and intial supply of pint
 		let initial_liquid_supply = 1_000;
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			LIQUID_ASSET_ID,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
 		assert_ok!(AssetIndex::add_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),
 			LIQUID_ASSET_ID,
 			initial_liquid_supply,
-			MultiLocation::Null,
 			INDEX_TOKEN_SUPPLY,
 		));
 
