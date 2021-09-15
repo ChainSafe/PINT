@@ -417,7 +417,7 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
-			// native asset can't be added
+			// native asset can't be registered
 			Self::ensure_not_native_asset(&asset_id)?;
 
 			Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
