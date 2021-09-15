@@ -26,7 +26,7 @@ __NAV__ (_Net Asset Value_) represents:
 * In the context of the index token itself (PINT) this however represents the unit value of the token and is calculated
   by taking the value of each of the underlying tokens over the total supply of PINT:
 
-<div style="text-align:center"><img src="../../assets/img/nav-formula.png"  alt="NAV formula"/></div>
+<div style="text-align:center"><img src="../../../assets/img/nav-formula.png"  alt="NAV formula"/></div>
 
 ## Pallets
 
