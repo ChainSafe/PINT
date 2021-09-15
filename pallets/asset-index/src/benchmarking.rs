@@ -29,10 +29,17 @@ benchmarks! {
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::Null;
+
+		assert_ok!(
+			<AssetIndex<T>>::register_asset(
+				origin.clone(),
+				asset_id,
+				AssetAvailability::Liquid(MultiLocation::Null)
+			)
+		);
 		let call = Call::<T>::add_asset(
 					asset_id,
 					million,
-					location.clone(),
 					million
 		);
 
@@ -56,11 +63,15 @@ benchmarks! {
 		let deposit_units = 1000_u32.into();
 
 		// create liquid assets
+		assert_ok!(<AssetIndex<T>>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
 		assert_ok!(<AssetIndex<T>>::add_asset(
 			origin.clone(),
 			asset_id,
 			units,
-			MultiLocation::Null,
 			tokens
 		));
 
@@ -95,11 +106,15 @@ benchmarks! {
 		let admin_deposit = 1_000_000u32;
 		let units = 1_000u32.into();
 
+		assert_ok!(<AssetIndex<T>>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
 			100u32.into(),
-			MultiLocation::Null,
 			admin_deposit.into(),
 		));
 
@@ -208,11 +223,15 @@ benchmarks! {
 		let deposit_units = 1_000_u32.into();
 
 		// create liquid assets
+		assert_ok!(<AssetIndex<T>>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
 		assert_ok!(<AssetIndex<T>>::add_asset(
 			origin.clone(),
 			asset_id,
 			units,
-			MultiLocation::Null,
 			tokens
 		));
 
@@ -245,7 +264,12 @@ benchmarks! {
 		// create price feed
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
 
-		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, MultiLocation::Null, amount));
+		assert_ok!(<AssetIndex<T>>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
+		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, amount));
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 		assert_ok!(<AssetIndex<T>>::deposit(origin.clone(), asset_id, units));
 

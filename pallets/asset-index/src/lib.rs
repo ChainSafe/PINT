@@ -650,8 +650,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block
-							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block &&
+							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -1143,8 +1143,8 @@ pub mod pallet {
 			let origin = T::AdminOrigin::successful_origin();
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
-			Self::register_asset(T::AdminOrigin::successful_origin(), asset_id, location)?;
-			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
+			Self::register_asset(T::AdminOrigin::successful_origin(), asset_id, AssetAvailability::Liquid(location))?;
+			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
 		}
 	}
 
