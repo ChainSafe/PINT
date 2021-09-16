@@ -83,6 +83,21 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                 );
             },
         },
+        {
+            pallet: "committee",
+            call: "removeMember",
+            args: [config.ziggy.address],
+            verify: async () => {
+                assert(
+                    (
+                        (await api.query.committee.members(
+                            config.ziggy.address
+                        )) as any
+                    ).isNone,
+                    "remove member failed"
+                );
+            },
+        },
         /* local_treasury */
         {
             pallet: "localTreasury",
