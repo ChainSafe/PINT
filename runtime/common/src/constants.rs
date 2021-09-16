@@ -123,6 +123,7 @@ parameter_types! {
 	// This number may need to be adjusted in the future if this assumption no longer holds true.
 	pub const MaxLocks: u32 = 50;
 	pub const MinCandidates: u32 = 1;
+	pub const MinCouncilMembers: usize = 4;
 	pub const MinCouncilVotes: usize = 4;
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 	pub const MinimumRedemption: u32 = 0;

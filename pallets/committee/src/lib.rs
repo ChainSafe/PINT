@@ -64,6 +64,9 @@ pub mod pallet {
 		/// Duration (in blocks) of the voting period
 		type VotingPeriod: Get<Self::BlockNumber>;
 
+		/// Minimum number of council members
+		type MinCouncilMembers: Get<usize>;
+
 		/// Minimum number of council members that must vote for a action to be
 		/// passed
 		type MinCouncilVotes: Get<usize>;
@@ -170,6 +173,9 @@ pub mod pallet {
 		/// A new consituent has been added
 		/// \[constituent_address]
 		NewConstituent(AccountIdFor<T>),
+		/// A member has been removed
+		/// \[member_type, address]
+		RemoveMember(MemberType, AccountIdFor<T>),
 	}
 
 	#[pallet::error]
@@ -198,6 +204,8 @@ pub mod pallet {
 		ProposalNotAcceptedCouncilDeny,
 		/// Attempted to execute a proposal that has already been executed
 		ProposalAlreadyExecuted,
+		/// Reach the minimal number of the limit of council members
+		MinimalCouncilMembers,
 		/// The hash provided does not have an associated proposal
 		NoProposalWithHash,
 		/// The data type for enumerating the proposals has reached its upper
@@ -430,6 +438,35 @@ pub mod pallet {
 
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
+		}
+
+		/// Remove council or constituent via governance
+		///
+		/// This call can only be called after the approval of the committee
+		#[pallet::weight(T::WeightInfo::add_constituent())]
+		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
+			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
+
+			Members::<T>::try_mutate_exists(member.clone(), |m| -> Result<(), DispatchError> {
+				if let Some(ty) = m {
+					// Check if have enough council members
+					if *ty == MemberType::Council
+						&& <Members<T>>::iter_values().filter(|m| *m == MemberType::Council).count()
+							<= T::MinCouncilMembers::get()
+					{
+						return Err(<Error<T>>::MinimalCouncilMembers.into());
+					}
+
+					// # Safty
+					//
+					// Only a no-fail assign operation left, use the type of member
+					// in this scope to send event.
+					Self::deposit_event(Event::RemoveMember(ty.clone(), member));
+				}
+
+				*m = None;
+				Ok(())
+			})
 		}
 	}
 
