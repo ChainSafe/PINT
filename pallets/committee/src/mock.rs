@@ -94,7 +94,6 @@ type EnsureApprovedByCommittee =
 impl pallet_committee::Config for Test {
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
-	type MinCouncilMembers = MinCouncilMembers;
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalSubmissionOrigin = EnsureSignedBy<AdminAccountId, AccountId>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;

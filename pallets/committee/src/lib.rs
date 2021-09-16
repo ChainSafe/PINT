@@ -64,9 +64,6 @@ pub mod pallet {
 		/// Duration (in blocks) of the voting period
 		type VotingPeriod: Get<Self::BlockNumber>;
 
-		/// Minimum number of council members
-		type MinCouncilMembers: Get<usize>;
-
 		/// Minimum number of council members that must vote for a action to be
 		/// passed
 		type MinCouncilVotes: Get<usize>;
@@ -453,7 +450,7 @@ pub mod pallet {
 				// Check if have enough council members
 				if *ty == MemberType::Council
 					&& <Members<T>>::iter_values().filter(|m| *m == MemberType::Council).count()
-						<= T::MinCouncilMembers::get()
+						<= T::MinCouncilVotes::get()
 				{
 					return Err(Error::<T>::MinimalCouncilMembers.into());
 				}

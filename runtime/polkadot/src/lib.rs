@@ -440,7 +440,6 @@ impl pallet_committee::Config for Runtime {
 	type ProposalNonce = u32;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
-	type MinCouncilMembers = MinCouncilMembers;
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
