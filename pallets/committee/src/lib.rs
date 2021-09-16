@@ -462,10 +462,11 @@ pub mod pallet {
 					// Only a no-fail assign operation left, use the type of member
 					// in this scope to send event.
 					Self::deposit_event(Event::RemoveMember(ty.clone(), member));
+					*m = None;
+					Ok(())
+				} else {
+					Err(<Error<T>>::NotMember.into())
 				}
-
-				*m = None;
-				Ok(())
 			})
 		}
 	}
