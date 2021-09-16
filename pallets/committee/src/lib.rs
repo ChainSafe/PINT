@@ -443,7 +443,7 @@ pub mod pallet {
 		/// Remove council or constituent via governance
 		///
 		/// This call can only be called after the approval of the committee
-		#[pallet::weight(T::WeightInfo::remove_member())]
+		#[pallet::weight((T::WeightInfo::remove_member(), DispatchClass::Operational))]
 		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
