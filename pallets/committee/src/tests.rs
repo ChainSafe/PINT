@@ -399,29 +399,29 @@ fn can_remove_member() {
 
 		// adds two constituents
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
-		assert_eq!(<pallet::Members<Test>>::get(CONSTITUENT), Some(MemberType::Constituent));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), Some(MemberType::Constituent));
 		assert_ok!(Committee::add_constituent(Origin::root(), another_constituent));
-		assert_eq!(<pallet::Members<Test>>::get(another_constituent), Some(MemberType::Constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), Some(MemberType::Constituent));
 
 		// cannot remove account which is not a member
-		assert_noop!(Committee::remove_member(Origin::root(), 4), <pallet::Error<Test>>::NotMember);
+		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
 
 		// can remove constituent
 		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
-		assert_eq!(<pallet::Members<Test>>::get(CONSTITUENT), None);
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
 
 		// can remove council
-		assert_eq!(<pallet::Members<Test>>::get(3), Some(MemberType::Council));
+		assert_eq!(pallet::Members::<Test>::get(3), Some(MemberType::Council));
 		assert_ok!(Committee::remove_member(Origin::root(), 3));
-		assert_eq!(<pallet::Members<Test>>::get(3), None);
+		assert_eq!(pallet::Members::<Test>::get(3), None);
 
 		// can remove constituent again
 		assert_ok!(Committee::remove_member(Origin::root(), another_constituent));
-		assert_eq!(<pallet::Members<Test>>::get(another_constituent), None);
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), None);
 
 		// cannot remove council again
-		assert_eq!(<pallet::Members<Test>>::get(2), Some(MemberType::Council));
-		assert_noop!(Committee::remove_member(Origin::root(), 2), <pallet::Error<Test>>::MinimalCouncilMembers);
+		assert_eq!(pallet::Members::<Test>::get(2), Some(MemberType::Council));
+		assert_noop!(Committee::remove_member(Origin::root(), 2), pallet::Error::<Test>::MinimalCouncilMembers);
 	});
 }
 
