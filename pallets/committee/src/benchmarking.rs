@@ -95,4 +95,14 @@ benchmarks! {
 	) verify {
 		assert!(<pallet::Members<T>>::contains_key(constituent));
 	}
+
+	remove_member {
+		let constituent: T::AccountId = account("constituent", 0, 0);
+		assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), constituent.clone()));
+	}: _(
+		SystemOrigin::Root,
+		constituent.clone()
+	) verify {
+		assert!(!<pallet::Members<T>>::contains_key(constituent));
+	}
 }

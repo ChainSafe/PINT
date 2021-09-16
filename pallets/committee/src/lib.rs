@@ -443,7 +443,7 @@ pub mod pallet {
 		/// Remove council or constituent via governance
 		///
 		/// This call can only be called after the approval of the committee
-		#[pallet::weight(T::WeightInfo::add_constituent())]
+		#[pallet::weight(T::WeightInfo::remove_member())]
 		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
@@ -477,6 +477,7 @@ pub mod pallet {
 		fn vote() -> Weight;
 		fn close() -> Weight;
 		fn add_constituent() -> Weight;
+		fn remove_member() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -494,6 +495,10 @@ pub mod pallet {
 		}
 
 		fn add_constituent() -> Weight {
+			Default::default()
+		}
+
+		fn remove_member() -> Weight {
 			Default::default()
 		}
 	}
