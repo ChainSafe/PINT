@@ -453,8 +453,8 @@ pub mod pallet {
 					Err(Error::<T>::MinimalCouncilMembers.into())
 				}
 			})?;
-			Self::deposit_event(Event::RemoveMember(member, ty));
 
+			Self::deposit_event(Event::RemoveMember(member, ty));
 			Ok(())
 		}
 	}
