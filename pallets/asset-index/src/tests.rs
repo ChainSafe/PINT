@@ -24,7 +24,7 @@ fn can_register_asset() {
 			ASSET_A_ID,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
-		assert_eq!(<pallet::Assets<Test>>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::Null)));
+		assert_eq!(<pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::Null)));
 	})
 }
 

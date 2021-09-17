@@ -31,7 +31,7 @@ benchmarks! {
 		let location = MultiLocation::Null;
 
 		assert_ok!(
-			<AssetIndex<T>>::register_asset(
+			AssetIndex::<T>::register_asset(
 				origin.clone(),
 				asset_id,
 				AssetAvailability::Liquid(MultiLocation::Null)
@@ -63,7 +63,7 @@ benchmarks! {
 		let deposit_units = 1000_u32.into();
 
 		// create liquid assets
-		assert_ok!(<AssetIndex<T>>::register_asset(
+		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)

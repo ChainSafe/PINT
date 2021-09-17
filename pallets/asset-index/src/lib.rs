@@ -759,7 +759,7 @@ pub mod pallet {
 			units: T::Balance,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			<Assets<T>>::get(&asset_id).ok_or(<Error<T>>::AssetNotExists)?;
+			<Assets<T>>::get(&asset_id).ok_or(Error::<T>::AssetNotExists)?;
 
 			if units.is_zero() {
 				return Ok(().into());
@@ -1147,7 +1147,7 @@ pub mod pallet {
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
 
 			// the tests of benchmarks register assets by default
-			if <Assets<T>>::get(asset_id).is_none() {
+			if Assets::<T>::get(asset_id).is_none() {
 				Self::register_asset(
 					T::AdminOrigin::successful_origin(),
 					asset_id,
