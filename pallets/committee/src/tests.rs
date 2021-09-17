@@ -20,6 +20,7 @@ const EMPTY_RANGE: std::ops::Range<AccountId> = 0..0;
 const START_OF_S1: <Test as system::Config>::BlockNumber = VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
 // Start of first voting period
 const START_OF_V1: <Test as system::Config>::BlockNumber = 2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
+const CONSTITUENT: u64 = 42;
 
 /// value is used to make unique actions
 fn make_action(value: u64) -> Call {
@@ -372,7 +373,7 @@ fn cannot_execute_proposal_twice() {
 
 #[test]
 fn cannot_add_constituent_if_already_is_council() {
-	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
+	new_test_ext_without_members().execute_with(|| {
 		assert_noop!(
 			Committee::add_constituent(Origin::root(), PROPOSER_ACCOUNT_ID),
 			<pallet::Error<Test>>::AlreadyCouncilMember
@@ -382,10 +383,45 @@ fn cannot_add_constituent_if_already_is_council() {
 
 #[test]
 fn cannot_add_constituent_if_already_is_constituent() {
-	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
-		assert_ok!(Committee::add_constituent(Origin::root(), 42));
+	new_test_ext_without_members().execute_with(|| {
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_noop!(
+			Committee::add_constituent(Origin::root(), CONSTITUENT),
+			<pallet::Error<Test>>::AlreadyConstituentMember
+		);
+	});
+}
 
-		assert_noop!(Committee::add_constituent(Origin::root(), 42), <pallet::Error<Test>>::AlreadyConstituentMember);
+#[test]
+fn can_remove_member() {
+	new_test_ext(0..4).execute_with(|| {
+		let another_constituent = CONSTITUENT + 1;
+
+		// adds two constituents
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), Some(MemberType::Constituent));
+		assert_ok!(Committee::add_constituent(Origin::root(), another_constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), Some(MemberType::Constituent));
+
+		// cannot remove account which is not a member
+		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
+
+		// can remove constituent
+		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
+
+		// can remove council
+		assert_eq!(pallet::Members::<Test>::get(3), Some(MemberType::Council));
+		assert_ok!(Committee::remove_member(Origin::root(), 3));
+		assert_eq!(pallet::Members::<Test>::get(3), None);
+
+		// can remove constituent again
+		assert_ok!(Committee::remove_member(Origin::root(), another_constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), None);
+
+		// cannot remove council again
+		assert_eq!(pallet::Members::<Test>::get(2), Some(MemberType::Council));
+		assert_noop!(Committee::remove_member(Origin::root(), 2), pallet::Error::<Test>::MinimalCouncilMembers);
 	});
 }
 
@@ -397,7 +433,7 @@ fn propose_constituent_works() {
 		// propose a new constituent
 		assert_ok!(Committee::propose(
 			Origin::signed(PROPOSER_ACCOUNT_ID),
-			Box::new(Call::Committee(crate::Call::add_constituent(42)))
+			Box::new(Call::Committee(crate::Call::add_constituent(CONSTITUENT)))
 		));
 
 		// test if proposal submitted with event
@@ -415,7 +451,7 @@ fn propose_constituent_works() {
 			panic!("Could not get proposal hash from events");
 		}
 
-		// check if constituent committee contains 42
-		assert!(<pallet::Members<Test>>::contains_key(42));
+		// check if constituent committee contains new constituent
+		assert!(<pallet::Members<Test>>::contains_key(CONSTITUENT));
 	});
 }

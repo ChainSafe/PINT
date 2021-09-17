@@ -77,11 +77,13 @@ parameter_types! {
 }
 pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
 pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = PROPOSER_ACCOUNT_ID;
+pub(crate) const MIN_COUNCIL_MEMBERS: usize = 4;
 pub(crate) const MIN_COUNCIL_VOTES: usize = 4;
 
 ord_parameter_types! {
 	pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
 	pub const ExecuterAccountId: AccountId = EXECUTER_ACCOUNT_ID;
+	pub const MinCouncilMembers: usize = MIN_COUNCIL_MEMBERS;
 	pub const MinCouncilVotes: usize = MIN_COUNCIL_VOTES;
 
 }
@@ -130,6 +132,18 @@ where
 	t.into()
 }
 
+// Build genesis storage according to the mock runtime.
+pub fn new_test_ext_without_members() -> sp_io::TestExternalities {
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pallet_committee::GenesisConfig::<Test> {
+		council_members: vec![PROPOSER_ACCOUNT_ID],
+		constituent_members: Default::default(),
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
+	t.into()
+}
 // Get last event
 pub fn last_event() -> Event {
 	system::Pallet::<Test>::events().pop().expect("Event expected").event

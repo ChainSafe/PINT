@@ -170,6 +170,9 @@ pub mod pallet {
 		/// A new consituent has been added
 		/// \[constituent_address]
 		NewConstituent(AccountIdFor<T>),
+		/// A member has been removed
+		/// \[member_type, address]
+		RemoveMember(AccountIdFor<T>, MemberType),
 	}
 
 	#[pallet::error]
@@ -198,6 +201,8 @@ pub mod pallet {
 		ProposalNotAcceptedCouncilDeny,
 		/// Attempted to execute a proposal that has already been executed
 		ProposalAlreadyExecuted,
+		/// Reach the minimal number of the limit of council members
+		MinimalCouncilMembers,
 		/// The hash provided does not have an associated proposal
 		NoProposalWithHash,
 		/// The data type for enumerating the proposals has reached its upper
@@ -307,11 +312,7 @@ pub mod pallet {
 		/// the committee
 		pub fn ensure_member(origin: OriginFor<T>) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
 			let who = ensure_signed(origin)?;
-			if let Some(member_type) = <Members<T>>::get(who.clone()) {
-				Ok(CommitteeMember::new(who, member_type))
-			} else {
-				Err(<Error<T>>::NotMember.into())
-			}
+			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?))
 		}
 	}
 
@@ -431,6 +432,31 @@ pub mod pallet {
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
 		}
+
+		/// Remove council or constituent via governance
+		///
+		/// This call can only be called after the approval of the committee
+		#[pallet::weight(T::WeightInfo::remove_member())]
+		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
+			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
+
+			let ty = Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<MemberType, DispatchError> {
+				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
+
+				// Check if have enough council members
+				if ty == MemberType::Constituent ||
+					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
+						T::MinCouncilVotes::get()
+				{
+					Ok(ty)
+				} else {
+					Err(Error::<T>::MinimalCouncilMembers.into())
+				}
+			})?;
+
+			Self::deposit_event(Event::RemoveMember(member, ty));
+			Ok(())
+		}
 	}
 
 	/// Trait for the asset-index pallet extrinsic weights.
@@ -439,6 +465,7 @@ pub mod pallet {
 		fn vote() -> Weight;
 		fn close() -> Weight;
 		fn add_constituent() -> Weight;
+		fn remove_member() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -456,6 +483,10 @@ pub mod pallet {
 		}
 
 		fn add_constituent() -> Weight {
+			Default::default()
+		}
+
+		fn remove_member() -> Weight {
 			Default::default()
 		}
 	}
