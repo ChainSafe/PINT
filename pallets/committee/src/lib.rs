@@ -350,7 +350,7 @@ pub mod pallet {
 		/// This can only be called by members of the committee.
 		/// Successfully cast votes will be recorded in the state and a proposal
 		/// meeting voting requirements can be executed.
-		#[pallet::weight(T::WeightInfo::vote())]
+		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			// Only members can vote
 			let voter = Self::ensure_member(origin)?;
@@ -375,7 +375,7 @@ pub mod pallet {
 		/// Extrinsic to close and execute a proposal.
 		/// Proposal must have been voted on and have majority approval.
 		/// Only the proposal execution origin can execute.
-		#[pallet::weight(T::WeightInfo::close())]
+		#[pallet::weight((T::WeightInfo::close(), DispatchClass::Operational))]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
 			let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
