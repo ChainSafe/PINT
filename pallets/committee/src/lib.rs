@@ -440,22 +440,20 @@ pub mod pallet {
 		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-			Self::deposit_event(Event::RemoveMember(
-				member.clone(),
-				Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<MemberType, DispatchError> {
-					let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
+			let ty = Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<MemberType, DispatchError> {
+				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
-					// Check if have enough council members
-					if ty == MemberType::Constituent ||
-						Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-							T::MinCouncilVotes::get()
-					{
-						Ok(ty)
-					} else {
-						Err(Error::<T>::MinimalCouncilMembers.into())
-					}
-				})?,
-			));
+				// Check if have enough council members
+				if ty == MemberType::Constituent ||
+					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
+						T::MinCouncilVotes::get()
+				{
+					Ok(ty)
+				} else {
+					Err(Error::<T>::MinimalCouncilMembers.into())
+				}
+			})?;
+			Self::deposit_event(Event::RemoveMember(member, ty));
 
 			Ok(())
 		}
