@@ -452,7 +452,7 @@ pub mod pallet {
 					{
 						Ok(ty)
 					} else {
-						Err(Error::<T>::MinimalCouncilMembers.into());
+						Err(Error::<T>::MinimalCouncilMembers.into())
 					}
 				})?,
 			));
