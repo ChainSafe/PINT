@@ -312,11 +312,7 @@ pub mod pallet {
 		/// the committee
 		pub fn ensure_member(origin: OriginFor<T>) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
 			let who = ensure_signed(origin)?;
-			if let Some(member_type) = Members::<T>::get(who.clone()) {
-				Ok(CommitteeMember::new(who, member_type))
-			} else {
-				Err(Error::<T>::NotMember.into())
-			}
+			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?))
 		}
 	}
 
@@ -444,26 +440,24 @@ pub mod pallet {
 		pub fn remove_member(origin: OriginFor<T>, member: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-			Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<(), DispatchError> {
-				let ty = maybe_member.as_ref().ok_or(Error::<T>::NotMember)?;
+			Self::deposit_event(Event::RemoveMember(
+				member.clone(),
+				Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<MemberType, DispatchError> {
+					let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
-				// Check if have enough council members
-				if *ty == MemberType::Council &&
-					<Members<T>>::iter_values().filter(|m| *m == MemberType::Council).count() <=
-						T::MinCouncilVotes::get()
-				{
-					return Err(Error::<T>::MinimalCouncilMembers.into());
-				}
+					// Check if have enough council members
+					if ty == MemberType::Council
+						&& Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+							<= T::MinCouncilVotes::get()
+					{
+						return Err(Error::<T>::MinimalCouncilMembers.into());
+					}
 
-				// # Safty
-				//
-				// Only a no-fail assign operation left, use the type of member
-				// in this scope to send event.
-				Self::deposit_event(Event::RemoveMember(member.clone(), ty.clone()));
-				*maybe_member = None;
+					Ok(ty)
+				})?,
+			));
 
-				Ok(())
-			})
+			Ok(())
 		}
 	}
 
