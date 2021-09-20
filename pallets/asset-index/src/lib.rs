@@ -34,7 +34,6 @@ pub mod pallet {
 	use primitives::traits::AssetRecorderBenchmarks;
 
 	use frame_support::{
-		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
@@ -360,7 +359,7 @@ pub mod pallet {
 			units: T::Balance,
 			location: MultiLocation,
 			amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, location, amount)
 		}
 
@@ -373,7 +372,7 @@ pub mod pallet {
 			location: MultiLocation,
 			amount: T::Balance,
 			recipient: T::AccountId,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::do_add_asset(recipient, asset_id, units, location, amount)
 		}
@@ -394,7 +393,7 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			Self::do_remove_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, recipient)
 		}
 
@@ -406,7 +405,7 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			ensure_root(origin)?;
 			Self::do_remove_asset(who, asset_id, units, recipient)
 		}
@@ -444,7 +443,7 @@ pub mod pallet {
 			T::AdminOrigin::ensure_origin(origin)?;
 			ensure!(!new_range.minimum.is_zero(), Error::<T>::InvalidDepositRange);
 			ensure!(new_range.maximum > new_range.minimum, Error::<T>::InvalidDepositRange);
-			IndexTokenDepositRange::<T>::put(new_range.clone());
+			IndexTokenDepositRange::<T>::put(&new_range);
 			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
 			Ok(())
 		}
@@ -483,12 +482,9 @@ pub mod pallet {
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
 				symbol.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 
-			Metadata::<T>::try_mutate_exists(id, |metadata| {
-				*metadata = Some(AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
-
-				Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
-				Ok(())
-			})
+			Metadata::<T>::insert(id, AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
+			Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
+			Ok(())
 		}
 
 		/// Initiate a transfer from the user's sovereign account into the
@@ -498,6 +494,7 @@ pub mod pallet {
 		/// account and mints PINT proportionally using the latest
 		/// available price pairs
 		#[pallet::weight(T::WeightInfo::deposit())]
+		#[transactional]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResult {
 			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			if units.is_zero() {
@@ -530,12 +527,8 @@ pub mod pallet {
 			T::RemoteAssetManager::deposit(asset_id, units);
 
 			// insert new deposit
-			<Deposits<T>>::try_mutate(&caller, |deposits| -> DispatchResult {
-				deposits
-					.try_push((index_tokens, frame_system::Pallet::<T>::block_number()))
-					.map_err(|_| Error::<T>::TooManyDeposits)?;
-				Ok(())
-			})?;
+			Deposits::<T>::try_append(&caller, (index_tokens, frame_system::Pallet::<T>::block_number()))
+				.map_err(|_| Error::<T>::TooManyDeposits)?;
 
 			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
@@ -554,7 +547,7 @@ pub mod pallet {
 		/// ratio of the liquid assets in the index.
 		#[pallet::weight(T::WeightInfo::withdraw())]
 		#[transactional]
-		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
+		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
 			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			ensure!(amount >= T::MinimumRedemption::get(), Error::<T>::MinimumRedemption);
 
@@ -613,13 +606,10 @@ pub mod pallet {
 			// state
 			let end_block = frame_system::Pallet::<T>::block_number().saturating_add(T::WithdrawalPeriod::get());
 			// lock the assets for the withdrawal period starting at current block
-			PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
-				let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
-				redemption.push(PendingRedemption { end_block, assets })
-			});
+			PendingWithdrawals::<T>::append(&caller, PendingRedemption { end_block, assets });
 
 			Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Attempts to complete all currently pending redemption processes
@@ -640,8 +630,8 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
-		#[transactional]
 		#[pallet::weight(T::WeightInfo::complete_withdraw())]
+		#[transactional]
 		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResult {
 			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			let current_block = frame_system::Pallet::<T>::block_number();
@@ -764,9 +754,9 @@ pub mod pallet {
 			units: T::Balance,
 			location: MultiLocation,
 			amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(().into());
+				return Ok(());
 			}
 
 			let availability = AssetAvailability::Liquid(location);
@@ -789,7 +779,7 @@ pub mod pallet {
 			}
 
 			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Removes liquid assets
@@ -798,9 +788,9 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			if units.is_zero() {
-				return Ok(().into());
+				return Ok(());
 			}
 			Self::ensure_not_native_asset(&asset_id)?;
 
@@ -1001,7 +991,7 @@ pub mod pallet {
 		fn do_update_index_token_locks(user: &T::AccountId) {
 			let locks = IndexTokenLocks::<T>::get(user);
 			if !locks.is_empty() {
-				Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
+				Self::do_insert_index_token_locks(user, locks)
 			}
 		}
 
@@ -1057,7 +1047,7 @@ pub mod pallet {
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
 			// mint asset into the treasury account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?; // ??? Bryan - where is this token coming from?
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
 			Ok(())
@@ -1087,7 +1077,7 @@ pub mod pallet {
 			let index_token = Self::saft_equivalent(saft_nav)?;
 
 			// mint the given units of the SAFT asset into the treasury's account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?; // ??? Bryan - what prevents this from minting other assets? e.g. DOT
 
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, index_token);

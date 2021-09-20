@@ -474,7 +474,7 @@ pub mod pallet {
 			value: T::Balance,
 			payee: RewardDestination<AccountIdFor<T>>,
 		) -> DispatchResultWithPostInfo {
-			let _ = ensure_signed(origin.clone())?;
+			let _ = ensure_signed(origin.clone())?; // ??? Bryan - why ensure signed & ensure admin?
 			T::AdminOrigin::ensure_origin(origin)?;
 			if value.is_zero() {
 				return Ok(().into());
@@ -496,6 +496,8 @@ pub mod pallet {
 
 			let call = PalletStakingCall::<T>::Bond(Bond { controller: controller.clone(), value, payee });
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
+
+			// ??? Bryan - who is paying for the XCM execution fee on dest chain?
 
 			let xcm = Xcm::Transact {
 				origin_type: OriginKind::SovereignAccount,
@@ -549,6 +551,8 @@ pub mod pallet {
 				delay: T::BlockNumber::zero(),
 			});
 			let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
+
+			// ??? Bryan - who is paying for the XCM execution fee on dest chain? also the proxy deposit
 
 			let xcm = Xcm::Transact {
 				origin_type: OriginKind::SovereignAccount,
