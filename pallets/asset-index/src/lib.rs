@@ -1138,7 +1138,7 @@ pub mod pallet {
 			units: T::Balance,
 			location: MultiLocation,
 			amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let origin = T::AdminOrigin::successful_origin();
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 
