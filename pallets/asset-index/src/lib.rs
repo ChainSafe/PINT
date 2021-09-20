@@ -650,8 +650,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -759,7 +759,7 @@ pub mod pallet {
 			units: T::Balance,
 			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
-			<Assets<T>>::get(&asset_id).ok_or(Error::<T>::AssetNotExists)?;
+			Assets::<T>::get(&asset_id).ok_or(Error::<T>::AssetNotExists)?;
 
 			if units.is_zero() {
 				return Ok(().into());
