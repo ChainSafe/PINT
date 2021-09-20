@@ -341,7 +341,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 ASSET_ID_A,
                 PINT.mul(ASSET_ID_A_UNITS),
-                PARENT_LOCATION,
                 PINT.mul(ASSET_ID_A_AMOUNT),
             ],
             verify: async (before: Balance) => {

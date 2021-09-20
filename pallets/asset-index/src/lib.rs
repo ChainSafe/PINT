@@ -322,6 +322,8 @@ pub mod pallet {
 		NoPendingWithdrawals,
 		/// Thrown if the asset that should be added is already registered
 		AssetAlreadyExists,
+		/// Thrown if the asset that should be added has not been registered.
+		AssetNotExists,
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
@@ -357,10 +359,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResult {
-			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, location, amount)
+			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, amount)
 		}
 
 		/// Add liquid asset with root origin, see `add_asset`
@@ -369,12 +370,11 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 			recipient: T::AccountId,
 		) -> DispatchResult {
 			ensure_root(origin)?;
-			Self::do_add_asset(recipient, asset_id, units, location, amount)
+			Self::do_add_asset(recipient, asset_id, units, amount)
 		}
 
 		/// Dispatches transfer to move assets out of the index’s account,
@@ -421,6 +421,9 @@ pub mod pallet {
 			availability: AssetAvailability,
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
+
+			// native asset can't be registered
+			Self::ensure_not_native_asset(&asset_id)?;
 
 			Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
 				// allow new assets only
@@ -752,31 +755,16 @@ pub mod pallet {
 			recipient: T::AccountId,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
 		) -> DispatchResult {
+			Assets::<T>::get(&asset_id).ok_or(Error::<T>::AssetNotExists)?;
+
 			if units.is_zero() {
 				return Ok(());
 			}
 
-			let availability = AssetAvailability::Liquid(location);
-
-			// check whether this is a new asset and make sure locations match otherwise
-			let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
-				ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
-				false
-			} else {
-				true
-			};
-
 			// transfer the caller's fund into the treasury account
 			Self::add_liquid(&recipient, asset_id, units, amount)?;
-
-			// register asset if not yet known
-			if is_new_asset {
-				Assets::<T>::insert(asset_id, availability.clone());
-				Self::deposit_event(Event::AssetRegistered(asset_id, availability));
-			}
 
 			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
 			Ok(())
@@ -1155,7 +1143,16 @@ pub mod pallet {
 			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
-			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, location, amount)
+
+			// the tests of benchmarks register assets by default
+			if Assets::<T>::get(asset_id).is_none() {
+				Self::register_asset(
+					T::AdminOrigin::successful_origin(),
+					asset_id,
+					AssetAvailability::Liquid(location),
+				)?;
+			}
+			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
 		}
 
 		/// deposit index tokens to the testing account with saft_nav
