@@ -757,7 +757,7 @@ pub mod pallet {
 			units: T::Balance,
 			amount: T::Balance,
 		) -> DispatchResult {
-			Assets::<T>::get(&asset_id).ok_or(Error::<T>::AssetNotExists)?;
+			ensure!(Assets::<T>::contains_key(&asset_id), Error::<T>::AssetNotExists);
 
 			if units.is_zero() {
 				return Ok(());
