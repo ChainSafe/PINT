@@ -1047,7 +1047,7 @@ pub mod pallet {
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
 			// mint asset into the treasury account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?; // ??? Bryan - where is this token coming from?
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
 			Ok(())
@@ -1077,7 +1077,7 @@ pub mod pallet {
 			let index_token = Self::saft_equivalent(saft_nav)?;
 
 			// mint the given units of the SAFT asset into the treasury's account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?; // ??? Bryan - what prevents this from minting other assets? e.g. DOT
+			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
 
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, index_token);
