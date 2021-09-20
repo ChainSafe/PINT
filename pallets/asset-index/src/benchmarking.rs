@@ -68,7 +68,7 @@ benchmarks! {
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
-		assert_ok!(<AssetIndex<T>>::add_asset(
+		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
 			units,
@@ -80,7 +80,7 @@ benchmarks! {
 
 		// deposit some funds into the index from an user account
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, deposit_units));
-		assert_ok!(<AssetIndex<T>>::deposit(origin.clone(), asset_id, deposit_units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, deposit_units));
 
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
@@ -90,7 +90,7 @@ benchmarks! {
 		);
 
 		// start withdraw
-		assert_ok!(<AssetIndex<T>>::withdraw(
+		assert_ok!(AssetIndex::<T>::withdraw(
 			origin.clone(),
 			42_u32.into(),
 		));
@@ -106,7 +106,7 @@ benchmarks! {
 		let admin_deposit = 1_000_000u32;
 		let units = 1_000u32.into();
 
-		assert_ok!(<AssetIndex<T>>::register_asset(
+		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
@@ -223,12 +223,12 @@ benchmarks! {
 		let deposit_units = 1_000_u32.into();
 
 		// create liquid assets
-		assert_ok!(<AssetIndex<T>>::register_asset(
+		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
-		assert_ok!(<AssetIndex<T>>::add_asset(
+		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
 			units,
@@ -240,7 +240,7 @@ benchmarks! {
 
 		// deposit some funds into the index from an user account
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, deposit_units));
-		assert_ok!(<AssetIndex<T>>::deposit(origin.clone(), asset_id, deposit_units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, deposit_units));
 
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
@@ -264,20 +264,20 @@ benchmarks! {
 		// create price feed
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
 
-		assert_ok!(<AssetIndex<T>>::register_asset(
+		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
 		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, amount));
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
-		assert_ok!(<AssetIndex<T>>::deposit(origin.clone(), asset_id, units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, units));
 
 		let call = Call::<T>::unlock();
 	}: { call.dispatch_bypass_filter(origin)? } verify {
-		assert_eq!(<pallet::IndexTokenLocks<T>>::get(&origin_account_id), vec![types::IndexTokenLock{
-			locked: <AssetIndex<T>>::index_token_equivalent(asset_id, units).unwrap(),
-			end_block: <frame_system::Pallet<T>>::block_number() + T::LockupPeriod::get() - 1u32.into()
+		assert_eq!(pallet::IndexTokenLocks::<T>::get(&origin_account_id), vec![types::IndexTokenLock{
+			locked: AssetIndex::<T>::index_token_equivalent(asset_id, units).unwrap(),
+			end_block: frame_system::Pallet::<T>::block_number() + T::LockupPeriod::get() - 1u32.into()
 		}]);
 	}
 }
