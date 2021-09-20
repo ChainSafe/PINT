@@ -17,6 +17,10 @@ in functionality rather than the changes in code.
 
 Details on how to run tests relevant to the changes within this pull request.
 
+NOTE: If you're pulling request from your personal fork, please follow 
+
+https://app.circleci.com/pipelines/github/ChainSafe/PINT to trigger our CI.
+
 -->
 
 ```
