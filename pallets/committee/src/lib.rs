@@ -35,7 +35,7 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::{Codec, DispatchResultWithPostInfo},
 		pallet_prelude::*,
-		sp_runtime::traits::{CheckedAdd, Dispatchable, One, Zero},
+		sp_runtime::traits::{CheckedAdd, Dispatchable, One, Saturating, Zero},
 		sp_std::{boxed::Box, prelude::*, vec::Vec},
 		weights::{GetDispatchInfo, PostDispatchInfo},
 	};
@@ -190,6 +190,9 @@ pub mod pallet {
 		/// Attempted to cast a vote outside the accepted voting period for a
 		/// proposal
 		NotInVotingPeriod,
+		/// Attempted to cast a vote outside the accepted voting period for a
+		/// member
+		MemberNotInVotingPeriod,
 		/// Attempted to add a constituent that is already a member of the
 		/// council
 		AlreadyCouncilMember,
@@ -358,21 +361,32 @@ pub mod pallet {
 		/// meeting voting requirements can be executed.
 		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
-			// Only members can vote
 			let voter = Self::ensure_member(origin)?;
-
-			Votes::<T>::try_mutate(&proposal_hash, |votes| {
-				if let Some(votes) = votes {
-					// Can only vote within the allowed range of blocks for this proposal
-					ensure!(Self::within_voting_period(votes), Error::<T>::NotInVotingPeriod);
-					// members can vote only once
-					ensure!(!votes.has_voted(&voter.account_id), Error::<T>::DuplicateVote);
-					votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
-					Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
-					Ok(())
-				} else {
-					Err(Error::<T>::NoProposalWithHash)
+			VotingTimeouts::<T>::try_mutate(&voter.account_id, |maybe_timeout| -> DispatchResult {
+				if maybe_timeout
+					.take()
+					.filter(|block_number| {
+						frame_system::Pallet::<T>::block_number().saturating_sub(*block_number) < T::VotingPeriod::get()
+					})
+					.is_some()
+				{
+					return Err(Error::<T>::MemberNotInVotingPeriod.into());
 				}
+
+				Ok(())
+			})?;
+
+			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
+				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
+
+				// Can only vote within the allowed range of blocks for this proposal
+				ensure!(Self::within_voting_period(&votes), Error::<T>::NotInVotingPeriod);
+				// members can vote only once
+				ensure!(!votes.has_voted(&voter.account_id), Error::<T>::DuplicateVote);
+				votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
+
+				Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
+				Ok(())
 			})?;
 
 			Ok(())

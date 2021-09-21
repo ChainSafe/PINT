@@ -142,6 +142,12 @@ fn member_cannot_vote_before_voting_period() {
 			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
+
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal.hash(), VoteKind::Nay),
+			pallet::Error::<Test>::MemberNotInVotingPeriod
+		);
 	});
 }
 
