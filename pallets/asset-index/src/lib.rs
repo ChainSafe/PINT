@@ -1140,9 +1140,9 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = T::AdminOrigin::successful_origin();
-			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone())?;
 
-			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id)?;
+			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id).map_err(|e| e.error)?;
 
 			// the tests of benchmarks register assets by default
 			if Assets::<T>::get(asset_id).is_none() {
@@ -1152,6 +1152,7 @@ pub mod pallet {
 					AssetAvailability::Liquid(location),
 				)?;
 			}
+
 			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
 		}
 

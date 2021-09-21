@@ -303,6 +303,7 @@ pub mod pallet {
 				1_u32.into(),
 				1.into(),
 			)?;
+
 			Ok(().into())
 		}
 	}
