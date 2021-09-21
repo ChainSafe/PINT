@@ -125,7 +125,7 @@ pub mod pallet {
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
 
-	/// Storte a mapping (hash) -> BlockNumber for new members' voting timeout
+	/// Storte a mapping (hash) -> BlockNumber for new members' voting timeouts
 	#[pallet::storage]
 	pub type VotingTimeouts<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
