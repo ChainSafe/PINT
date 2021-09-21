@@ -387,9 +387,7 @@ pub mod pallet {
 
 				Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
 				Ok(())
-			})?;
-
-			Ok(())
+			})
 		}
 
 		/// Extrinsic to close and execute a proposal.
