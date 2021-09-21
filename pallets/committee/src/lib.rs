@@ -125,6 +125,11 @@ pub mod pallet {
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
 
+	/// Store a mapping (hash) -> VoteAggregate for all existing proposals.
+	#[pallet::storage]
+	pub type VotingTimeouts<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
+
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		pub council_members: Vec<T::AccountId>,
@@ -429,6 +434,7 @@ pub mod pallet {
 				}
 			})?;
 
+			VotingTimeouts::<T>::insert(&constituent, frame_system::Pallet::<T>::block_number());
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
 		}
@@ -444,9 +450,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					Ok(ty)
 				} else {
