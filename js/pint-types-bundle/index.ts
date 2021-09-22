@@ -100,6 +100,10 @@ export const definitions = {
                 Proposal: {
                     nonce: "ProposalNonce",
                     action: "Call",
+                    status: "ProposalStatus",
+                },
+                ProposalStatus: {
+                    _enum: ["Active", "Closed", "Executed"],
                 },
                 ProposalNonce: "u32",
                 ProxyType: {
