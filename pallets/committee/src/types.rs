@@ -11,15 +11,26 @@ use frame_support::{
 use frame_system::RawOrigin;
 
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+pub enum ProposalStatus {
+	Active,
+	Close,
+	Executed,
+}
+
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
 /// It has been proposed and has an assigned nonce.
 /// This extra abstraction is required since it may be desirable construct
 /// multiple proposal instances out of a single proposal
-pub struct Proposal<T: Config>(pub T::ProposalNonce, pub T::Action);
+pub struct Proposal<T: Config> {
+	pub nonce: T::ProposalNonce,
+	pub action: T::Action,
+	pub status: ProposalStatus,
+}
 
 impl<T: Config> Proposal<T> {
-	pub fn new(nonce: T::ProposalNonce, action: T::Action) -> Self {
-		Self(nonce, action)
+	pub fn new(nonce: T::ProposalNonce, action: T::Action, status: ProposalStatus) -> Self {
+		Self { nonce, action, status }
 	}
 
 	pub fn hash(&self) -> <T as frame_system::Config>::Hash {

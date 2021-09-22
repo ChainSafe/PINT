@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::{mock::*, CommitteeMember, MemberType, VoteAggregate, VoteKind};
+use crate::{mock::*, CommitteeMember, MemberType, ProposalStatus, VoteAggregate, VoteKind};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};
@@ -31,7 +31,7 @@ fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
 	let action = make_action(action_value);
 	let expected_nonce = pallet::ProposalCount::<Test>::get();
 	assert_ok!(Committee::propose(Origin::signed(PROPOSER_ACCOUNT_ID), Box::new(action.clone())));
-	pallet::Proposal::<Test>::new(expected_nonce, action)
+	pallet::Proposal::<Test>::new(expected_nonce, action, ProposalStatus::Active)
 }
 
 //
@@ -70,7 +70,7 @@ fn can_create_multiple_proposals_from_same_action() {
 
 		for i in 0..repeats {
 			let nonce = u32::try_from(i).unwrap();
-			let proposal = pallet::Proposal::<Test>::new(nonce, action.clone());
+			let proposal = pallet::Proposal::<Test>::new(nonce, action.clone(), ProposalStatus::Active);
 			assert!(Committee::active_proposals().contains(&proposal.hash()));
 			assert!(Committee::get_proposal(&proposal.hash()) == Some(proposal));
 		}
@@ -126,7 +126,7 @@ fn non_member_cannot_vote() {
 fn cannot_vote_for_non_existent_proposal() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
 		let action = make_action(123);
-		let proposal = pallet::Proposal::<Test>::new(0, action);
+		let proposal = pallet::Proposal::<Test>::new(0, action, ProposalStatus::Active);
 		assert_noop!(
 			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NoProposalWithHash

@@ -328,7 +328,7 @@ pub mod pallet {
 
 			// Create a new proposal with a unique nonce
 			let nonce = Self::take_and_increment_nonce()?;
-			let proposal = Proposal::<T>(nonce.clone(), *action);
+			let proposal = Proposal::<T>::new(nonce.clone(), *action, ProposalStatus::Active);
 
 			let proposal_hash = proposal.hash();
 
@@ -394,7 +394,7 @@ pub mod pallet {
 
 			// Execute the proposal
 			let proposal = Self::get_proposal(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
-			let result = proposal.1.dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
+			let result = proposal.action.dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
 
 			// register that this proposal has been executed
 			ExecutedProposals::<T>::insert(proposal_hash, ());
@@ -444,9 +444,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					Ok(ty)
 				} else {
