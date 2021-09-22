@@ -112,10 +112,6 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
 
-	/// Store a mapping (hash) -> () for all proposals that have been executed
-	#[pallet::storage]
-	pub type ExecutedProposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, (), OptionQuery>;
-
 	/// Maps accountIDs to their member type (council or constituent)
 	#[pallet::storage]
 	pub type Members<T: Config> = StorageMap<_, Blake2_128Concat, AccountIdFor<T>, MemberType, OptionQuery>;
@@ -199,6 +195,8 @@ pub mod pallet {
 		ProposalNotAcceptedConstituentVeto,
 		/// Tried to close a proposal but proposal was denied by council
 		ProposalNotAcceptedCouncilDeny,
+		/// Attempted to execute a proposal that has already been closed
+		ProposalAlreadyClosed,
 		/// Attempted to execute a proposal that has already been executed
 		ProposalAlreadyExecuted,
 		/// Reach the minimal number of the limit of council members
@@ -380,33 +378,41 @@ pub mod pallet {
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
 			let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
-			// ensure proposal has not already been executed
-			ensure!(!ExecutedProposals::<T>::contains_key(proposal_hash), Error::<T>::ProposalAlreadyExecuted);
-
-			let votes = Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
-			let current_block = frame_system::Pallet::<T>::block_number();
-
-			// Ensure voting period is over
-			ensure!(current_block > votes.end, Error::<T>::VotingPeriodNotElapsed);
-
-			// Ensure voting has accepted proposal
-			votes.is_accepted(T::MinCouncilVotes::get()).map_err(Into::<Error<T>>::into)?;
-
-			// Execute the proposal
-			let proposal = Self::get_proposal(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
-			let result = proposal.action.dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
-
 			// register that this proposal has been executed
-			ExecutedProposals::<T>::insert(proposal_hash, ());
+			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResultWithPostInfo {
+				let mut proposal = maybe_proposal.take().ok_or(Error::<T>::NoProposalWithHash)?;
 
-			Self::deposit_event(Event::ClosedAndExecutedProposal(
-				proposal_hash,
-				result.map(|_| ()).map_err(|e| e.error),
-			));
+				// ensure proposal has not already been executed
+				(match proposal.status {
+					ProposalStatus::Close => Err(Error::<T>::ProposalAlreadyClosed),
+					ProposalStatus::Executed => Err(Error::<T>::ProposalAlreadyExecuted),
+					_ => Ok(()),
+				})?;
 
-			// TODO: Handle weight used by the dispatch call in weight calculation
+				let votes = Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+				let current_block = frame_system::Pallet::<T>::block_number();
 
-			Ok(().into())
+				// Ensure voting period is over
+				ensure!(current_block > votes.end, Error::<T>::VotingPeriodNotElapsed);
+
+				// Ensure voting has accepted proposal
+				votes.is_accepted(T::MinCouncilVotes::get()).map_err(Into::<Error<T>>::into)?;
+
+				// Execute the proposal
+				let result = proposal.action.clone().dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
+
+				proposal.status = ProposalStatus::Executed;
+				*maybe_proposal = Some(proposal);
+
+				Self::deposit_event(Event::ClosedAndExecutedProposal(
+					proposal_hash,
+					result.map(|_| ()).map_err(|e| e.error),
+				));
+
+				// TODO: Handle weight used by the dispatch call in weight calculation
+
+				Ok(().into())
+			})
 		}
 
 		/// Add new constituent to the committee
