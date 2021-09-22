@@ -125,6 +125,8 @@ fn non_member_cannot_vote() {
 #[test]
 fn cannot_vote_for_non_existent_proposal() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
+		System::set_block_number(VOTING_PERIOD + 1);
+
 		let action = make_action(123);
 		let proposal = pallet::Proposal::<Test>::new(0, action);
 		assert_noop!(
@@ -137,6 +139,8 @@ fn cannot_vote_for_non_existent_proposal() {
 #[test]
 fn member_cannot_vote_before_voting_period() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
+		System::set_block_number(VOTING_PERIOD + 1);
+
 		let proposal = submit_proposal(123);
 		assert_noop!(
 			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
@@ -259,7 +263,7 @@ where
 	I: IntoIterator<Item = AccountId>,
 {
 	for m in accounts.into_iter() {
-		<pallet::Members<Test>>::insert(m, MemberType::Constituent);
+		<pallet::Members<Test>>::insert(m, (MemberType::Constituent, 0u64));
 	}
 }
 
@@ -405,9 +409,9 @@ fn can_remove_member() {
 
 		// adds two constituents
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
-		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), Some(MemberType::Constituent));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), Some((MemberType::Constituent, 0u64)));
 		assert_ok!(Committee::add_constituent(Origin::root(), another_constituent));
-		assert_eq!(pallet::Members::<Test>::get(another_constituent), Some(MemberType::Constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), Some((MemberType::Constituent, 0u64)));
 
 		// cannot remove account which is not a member
 		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
@@ -417,7 +421,7 @@ fn can_remove_member() {
 		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
 
 		// can remove council
-		assert_eq!(pallet::Members::<Test>::get(3), Some(MemberType::Council));
+		assert_eq!(pallet::Members::<Test>::get(3), Some((MemberType::Council, 0u64)));
 		assert_ok!(Committee::remove_member(Origin::root(), 3));
 		assert_eq!(pallet::Members::<Test>::get(3), None);
 
@@ -426,7 +430,7 @@ fn can_remove_member() {
 		assert_eq!(pallet::Members::<Test>::get(another_constituent), None);
 
 		// cannot remove council again
-		assert_eq!(pallet::Members::<Test>::get(2), Some(MemberType::Council));
+		assert_eq!(pallet::Members::<Test>::get(2), Some((MemberType::Council, 0u64)));
 		assert_noop!(Committee::remove_member(Origin::root(), 2), pallet::Error::<Test>::MinimalCouncilMembers);
 	});
 }
