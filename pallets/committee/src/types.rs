@@ -13,7 +13,7 @@ use frame_system::RawOrigin;
 #[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 pub enum ProposalStatus {
 	Active,
-	Close,
+	Closed,
 	Executed,
 }
 

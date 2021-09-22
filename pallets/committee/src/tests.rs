@@ -367,6 +367,19 @@ fn cannot_execute_proposal_twice() {
 	});
 }
 
+#[test]
+fn cannot_execute_proposal_after_closed() {
+	new_test_ext(0..4).execute_with(|| {
+		let proposal = submit_proposal(123);
+		run_to_block(START_OF_S1 + VOTING_PERIOD * 2);
+
+		assert_noop!(
+			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
+			pallet::Error::<Test>::ProposalAlreadyClosed
+		);
+	});
+}
+
 //
 // Constituent Committee Council Selection
 //
