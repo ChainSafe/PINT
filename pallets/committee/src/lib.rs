@@ -449,9 +449,9 @@ pub mod pallet {
 				let member = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if member.0 == MemberType::Constituent
-					|| Members::<T>::iter_values().filter(|(m, _)| *m == MemberType::Council).count()
-						> T::MinCouncilVotes::get()
+				if member.0 == MemberType::Constituent ||
+					Members::<T>::iter_values().filter(|(m, _)| *m == MemberType::Council).count() >
+						T::MinCouncilVotes::get()
 				{
 					Ok(member.0)
 				} else {
