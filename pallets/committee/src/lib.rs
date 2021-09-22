@@ -118,13 +118,17 @@ pub mod pallet {
 
 	/// Maps accountIDs to their member type (council or constituent)
 	#[pallet::storage]
-	pub type Members<T: Config> =
-		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, (MemberType, T::BlockNumber), OptionQuery>;
+	pub type Members<T: Config> = StorageMap<_, Blake2_128Concat, AccountIdFor<T>, MemberType, OptionQuery>;
 
 	/// Store a mapping (hash) -> VoteAggregate for all existing proposals.
 	#[pallet::storage]
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
+
+	/// Storte a mapping (hash) -> BlockNumber for new members' voting timeouts
+	#[pallet::storage]
+	pub type VotingTimeouts<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -143,11 +147,11 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			for member in &self.council_members {
-				Members::<T>::insert(member, (MemberType::Council, T::BlockNumber::zero()));
+				Members::<T>::insert(member, MemberType::Council);
 			}
 
 			for member in &self.constituent_members {
-				Members::<T>::insert(member, (MemberType::Constituent, T::BlockNumber::zero()));
+				Members::<T>::insert(member, MemberType::Constituent);
 			}
 		}
 	}
@@ -316,7 +320,7 @@ pub mod pallet {
 		/// the committee
 		pub fn ensure_member(origin: OriginFor<T>) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
 			let who = ensure_signed(origin)?;
-			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?.0))
+			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?))
 		}
 	}
 
@@ -358,11 +362,19 @@ pub mod pallet {
 		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			let voter = Self::ensure_member(origin)?;
-			Members::<T>::get(&voter.account_id)
-				.filter(|member| {
-					frame_system::Pallet::<T>::block_number().saturating_sub(member.1) > T::VotingPeriod::get()
-				})
-				.ok_or(Error::<T>::MemberNotInVotingPeriod)?;
+			VotingTimeouts::<T>::try_mutate(&voter.account_id, |maybe_timeout| -> DispatchResult {
+				if maybe_timeout
+					.take()
+					.filter(|block_number| {
+						frame_system::Pallet::<T>::block_number().saturating_sub(*block_number) < T::VotingPeriod::get()
+					})
+					.is_some()
+				{
+					return Err(Error::<T>::MemberNotInVotingPeriod.into());
+				}
+
+				Ok(())
+			})?;
 
 			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
 				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
@@ -421,19 +433,20 @@ pub mod pallet {
 		pub fn add_constituent(origin: OriginFor<T>, constituent: AccountIdFor<T>) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-			Members::<T>::try_mutate(constituent.clone(), |maybe_member| -> Result<(), DispatchError> {
-				if let Some(member) = maybe_member {
-					Err(match member.0 {
+			Members::<T>::try_mutate(constituent.clone(), |member| -> Result<(), DispatchError> {
+				if let Some(ty) = member {
+					Err(match ty {
 						MemberType::Council => <Error<T>>::AlreadyCouncilMember,
 						MemberType::Constituent => <Error<T>>::AlreadyConstituentMember,
 					}
 					.into())
 				} else {
-					*maybe_member = Some((MemberType::Constituent, frame_system::Pallet::<T>::block_number()));
+					*member = Some(MemberType::Constituent);
 					Ok(())
 				}
 			})?;
 
+			VotingTimeouts::<T>::insert(&constituent, frame_system::Pallet::<T>::block_number());
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
 		}
@@ -446,14 +459,14 @@ pub mod pallet {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
 			let ty = Members::<T>::try_mutate_exists(&member, |maybe_member| -> Result<MemberType, DispatchError> {
-				let member = maybe_member.take().ok_or(Error::<T>::NotMember)?;
+				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if member.0 == MemberType::Constituent
-					|| Members::<T>::iter_values().filter(|(m, _)| *m == MemberType::Council).count()
-						> T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent ||
+					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
+						T::MinCouncilVotes::get()
 				{
-					Ok(member.0)
+					Ok(ty)
 				} else {
 					Err(Error::<T>::MinimalCouncilMembers.into())
 				}
