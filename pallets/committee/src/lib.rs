@@ -244,7 +244,7 @@ pub mod pallet {
 			Proposals::translate_values(|mut proposal: Proposal<T>| {
 				Self::get_votes_for(&proposal.hash()).and_then(
 					|votes: VoteAggregate<T::AccountId, T::BlockNumber>| -> Option<Proposal<T>> {
-						if n.saturating_sub(votes.end) >= voting_period && proposal.status == ProposalStatus::Active {
+						if n.saturating_sub(votes.end) > voting_period && proposal.status == ProposalStatus::Active {
 							proposal.status = ProposalStatus::Closed;
 						}
 
