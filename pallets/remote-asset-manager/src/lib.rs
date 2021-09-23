@@ -474,7 +474,6 @@ pub mod pallet {
 			value: T::Balance,
 			payee: RewardDestination<AccountIdFor<T>>,
 		) -> DispatchResultWithPostInfo {
-			let _ = ensure_signed(origin.clone())?;
 			T::AdminOrigin::ensure_origin(origin)?;
 			if value.is_zero() {
 				return Ok(().into());

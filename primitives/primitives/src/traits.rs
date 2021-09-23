@@ -4,9 +4,6 @@
 //! This contains shared traits that are used in multiple pallets to prevent
 //! circular dependencies
 
-#[cfg(feature = "runtime-benchmarks")]
-use frame_support::dispatch::DispatchResultWithPostInfo;
-
 use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
 use frame_support::{
 	dispatch::DispatchError,
@@ -286,12 +283,7 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 /// Helper trait for runtime benchmarks
 #[cfg(feature = "runtime-benchmarks")]
 pub trait AssetRecorderBenchmarks<AssetId, Balance> {
-	fn add_asset(
-		asset_id: AssetId,
-		units: Balance,
-		location: MultiLocation,
-		amount: Balance,
-	) -> DispatchResultWithPostInfo;
+	fn add_asset(asset_id: AssetId, units: Balance, location: MultiLocation, amount: Balance) -> DispatchResult;
 
 	fn deposit_saft_equivalent(saft_nav: Balance) -> DispatchResult;
 }

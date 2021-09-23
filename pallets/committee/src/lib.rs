@@ -110,7 +110,7 @@ pub mod pallet {
 
 	/// Store a mapping (hash) -> Proposal for all existing proposals.
 	#[pallet::storage]
-	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
+	pub type Proposals<T: Config> = StorageMap<_, Identity, HashFor<T>, Proposal<T>, OptionQuery>;
 
 	/// Store a mapping (hash) -> () for all proposals that have been executed
 	#[pallet::storage]
@@ -247,14 +247,11 @@ pub mod pallet {
 		/// store Returns an error if the data type used for the nonce
 		/// exceeds is maximum value
 		fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
-			let nonce = ProposalCount::<T>::get();
-			match nonce.checked_add(&T::ProposalNonce::one()) {
-				Some(next) => {
-					ProposalCount::<T>::set(next);
-					Ok(nonce)
-				}
-				None => Err(Error::ProposalNonceExhausted),
-			}
+			ProposalCount::<T>::try_mutate(|nonce| -> Result<T::ProposalNonce, Error<T>> {
+				let current = nonce.clone();
+				*nonce = current.checked_add(&One::one()).ok_or(Error::ProposalNonceExhausted)?;
+				Ok(current)
+			})
 		}
 
 		pub fn active_proposals() -> Vec<HashFor<T>> {
@@ -294,25 +291,26 @@ pub mod pallet {
 		/// `Storage: ActiveProposals (r:1 w:1) + Votes (r1) * len(proposals)`
 		fn upkeep(n: BlockNumberFor<T>) -> Weight {
 			// ActiveProposals.retain (r:1 w:1)
-			let mut consumed = T::DbWeight::get().reads_writes(1, 1);
+			let mut reads: Weight = 1;
+			let writes: Weight = 1;
 
 			// clear out proposals that are no longer active
 			ActiveProposals::<T>::mutate(|proposals| {
 				// consumed weight for all `Storage: Votes (r1)` lookups
-				let read_vote = T::DbWeight::get().reads(1);
-				consumed = consumed.saturating_add(read_vote.saturating_mul(proposals.len() as Weight));
+				reads = reads.saturating_add(proposals.len() as Weight);
 
 				proposals.retain(|hash| if let Some(votes) = Self::get_votes_for(hash) { votes.end > n } else { false })
 			});
 
-			consumed
+			T::DbWeight::get().reads_writes(reads, writes)
 		}
 
 		/// Used to check if an origin is signed and the signer is a member of
 		/// the committee
 		pub fn ensure_member(origin: OriginFor<T>) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
 			let who = ensure_signed(origin)?;
-			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?))
+			let members = Members::<T>::get(&who).ok_or(Error::<T>::NotMember)?;
+			Ok(CommitteeMember::new(who, members))
 		}
 	}
 
