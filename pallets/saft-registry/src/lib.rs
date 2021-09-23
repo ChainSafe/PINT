@@ -118,11 +118,11 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new SAFT was added
-		/// \[AssetId, AssetIndex\]
-		SAFTAdded(T::AssetId, SAFTId),
+		/// \[AssetId, AssetIndex, SAFT Record\]
+		SAFTAdded(T::AssetId, SAFTId, SAFTRecord<T::Balance, T::Balance>),
 		/// A SAFT was removed
-		/// \[AssetId, AssetIndex\]
-		SAFTRemoved(T::AssetId, SAFTId),
+		/// \[AssetId, AssetIndex, SAFT Record\]
+		SAFTRemoved(T::AssetId, SAFTId, SAFTRecord<T::Balance, T::Balance>),
 		/// The NAV for a SAFT was updated
 		/// \[AssetId, AssetIndex, OldNav, NewNav\]
 		NavUpdated(T::AssetId, SAFTId, T::Balance, T::Balance),
@@ -339,8 +339,9 @@ pub mod pallet {
 			})?;
 
 			// insert the new record
-			ActiveSAFTs::<T>::insert(asset_id, saft_id, SAFTRecord::new(nav, units));
-			Self::deposit_event(Event::<T>::SAFTAdded(asset_id, saft_id));
+			let record = SAFTRecord::new(nav, units);
+			ActiveSAFTs::<T>::insert(asset_id, saft_id, record.clone());
+			Self::deposit_event(Event::<T>::SAFTAdded(asset_id, saft_id, record));
 			Ok(())
 		}
 
@@ -354,7 +355,7 @@ pub mod pallet {
 			T::AssetRecorder::remove_saft(&who, asset_id, saft.units, saft.nav)?;
 			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| *nav = nav.saturating_sub(saft.nav));
 
-			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id));
+			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id, saft));
 
 			Ok(())
 		}
