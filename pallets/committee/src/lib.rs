@@ -374,7 +374,7 @@ pub mod pallet {
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			let voter = Self::ensure_member(origin)?;
 
-			if VotingEligibility::<T>::take(&voter.account_id)
+			if VotingEligibility::<T>::get(&voter.account_id)
 				.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
 				.is_some()
 			{
