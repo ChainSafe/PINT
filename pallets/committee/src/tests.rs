@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::{mock::*, CommitteeMember, MemberType, VoteAggregate, VoteKind};
+use crate::{mock::*, CommitteeMember, MemberType, VoteAggregate, VoteKind, VotingEligibility};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};
@@ -125,8 +125,6 @@ fn non_member_cannot_vote() {
 #[test]
 fn cannot_vote_for_non_existent_proposal() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
-		run_to_block(START_OF_S1);
-
 		assert_noop!(
 			Committee::vote(Origin::signed(ASHLEY), Default::default(), VoteKind::Aye),
 			pallet::Error::<Test>::NoProposalWithHash
@@ -137,15 +135,10 @@ fn cannot_vote_for_non_existent_proposal() {
 #[test]
 fn cannot_vote_without_voting_eligibility() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
-		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), Default::default(), VoteKind::Aye),
-			pallet::Error::<Test>::NoVotingEligibility
-		);
-
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
 		assert_noop!(
 			Committee::vote(Origin::signed(CONSTITUENT), Default::default(), VoteKind::Nay),
-			pallet::Error::<Test>::NoVotingEligibility
+			pallet::Error::<Test>::NotEligibileToVoteYet
 		);
 	})
 }
@@ -189,9 +182,13 @@ fn member_can_vote_aye() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 		let proposal = submit_proposal(123);
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
+
 		run_to_block(START_OF_S1);
+
 		// first block in voting period
 		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), None);
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -426,8 +423,10 @@ fn can_remove_member() {
 		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
 
 		// can remove constituent
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(VOTING_PERIOD));
 		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
 		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), None);
 
 		// can remove council
 		assert_eq!(pallet::Members::<Test>::get(3), Some(MemberType::Council));

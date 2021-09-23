@@ -126,7 +126,11 @@ pub mod pallet {
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
 
-	/// Storte a mapping (hash) -> BlockNumber for new members' voting timeouts
+	/// Stores the block height at which point a member is eligible to cast their vote
+	///
+	/// For new members, this will be the block they were added as members plus the duration of one
+	/// voting period. This means new members are eligible to cast their vote in the next voting
+	/// period.
 	#[pallet::storage]
 	pub type VotingEligibility<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
@@ -147,15 +151,14 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			let voting_period = T::VotingPeriod::get();
 			for member in &self.council_members {
 				Members::<T>::insert(member, MemberType::Council);
-				VotingEligibility::<T>::insert(member, voting_period);
+				VotingEligibility::<T>::insert(member, T::BlockNumber::zero());
 			}
 
 			for member in &self.constituent_members {
 				Members::<T>::insert(member, MemberType::Constituent);
-				VotingEligibility::<T>::insert(member, voting_period);
+				VotingEligibility::<T>::insert(member, T::BlockNumber::zero());
 			}
 		}
 	}
@@ -195,7 +198,7 @@ pub mod pallet {
 		/// proposal
 		NotInVotingPeriod,
 		/// Attempted to cast a vote without voting eligibility
-		NoVotingEligibility,
+		NotEligibileToVoteYet,
 		/// Attempted to add a constituent that is already a member of the
 		/// council
 		AlreadyCouncilMember,
@@ -330,9 +333,10 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Extrinsic to propose a new action to be voted upon in the next
-		/// voting period. The provided action will be turned into a
-		/// proposal and added to the list of current active proposals
-		/// to be voted on in the next voting period.
+		/// voting period.
+		///
+		/// The provided action will be turned into a proposal and added to the list of current
+		/// active proposals to be voted on in the next voting period.
 		#[pallet::weight(T::WeightInfo::propose())]
 		pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
 			let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
@@ -359,9 +363,12 @@ pub mod pallet {
 		}
 
 		/// Extrinsic to vote on an existing proposal.
-		/// This can only be called by members of the committee.
-		/// Successfully cast votes will be recorded in the state and a proposal
-		/// meeting voting requirements can be executed.
+		///
+		/// This can only be called by members of the committee that are eligible to vote.
+		///
+		/// New members are eligible to vote after 1 voting period has passed from the block they
+		/// were added to the members set. Successfully cast votes will be recorded in the state and
+		/// a proposal meeting voting requirements can be executed.
 		#[transactional]
 		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
@@ -373,7 +380,7 @@ pub mod pallet {
 					.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
 					.is_some()
 				{
-					return Err(Error::<T>::NoVotingEligibility.into());
+					return Err(Error::<T>::NotEligibileToVoteYet.into());
 				}
 
 				Ok(())
@@ -394,7 +401,9 @@ pub mod pallet {
 		}
 
 		/// Extrinsic to close and execute a proposal.
+		///
 		/// Proposal must have been voted on and have majority approval.
+		///
 		/// Only the proposal execution origin can execute.
 		#[pallet::weight((T::WeightInfo::close(), DispatchClass::Operational))]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
@@ -473,6 +482,7 @@ pub mod pallet {
 					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
 						T::MinCouncilVotes::get()
 				{
+					VotingEligibility::<T>::take(&member);
 					Ok(ty)
 				} else {
 					Err(Error::<T>::MinimalCouncilMembers.into())
