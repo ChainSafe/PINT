@@ -95,8 +95,8 @@
   "ProposalStatus": {
     "_enum": [
       "Active",
-      "Closed",
-      "Executed"
+      "Executed",
+      "Timeout"
     ]
   },
   "ProposalNonce": "u32",

@@ -103,7 +103,7 @@ export const definitions = {
                     status: "ProposalStatus",
                 },
                 ProposalStatus: {
-                    _enum: ["Active", "Closed", "Executed"],
+                    _enum: ["Active", "Executed", "Timeout"],
                 },
                 ProposalNonce: "u32",
                 ProxyType: {
