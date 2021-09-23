@@ -37,6 +37,7 @@ pub mod pallet {
 		pallet_prelude::*,
 		sp_runtime::traits::{CheckedAdd, Dispatchable, One, Saturating, Zero},
 		sp_std::{boxed::Box, prelude::*, vec::Vec},
+		transactional,
 		weights::{GetDispatchInfo, PostDispatchInfo},
 	};
 	use frame_system::pallet_prelude::*;
@@ -110,7 +111,7 @@ pub mod pallet {
 
 	/// Store a mapping (hash) -> Proposal for all existing proposals.
 	#[pallet::storage]
-	pub type Proposals<T: Config> = StorageMap<_, Blake2_128Concat, HashFor<T>, Proposal<T>, OptionQuery>;
+	pub type Proposals<T: Config> = StorageMap<_, Identity, HashFor<T>, Proposal<T>, OptionQuery>;
 
 	/// Maps accountIDs to their member type (council or constituent)
 	#[pallet::storage]
@@ -120,6 +121,15 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
+
+	/// Stores the block height at which point a member is eligible to cast their vote
+	///
+	/// For new members, this will be the block they were added as members plus the duration of one
+	/// voting period. This means new members are eligible to cast their vote in the next voting
+	/// period.
+	#[pallet::storage]
+	pub type VotingEligibility<T: Config> =
+		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -139,10 +149,12 @@ pub mod pallet {
 		fn build(&self) {
 			for member in &self.council_members {
 				Members::<T>::insert(member, MemberType::Council);
+				VotingEligibility::<T>::insert(member, T::BlockNumber::zero());
 			}
 
 			for member in &self.constituent_members {
 				Members::<T>::insert(member, MemberType::Constituent);
+				VotingEligibility::<T>::insert(member, T::BlockNumber::zero());
 			}
 		}
 	}
@@ -181,6 +193,8 @@ pub mod pallet {
 		/// Attempted to cast a vote outside the accepted voting period for a
 		/// proposal
 		NotInVotingPeriod,
+		/// Attempted to cast a vote without voting eligibility
+		NotEligibileToVoteYet,
 		/// Attempted to add a constituent that is already a member of the
 		/// council
 		AlreadyCouncilMember,
@@ -245,14 +259,11 @@ pub mod pallet {
 		/// store Returns an error if the data type used for the nonce
 		/// exceeds is maximum value
 		fn take_and_increment_nonce() -> Result<T::ProposalNonce, Error<T>> {
-			let nonce = ProposalCount::<T>::get();
-			match nonce.checked_add(&T::ProposalNonce::one()) {
-				Some(next) => {
-					ProposalCount::<T>::set(next);
-					Ok(nonce)
-				}
-				None => Err(Error::ProposalNonceExhausted),
-			}
+			ProposalCount::<T>::try_mutate(|nonce| -> Result<T::ProposalNonce, Error<T>> {
+				let current = nonce.clone();
+				*nonce = current.checked_add(&One::one()).ok_or(Error::ProposalNonceExhausted)?;
+				Ok(current)
+			})
 		}
 
 		pub fn active_proposals() -> Vec<HashFor<T>> {
@@ -292,34 +303,36 @@ pub mod pallet {
 		/// `Storage: ActiveProposals (r:1 w:1) + Votes (r1) * len(proposals)`
 		fn upkeep(n: BlockNumberFor<T>) -> Weight {
 			// ActiveProposals.retain (r:1 w:1)
-			let mut consumed = T::DbWeight::get().reads_writes(1, 1);
+			let mut reads: Weight = 1;
+			let writes: Weight = 1;
 
 			// clear out proposals that are no longer active
 			ActiveProposals::<T>::mutate(|proposals| {
 				// consumed weight for all `Storage: Votes (r1)` lookups
-				let read_vote = T::DbWeight::get().reads(1);
-				consumed = consumed.saturating_add(read_vote.saturating_mul(proposals.len() as Weight));
+				reads = reads.saturating_add(proposals.len() as Weight);
 
 				proposals.retain(|hash| if let Some(votes) = Self::get_votes_for(hash) { votes.end > n } else { false })
 			});
 
-			consumed
+			T::DbWeight::get().reads_writes(reads, writes)
 		}
 
 		/// Used to check if an origin is signed and the signer is a member of
 		/// the committee
 		pub fn ensure_member(origin: OriginFor<T>) -> Result<CommitteeMember<AccountIdFor<T>>, DispatchError> {
 			let who = ensure_signed(origin)?;
-			Ok(CommitteeMember::new(who.clone(), Members::<T>::get(who).ok_or(Error::<T>::NotMember)?))
+			let members = Members::<T>::get(&who).ok_or(Error::<T>::NotMember)?;
+			Ok(CommitteeMember::new(who, members))
 		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Extrinsic to propose a new action to be voted upon in the next
-		/// voting period. The provided action will be turned into a
-		/// proposal and added to the list of current active proposals
-		/// to be voted on in the next voting period.
+		/// voting period.
+		///
+		/// The provided action will be turned into a proposal and added to the list of current
+		/// active proposals to be voted on in the next voting period.
 		#[pallet::weight(T::WeightInfo::propose())]
 		pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
 			let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
@@ -346,33 +359,39 @@ pub mod pallet {
 		}
 
 		/// Extrinsic to vote on an existing proposal.
-		/// This can only be called by members of the committee.
-		/// Successfully cast votes will be recorded in the state and a proposal
-		/// meeting voting requirements can be executed.
+		///
+		/// This can only be called by members of the committee that are eligible to vote.
+		///
+		/// New members are eligible to vote after 1 voting period has passed from the block they
+		/// were added to the members set. Successfully cast votes will be recorded in the state and
+		/// a proposal meeting voting requirements can be executed.
+		#[transactional]
 		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
-			// Only members can vote
 			let voter = Self::ensure_member(origin)?;
 
-			Votes::<T>::try_mutate(&proposal_hash, |votes| {
-				if let Some(votes) = votes {
-					// Can only vote within the allowed range of blocks for this proposal
-					ensure!(Self::within_voting_period(votes), Error::<T>::NotInVotingPeriod);
-					// members can vote only once
-					ensure!(!votes.has_voted(&voter.account_id), Error::<T>::DuplicateVote);
-					votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
-					Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
-					Ok(())
-				} else {
-					Err(Error::<T>::NoProposalWithHash)
-				}
-			})?;
+			VotingEligibility::<T>::get(&voter.account_id)
+				.filter(|block_number| frame_system::Pallet::<T>::block_number() >= *block_number)
+				.ok_or(Error::<T>::NotEligibileToVoteYet)?;
 
-			Ok(())
+			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
+				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
+
+				// Can only vote within the allowed range of blocks for this proposal
+				ensure!(Self::within_voting_period(&votes), Error::<T>::NotInVotingPeriod);
+				// members can vote only once
+				ensure!(!votes.has_voted(&voter.account_id), Error::<T>::DuplicateVote);
+				votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
+
+				Self::deposit_event(Event::VoteCast(voter, proposal_hash, vote));
+				Ok(())
+			})
 		}
 
 		/// Extrinsic to close and execute a proposal.
+		///
 		/// Proposal must have been voted on and have majority approval.
+		///
 		/// Only the proposal execution origin can execute.
 		#[pallet::weight((T::WeightInfo::close(), DispatchClass::Operational))]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
@@ -443,6 +462,11 @@ pub mod pallet {
 				}
 			})?;
 
+			VotingEligibility::<T>::insert(
+				&constituent,
+				frame_system::Pallet::<T>::block_number() + T::VotingPeriod::get(),
+			);
+
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
 		}
@@ -462,6 +486,7 @@ pub mod pallet {
 					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
 						T::MinCouncilVotes::get()
 				{
+					VotingEligibility::<T>::take(&member);
 					Ok(ty)
 				} else {
 					Err(Error::<T>::MinimalCouncilMembers.into())
