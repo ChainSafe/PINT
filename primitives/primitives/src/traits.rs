@@ -268,7 +268,7 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// Updates the index by burning the given amount of index token from
 	/// the caller's account.
 	fn remove_liquid(
-		who: AccountId,
+		who: &AccountId,
 		id: AssetId,
 		units: Balance,
 		nav: Balance,
@@ -277,13 +277,13 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 
 	/// Burns the given amount of SAFT token from the index and
 	/// the nav from the caller's account
-	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
+	fn remove_saft(who: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
 /// Helper trait for runtime benchmarks
 #[cfg(feature = "runtime-benchmarks")]
 pub trait AssetRecorderBenchmarks<AssetId, Balance> {
-	fn add_asset(asset_id: AssetId, units: Balance, localtion: MultiLocation, amount: Balance) -> DispatchResult;
+	fn add_asset(asset_id: AssetId, units: Balance, location: MultiLocation, amount: Balance) -> DispatchResult;
 
 	fn deposit_saft_equivalent(saft_nav: Balance) -> DispatchResult;
 }
