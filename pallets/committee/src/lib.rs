@@ -374,17 +374,12 @@ pub mod pallet {
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			let voter = Self::ensure_member(origin)?;
 
-			VotingEligibility::<T>::try_mutate(&voter.account_id, |maybe_eligibility| -> DispatchResult {
-				if maybe_eligibility
-					.take()
-					.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
-					.is_some()
-				{
-					return Err(Error::<T>::NotEligibileToVoteYet.into());
-				}
-
-				Ok(())
-			})?;
+			if VotingEligibility::<T>::take(&voter.account_id)
+				.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
+				.is_some()
+			{
+				return Err(Error::<T>::NotEligibileToVoteYet.into());
+			}
 
 			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
 				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
