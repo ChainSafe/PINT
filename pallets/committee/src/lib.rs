@@ -375,13 +375,7 @@ pub mod pallet {
 			let voter = Self::ensure_member(origin)?;
 
 			VotingEligibility::<T>::get(&voter.account_id)
-				.and_then(|block_number| {
-					if frame_system::Pallet::<T>::block_number() >= block_number {
-						Some(block_number)
-					} else {
-						None
-					}
-				})
+				.filter(|block_number| frame_system::Pallet::<T>::block_number() >= *block_number)
 				.ok_or(Error::<T>::NotEligibileToVoteYet)?;
 
 			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
