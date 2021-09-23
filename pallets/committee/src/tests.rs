@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::{mock::*, CommitteeMember, MemberType, ProposalStatus, VoteAggregate, VoteKind};
+use crate::{mock::*, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate, VoteKind};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};
@@ -368,15 +368,19 @@ fn cannot_execute_proposal_twice() {
 }
 
 #[test]
-fn cannot_execute_proposal_after_closed() {
+fn cannot_execute_proposal_after_timeout() {
 	new_test_ext(0..4).execute_with(|| {
 		let proposal = submit_proposal(123);
+		let proposal_hash = proposal.hash();
 
-		run_to_block(START_OF_S1 + VOTING_PERIOD * 2 + 1);
+		run_to_block(START_OF_S1 + VOTING_PERIOD * 2);
 
+		assert_eq!(Proposals::<Test>::get(proposal_hash).unwrap().status, ProposalStatus::Active);
+		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal_hash));
+		assert_eq!(Proposals::<Test>::get(proposal_hash).unwrap().status, ProposalStatus::Timeout);
 		assert_noop!(
-			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
-			pallet::Error::<Test>::ProposalAlreadyClosed
+			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal_hash),
+			pallet::Error::<Test>::ProposalTimeout
 		);
 	});
 }

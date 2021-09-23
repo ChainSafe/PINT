@@ -195,8 +195,8 @@ pub mod pallet {
 		ProposalNotAcceptedConstituentVeto,
 		/// Tried to close a proposal but proposal was denied by council
 		ProposalNotAcceptedCouncilDeny,
-		/// Attempted to execute a proposal that has already been closed
-		ProposalAlreadyClosed,
+		/// Attempted to execute a proposal that is timeout
+		ProposalTimeout,
 		/// Attempted to execute a proposal that has already been executed
 		ProposalAlreadyExecuted,
 		/// Reach the minimal number of the limit of council members
@@ -237,21 +237,6 @@ pub mod pallet {
 				}
 			}
 			0
-		}
-
-		fn on_finalize(n: BlockNumberFor<T>) {
-			let voting_period = T::VotingPeriod::get();
-			Proposals::translate_values(|mut proposal: Proposal<T>| {
-				Self::get_votes_for(&proposal.hash()).and_then(
-					|votes: VoteAggregate<T::AccountId, T::BlockNumber>| -> Option<Proposal<T>> {
-						if n.saturating_sub(votes.end) > voting_period && proposal.status == ProposalStatus::Active {
-							proposal.status = ProposalStatus::Closed;
-						}
-
-						Some(proposal)
-					},
-				)
-			})
 		}
 	}
 
@@ -396,16 +381,23 @@ pub mod pallet {
 			// register that this proposal has been executed
 			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResultWithPostInfo {
 				let mut proposal = maybe_proposal.take().ok_or(Error::<T>::NoProposalWithHash)?;
+				let votes = Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
+				let current_block = frame_system::Pallet::<T>::block_number();
 
 				// ensure proposal has not already been executed
 				(match proposal.status {
-					ProposalStatus::Closed => Err(Error::<T>::ProposalAlreadyClosed),
-					ProposalStatus::Executed => Err(Error::<T>::ProposalAlreadyExecuted),
-					_ => Ok(()),
-				})?;
+					ProposalStatus::Active => {
+						if current_block.saturating_sub(votes.end) >= T::VotingPeriod::get() {
+							proposal.status = ProposalStatus::Timeout;
+							*maybe_proposal = Some(proposal);
+							return Ok(().into());
+						}
 
-				let votes = Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
-				let current_block = frame_system::Pallet::<T>::block_number();
+						Ok(())
+					}
+					ProposalStatus::Timeout => Err(Error::<T>::ProposalTimeout),
+					ProposalStatus::Executed => Err(Error::<T>::ProposalAlreadyExecuted),
+				})?;
 
 				// Ensure voting period is over
 				ensure!(current_block > votes.end, Error::<T>::VotingPeriodNotElapsed);
