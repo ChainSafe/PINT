@@ -125,28 +125,41 @@ fn non_member_cannot_vote() {
 #[test]
 fn cannot_vote_for_non_existent_proposal() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
-		let action = make_action(123);
-		let proposal = pallet::Proposal::<Test>::new(0, action);
+		run_to_block(START_OF_S1);
+
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
+			Committee::vote(Origin::signed(ASHLEY), Default::default(), VoteKind::Aye),
 			pallet::Error::<Test>::NoProposalWithHash
 		);
 	});
 }
 
 #[test]
-fn member_cannot_vote_before_voting_period() {
+fn cannot_vote_without_voting_eligibility() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
-		let proposal = submit_proposal(123);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
-			pallet::Error::<Test>::NotInVotingPeriod
+			Committee::vote(Origin::signed(ASHLEY), Default::default(), VoteKind::Aye),
+			pallet::Error::<Test>::NoVotingEligibility
 		);
 
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
 		assert_noop!(
-			Committee::vote(Origin::signed(CONSTITUENT), proposal.hash(), VoteKind::Nay),
-			pallet::Error::<Test>::MemberNotInVotingPeriod
+			Committee::vote(Origin::signed(CONSTITUENT), Default::default(), VoteKind::Nay),
+			pallet::Error::<Test>::NoVotingEligibility
+		);
+	})
+}
+
+#[test]
+fn member_cannot_vote_before_voting_period() {
+	new_test_ext(ASHLEY_RANGE).execute_with(|| {
+		run_to_block(START_OF_S1 + 1);
+
+		let proposal = submit_proposal(123);
+
+		assert_noop!(
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
+			pallet::Error::<Test>::NotInVotingPeriod
 		);
 	});
 }

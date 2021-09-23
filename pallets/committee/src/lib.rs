@@ -35,8 +35,9 @@ pub mod pallet {
 	use frame_support::{
 		dispatch::{Codec, DispatchResultWithPostInfo},
 		pallet_prelude::*,
-		sp_runtime::traits::{CheckedAdd, Dispatchable, One, Saturating, Zero},
+		sp_runtime::traits::{CheckedAdd, Dispatchable, One, Zero},
 		sp_std::{boxed::Box, prelude::*, vec::Vec},
+		transactional,
 		weights::{GetDispatchInfo, PostDispatchInfo},
 	};
 	use frame_system::pallet_prelude::*;
@@ -127,7 +128,7 @@ pub mod pallet {
 
 	/// Storte a mapping (hash) -> BlockNumber for new members' voting timeouts
 	#[pallet::storage]
-	pub type VotingTimeouts<T: Config> =
+	pub type VotingEligibility<T: Config> =
 		StorageMap<_, Blake2_128Concat, AccountIdFor<T>, BlockNumberFor<T>, OptionQuery>;
 
 	#[pallet::genesis_config]
@@ -146,12 +147,15 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			let voting_period = T::VotingPeriod::get();
 			for member in &self.council_members {
 				Members::<T>::insert(member, MemberType::Council);
+				VotingEligibility::<T>::insert(member, voting_period);
 			}
 
 			for member in &self.constituent_members {
 				Members::<T>::insert(member, MemberType::Constituent);
+				VotingEligibility::<T>::insert(member, voting_period);
 			}
 		}
 	}
@@ -190,9 +194,8 @@ pub mod pallet {
 		/// Attempted to cast a vote outside the accepted voting period for a
 		/// proposal
 		NotInVotingPeriod,
-		/// Attempted to cast a vote outside the accepted voting period for a
-		/// member
-		MemberNotInVotingPeriod,
+		/// Attempted to cast a vote without voting eligibility
+		NoVotingEligibility,
 		/// Attempted to add a constituent that is already a member of the
 		/// council
 		AlreadyCouncilMember,
@@ -359,18 +362,18 @@ pub mod pallet {
 		/// This can only be called by members of the committee.
 		/// Successfully cast votes will be recorded in the state and a proposal
 		/// meeting voting requirements can be executed.
+		#[transactional]
 		#[pallet::weight((T::WeightInfo::vote(), DispatchClass::Operational))]
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			let voter = Self::ensure_member(origin)?;
-			VotingTimeouts::<T>::try_mutate(&voter.account_id, |maybe_timeout| -> DispatchResult {
-				if maybe_timeout
+
+			VotingEligibility::<T>::try_mutate(&voter.account_id, |maybe_eligibility| -> DispatchResult {
+				if maybe_eligibility
 					.take()
-					.filter(|block_number| {
-						frame_system::Pallet::<T>::block_number().saturating_sub(*block_number) < T::VotingPeriod::get()
-					})
+					.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
 					.is_some()
 				{
-					return Err(Error::<T>::MemberNotInVotingPeriod.into());
+					return Err(Error::<T>::NoVotingEligibility.into());
 				}
 
 				Ok(())
@@ -446,7 +449,11 @@ pub mod pallet {
 				}
 			})?;
 
-			VotingTimeouts::<T>::insert(&constituent, frame_system::Pallet::<T>::block_number());
+			VotingEligibility::<T>::insert(
+				&constituent,
+				frame_system::Pallet::<T>::block_number() + T::VotingPeriod::get(),
+			);
+
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
 		}
