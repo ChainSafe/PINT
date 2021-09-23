@@ -387,6 +387,7 @@ pub mod pallet {
 				// ensure proposal has not already been executed
 				(match proposal.status {
 					ProposalStatus::Active => {
+						// proposal timeout after two voting periods
 						if current_block.saturating_sub(votes.end) >= T::VotingPeriod::get() {
 							proposal.status = ProposalStatus::Timeout;
 							*maybe_proposal = Some(proposal);
