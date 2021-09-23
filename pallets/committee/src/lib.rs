@@ -375,7 +375,9 @@ pub mod pallet {
 			let voter = Self::ensure_member(origin)?;
 
 			if VotingEligibility::<T>::get(&voter.account_id)
-				.filter(|block_number| frame_system::Pallet::<T>::block_number() < *block_number)
+				.filter(|block_number| {
+					*block_number != T::BlockNumber::zero() && *block_number > frame_system::Pallet::<T>::block_number()
+				})
 				.is_some()
 			{
 				return Err(Error::<T>::NotEligibileToVoteYet.into());
