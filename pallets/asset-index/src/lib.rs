@@ -796,7 +796,7 @@ pub mod pallet {
 			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
 
 			// transfer the caller's fund into the treasury account
-			Self::remove_liquid(who.clone(), asset_id, units, index_tokens, recipient.clone())?;
+			Self::remove_liquid(&who, asset_id, units, index_tokens, recipient.clone())?;
 
 			Self::deposit_event(Event::AssetRemoved(asset_id, units, who, recipient, index_tokens));
 			Ok(().into())
@@ -1090,7 +1090,7 @@ pub mod pallet {
 		}
 
 		fn remove_liquid(
-			who: T::AccountId,
+			who: &T::AccountId,
 			asset_id: T::AssetId,
 			units: T::Balance,
 			nav: T::Balance,
@@ -1100,7 +1100,7 @@ pub mod pallet {
 				return Ok(());
 			}
 			ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
-			ensure!(T::IndexToken::can_slash(&who, nav), Error::<T>::InsufficientDeposit);
+			ensure!(T::IndexToken::can_slash(who, nav), Error::<T>::InsufficientDeposit);
 
 			let recipient = recipient.unwrap_or_else(|| who.clone());
 
@@ -1108,13 +1108,13 @@ pub mod pallet {
 			T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
 
 			// burn index token accordingly, no index token changes in the meantime
-			T::IndexToken::slash(&who, nav);
+			T::IndexToken::slash(who, nav);
 
 			Ok(())
 		}
 
 		fn remove_saft(
-			who: T::AccountId,
+			who: &T::AccountId,
 			asset_id: T::AssetId,
 			units: T::Balance,
 			saft_nav: T::Balance,
@@ -1129,12 +1129,12 @@ pub mod pallet {
 			let index_token = Self::saft_equivalent(saft_nav)?;
 
 			ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
-			ensure!(T::IndexToken::can_slash(&who, index_token), Error::<T>::InsufficientDeposit);
+			ensure!(T::IndexToken::can_slash(who, index_token), Error::<T>::InsufficientDeposit);
 
 			// burn SAFT by withdrawing from the index
 			T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
 			// burn index token accordingly, no index token changes in the meantime
-			T::IndexToken::slash(&who, index_token);
+			T::IndexToken::slash(who, index_token);
 
 			Ok(())
 		}

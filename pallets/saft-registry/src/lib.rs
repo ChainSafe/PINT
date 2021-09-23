@@ -208,7 +208,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::remove_saft())]
 		#[transactional]
 		pub fn remove_saft(origin: OriginFor<T>, asset_id: T::AssetId, saft_id: SAFTId) -> DispatchResult {
-			Self::do_remove_saft(T::AdminOrigin::ensure_origin(origin.clone())?, asset_id, saft_id)
+			Self::do_remove_saft(T::AdminOrigin::ensure_origin(origin)?, asset_id, saft_id)
 		}
 
 		/// Removes saft assets with root origin
@@ -351,7 +351,7 @@ pub mod pallet {
 			let saft = ActiveSAFTs::<T>::take(asset_id, saft_id).ok_or(Error::<T>::SAFTNotFound)?;
 
 			// reflect the change in NAV
-			T::AssetRecorder::remove_saft(who, asset_id, saft.units, saft.nav)?;
+			T::AssetRecorder::remove_saft(&who, asset_id, saft.units, saft.nav)?;
 			SAFTNetAssetValue::<T>::mutate(asset_id, |nav| *nav = nav.saturating_sub(saft.nav));
 
 			Self::deposit_event(Event::<T>::SAFTRemoved(asset_id, saft_id));
