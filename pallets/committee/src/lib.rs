@@ -374,14 +374,15 @@ pub mod pallet {
 		pub fn vote(origin: OriginFor<T>, proposal_hash: HashFor<T>, vote: VoteKind) -> DispatchResult {
 			let voter = Self::ensure_member(origin)?;
 
-			if VotingEligibility::<T>::get(&voter.account_id)
-				.filter(|block_number| {
-					*block_number != T::BlockNumber::zero() && *block_number > frame_system::Pallet::<T>::block_number()
+			VotingEligibility::<T>::get(&voter.account_id)
+				.and_then(|block_number| {
+					if frame_system::Pallet::<T>::block_number() >= block_number {
+						Some(block_number)
+					} else {
+						None
+					}
 				})
-				.is_some()
-			{
-				return Err(Error::<T>::NotEligibileToVoteYet.into());
-			}
+				.ok_or(Error::<T>::NotEligibileToVoteYet)?;
 
 			Votes::<T>::try_mutate(&proposal_hash, |maybe_votes| -> DispatchResult {
 				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
@@ -475,9 +476,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)

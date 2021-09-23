@@ -188,7 +188,7 @@ fn member_can_vote_aye() {
 
 		// first block in voting period
 		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
-		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), None);
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -269,7 +269,7 @@ where
 	I: IntoIterator<Item = AccountId>,
 {
 	for m in accounts.into_iter() {
-		<pallet::Members<Test>>::insert(m, MemberType::Constituent);
+		assert_ok!(Committee::add_constituent(Origin::root(), m));
 	}
 }
 
