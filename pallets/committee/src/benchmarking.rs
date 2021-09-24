@@ -14,7 +14,7 @@ fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pa
 	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), ensure_signed(origin.clone()).unwrap(),));
 	let call = <Call<T>>::propose(Box::new(action.clone()));
 	assert_ok!(call.dispatch_bypass_filter(origin));
-	pallet::Proposal::<T>::new(expected_nonce, action)
+	pallet::Proposal::<T>::new(expected_nonce, action, ProposalStatus::Active)
 }
 
 benchmarks! {

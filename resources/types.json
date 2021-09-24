@@ -53,6 +53,10 @@
   },
   "CurrencyId": "AssetId",
   "CurrencyIdOf": "CurrencyId",
+  "DepositRange": {
+    "minimum": "Balance",
+    "maximum": "Balance"
+  },
   "FeeRate": {
     "numerator": "u32",
     "denominator": "u32"
@@ -83,9 +87,26 @@
     "end_block": "BlockNumber",
     "assets": "Vec<AssetWithdrawal>"
   },
+  "Proposal": {
+    "nonce": "ProposalNonce",
+    "action": "Call",
+    "status": "ProposalStatus"
+  },
+  "ProposalStatus": {
+    "_enum": [
+      "Active",
+      "Executed",
+      "Timeout"
+    ]
+  },
   "ProposalNonce": "u32",
   "ProxyType": {
-    "_enum": ["Any", "NonTransfer", "Governance", "Staking"]
+    "_enum": [
+      "Any",
+      "NonTransfer",
+      "Governance",
+      "Staking"
+    ]
   },
   "ProxyState": {
     "added": "Vec<ProxyType>"

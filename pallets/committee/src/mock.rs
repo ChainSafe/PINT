@@ -113,6 +113,7 @@ pub fn run_to_block(n: u64) {
 		System::on_initialize(System::block_number());
 		// need to explicitly call the committee pallet on_initialize
 		Committee::on_initialize(System::block_number());
+		Committee::on_finalize(System::block_number());
 	}
 }
 
