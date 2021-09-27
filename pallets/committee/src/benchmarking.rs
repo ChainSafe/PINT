@@ -15,10 +15,10 @@ fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pa
 	let account_id = ensure_signed(origin.clone()).unwrap();
 	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), account_id.clone()));
 	<System<T>>::set_block_number(
-		<System<T>>::block_number()
-			+ <T as Config>::VotingPeriod::get()
-			+ <T as Config>::ProposalSubmissionPeriod::get()
-			+ 1_u32.into(),
+		<System<T>>::block_number() +
+			<T as Config>::VotingPeriod::get() +
+			<T as Config>::ProposalSubmissionPeriod::get() +
+			1_u32.into(),
 	);
 
 	let call = <Call<T>>::propose(Box::new(action.clone()));
