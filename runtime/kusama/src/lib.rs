@@ -435,7 +435,7 @@ impl pallet_committee::Config for Runtime {
 	type Origin = Origin;
 	type Action = Call;
 	type ProposalNonce = u32;
-	type Days = DAYS;
+	type Days = Days;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;

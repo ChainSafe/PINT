@@ -105,4 +105,13 @@ benchmarks! {
 	) verify {
 		assert!(!<pallet::Members<T>>::contains_key(constituent));
 	}
+
+	set_voting_period {
+		let two_weeks: T::BlockNumber = (10u32 * 60 * 24 * 7 * 2).into();
+	}: _(
+		SystemOrigin::Root,
+		two_weeks
+	) verify {
+		assert_eq!(<pallet::VotingPeriod<T>>::get(), two_weeks);
+	}
 }

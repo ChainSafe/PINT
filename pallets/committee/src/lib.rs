@@ -493,9 +493,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)
@@ -511,7 +511,7 @@ pub mod pallet {
 		/// Set voting period
 		///
 		/// only accept 7~28 days
-		#[pallet::weight(T::WeightInfo::remove_member())]
+		#[pallet::weight(T::WeightInfo::set_voting_period())]
 		pub fn set_voting_period(origin: OriginFor<T>, voting_period: T::BlockNumber) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
@@ -535,6 +535,7 @@ pub mod pallet {
 		fn close() -> Weight;
 		fn add_constituent() -> Weight;
 		fn remove_member() -> Weight;
+		fn set_voting_period() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -556,6 +557,10 @@ pub mod pallet {
 		}
 
 		fn remove_member() -> Weight {
+			Default::default()
+		}
+
+		fn set_voting_period() -> Weight {
 			Default::default()
 		}
 	}
