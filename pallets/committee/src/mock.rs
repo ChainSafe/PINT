@@ -79,12 +79,14 @@ pub(crate) const PROPOSER_ACCOUNT_ID: AccountId = 88;
 pub(crate) const EXECUTER_ACCOUNT_ID: AccountId = PROPOSER_ACCOUNT_ID;
 pub(crate) const MIN_COUNCIL_MEMBERS: usize = 4;
 pub(crate) const MIN_COUNCIL_VOTES: usize = 4;
+pub(crate) const DAYS: u64 = 1;
 
 ord_parameter_types! {
 	pub const AdminAccountId: AccountId = PROPOSER_ACCOUNT_ID;
 	pub const ExecuterAccountId: AccountId = EXECUTER_ACCOUNT_ID;
 	pub const MinCouncilMembers: usize = MIN_COUNCIL_MEMBERS;
 	pub const MinCouncilVotes: usize = MIN_COUNCIL_VOTES;
+	pub const Days: <Test as system::Config>::BlockNumber = DAYS;
 
 }
 
@@ -92,6 +94,7 @@ type EnsureApprovedByCommittee =
 	frame_system::EnsureOneOf<AccountId, frame_system::EnsureRoot<AccountId>, crate::EnsureApprovedByCommittee<Test>>;
 
 impl pallet_committee::Config for Test {
+	type Days = Days;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;

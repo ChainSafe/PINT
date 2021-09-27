@@ -70,6 +70,7 @@ parameter_types! {
 	pub const BaseXcmWeight: Weight = 100_000_000;
 	pub const BlockHashCount: BlockNumber = 250;
 	pub const MaxActiveDeposits: u32 = 5;
+	pub const Days: BlockNumber = DAYS;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
 	/// Same as Polkadot Relay Chain.
 	pub const ExistentialDeposit: Balance = 500;
