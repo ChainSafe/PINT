@@ -34,7 +34,7 @@ fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
 	let action = make_action(action_value);
 	let expected_nonce = pallet::ProposalCount::<Test>::get();
 	assert_ok!(Committee::propose(Origin::signed(PROPOSER_ACCOUNT_ID), Box::new(action.clone())));
-	pallet::Proposal::<Test>::new(expected_nonce, action, ProposalStatus::Active)
+	pallet::Proposal::<Test>::new(action, PROPOSER_ACCOUNT_ID, expected_nonce, ProposalStatus::Active)
 }
 
 //
@@ -73,7 +73,8 @@ fn can_create_multiple_proposals_from_same_action() {
 
 		for i in 0..repeats {
 			let nonce = u32::try_from(i).unwrap();
-			let proposal = pallet::Proposal::<Test>::new(nonce, action.clone(), ProposalStatus::Active);
+			let proposal =
+				pallet::Proposal::<Test>::new(action.clone(), PROPOSER_ACCOUNT_ID, nonce, ProposalStatus::Active);
 			assert!(Committee::active_proposals().contains(&proposal.hash()));
 			assert!(Committee::get_proposal(&proposal.hash()) == Some(proposal));
 		}

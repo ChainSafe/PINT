@@ -339,7 +339,7 @@ pub mod pallet {
 
 			// Create a new proposal with a unique nonce
 			let nonce = Self::take_and_increment_nonce()?;
-			let proposal = Proposal::<T>::new(nonce.clone(), *action, ProposalStatus::Active);
+			let proposal = Proposal::<T>::new(*action, proposer.clone(), nonce.clone(), ProposalStatus::Active);
 
 			let proposal_hash = proposal.hash();
 
@@ -395,7 +395,7 @@ pub mod pallet {
 		/// Only the proposal execution origin can execute.
 		#[pallet::weight((T::WeightInfo::close(), DispatchClass::Operational))]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
-			let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
+			T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
 			// register that this proposal has been executed
 			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResultWithPostInfo {
@@ -426,7 +426,10 @@ pub mod pallet {
 				votes.is_accepted(T::MinCouncilVotes::get()).map_err(Into::<Error<T>>::into)?;
 
 				// Execute the proposal
-				let result = proposal.action.clone().dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
+				let result = proposal
+					.action
+					.clone()
+					.dispatch(Origin::<T>::ApprovedByCommittee(proposal.issuer.clone(), votes).into());
 
 				proposal.status = ProposalStatus::Executed;
 				*maybe_proposal = Some(proposal);
@@ -480,9 +483,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)
