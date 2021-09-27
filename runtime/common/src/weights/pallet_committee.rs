@@ -44,41 +44,50 @@ impl<T: frame_system::Config> pallet_committee::WeightInfo for WeightInfo<T> {
 	// Storage: Committee Members (r:1 w:0)
 	// Storage: Committee ProposalCount (r:1 w:1)
 	// Storage: Committee ActiveProposals (r:1 w:1)
+	// Storage: Committee VotingPeriod (r:1 w:0)
 	// Storage: Committee Proposals (r:0 w:1)
 	// Storage: Committee Votes (r:0 w:1)
 	fn propose() -> Weight {
-		(30_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+		(34_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
 	// Storage: Committee Members (r:1 w:0)
 	// Storage: Committee VotingEligibility (r:1 w:0)
 	// Storage: Committee Votes (r:1 w:1)
+	// Storage: Committee VotingPeriod (r:1 w:0)
 	fn vote() -> Weight {
-		(30_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+		(32_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Committee Members (r:1 w:0)
 	// Storage: Committee Proposals (r:1 w:1)
 	// Storage: Committee Votes (r:1 w:0)
+	// Storage: Committee VotingPeriod (r:1 w:0)
 	fn close() -> Weight {
-		(29_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(3 as Weight))
+		(32_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(4 as Weight))
 			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 	// Storage: Committee Members (r:1 w:1)
+	// Storage: Committee VotingPeriod (r:1 w:0)
 	// Storage: Committee VotingEligibility (r:0 w:1)
 	fn add_constituent() -> Weight {
-		(19_000_000 as Weight)
-			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+		(21_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
 	}
 	// Storage: Committee Members (r:1 w:1)
 	// Storage: Committee VotingEligibility (r:1 w:1)
 	fn remove_member() -> Weight {
-		(21_000_000 as Weight)
+		(20_000_000 as Weight)
 			.saturating_add(T::DbWeight::get().reads(2 as Weight))
 			.saturating_add(T::DbWeight::get().writes(2 as Weight))
+	}
+	// Storage: Committee VotingPeriod (r:0 w:1)
+	fn set_voting_period() -> Weight {
+		(2_000_000 as Weight)
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
 	}
 }
