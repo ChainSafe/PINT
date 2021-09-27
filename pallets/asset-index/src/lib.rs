@@ -1034,8 +1034,8 @@ pub mod pallet {
 			}
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
-			// mint asset into the treasury account
-			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+			// transfer the asset from the caller to treasury account
+			T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
 			Ok(())
