@@ -473,10 +473,8 @@ pub mod pallet {
 				}
 			})?;
 
-			VotingEligibility::<T>::insert(
-				&constituent,
-				frame_system::Pallet::<T>::block_number() + VotingPeriod::<T>::get(),
-			);
+			let block_numer = frame_system::Pallet::<T>::block_number();
+			VotingEligibility::<T>::insert(&constituent, block_numer + Self::get_next_voting_period_end(&block_numer)?);
 
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())

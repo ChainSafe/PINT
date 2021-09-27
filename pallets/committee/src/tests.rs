@@ -341,14 +341,15 @@ fn cannot_close_if_council_rejects() {
 fn cannot_close_if_constituents_veto() {
 	new_test_ext(0..4).execute_with(|| {
 		add_constituents(4..8);
+		run_to_block(START_OF_V1);
 
 		let proposal = submit_proposal(123);
+		run_to_block(START_OF_V1 + START_OF_S1 - 1);
 
-		run_to_block(START_OF_S1);
 		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 		vote_with_each(4..8, proposal.hash(), VoteKind::Nay);
 
-		run_to_block(START_OF_V1 + 1);
+		run_to_block(START_OF_V1 + START_OF_S1 + 1);
 		assert_noop!(
 			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
 			pallet::Error::<Test>::ProposalNotAcceptedConstituentVeto
@@ -384,6 +385,31 @@ fn cannot_execute_proposal_twice() {
 			pallet::Error::<Test>::ProposalAlreadyExecuted
 		);
 	});
+}
+
+#[test]
+fn new_member_cannot_vote() {
+	new_test_ext(0..4).execute_with(|| {
+		let proposal = submit_proposal(123);
+		let proposal_hash = proposal.hash();
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+
+		run_to_block(START_OF_V1 - 1);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotEligibileToVoteYet
+		);
+
+		run_to_block(START_OF_V1);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotInVotingPeriod
+		);
+
+		run_to_block(START_OF_V1 + 1);
+		assert_ok!(Committee::close(Origin::signed(CONSTITUENT), proposal_hash));
+	})
 }
 
 #[test]
@@ -444,7 +470,7 @@ fn can_remove_member() {
 		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
 
 		// can remove constituent
-		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(VOTING_PERIOD));
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(START_OF_V1));
 		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
 		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
 		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), None);
