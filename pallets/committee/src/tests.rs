@@ -393,6 +393,10 @@ fn new_member_cannot_vote() {
 	new_test_ext(0..4).execute_with(|| {
 		let proposal = submit_proposal(123);
 		let proposal_hash = proposal.hash();
+		let new_voting_period = 7 * DAYS + 1;
+
+		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
 
 		run_to_block(START_OF_V1 - 1);
@@ -410,6 +414,7 @@ fn new_member_cannot_vote() {
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(CONSTITUENT), proposal_hash));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), new_voting_period);
 	})
 }
 
@@ -525,7 +530,7 @@ fn propose_constituent_works() {
 #[test]
 fn can_set_voting_period() {
 	new_test_ext_without_members().execute_with(|| {
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), 5);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 		assert_noop!(Committee::set_voting_period(Origin::root(), DAYS), pallet::Error::<Test>::InvalidVotingPeriod);
 
 		assert_noop!(
