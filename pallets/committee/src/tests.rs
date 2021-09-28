@@ -34,7 +34,7 @@ fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
 	let action = make_action(action_value);
 	let expected_nonce = pallet::ProposalCount::<Test>::get();
 	assert_ok!(Committee::propose(Origin::signed(PROPOSER_ACCOUNT_ID), Box::new(action.clone())));
-	pallet::Proposal::<Test>::new(expected_nonce, action, ProposalStatus::Active)
+	pallet::Proposal::<Test>::new(action, PROPOSER_ACCOUNT_ID, expected_nonce, ProposalStatus::Active)
 }
 
 //
@@ -73,7 +73,8 @@ fn can_create_multiple_proposals_from_same_action() {
 
 		for i in 0..repeats {
 			let nonce = u32::try_from(i).unwrap();
-			let proposal = pallet::Proposal::<Test>::new(nonce, action.clone(), ProposalStatus::Active);
+			let proposal =
+				pallet::Proposal::<Test>::new(action.clone(), PROPOSER_ACCOUNT_ID, nonce, ProposalStatus::Active);
 			assert!(Committee::active_proposals().contains(&proposal.hash()));
 			assert!(Committee::get_proposal(&proposal.hash()) == Some(proposal));
 		}
@@ -341,14 +342,15 @@ fn cannot_close_if_council_rejects() {
 fn cannot_close_if_constituents_veto() {
 	new_test_ext(0..4).execute_with(|| {
 		add_constituents(4..8);
+		run_to_block(START_OF_V1);
 
 		let proposal = submit_proposal(123);
+		run_to_block(START_OF_V1 + START_OF_S1 - 1);
 
-		run_to_block(START_OF_S1);
 		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 		vote_with_each(4..8, proposal.hash(), VoteKind::Nay);
 
-		run_to_block(START_OF_V1 + 1);
+		run_to_block(START_OF_V1 + START_OF_S1 + 1);
 		assert_noop!(
 			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
 			pallet::Error::<Test>::ProposalNotAcceptedConstituentVeto
@@ -384,6 +386,31 @@ fn cannot_execute_proposal_twice() {
 			pallet::Error::<Test>::ProposalAlreadyExecuted
 		);
 	});
+}
+
+#[test]
+fn new_member_cannot_vote() {
+	new_test_ext(0..4).execute_with(|| {
+		let proposal = submit_proposal(123);
+		let proposal_hash = proposal.hash();
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+
+		run_to_block(START_OF_V1 - 1);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotEligibileToVoteYet
+		);
+
+		run_to_block(START_OF_V1);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotInVotingPeriod
+		);
+
+		run_to_block(START_OF_V1 + 1);
+		assert_ok!(Committee::close(Origin::signed(CONSTITUENT), proposal_hash));
+	})
 }
 
 #[test]
@@ -444,7 +471,7 @@ fn can_remove_member() {
 		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
 
 		// can remove constituent
-		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(VOTING_PERIOD));
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(START_OF_V1));
 		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
 		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
 		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), None);
@@ -492,5 +519,27 @@ fn propose_constituent_works() {
 
 		// check if constituent committee contains new constituent
 		assert!(<pallet::Members<Test>>::contains_key(CONSTITUENT));
+	});
+}
+
+#[test]
+fn can_set_voting_period() {
+	new_test_ext_without_members().execute_with(|| {
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), 5);
+		assert_noop!(Committee::set_voting_period(Origin::root(), DAYS), pallet::Error::<Test>::InvalidVotingPeriod);
+
+		assert_noop!(
+			Committee::set_voting_period(Origin::root(), 7 * DAYS),
+			pallet::Error::<Test>::InvalidVotingPeriod
+		);
+		assert_ok!(Committee::set_voting_period(Origin::root(), 7 * DAYS + 1));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), 7 * DAYS + 1);
+
+		assert_noop!(
+			Committee::set_voting_period(Origin::root(), 28 * DAYS),
+			pallet::Error::<Test>::InvalidVotingPeriod
+		);
+		assert_ok!(Committee::set_voting_period(Origin::root(), 28 * DAYS - 1));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), 28 * DAYS - 1);
 	});
 }

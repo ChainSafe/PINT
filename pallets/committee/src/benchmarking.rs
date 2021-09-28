@@ -11,10 +11,20 @@ use frame_system::{ensure_signed, Call as SystemCall, Pallet as System, RawOrigi
 fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pallet::Proposal<T> {
 	let action: T::Action = <SystemCall<T>>::remark(vec![0; 0]).into();
 	let expected_nonce = pallet::ProposalCount::<T>::get();
-	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), ensure_signed(origin.clone()).unwrap(),));
+
+	let account_id = ensure_signed(origin.clone()).unwrap();
+	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), account_id.clone()));
+	<System<T>>::set_block_number(
+		<System<T>>::block_number() +
+			<T as Config>::VotingPeriod::get() +
+			<T as Config>::ProposalSubmissionPeriod::get() +
+			1_u32.into(),
+	);
+
 	let call = <Call<T>>::propose(Box::new(action.clone()));
 	assert_ok!(call.dispatch_bypass_filter(origin));
-	pallet::Proposal::<T>::new(expected_nonce, action, ProposalStatus::Active)
+
+	pallet::Proposal::<T>::new(action, account_id, expected_nonce, ProposalStatus::Active)
 }
 
 benchmarks! {
@@ -104,5 +114,14 @@ benchmarks! {
 		constituent.clone()
 	) verify {
 		assert!(!<pallet::Members<T>>::contains_key(constituent));
+	}
+
+	set_voting_period {
+		let two_weeks: T::BlockNumber = (10u32 * 60 * 24 * 7 * 2).into();
+	}: _(
+		SystemOrigin::Root,
+		two_weeks
+	) verify {
+		assert_eq!(<pallet::VotingPeriod<T>>::get(), two_weeks);
 	}
 }

@@ -23,14 +23,15 @@ pub enum ProposalStatus {
 /// This extra abstraction is required since it may be desirable construct
 /// multiple proposal instances out of a single proposal
 pub struct Proposal<T: Config> {
-	pub nonce: T::ProposalNonce,
 	pub action: T::Action,
+	pub issuer: T::AccountId,
+	pub nonce: T::ProposalNonce,
 	pub status: ProposalStatus,
 }
 
 impl<T: Config> Proposal<T> {
-	pub fn new(nonce: T::ProposalNonce, action: T::Action, status: ProposalStatus) -> Self {
-		Self { nonce, action, status }
+	pub fn new(action: T::Action, issuer: T::AccountId, nonce: T::ProposalNonce, status: ProposalStatus) -> Self {
+		Self { action, nonce, status, issuer }
 	}
 
 	pub fn hash(&self) -> <T as frame_system::Config>::Hash {

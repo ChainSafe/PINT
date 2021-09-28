@@ -59,6 +59,9 @@ pub mod pallet {
 		/// A unique number assigned to each new instance of a proposal
 		type ProposalNonce: Parameter + Member + One + Zero + Codec + Default + MaybeSerializeDeserialize + CheckedAdd;
 
+		/// A number for adjusting how many blocks represent a day
+		type Days: Get<Self::BlockNumber>;
+
 		/// Duration (in blocks) of the proposal submission period
 		type ProposalSubmissionPeriod: Get<Self::BlockNumber>;
 
@@ -122,6 +125,10 @@ pub mod pallet {
 	pub type Votes<T: Config> =
 		StorageMap<_, Blake2_128Concat, HashFor<T>, VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>, OptionQuery>;
 
+	/// Store a duration (in blocks) of the voting period
+	#[pallet::storage]
+	pub type VotingPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
 	/// Stores the block height at which point a member is eligible to cast their vote
 	///
 	/// For new members, this will be the block they were added as members plus the duration of one
@@ -147,6 +154,8 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			VotingPeriod::<T>::set(T::VotingPeriod::get());
+
 			for member in &self.council_members {
 				Members::<T>::insert(member, MemberType::Council);
 				VotingEligibility::<T>::insert(member, T::BlockNumber::zero());
@@ -223,6 +232,8 @@ pub mod pallet {
 		/// There was a numerical overflow or underflow in calculating when the
 		/// voting period should end
 		InvalidOperationInEndBlockComputation,
+		/// Attempted to set VotingPeriod out of the range of 7 days ~ 28 days
+		InvalidVotingPeriod,
 	}
 
 	impl<T> From<VoteRejectionReason> for Error<T> {
@@ -241,7 +252,7 @@ pub mod pallet {
 			// perform upkeep only at the start of a new cycle
 			match Self::get_next_voting_period_end(&n) {
 				Ok(end) => {
-					if end == n + T::VotingPeriod::get() + T::ProposalSubmissionPeriod::get() {
+					if end == n + VotingPeriod::<T>::get() + T::ProposalSubmissionPeriod::get() {
 						return Self::upkeep(n);
 					}
 				}
@@ -283,7 +294,7 @@ pub mod pallet {
 		pub fn get_next_voting_period_end(
 			block_number: &BlockNumberFor<T>,
 		) -> Result<BlockNumberFor<T>, DispatchError> {
-			utils::get_vote_end(block_number, &T::VotingPeriod::get(), &T::ProposalSubmissionPeriod::get())
+			utils::get_vote_end(block_number, &VotingPeriod::<T>::get(), &T::ProposalSubmissionPeriod::get())
 				.ok_or_else(|| Error::<T>::InvalidOperationInEndBlockComputation.into())
 		}
 
@@ -291,7 +302,7 @@ pub mod pallet {
 		/// for the given VoteAggregate.
 		pub fn within_voting_period(votes: &VoteAggregate<AccountIdFor<T>, BlockNumberFor<T>>) -> bool {
 			let current_block = frame_system::Pallet::<T>::block_number();
-			current_block < votes.end && current_block >= votes.end - T::VotingPeriod::get()
+			current_block < votes.end && current_block >= votes.end - VotingPeriod::<T>::get()
 		}
 
 		/// Function executed at the initialization of the first block in
@@ -339,7 +350,7 @@ pub mod pallet {
 
 			// Create a new proposal with a unique nonce
 			let nonce = Self::take_and_increment_nonce()?;
-			let proposal = Proposal::<T>::new(nonce.clone(), *action, ProposalStatus::Active);
+			let proposal = Proposal::<T>::new(*action, proposer.clone(), nonce.clone(), ProposalStatus::Active);
 
 			let proposal_hash = proposal.hash();
 
@@ -395,7 +406,7 @@ pub mod pallet {
 		/// Only the proposal execution origin can execute.
 		#[pallet::weight((T::WeightInfo::close(), DispatchClass::Operational))]
 		pub fn close(origin: OriginFor<T>, proposal_hash: HashFor<T>) -> DispatchResultWithPostInfo {
-			let closer = T::ProposalExecutionOrigin::ensure_origin(origin)?;
+			T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
 			// register that this proposal has been executed
 			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResultWithPostInfo {
@@ -407,7 +418,7 @@ pub mod pallet {
 				(match proposal.status {
 					ProposalStatus::Active => {
 						// proposal timeout after two voting periods
-						if current_block.saturating_sub(votes.end) >= T::VotingPeriod::get() {
+						if current_block.saturating_sub(votes.end) >= VotingPeriod::<T>::get() {
 							proposal.status = ProposalStatus::Timeout;
 							*maybe_proposal = Some(proposal);
 							return Ok(().into());
@@ -426,7 +437,10 @@ pub mod pallet {
 				votes.is_accepted(T::MinCouncilVotes::get()).map_err(Into::<Error<T>>::into)?;
 
 				// Execute the proposal
-				let result = proposal.action.clone().dispatch(Origin::<T>::ApprovedByCommittee(closer, votes).into());
+				let result = proposal
+					.action
+					.clone()
+					.dispatch(Origin::<T>::ApprovedByCommittee(proposal.issuer.clone(), votes).into());
 
 				proposal.status = ProposalStatus::Executed;
 				*maybe_proposal = Some(proposal);
@@ -462,10 +476,8 @@ pub mod pallet {
 				}
 			})?;
 
-			VotingEligibility::<T>::insert(
-				&constituent,
-				frame_system::Pallet::<T>::block_number() + T::VotingPeriod::get(),
-			);
+			let block_numer = frame_system::Pallet::<T>::block_number();
+			VotingEligibility::<T>::insert(&constituent, block_numer + Self::get_next_voting_period_end(&block_numer)?);
 
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
@@ -496,6 +508,25 @@ pub mod pallet {
 			Self::deposit_event(Event::RemoveMember(member, ty));
 			Ok(())
 		}
+
+		/// Set voting period
+		///
+		/// only accept 7~28 days
+		#[pallet::weight(T::WeightInfo::set_voting_period())]
+		pub fn set_voting_period(origin: OriginFor<T>, voting_period: T::BlockNumber) -> DispatchResult {
+			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
+
+			let days = T::Days::get();
+			let weeks = days.saturating_mul(7u32.into());
+
+			ensure!(
+				weeks < voting_period && voting_period < weeks.saturating_mul(4u32.into()),
+				Error::<T>::InvalidVotingPeriod
+			);
+
+			VotingPeriod::<T>::set(voting_period);
+			Ok(())
+		}
 	}
 
 	/// Trait for the asset-index pallet extrinsic weights.
@@ -505,6 +536,7 @@ pub mod pallet {
 		fn close() -> Weight;
 		fn add_constituent() -> Weight;
 		fn remove_member() -> Weight;
+		fn set_voting_period() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -526,6 +558,10 @@ pub mod pallet {
 		}
 
 		fn remove_member() -> Weight {
+			Default::default()
+		}
+
+		fn set_voting_period() -> Weight {
 			Default::default()
 		}
 	}
