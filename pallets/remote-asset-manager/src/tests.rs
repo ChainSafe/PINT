@@ -173,6 +173,8 @@ fn can_transact_staking() {
 
 	Para::execute_with(|| {
 		register_relay();
+		// mint some funds first to cover the transfer
+		assert_ok!(para::Currency::deposit(RELAY_CHAIN_ASSET, &ADMIN_ACCOUNT, 1_000_000));
 
 		// fails to bond extra, no initial bond
 		assert_noop!(

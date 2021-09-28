@@ -349,8 +349,9 @@ pub mod pallet {
 		/// The amount of PINT minted and awarded to the LP is specified as part
 		/// of the associated proposal
 		/// Caller's balance is updated to allocate the correct amount of the
-		/// IndexToken. If the asset does not exist yet, it will get
-		/// created with the given location.
+		/// IndexToken.
+		/// The given amount of assets must already exist in the caller's account,
+		/// they are then transferred to the treasury account.
 		///
 		/// The Governance committee decides the tokens that comprise the index,
 		/// as well as the allocation of each and their value.
