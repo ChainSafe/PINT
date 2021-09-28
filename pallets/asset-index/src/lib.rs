@@ -747,10 +747,15 @@ pub mod pallet {
 				.ok_or_else(|| ArithmeticError::Overflow.into())
 		}
 
-		/// Adds liquid asset
+		/// Adds liquid asset units
 		///
-		/// - If asset not exists, create asset
 		/// - If asset exists, deposit more units into matched asset
+		///
+		/// This function is a no-op if:
+		///  - The `units` to be converted is zero, this would be analogous to
+		///    [`LocalTreasury::withdraw`]
+		///  - The `amount` of index tokens to be received is less than the required ED and the
+		///    account does not exist.
 		fn do_add_asset(
 			recipient: T::AccountId,
 			asset_id: T::AssetId,
@@ -763,7 +768,7 @@ pub mod pallet {
 				return Ok(());
 			}
 
-			// transfer the caller's fund into the treasury account
+			// transfer the caller's funds into the treasury account in exchange for index tokens
 			Self::add_liquid(&recipient, asset_id, units, amount)?;
 
 			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
@@ -789,7 +794,7 @@ pub mod pallet {
 			Self::remove_liquid(&who, asset_id, units, index_tokens, recipient.clone())?;
 
 			Self::deposit_event(Event::AssetRemoved(asset_id, units, who, recipient, index_tokens));
-			Ok(().into())
+			Ok(())
 		}
 
 		/// The fee model depends on how long LP contributions remained in the index.
@@ -858,7 +863,7 @@ pub mod pallet {
 		///
 		/// *NOTE*:
 		///   - This does not account for fees
-		///   - This is a noop for `redeem == 0`
+		///   - This is a no-op for `redeem == 0`
 		pub fn liquid_asset_redemptions(
 			redeem: u128,
 		) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
