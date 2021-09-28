@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 #
 # Building layer
-FROM paritytech/ci-linux:production as builder
+FROM paritytech/ci-linux:staging-1.55.0-stable as builder
 COPY . .
 ENV CARGO_TERM_COLOR=always
 RUN --mount=type=cache,target=/usr/local/cargo/git \
