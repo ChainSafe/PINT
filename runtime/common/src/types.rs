@@ -1,5 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
+use sp_std::marker::PhantomData;
 
 /// Origin either `Root` or `CommitteeOrigin`
 pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
@@ -10,3 +11,16 @@ pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
 
 /// Origin that approved by committee
 pub type CommitteeOrigin<Runtime> = pallet_committee::EnsureApprovedByCommittee<Runtime>;
+
+/// Range of voting period
+pub struct VotingPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_committee::traits::VotingPeriodRange<T::BlockNumber> for VotingPeriodRange<T> {
+	fn max() -> T::BlockNumber {
+		(crate::constants::DAYS * 28).into()
+	}
+
+	fn min() -> T::BlockNumber {
+		(crate::constants::DAYS * 7).into()
+	}
+}

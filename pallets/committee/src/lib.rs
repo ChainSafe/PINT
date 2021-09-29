@@ -21,6 +21,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+pub mod traits;
 mod types;
 mod utils;
 
@@ -31,7 +32,7 @@ mod utils;
 #[frame_support::pallet]
 pub mod pallet {
 	pub use crate::types::*;
-	use crate::utils;
+	use crate::{traits::*, utils};
 	use frame_support::{
 		dispatch::{Codec, DispatchResultWithPostInfo},
 		pallet_prelude::*,
@@ -59,14 +60,14 @@ pub mod pallet {
 		/// A unique number assigned to each new instance of a proposal
 		type ProposalNonce: Parameter + Member + One + Zero + Codec + Default + MaybeSerializeDeserialize + CheckedAdd;
 
-		/// A number for adjusting how many blocks represent a day
-		type Days: Get<Self::BlockNumber>;
-
 		/// Duration (in blocks) of the proposal submission period
 		type ProposalSubmissionPeriod: Get<Self::BlockNumber>;
 
 		/// Duration (in blocks) of the voting period
 		type VotingPeriod: Get<Self::BlockNumber>;
+
+		/// Range of the voting period
+		type VotingPeriodRange: VotingPeriodRange<Self::BlockNumber>;
 
 		/// Minimum number of council members that must vote for a action to be
 		/// passed
@@ -516,11 +517,8 @@ pub mod pallet {
 		pub fn set_voting_period(origin: OriginFor<T>, voting_period: T::BlockNumber) -> DispatchResult {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
-			let days = T::Days::get();
-			let weeks = days.saturating_mul(7u32.into());
-
 			ensure!(
-				weeks < voting_period && voting_period < weeks.saturating_mul(4u32.into()),
+				T::VotingPeriodRange::min() <= voting_period && voting_period <= T::VotingPeriodRange::max(),
 				Error::<T>::InvalidVotingPeriod
 			);
 
