@@ -194,6 +194,12 @@ pub mod pallet {
 		/// A member has been removed
 		/// \[member_type, address]
 		RemoveMember(AccountIdFor<T>, MemberType),
+		/// A new pending voting period has been set
+		/// \[block_number]
+		NewPendingVotingPeriod(BlockNumberFor<T>),
+		/// A new voting period has been set
+		/// \[block_number]
+		NewVotingPeriod(BlockNumberFor<T>),
 	}
 
 	#[pallet::error]
@@ -331,9 +337,10 @@ pub mod pallet {
 
 			// reset the voting period if has pending voting period
 			if let Some(pending_voting_period) = PendingVotingPeriod::<T>::get() {
-				writes = writes.saturating_add(pending_voting_period.encode().len() as Weight);
+				writes = writes.saturating_add(1);
 
 				VotingPeriod::<T>::set(pending_voting_period);
+				Self::deposit_event(Event::NewVotingPeriod(pending_voting_period));
 			}
 
 			T::DbWeight::get().reads_writes(reads, writes)
@@ -534,6 +541,7 @@ pub mod pallet {
 			);
 
 			PendingVotingPeriod::<T>::set(Some(voting_period));
+			Self::deposit_event(Event::NewPendingVotingPeriod(voting_period));
 			Ok(())
 		}
 	}
