@@ -532,24 +532,23 @@ fn propose_constituent_works() {
 #[test]
 fn can_set_voting_period() {
 	new_test_ext_without_members().execute_with(|| {
+		// ensure initial voting period has been set
 		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 
-		// move to the last block of the first epoch_period
-		run_to_block(VOTING_PERIOD - 1);
-		assert_noop!(Committee::set_voting_period(Origin::root(), DAYS), pallet::Error::<Test>::InvalidVotingPeriod);
-
+		// cannot set voting period out of range
 		assert_noop!(
-			Committee::set_voting_period(Origin::root(), 7 * DAYS),
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::max() + 1),
 			pallet::Error::<Test>::InvalidVotingPeriod
 		);
 		assert_noop!(
-			Committee::set_voting_period(Origin::root(), 4 * 7 * DAYS),
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::min() - 1),
 			pallet::Error::<Test>::InvalidVotingPeriod
 		);
-		assert_ok!(Committee::set_voting_period(Origin::root(), 7 * DAYS + 1));
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
+
+		// can set voting period
+		assert_ok!(Committee::set_voting_period(Origin::root(), WEEKS));
 
 		run_to_block(VOTING_PERIOD);
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), 7 * DAYS + 1);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), WEEKS);
 	});
 }
