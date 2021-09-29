@@ -4,7 +4,8 @@
 use crate as pallet;
 
 use crate::{
-	mock::*, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate, VoteKind, VotingEligibility,
+	mock::*, traits::VotingPeriodRange as _, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate,
+	VoteKind, VotingEligibility,
 };
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
@@ -393,7 +394,7 @@ fn new_member_cannot_vote() {
 	new_test_ext(0..4).execute_with(|| {
 		let proposal = submit_proposal(123);
 		let proposal_hash = proposal.hash();
-		let new_voting_period = 7 * DAYS + 1;
+		let new_voting_period = WEEKS;
 
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
 		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
@@ -537,11 +538,11 @@ fn can_set_voting_period() {
 
 		// cannot set voting period out of range
 		assert_noop!(
-			Committee::set_voting_period(Origin::root(), VotingPeriodRange::max() + 1),
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::max() + 1),
 			pallet::Error::<Test>::InvalidVotingPeriod
 		);
 		assert_noop!(
-			Committee::set_voting_period(Origin::root(), VotingPeriodRange::min() - 1),
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::min() - 1),
 			pallet::Error::<Test>::InvalidVotingPeriod
 		);
 
