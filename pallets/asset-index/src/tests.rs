@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::{assert_noop, assert_ok, traits::Currency as _};
-use orml_traits::MultiCurrency;
+use orml_traits::{GetByKey, MultiCurrency};
 use rand::Rng;
 use sp_runtime::{traits::Zero, FixedPointNumber};
 use xcm::v0::MultiLocation;
@@ -647,4 +647,27 @@ fn can_withdraw() {
 		let pending = pending.remove(0);
 		assert_eq!(pending.assets.len(), 2);
 	})
+}
+
+#[test]
+fn add_asset_less_than_existential_deposit_is_noop() {
+	new_test_ext_with_balance(vec![]).execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ED_ASSET_ID,
+			AssetAvailability::Liquid(MultiLocation::Null)
+		));
+
+		let ed = ExistentialDeposits::get(&ED_ASSET_ID);
+		assert_ok!(Currency::deposit(ED_ASSET_ID, &ACCOUNT_ID, ed));
+
+		// index token payout less than ED is a no-op
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ED_ASSET_ID,
+			ed,
+			ExistentialDeposit::get().saturating_sub(1)
+		));
+		assert!(AssetIndex::index_token_balance(&ACCOUNT_ID).is_zero());
+	});
 }
