@@ -1141,8 +1141,10 @@ pub mod pallet {
 			amount: T::Balance,
 		) -> DispatchResult {
 			let origin = T::AdminOrigin::successful_origin();
-			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone())?;
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin)?;
 
+			// also mint the funds
+			T::Currency::deposit(asset_id, &origin_account_id, amount)?;
 			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id).map_err(|e| e.error)?;
 
 			// the tests of benchmarks register assets by default
