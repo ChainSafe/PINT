@@ -396,6 +396,11 @@ fn new_member_cannot_vote() {
 		let new_voting_period = 7 * DAYS + 1;
 
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
+
+		run_to_block(VOTING_PERIOD);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), new_voting_period);
 
 		run_to_block(START_OF_V1 - 1);
 		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
@@ -403,15 +408,12 @@ fn new_member_cannot_vote() {
 			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
 			pallet::Error::<Test>::NotEligibileToVoteYet
 		);
-		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 
 		run_to_block(START_OF_V1);
 		assert_noop!(
 			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), new_voting_period);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(CONSTITUENT), proposal_hash));
@@ -533,7 +535,7 @@ fn can_set_voting_period() {
 		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 
 		// move to the last block of the first epoch_period
-		run_to_block(START_OF_V1 - 1);
+		run_to_block(VOTING_PERIOD - 1);
 		assert_noop!(Committee::set_voting_period(Origin::root(), DAYS), pallet::Error::<Test>::InvalidVotingPeriod);
 
 		assert_noop!(
@@ -547,7 +549,7 @@ fn can_set_voting_period() {
 		assert_ok!(Committee::set_voting_period(Origin::root(), 7 * DAYS + 1));
 		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 
-		run_to_block(START_OF_V1);
+		run_to_block(VOTING_PERIOD);
 		assert_eq!(pallet::VotingPeriod::<Test>::get(), 7 * DAYS + 1);
 	});
 }

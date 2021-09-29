@@ -4,7 +4,7 @@ use super::*;
 use frame_benchmarking::{account, benchmarks, vec, Box};
 use frame_support::{
 	assert_noop, assert_ok,
-	traits::{EnsureOrigin, Get, UnfilteredDispatchable},
+	traits::{EnsureOrigin, Get, Hooks, UnfilteredDispatchable},
 };
 use frame_system::{ensure_signed, Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
 
@@ -25,6 +25,13 @@ fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pa
 	assert_ok!(call.dispatch_bypass_filter(origin));
 
 	pallet::Proposal::<T>::new(action, account_id, expected_nonce, ProposalStatus::Active)
+}
+
+fn run_to_block<T: Config>(n: T::BlockNumber) {
+	while System::<T>::block_number() < n {
+		System::<T>::set_block_number(System::<T>::block_number() + 1u32.into());
+		Pallet::<T>::on_initialize(System::<T>::block_number());
+	}
 }
 
 benchmarks! {
@@ -122,6 +129,7 @@ benchmarks! {
 		SystemOrigin::Root,
 		two_weeks
 	) verify {
+		run_to_block::<T>(<T as Config>::VotingPeriod::get());
 		assert_eq!(<pallet::VotingPeriod<T>>::get(), two_weeks);
 	}
 }

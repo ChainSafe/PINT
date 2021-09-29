@@ -69,7 +69,7 @@ impl system::Config for Test {
 }
 
 pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
-pub(crate) const VOTING_PERIOD: <Test as system::Config>::BlockNumber = 10;
+pub(crate) const VOTING_PERIOD: <Test as system::Config>::BlockNumber = 27;
 
 parameter_types! {
 	pub const ProposalSubmissionPeriod: <Test as system::Config>::BlockNumber = PROPOSAL_SUBMISSION_PERIOD;
