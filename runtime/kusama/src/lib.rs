@@ -55,11 +55,7 @@ use xcm_executor::XcmExecutor;
 
 use frame_support::traits::Everything;
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{
-	constants::*,
-	types::{CommitteeOrigin, GovernanceOrigin},
-	weights,
-};
+pub use pint_runtime_common::{constants::*, types::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::{
@@ -435,9 +431,9 @@ impl pallet_committee::Config for Runtime {
 	type Origin = Origin;
 	type Action = Call;
 	type ProposalNonce = u32;
-	type Days = Days;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
+	type VotingPeriodRange = VotingPeriodRange<Self>;
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
 	type ProposalSubmissionOrigin = EnsureMember<Self>;
