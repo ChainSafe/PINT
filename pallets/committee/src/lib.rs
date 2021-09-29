@@ -319,7 +319,7 @@ pub mod pallet {
 		fn upkeep(n: BlockNumberFor<T>) -> Weight {
 			// ActiveProposals.retain (r:1 w:1)
 			let mut reads: Weight = 1;
-			let writes: Weight = 1;
+			let mut writes: Weight = 1;
 
 			// clear out proposals that are no longer active
 			ActiveProposals::<T>::mutate(|proposals| {
@@ -328,6 +328,13 @@ pub mod pallet {
 
 				proposals.retain(|hash| if let Some(votes) = Self::get_votes_for(hash) { votes.end > n } else { false })
 			});
+
+			// reset the voting period if has pending voting period
+			if let Some(pending_voting_period) = PendingVotingPeriod::<T>::get() {
+				writes = writes.saturating_add(pending_voting_period.encode().len() as Weight);
+
+				VotingPeriod::<T>::set(pending_voting_period);
+			}
 
 			T::DbWeight::get().reads_writes(reads, writes)
 		}
@@ -413,7 +420,7 @@ pub mod pallet {
 			T::ProposalExecutionOrigin::ensure_origin(origin)?;
 
 			// register that this proposal has been executed
-			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResult {
+			Proposals::<T>::try_mutate_exists(&proposal_hash, |maybe_proposal| -> DispatchResultWithPostInfo {
 				let mut proposal = maybe_proposal.take().ok_or(Error::<T>::NoProposalWithHash)?;
 				let votes = Self::get_votes_for(&proposal_hash).ok_or(Error::<T>::NoProposalWithHash)?;
 				let current_block = frame_system::Pallet::<T>::block_number();
@@ -454,19 +461,8 @@ pub mod pallet {
 					result.map(|_| ()).map_err(|e| e.error),
 				));
 
-				Ok(())
-			})?;
-
-			// Set new `VotingPeriod` if no active proposals left and `PendingVotingPeriod` is some
-			if Proposals::<T>::iter_values().filter(|p| p.status == ProposalStatus::Active).count().is_zero() {
-				if let Some(pending_voting_period) = PendingVotingPeriod::<T>::get() {
-					VotingPeriod::<T>::set(pending_voting_period);
-				}
-			}
-
-			// TODO: Handle weight used by the dispatch call in weight calculation
-
-			Ok(().into())
+				Ok(().into())
+			})
 		}
 
 		/// Add new constituent to the committee
@@ -507,9 +503,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)
@@ -537,12 +533,7 @@ pub mod pallet {
 				Error::<T>::InvalidVotingPeriod
 			);
 
-			if Proposals::<T>::iter_values().filter(|p| p.status == ProposalStatus::Active).count().is_zero() {
-				VotingPeriod::<T>::set(voting_period);
-			} else {
-				PendingVotingPeriod::<T>::set(Some(voting_period));
-			}
-
+			PendingVotingPeriod::<T>::set(Some(voting_period));
 			Ok(())
 		}
 	}
