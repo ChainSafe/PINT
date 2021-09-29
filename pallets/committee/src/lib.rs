@@ -518,7 +518,7 @@ pub mod pallet {
 			T::ApprovedByCommitteeOrigin::ensure_origin(origin)?;
 
 			ensure!(
-				T::VotingPeriodRange::min() < voting_period && voting_period < T::VotingPeriodRange::max(),
+				T::VotingPeriodRange::min() <= voting_period && voting_period <= T::VotingPeriodRange::max(),
 				Error::<T>::InvalidVotingPeriod
 			);
 
