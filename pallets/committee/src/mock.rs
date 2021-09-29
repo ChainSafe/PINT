@@ -17,9 +17,9 @@ use frame_support::{
 };
 use frame_system::{self as system, EnsureSignedBy};
 
+use core::marker::PhantomData;
 use frame_support::traits::Everything;
 use sp_core::H256;
-use sp_std::marker::PhantomData;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -71,6 +71,7 @@ impl system::Config for Test {
 
 pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
 pub(crate) const VOTING_PERIOD: <Test as system::Config>::BlockNumber = 5;
+pub(crate) const WEEKS: <Test as system::Config>::BlockNumber = 7;
 
 parameter_types! {
 	pub const ProposalSubmissionPeriod: <Test as system::Config>::BlockNumber = PROPOSAL_SUBMISSION_PERIOD;
@@ -105,7 +106,7 @@ impl<T: frame_system::Config> crate::traits::VotingPeriodRange<T::BlockNumber> f
 }
 
 impl pallet_committee::Config for Test {
-	type VotingPeriodRange = VotingPeriodRange;
+	type VotingPeriodRange = VotingPeriodRange<Self>;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
 	type MinCouncilVotes = MinCouncilVotes;
