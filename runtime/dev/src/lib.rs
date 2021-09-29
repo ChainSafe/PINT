@@ -118,7 +118,7 @@ parameter_types! {
 	pub const Version: RuntimeVersion = VERSION;
 	// pallet-committee
 	pub const ProposalSubmissionPeriod: BlockNumber = 10;
-	pub const VotingPeriod: BlockNumber = 10;
+	pub const VotingPeriod: BlockNumber = 27 * DAYS;
 }
 
 // Configure FRAME pallets to include in runtime.
