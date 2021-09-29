@@ -195,8 +195,8 @@ pub mod pallet {
 		/// \[member_type, address]
 		RemoveMember(AccountIdFor<T>, MemberType),
 		/// A new pending voting period has been set
-		/// \[block_number]
-		NewPendingVotingPeriod(BlockNumberFor<T>),
+		/// \[block_number, next_voting_period_end]
+		NewPendingVotingPeriod(BlockNumberFor<T>, BlockNumberFor<T>),
 		/// A new voting period has been set
 		/// \[block_number]
 		NewVotingPeriod(BlockNumberFor<T>),
@@ -510,9 +510,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)
@@ -541,7 +541,10 @@ pub mod pallet {
 			);
 
 			PendingVotingPeriod::<T>::set(Some(voting_period));
-			Self::deposit_event(Event::NewPendingVotingPeriod(voting_period));
+			Self::deposit_event(Event::NewPendingVotingPeriod(
+				voting_period,
+				Self::get_next_voting_period_end(&frame_system::Pallet::<T>::block_number())?,
+			));
 			Ok(())
 		}
 	}
