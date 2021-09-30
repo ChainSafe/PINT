@@ -5,7 +5,10 @@ use frame_support::{assert_noop, assert_ok, traits::tokens::fungibles::Inspect};
 use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
 use sp_runtime::{traits::Zero, FixedPointNumber};
-use xcm::v1::{Junction, Junctions, MultiAsset, MultiLocation, NetworkId};
+use xcm::{
+	v1::{Junction, Junctions, MultiLocation, NetworkId},
+	VersionedMultiAssets, VersionedMultiLocation,
+};
 use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
@@ -66,9 +69,12 @@ fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 		// transfer from relay to parachain
 		assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
 			relay::Origin::signed(who.clone()),
-			Junctions::X1(Junction::Parachain(PARA_ID)),
-			Junctions::X1(Junction::AccountId32 { network: NetworkId::Any, id: who.clone().into() }),
-			vec![ConcreteFungible { id: Null, amount: relay_deposit_amount }],
+			Box::new(VersionedMultiLocation::V1(Junctions::X1(Junction::Parachain(PARA_ID)).into())),
+			Box::new(VersionedMultiLocation::V1(
+				Junctions::X1(Junction::AccountId32 { network: NetworkId::Any, id: who.clone().into() }).into()
+			)),
+			Box::new(VersionedMultiAssets::V1((Junctions::Here, relay_deposit_amount).into())),
+			0,
 			relay_deposit_amount as u64,
 		));
 	});

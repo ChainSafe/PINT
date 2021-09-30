@@ -1,5 +1,5 @@
 use cumulus_primitives_core::{DmpMessageHandler, XcmpMessageHandler};
-use polkadot_core_primitives::BlockNumber as RelayBlockNumber;
+use polkadot_core_primitives::{BlockNumber as RelayBlockNumber, HashT};
 use polkadot_parachain::primitives::Id as ParaId;
 use sp_std::convert::TryFrom;
 use xcm::v1::MultiLocation;

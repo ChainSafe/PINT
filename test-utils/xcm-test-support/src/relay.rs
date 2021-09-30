@@ -22,7 +22,7 @@ use frame_election_provider_support::onchain;
 use pallet_staking as staking;
 use pallet_staking::*;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
-use xcm::v1::{MultiLocation, NetworkId};
+use xcm::v1::{Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative, ChildParachainConvertsVia,
 	ChildSystemParachainAsSuperuser, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfFungible, FixedWeightBounds,
@@ -64,7 +64,7 @@ impl shared::Config for Runtime {}
 impl configuration::Config for Runtime {}
 
 parameter_types! {
-	pub const KsmLocation: MultiLocation = MultiLocation::default();
+	pub const KsmLocation: MultiLocation = MultiLocation { parents: 0, interior: Junctions::Here };
 	pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 	pub Ancestry: MultiLocation = MultiLocation::default();
