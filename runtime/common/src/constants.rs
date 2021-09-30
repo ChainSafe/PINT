@@ -133,7 +133,7 @@ parameter_types! {
 	pub const MinimumReserve: Balance = 100;
 	pub const UncleGenerations: u32 = 0;
 	// One UNIT buys 1 second of weight.
-	pub const UnitPerSecond: (MultiLocation, u128) = (MultiLocation::parent(), UNIT);
+	pub const UnitPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::here()), UNIT);
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
 	pub const WithdrawalPeriod: BlockNumber = 10;

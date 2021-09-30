@@ -16,7 +16,7 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
 use primitives::{traits::NavProvider, AssetAvailability};
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 use crate::Pallet as AssetIndex;
 

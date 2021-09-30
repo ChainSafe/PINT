@@ -6,7 +6,7 @@ use crate::{mock::*, SAFTRecord};
 use frame_support::{assert_noop, assert_ok};
 use primitives::traits::{MultiAssetRegistry, NavProvider};
 use sp_runtime::{traits::BadOrigin, FixedPointNumber};
-use xcm::v0::{Junction, MultiLocation};
+use xcm::v1::{Junction, Junctions, MultiLocation};
 
 const ASHLEY: AccountId = 0;
 
@@ -158,7 +158,7 @@ fn can_convert_to_liquid() {
 		assert!(!AssetIndex::is_liquid_asset(&SAFT_ASSET_ID));
 		assert_eq!(SaftRegistry::active_safts(SAFT_ASSET_ID, 0), Some(SAFTRecord::new(100, 20)));
 
-		let location: MultiLocation = (Junction::Parent, Junction::Parachain(100)).into();
+		let location: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(100)) };
 		assert_ok!(SaftRegistry::convert_to_liquid(Origin::signed(ADMIN_ACCOUNT_ID), SAFT_ASSET_ID, location.clone()));
 		assert_eq!(AssetIndex::native_asset_location(&SAFT_ASSET_ID), Some(location));
 

@@ -5716,6 +5716,7 @@ dependencies = [
  "pallet-xcm",
  "parachain-info",
  "parity-scale-codec",
+ "polkadot-core-primitives",
  "polkadot-parachain",
  "polkadot-runtime-parachains",
  "primitives",
@@ -12665,15 +12666,13 @@ dependencies = [
 
 [[package]]
 name = "xcm-simulator"
-version = "0.1.0"
-source = "git+https://github.com/shaunxw/xcm-simulator?branch=master#0c71745f7218ac562c45f44f7493981e35e3897d"
+version = "0.9.10"
+source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.10#aeea9b7bd81919e014f7621f6c4b2eb9709d918f"
 dependencies = [
- "cumulus-pallet-dmp-queue",
- "cumulus-pallet-xcmp-queue",
- "cumulus-primitives-core",
  "frame-support",
  "parity-scale-codec",
  "paste",
+ "polkadot-core-primitives",
  "polkadot-parachain",
  "polkadot-runtime-parachains",
  "sp-io",

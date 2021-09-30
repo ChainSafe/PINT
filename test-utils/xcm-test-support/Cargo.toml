@@ -41,11 +41,11 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 
 # polkadot
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
-polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }

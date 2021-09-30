@@ -5,12 +5,7 @@ use frame_support::{assert_noop, assert_ok, traits::tokens::fungibles::Inspect};
 use orml_traits::MultiCurrency;
 use primitives::traits::MultiAssetRegistry;
 use sp_runtime::{traits::Zero, FixedPointNumber};
-use xcm::v0::{
-	Junction::{self, *},
-	MultiAsset::*,
-	MultiLocation::*,
-	NetworkId,
-};
+use xcm::v1::{Junction, Junctions, MultiAsset, MultiLocation, NetworkId};
 use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_simulator::TestExt;
 
@@ -53,7 +48,7 @@ fn register_relay() {
 	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::register_asset(
 		para::Origin::signed(ADMIN_ACCOUNT),
 		RELAY_CHAIN_ASSET,
-		AssetAvailability::Liquid(X1(Parent)),
+		AssetAvailability::Liquid(MultiLocation::parent()),
 	));
 	assert_ok!(pallet_asset_index::Pallet::<para::Runtime>::add_asset(
 		para::Origin::signed(ADMIN_ACCOUNT),
@@ -71,8 +66,8 @@ fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 		// transfer from relay to parachain
 		assert_ok!(RelayChainPalletXcm::reserve_transfer_assets(
 			relay::Origin::signed(who.clone()),
-			X1(Parachain(PARA_ID)),
-			X1(Junction::AccountId32 { network: NetworkId::Any, id: who.clone().into() }),
+			Junctions::X1(Junction::Parachain(PARA_ID)),
+			Junctions::X1(Junction::AccountId32 { network: NetworkId::Any, id: who.clone().into() }),
 			vec![ConcreteFungible { id: Null, amount: relay_deposit_amount }],
 			relay_deposit_amount as u64,
 		));
@@ -253,7 +248,7 @@ fn can_transfer_to_statemint() {
 			pallet_remote_asset_manager::Error::<para::Runtime>::NoStatemintConfigFound
 		);
 
-		let config = StatemintConfig { parachain_id: STATEMINT_PARA_ID, enabled: false, pint_asset_id: spint_id };
+		let config = StatemintConfig { parachain_id: STATEMINT_PARA_ID, enabled: false };
 
 		assert_ok!(pallet_remote_asset_manager::Pallet::<para::Runtime>::set_statemint_config(
 			para::Origin::signed(ADMIN_ACCOUNT),

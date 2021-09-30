@@ -48,10 +48,9 @@ use xcm::v1::{
 	BodyId, Fungibility, Junction, Junction::*, Junctions, Junctions::*, MultiAsset, MultiLocation, NetworkId,
 };
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfConcreteFungible,
-	FixedWeightBounds, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
-	TakeRevenue, TakeWeightCredit,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
+	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
@@ -291,10 +290,9 @@ pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
 		use orml_traits::currency::MultiCurrency;
-		use xcm::v1::{AssetId, Fungibility, Junction, Junctions, MultiLocation};
 		match revenue.fun.clone() {
 			Fungibility::Fungible(amount) => {
-				if let AssetId::Concrete(MultiLocation { parents, interior }) = revenue.id {
+				if let xcm::v1::AssetId::Concrete(MultiLocation { parents: 1, interior }) = revenue.id {
 					if let Junctions::X1(Junction::Parachain(id)) = interior {
 						// ensure PINT Treasury account have ed for all of the cross-chain asset.
 						// Ignore the result.
@@ -319,7 +317,7 @@ impl xcm_executor::Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-	type Trader = FixedRateOfConcreteFungible<UnitPerSecond, ToTreasury>;
+	type Trader = FixedRateOfFungible<UnitPerSecond, ToTreasury>;
 	type ResponseHandler = (); // Don't handle responses for now.
 	type SubscriptionService = (); // Don't handle subscription for now.
 }
@@ -573,7 +571,7 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
-		if let xcm::v1::AssetId::Concrete(MultiLocation { parents, interior }) = asset.id {
+		if let xcm::v1::AssetId::Concrete(MultiLocation { parents: 1, interior }) = asset.id {
 			if let Junctions::X1(Junction::Parachain(id)) = interior {
 				return Some(id);
 			}

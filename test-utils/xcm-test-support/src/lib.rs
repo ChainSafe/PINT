@@ -10,6 +10,9 @@ use xcm_simulator::decl_test_relay_chain;
 /// Relay chain runtime
 pub mod relay;
 
+// Parachain libraries
+pub mod parachain;
+
 decl_test_relay_chain! {
 	pub struct Relay {
 		Runtime = relay::Runtime,
@@ -40,7 +43,7 @@ pub mod types {
 /// Basic converter types
 pub mod convert {
 	use super::types::*;
-	use xcm::v0::{Junction, MultiLocation, NetworkId};
+	use xcm::v1::{Junction, MultiLocation, NetworkId};
 
 	pub struct AccountId32Convert;
 	impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {

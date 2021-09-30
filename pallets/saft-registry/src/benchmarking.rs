@@ -6,7 +6,7 @@
 use frame_benchmarking::benchmarks;
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, traits::EnsureOrigin};
 use primitives::traits::AssetRecorderBenchmarks;
-use xcm::v0::{Junction, MultiLocation};
+use xcm::v1::{Junction, MultiLocation};
 
 use crate::Pallet as SaftRegistry;
 
