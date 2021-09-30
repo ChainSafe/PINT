@@ -1,3 +1,6 @@
+// Copyright 2021 ChainSafe Systems
+// SPDX-License-Identifier: LGPL-3.0-only
+
 use cumulus_primitives_core::{DmpMessageHandler, XcmpMessageHandler};
 use polkadot_core_primitives::{BlockNumber as RelayBlockNumber, HashT};
 use polkadot_parachain::primitives::Id as ParaId;

@@ -64,7 +64,7 @@ impl shared::Config for Runtime {}
 impl configuration::Config for Runtime {}
 
 parameter_types! {
-	pub const KsmLocation: MultiLocation = MultiLocation { parents: 0, interior: Junctions::Here };
+	pub const KsmLocation: MultiLocation = Junctions::Here.into();
 	pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 	pub Ancestry: MultiLocation = MultiLocation::default();

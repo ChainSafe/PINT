@@ -75,7 +75,7 @@ fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 			)),
 			Box::new(VersionedMultiAssets::V1((Junctions::Here, relay_deposit_amount).into())),
 			0,
-			relay_deposit_amount as u64,
+			600_000_000,
 		));
 	});
 	Para::execute_with(|| {

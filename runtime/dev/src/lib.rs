@@ -557,9 +557,9 @@ impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
 impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 	fn convert(location: MultiLocation) -> Option<AssetId> {
 		match location {
-			MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
+			MultiLocation { parents: 0, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 			MultiLocation {
-				parents: 0,
+				parents: 1,
 				interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
 			} if ParaId::from(id) == ParachainInfo::parachain_id() => {
 				// decode the general key

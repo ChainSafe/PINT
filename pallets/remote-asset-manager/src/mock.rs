@@ -31,7 +31,7 @@ pub use xcm_builder::{
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_simulator::{decl_test_network, decl_test_parachain};
+use xcm_simulator::{decl_test_network, decl_test_parachain, Get};
 
 use primitives::traits::MultiAssetRegistry;
 
@@ -293,7 +293,7 @@ pub mod para {
 
 	parameter_types! {
 		pub const UnitWeightCost: Weight = 1;
-		pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::parent()), 1);
+		pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 	}
 
 	/// Means for transacting assets on this chain.
@@ -424,7 +424,7 @@ pub mod para {
 
 		pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
 		pub const PINTAssetId: AssetId = PARA_ASSET;
-		pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
+		pub SelfLocation: MultiLocation = MultiLocation::new(1, Junctions::X1(Junction::Parachain(ParachainInfo::get().into())));
 
 		 // No fees for now
 		pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
@@ -537,7 +537,7 @@ pub mod para {
 			match location {
 				MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 				MultiLocation {
-					parents: 0,
+					parents: 1,
 					interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
 				} if ParaId::from(id) == ParachainInfo::parachain_id() => {
 					// decode the general key
