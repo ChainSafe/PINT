@@ -34,7 +34,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, XcmTransfer};
-	use xcm::v0::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
+	use xcm::v1::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
 
 	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
 	use xcm_calls::{
@@ -221,7 +221,7 @@ pub mod pallet {
 	///  - `parachain id`: the parachain of the statemint chain
 	///  - `weights`: the weights to use for the call
 	#[pallet::storage]
-	pub type StatemintParaConfig<T> = StorageValue<_, StatemintConfig<u32>, OptionQuery>;
+	pub type StatemintParaConfig<T> = StorageValue<_, StatemintConfig, OptionQuery>;
 
 	#[pallet::genesis_config]
 	#[allow(clippy::type_complexity)]
@@ -231,7 +231,7 @@ pub mod pallet {
 		/// key-value pairs for the `PalletProxyConfig` storage map
 		pub proxy_configs: Vec<(T::AssetId, ProxyConfig)>,
 		/// configures the statemint parachain
-		pub statemint_config: Option<StatemintConfig<u32>>,
+		pub statemint_config: Option<StatemintConfig>,
 	}
 
 	#[cfg(feature = "std")]
@@ -297,7 +297,7 @@ pub mod pallet {
 		/// Transacting XCM calls to the statemint parachain is now frozen
 		StatemintTransactionsDisabled,
 		/// Set statemint config. \[statemint config\]
-		SetStatemintConfig(StatemintConfig<u32>),
+		SetStatemintConfig(StatemintConfig),
 		/// Transfer to statemint succeeded. \[account, value\]
 		StatemintTransfer(T::AccountId, T::Balance),
 		/// The asset is frozen for XCM related operations.  \[asset id\]
@@ -426,8 +426,8 @@ pub mod pallet {
 					} else if !balances.pending_redemption.is_zero() {
 						// check if we need and able to unbond funds: only with we currently have enough active funds
 						// and room for 1 more unlocking chunk
-						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
-							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance)
+							&& ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
 						{
 							// attempt to send unbond
 							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
@@ -700,7 +700,7 @@ pub mod pallet {
 		/// `polkadot_parachain::primitives::Sibling`) has the permission to
 		/// modify the statemint PINT asset.
 		#[pallet::weight(10_000)] // TODO: Set weights
-		pub fn set_statemint_config(origin: OriginFor<T>, config: StatemintConfig<u32>) -> DispatchResult {
+		pub fn set_statemint_config(origin: OriginFor<T>, config: StatemintConfig) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
 			StatemintParaConfig::<T>::put(config.clone());

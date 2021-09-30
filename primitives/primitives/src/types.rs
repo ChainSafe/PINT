@@ -13,7 +13,7 @@ use frame_support::{
 	},
 	sp_std::vec::Vec,
 };
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 /// Some way of identifying an account on the chain. We intentionally make it
 /// equivalent to the public key of our transaction signing scheme.

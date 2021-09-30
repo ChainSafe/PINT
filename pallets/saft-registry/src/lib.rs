@@ -47,7 +47,7 @@ pub mod pallet {
 		types::AssetAvailability,
 		SAFTId,
 	};
-	use xcm::v0::MultiLocation;
+	use xcm::v1::MultiLocation;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {

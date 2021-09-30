@@ -3,7 +3,7 @@
 
 use codec::{Decode, Encode};
 use frame_support::{sp_runtime::traits::AtLeast32BitUnsigned, RuntimeDebug};
-use xcm::v0::{Junction, MultiAsset, MultiLocation};
+use xcm::v1::{AssetId, Fungibility, Junction, Junctions, MultiAsset, MultiLocation};
 
 /// Represents all XCM calls of the `pallet_staking` pallet transacted on a parachain
 #[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug)]
@@ -40,7 +40,7 @@ where
 /// Represents the config for the statemint parachain
 #[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
-pub struct StatemintConfig<AssetId> {
+pub struct StatemintConfig {
 	/// The id of the `statemint` parachain
 	///
 	/// *NOTE* using `u32` here instead of location, since `MultiLocation` has
@@ -48,25 +48,23 @@ pub struct StatemintConfig<AssetId> {
 	pub parachain_id: u32,
 	/// Whether interacting with the parachain is currently active
 	pub enabled: bool,
-	/// The `pallet_assets` asset identifier of the pint token on statemint
-	pub pint_asset_id: AssetId,
 }
 
-impl<AssetId> StatemintConfig<AssetId> {
+impl StatemintConfig {
 	/// The path to the `statemint` parachain
 	///
 	/// *NOTE:* this is not the full path to the asset on the statemint chain
 	pub fn parahain_location(&self) -> MultiLocation {
-		(Junction::Parent, Junction::Parachain(self.parachain_id)).into()
+		MultiLocation::new(1, Junctions::X1(Junction::Parachain(self.parachain_id)))
 	}
 }
-impl<AssetId: Into<u128> + Copy> StatemintConfig<AssetId> {
+impl StatemintConfig {
 	/// The XCM `MultiAsset` the statemint parachain expects in order to convert it correctly to the
 	/// pint asset
 	pub fn multi_asset(&self, amount: u128) -> MultiAsset {
 		// TODO simplify when on polkadot-v0.9.9 (xcm-latest) with the correct asset id converter:
 		// AsPrefixedGeneralIndex<Local, AssetId, JustTry>::reverse_ref(&self.pint_asset_id.into())
 		// where Local is MultiLocation = Junctions::Here.into()
-		MultiAsset::ConcreteFungible { id: Junction::GeneralIndex { id: self.pint_asset_id.into() }.into(), amount }
+		MultiAsset { id: AssetId::Concrete(MultiLocation::here()), fun: Fungibility::Fungible(amount) }
 	}
 }

@@ -23,8 +23,8 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::XcmTransfer;
 	use xcm::{
-		opaque::v0::{Junction, NetworkId},
-		v0::MultiLocation,
+		opaque::v1::{Junction, NetworkId},
+		v1::MultiLocation,
 	};
 
 	#[pallet::config]
@@ -184,7 +184,8 @@ pub mod pallet {
 		fn destination(asset: T::AssetId, recipient: T::AccountId) -> Result<MultiLocation, DispatchError> {
 			let mut dest: MultiLocation = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAsset)?;
 			let id = T::AccountId32Convert::convert(recipient);
-			dest.push(Junction::AccountId32 { network: NetworkId::Any, id }).map_err(|_| Error::<T>::InvalidAsset)?;
+			dest.push_interior(Junction::AccountId32 { network: NetworkId::Any, id })
+				.map_err(|_| Error::<T>::InvalidAsset)?;
 			Ok(dest)
 		}
 	}

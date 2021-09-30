@@ -15,7 +15,7 @@ use frame_support::{
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
 use primitives::{fee::FeeRate, AccountId, AssetId, Balance, BlockNumber};
-use xcm::v0::{Junction, MultiLocation};
+use xcm::v1::MultiLocation;
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
 // blocks.
@@ -88,7 +88,7 @@ parameter_types! {
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const RelayChainAssetId: AssetId = 0;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
-	pub const RelayLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 	pub RuntimeBlockLength: BlockLength =
@@ -133,7 +133,7 @@ parameter_types! {
 	pub const MinimumReserve: Balance = 100;
 	pub const UncleGenerations: u32 = 0;
 	// One UNIT buys 1 second of weight.
-	pub const UnitPerSecond: (MultiLocation, u128) = (MultiLocation::X1(Junction::Parent), UNIT);
+	pub const UnitPerSecond: (MultiLocation, u128) = (MultiLocation::parent(), UNIT);
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
 	pub const WithdrawalPeriod: BlockNumber = 10;
