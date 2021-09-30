@@ -130,6 +130,10 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type VotingPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
 
+	/// Store a duration of the voting period which marked as pending
+	#[pallet::storage]
+	pub type PendingVotingPeriod<T: Config> = StorageValue<_, T::BlockNumber, OptionQuery>;
+
 	/// Stores the block height at which point a member is eligible to cast their vote
 	///
 	/// For new members, this will be the block they were added as members plus the duration of one
@@ -191,6 +195,12 @@ pub mod pallet {
 		/// A member has been removed
 		/// \[member_type, address]
 		RemoveMember(AccountIdFor<T>, MemberType),
+		/// A new pending voting period has been set
+		/// \[block_number, next_voting_circle]
+		NewPendingVotingPeriod(BlockNumberFor<T>, BlockNumberFor<T>),
+		/// A new voting period has been set
+		/// \[block_number]
+		NewVotingPeriod(BlockNumberFor<T>),
 	}
 
 	#[pallet::error]
@@ -316,7 +326,7 @@ pub mod pallet {
 		fn upkeep(n: BlockNumberFor<T>) -> Weight {
 			// ActiveProposals.retain (r:1 w:1)
 			let mut reads: Weight = 1;
-			let writes: Weight = 1;
+			let mut writes: Weight = 1;
 
 			// clear out proposals that are no longer active
 			ActiveProposals::<T>::mutate(|proposals| {
@@ -325,6 +335,14 @@ pub mod pallet {
 
 				proposals.retain(|hash| if let Some(votes) = Self::get_votes_for(hash) { votes.end > n } else { false })
 			});
+
+			// reset the voting period if has pending voting period
+			if let Some(pending_voting_period) = PendingVotingPeriod::<T>::get() {
+				writes = writes.saturating_add(1);
+
+				VotingPeriod::<T>::set(pending_voting_period);
+				Self::deposit_event(Event::NewVotingPeriod(pending_voting_period));
+			}
 
 			T::DbWeight::get().reads_writes(reads, writes)
 		}
@@ -451,8 +469,6 @@ pub mod pallet {
 					result.map(|_| ()).map_err(|e| e.error),
 				));
 
-				// TODO: Handle weight used by the dispatch call in weight calculation
-
 				Ok(().into())
 			})
 		}
@@ -522,7 +538,13 @@ pub mod pallet {
 				Error::<T>::InvalidVotingPeriod
 			);
 
-			VotingPeriod::<T>::set(voting_period);
+			PendingVotingPeriod::<T>::set(Some(voting_period));
+			Self::deposit_event(Event::NewPendingVotingPeriod(
+				voting_period,
+				Self::get_next_voting_period_end(&frame_system::Pallet::<T>::block_number())?
+					.saturating_sub(T::ProposalSubmissionPeriod::get())
+					.saturating_sub(VotingPeriod::<T>::get()),
+			));
 			Ok(())
 		}
 	}

@@ -4,7 +4,8 @@
 use crate as pallet;
 
 use crate::{
-	mock::*, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate, VoteKind, VotingEligibility,
+	mock::*, traits::VotingPeriodRange as _, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate,
+	VoteKind, VotingEligibility,
 };
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
@@ -393,7 +394,14 @@ fn new_member_cannot_vote() {
 	new_test_ext(0..4).execute_with(|| {
 		let proposal = submit_proposal(123);
 		let proposal_hash = proposal.hash();
+		let new_voting_period = WEEKS;
+
 		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
+
+		run_to_block(VOTING_PERIOD);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), new_voting_period);
 
 		run_to_block(START_OF_V1 - 1);
 		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
@@ -525,20 +533,23 @@ fn propose_constituent_works() {
 #[test]
 fn can_set_voting_period() {
 	new_test_ext_without_members().execute_with(|| {
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), 5);
+		// ensure initial voting period has been set
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
 
+		// cannot set voting period out of range
 		assert_noop!(
-			Committee::set_voting_period(Origin::root(), WEEKS - 1),
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::max() + 1),
 			pallet::Error::<Test>::InvalidVotingPeriod
 		);
+		assert_noop!(
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::min() - 1),
+			pallet::Error::<Test>::InvalidVotingPeriod
+		);
+
+		// can set voting period
 		assert_ok!(Committee::set_voting_period(Origin::root(), WEEKS));
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), WEEKS);
 
-		assert_noop!(
-			Committee::set_voting_period(Origin::root(), 4 * WEEKS + 1),
-			pallet::Error::<Test>::InvalidVotingPeriod
-		);
-		assert_ok!(Committee::set_voting_period(Origin::root(), 4 * WEEKS));
-		assert_eq!(pallet::VotingPeriod::<Test>::get(), 4 * WEEKS);
+		run_to_block(VOTING_PERIOD);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), WEEKS);
 	});
 }

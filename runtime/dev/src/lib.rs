@@ -117,8 +117,8 @@ parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
 	pub const Version: RuntimeVersion = VERSION;
 	// pallet-committee
-	pub const ProposalSubmissionPeriod: BlockNumber = 10;
-	pub const VotingPeriod: BlockNumber = 27 * DAYS;
+	pub const ProposalSubmissionPeriod: BlockNumber = 1;
+	pub const VotingPeriod: BlockNumber = 3;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -434,13 +434,25 @@ impl pallet_saft_registry::Config for Runtime {
 	type WeightInfo = weights::pallet_saft_registry::WeightInfo<Runtime>;
 }
 
+pub struct VotingPeriodRangeDev<T>(sp_std::marker::PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_committee::traits::VotingPeriodRange<T::BlockNumber> for VotingPeriodRangeDev<T> {
+	fn max() -> T::BlockNumber {
+		(28 * DAYS).into()
+	}
+
+	fn min() -> T::BlockNumber {
+		3u32.into()
+	}
+}
+
 impl pallet_committee::Config for Runtime {
 	type Origin = Origin;
 	type Action = Call;
 	type ProposalNonce = u32;
 	type ProposalSubmissionPeriod = ProposalSubmissionPeriod;
 	type VotingPeriod = VotingPeriod;
-	type VotingPeriodRange = VotingPeriodRange<Self>;
+	type VotingPeriodRange = VotingPeriodRangeDev<Self>;
 	type MinCouncilVotes = MinCouncilVotes;
 	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
