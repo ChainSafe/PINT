@@ -382,7 +382,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["propose.assetIndex.deposit"],
+            required: ["votes.assetIndex.deposit"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
