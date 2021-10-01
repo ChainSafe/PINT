@@ -426,8 +426,8 @@ pub mod pallet {
 					} else if !balances.pending_redemption.is_zero() {
 						// check if we need and able to unbond funds: only with we currently have enough active funds
 						// and room for 1 more unlocking chunk
-						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance)
-							&& ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
+							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
 						{
 							// attempt to send unbond
 							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
