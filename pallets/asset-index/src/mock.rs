@@ -12,7 +12,7 @@ use pallet_price_feed::PriceFeedBenchmarks;
 use crate as pallet_asset_index;
 use frame_support::{
 	ord_parameter_types, parameter_types,
-	traits::{GenesisBuild, LockIdentifier, StorageMapShim},
+	traits::{GenesisBuild, LockIdentifier},
 	PalletId,
 };
 use frame_system as system;
@@ -79,7 +79,7 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type Version = ();
 	type PalletInfo = PalletInfo;
-	type AccountData = ();
+	type AccountData = pallet_balances::AccountData<Balance>;
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type SystemWeightInfo = ();
@@ -97,7 +97,7 @@ ord_parameter_types! {
 // param types for balances
 parameter_types! {
 	pub const MaxLocks: u32 = 1024;
-	pub static ExistentialDeposit: Balance = 0;
+	pub static ExistentialDeposit: Balance = 2;
 }
 
 impl pallet_balances::Config for Test {
@@ -105,12 +105,7 @@ impl pallet_balances::Config for Test {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = StorageMapShim<
-		pallet_balances::Account<Test>,
-		system::Provider<Test>,
-		AccountId,
-		pallet_balances::AccountData<Balance>,
-	>;
+	type AccountStore = System;
 	type WeightInfo = ();
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
@@ -118,8 +113,12 @@ impl pallet_balances::Config for Test {
 }
 
 parameter_type_with_key! {
-	pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
-		Zero::zero()
+	pub ExistentialDeposits: |asset_id: AssetId| -> Balance {
+		if *asset_id == ED_ASSET_ID {
+			Balance::MAX / 2
+		} else {
+			Zero::zero()
+		}
 	};
 }
 
@@ -199,8 +198,9 @@ impl pallet_asset_index::Config for Test {
 pub const PINT_ASSET_ID: AssetId = 0u32;
 pub const ASSET_A_ID: AssetId = 1u32;
 pub const ASSET_B_ID: AssetId = 2u32;
-pub const SAFT_ASSET_ID: AssetId = 99u32;
 pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
+pub const SAFT_ASSET_ID: AssetId = 99u32;
+pub const ED_ASSET_ID: AssetId = 99999999u32;
 
 pub const ASSET_A_PRICE_MULTIPLIER: Balance = 2;
 pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;
