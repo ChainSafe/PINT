@@ -649,8 +649,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -1035,6 +1035,11 @@ pub mod pallet {
 			}
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
+
+			frame_support::sp_std::if_std! {
+				println!("{:?}", T::Currency::total_balance(asset_id, caller));
+			}
+
 			// transfer the asset from the caller to treasury account
 			T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance

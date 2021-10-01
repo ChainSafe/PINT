@@ -27,6 +27,7 @@ benchmarks! {
 	add_asset {
 		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone())?;
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::Null;
 
@@ -37,6 +38,9 @@ benchmarks! {
 				AssetAvailability::Liquid(MultiLocation::Null)
 			)
 		);
+
+		T::Currency::deposit(asset_id, &origin_account_id, million)?;
+
 		let call = Call::<T>::add_asset(
 					asset_id,
 					million,
@@ -68,6 +72,8 @@ benchmarks! {
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
+
+		T::Currency::deposit(asset_id, &origin_account_id, tokens)?;
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
@@ -111,6 +117,8 @@ benchmarks! {
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
+
+		T::Currency::deposit(asset_id, &origin_account_id, admin_deposit.into())?;
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
@@ -228,6 +236,7 @@ benchmarks! {
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
+		T::Currency::deposit(asset_id, &origin_account_id, deposit_units)?;
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
@@ -269,6 +278,8 @@ benchmarks! {
 			asset_id,
 			AssetAvailability::Liquid(MultiLocation::Null)
 		));
+
+		T::Currency::deposit(asset_id, &origin_account_id, amount)?;
 		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, amount));
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, units));
