@@ -180,8 +180,6 @@ export class Extrinsic {
      */
     public async propose(
         proposals: Record<string, string>,
-        finished: string[],
-        errors: string[],
         queue: Extrinsic[],
         config: ExtrinsicConfig
     ): Promise<void | string> {
@@ -304,18 +302,18 @@ export class Extrinsic {
         nonce: number
     ): Promise<void | string> {
         console.log(`-> queue extrinsic ${nonce}: ${this.id}...`);
-        const tx = await this.build();
+        const tx = await this.build().catch((err) => {
+            console.log(
+                `====> Error: extrinsic build failed ${this.id} failed: ${err}`
+            );
+            process.exit(1);
+        });
 
         // get res
         const res = (await this.send(tx, nonce, this.signed).catch(
             (err: any) => {
                 console.log(`====> Error: ${this.id} failed: ${err}`);
                 errors.push(`====> Error: ${this.id} failed: ${err}`);
-
-                // FIX ME:
-                //
-                // for test now
-                process.exit(1);
             }
         )) as TxResult;
 
@@ -325,11 +323,6 @@ export class Extrinsic {
             await this.verify(this.shared).catch((err: any) => {
                 console.log(`====> Error: ${this.id} verify failed: ${err}`);
                 errors.push(`====> Error: ${this.id} verify failed: ${err}`);
-
-                // FIX ME:
-                //
-                // for test now
-                process.exit(1);
             });
         }
 

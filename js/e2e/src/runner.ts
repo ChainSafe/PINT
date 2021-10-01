@@ -64,12 +64,13 @@ export default class Runner implements Config {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
+        let runner: Runner | undefined = undefined;
         if (ps.stdout) {
             ps.stdout.on("data", async (chunk: Buffer) => {
                 process.stdout.write(chunk.toString());
                 if (chunk.includes(LAUNCH_COMPLETE)) {
                     console.log("COMPLETE LAUNCH!");
-                    const runner = await Runner.build(exs, ws, uri);
+                    runner = await Runner.build(exs, ws, uri);
                     await runner.runTxs();
                 }
             });
@@ -84,6 +85,12 @@ export default class Runner implements Config {
 
         // Kill all processes when exiting.
         process.on("exit", () => {
+            if (runner && runner.errors.length > 0) {
+                console.log(`Failed tests: ${runner.errors.length}`);
+                for (const error of runner.errors) {
+                    console.log(error);
+                }
+            }
             console.log("-> exit polkadot-launch...");
             killAll(ps, Number(process.exitCode));
         });
@@ -132,13 +139,12 @@ export default class Runner implements Config {
                     BalanceLock: "OrmlBalanceLock",
                 },
             },
-            types: Object.assign(
-                {
-                    ...ChainlinkTypes,
-                    ...OrmlTypes,
-                },
-                (definitions.types as any)[0].types
-            ),
+            types: {
+                AmountOf: "Amount",
+                ...ChainlinkTypes,
+                ...OrmlTypes,
+                ...(definitions.types as any)[0].types,
+            },
         });
 
         // new Runner
@@ -172,10 +178,6 @@ export default class Runner implements Config {
         }
 
         if (this.errors.length > 0) {
-            console.log(`Failed tests: ${this.errors.length}`);
-            for (const error of this.errors) {
-                console.log(error);
-            }
             process.exit(1);
         }
         console.log("COMPLETE TESTS!");
@@ -252,13 +254,7 @@ export default class Runner implements Config {
                 })
                 .map((e) => {
                     if (e.proposal) {
-                        return e.propose(
-                            this.proposals,
-                            this.finished,
-                            this.errors,
-                            this.exs,
-                            this.config
-                        );
+                        return e.propose(this.proposals, this.exs, this.config);
                     } else {
                         let n = -1;
                         if (

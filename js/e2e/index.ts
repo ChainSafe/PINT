@@ -40,6 +40,12 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     });
 
     return [
+        /* orml_currencies */
+        {
+            pallet: "currencies",
+            call: "updateBalance",
+            args: [config.alice.address, ASSET_ID_A, ASSET_ID_A_AMOUNT],
+        },
         /* balance */
         {
             signed: config.alice,
@@ -532,5 +538,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
 
 // main
 (async () => {
-    await Runner.run(TESTS);
+    try {
+        await Runner.run(TESTS);
+    } catch (error) {
+        throw error;
+        process.exit(1);
+    }
 })();
