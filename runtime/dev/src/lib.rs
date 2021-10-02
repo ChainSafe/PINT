@@ -578,12 +578,11 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
-		if let xcm::v1::AssetId::Concrete(MultiLocation { parents: 1, interior }) = asset.id {
-			if let Junctions::X1(Junction::Parachain(id)) = interior {
-				return Some(id);
-			}
+		if let xcm::v1::AssetId::Concrete(location) = asset.id {
+			Self::convert(location)
+		} else {
+			None
 		}
-		None
 	}
 }
 
