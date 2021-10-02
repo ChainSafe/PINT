@@ -40,12 +40,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     });
 
     return [
-        /* orml_currencies */
-        {
-            pallet: "currencies",
-            call: "updateBalance",
-            args: [config.alice.address, ASSET_ID_A, ASSET_ID_A_AMOUNT],
-        },
         /* balance */
         {
             signed: config.alice,
@@ -126,7 +120,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 config.alice.address,
                 ASSET_ID_A,
-                PINT.mul(new BN(ASSET_ID_A_UNITS)),
+                PINT.mul(ASSET_ID_A_UNITS).mul(new BN(3)),
                 0,
             ],
         },
@@ -382,7 +376,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["votes.assetIndex.deposit"],
+            required: ["propose.assetIndex.deposit"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "withdraw",
