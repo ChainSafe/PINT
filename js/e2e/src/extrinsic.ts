@@ -140,7 +140,7 @@ export class Extrinsic {
                             ).asModule.toU8a()
                         );
                         reject(
-                            `${error.section}.${error.method}: ${error.documentation}`
+                            `${error.section}.${error.method}: ${error.docs}`
                         );
                     }
                 });

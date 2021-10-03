@@ -28,15 +28,15 @@ const WITHDRAWALS_PERIOD: number = 10;
 const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
     const PINT: Balance = api.createType("Balance", Math.pow(10, 12));
     const PARENT_LOCATION = api.createType("MultiLocation", {
-        X2: [
-            api.createType("Junction", { Parent: null }),
-            api.createType("Junction", {
+        parents: 1,
+        interior: api.createType("Junctions", {
+            X1: api.createType("Junction", {
                 AccountId32: {
                     network: "Any",
                     id: config.alice.address,
                 },
             }),
-        ],
+        }),
     });
 
     return [
