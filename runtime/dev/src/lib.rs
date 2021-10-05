@@ -44,12 +44,13 @@ use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
-use xcm::v0::{BodyId, Junction, Junction::*, MultiAsset, MultiLocation, MultiLocation::*, NetworkId};
+use xcm::v1::{
+	BodyId, Fungibility, Junction, Junction::*, Junctions, Junctions::*, MultiAsset, MultiLocation, NetworkId,
+};
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfConcreteFungible,
-	FixedWeightBounds, LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
-	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
-	TakeRevenue, TakeWeightCredit,
+	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
+	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
@@ -114,7 +115,7 @@ parameter_types! {
 		ParachainInfo::parachain_id().into()
 	).into();
 	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
-	pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+	pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
 	pub const Version: RuntimeVersion = VERSION;
 	// pallet-committee
 	pub const ProposalSubmissionPeriod: BlockNumber = 1;
@@ -281,7 +282,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 
 match_type! {
 	pub type ParentOrParentsUnitPlurality: impl Contains<MultiLocation> = {
-		X1(Parent) | X2(Parent, Plurality { id: BodyId::Unit, .. })
+		MultiLocation { parents: 1, interior: Here } |
+		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Unit, .. }) }
 	};
 }
 
@@ -291,12 +293,17 @@ pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
 	fn take_revenue(revenue: MultiAsset) {
 		use orml_traits::currency::MultiCurrency;
-		if let MultiAsset::ConcreteFungible { id, amount } = revenue {
-			if let Some(asset_id) = AssetIdConvert::convert(id) {
-				// ensure PINT Treasury account have ed for all of the cross-chain asset.
-				// Ignore the result.
-				let _ = Currencies::deposit(asset_id, &PintTreasuryAccount::get(), amount);
+		match revenue.fun.clone() {
+			Fungibility::Fungible(amount) => {
+				if let xcm::v1::AssetId::Concrete(MultiLocation { parents: 1, interior }) = revenue.id {
+					if let Junctions::X1(Junction::Parachain(id)) = interior {
+						// ensure PINT Treasury account have ed for all of the cross-chain asset.
+						// Ignore the result.
+						let _ = Currencies::deposit(id, &PintTreasuryAccount::get(), amount);
+					}
+				}
 			}
+			_ => {}
 		}
 	}
 }
@@ -313,8 +320,9 @@ impl xcm_executor::Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-	type Trader = FixedRateOfConcreteFungible<UnitPerSecond, ToTreasury>;
+	type Trader = FixedRateOfFungible<UnitPerSecond, ToTreasury>;
 	type ResponseHandler = (); // Don't handle responses for now.
+	type SubscriptionService = (); // Don't handle subscription for now.
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -323,7 +331,7 @@ pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNet
 /// the right message queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
@@ -350,6 +358,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type ChannelInfo = ParachainSystem;
+	type VersionWrapper = ();
 }
 
 impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -540,6 +549,7 @@ impl orml_xtokens::Config for Runtime {
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type BaseXcmWeight = BaseXcmWeight;
+	type LocationInverter = LocationInverter<Ancestry>;
 }
 
 impl orml_unknown_tokens::Config for Runtime {
@@ -556,10 +566,11 @@ impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
 impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 	fn convert(location: MultiLocation) -> Option<AssetId> {
 		match location {
-			MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
-			MultiLocation::X3(Junction::Parent, Junction::Parachain(id), Junction::GeneralKey(key))
-				if ParaId::from(id) == ParachainInfo::parachain_id() =>
-			{
+			MultiLocation { parents: 0, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
+			MultiLocation {
+				parents: 1,
+				interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
+			} if ParaId::from(id) == ParachainInfo::parachain_id() => {
 				// decode the general key
 				if let Ok(asset_id) = AssetId::decode(&mut &key[..]) {
 					// check `asset_id` is supported
@@ -576,8 +587,8 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
-		if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
-			Self::convert(id.clone())
+		if let xcm::v1::AssetId::Concrete(location) = asset.id {
+			Self::convert(location)
 		} else {
 			None
 		}

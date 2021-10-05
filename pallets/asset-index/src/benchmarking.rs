@@ -16,7 +16,7 @@ use frame_support::{
 use orml_traits::MultiCurrency;
 use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
 use primitives::{traits::NavProvider, AssetAvailability};
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 use crate::Pallet as AssetIndex;
 
@@ -28,13 +28,13 @@ benchmarks! {
 		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let million = 1_000_000u32.into();
-		let location = MultiLocation::Null;
+		let location = MultiLocation::default();
 
 		assert_ok!(
 			AssetIndex::<T>::register_asset(
 				origin.clone(),
 				asset_id,
-				AssetAvailability::Liquid(MultiLocation::Null)
+				AssetAvailability::Liquid(MultiLocation::default())
 			)
 		);
 		let call = Call::<T>::add_asset(
@@ -66,7 +66,7 @@ benchmarks! {
 		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
@@ -109,7 +109,7 @@ benchmarks! {
 		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
@@ -157,7 +157,7 @@ benchmarks! {
 	// 		origin.clone(),
 	// 		asset_id,
 	// 		units,
-	// 		MultiLocation::Null,
+	// 		MultiLocation::default(),
 	// 		amount
 	// 	));
 	//
@@ -226,7 +226,7 @@ benchmarks! {
 		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
@@ -267,7 +267,7 @@ benchmarks! {
 		assert_ok!(AssetIndex::<T>::register_asset(
 			origin.clone(),
 			asset_id,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, amount));
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));

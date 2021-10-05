@@ -301,6 +301,7 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 	ext
 }
 
+#[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext_from_genesis() -> sp_io::TestExternalities {
 	let ext = ExtBuilder::default().build();
 	MockPriceFeed::set_prices(vec![

@@ -46,7 +46,7 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
 	use sp_core::U256;
-	use xcm::v0::MultiLocation;
+	use xcm::v1::MultiLocation;
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
@@ -250,9 +250,12 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
-			use xcm::v0::Junction;
+			use xcm::v1::{Junction, Junctions, MultiLocation};
 			for (asset, id) in self.liquid_assets.iter().cloned() {
-				let availability = AssetAvailability::Liquid((Junction::Parent, Junction::Parachain(id.into())).into());
+				let availability = AssetAvailability::Liquid(MultiLocation {
+					parents: 0,
+					interior: Junctions::X1(Junction::Parachain(id.into())),
+				});
 				Assets::<T>::insert(asset, availability)
 			}
 

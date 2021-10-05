@@ -19,7 +19,7 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 use frame_support::traits::Everything;
 use primitives::AssetAvailability;
@@ -232,7 +232,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 		assert_ok!(AssetIndex::register_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),
 			LIQUID_ASSET_ID,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 		assert_ok!(AssetIndex::add_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),

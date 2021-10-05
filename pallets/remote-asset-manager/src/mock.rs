@@ -21,13 +21,9 @@ use sp_runtime::{
 	testing::Header,
 	traits::{AccountIdConversion, Zero},
 };
-use xcm::v0::{
-	Junction::{self, Parachain, Parent},
-	MultiLocation::{self, X1},
-	NetworkId,
-};
+use xcm::v1::{Junction, Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
-	AccountId32Aliases, AllowUnpaidExecutionFrom, FixedRateOfConcreteFungible, FixedWeightBounds, LocationInverter,
+	AccountId32Aliases, AllowUnpaidExecutionFrom, FixedRateOfFungible, FixedWeightBounds, LocationInverter,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 pub use xcm_builder::{
@@ -35,7 +31,7 @@ pub use xcm_builder::{
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_simulator::{decl_test_network, decl_test_parachain};
+use xcm_simulator::{decl_test_network, decl_test_parachain, Get};
 
 use primitives::traits::MultiAssetRegistry;
 
@@ -61,6 +57,8 @@ pub const RELAY_CHAIN_ASSET: AssetId = 42;
 decl_test_parachain! {
 	pub struct Para {
 		Runtime = para::Runtime,
+		XcmpMessageHandler = para::MsgQueue,
+		DmpMessageHandler = para::MsgQueue,
 		new_ext = para_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
 	}
 }
@@ -70,6 +68,8 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct Statemint {
 		Runtime = statemint::Runtime,
+		XcmpMessageHandler = para::MsgQueue,
+		DmpMessageHandler = para::MsgQueue,
 		new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(ALICE, INITIAL_BALANCE),(sibling_sovereign_account(), INITIAL_BALANCE)]),
 	}
 }
@@ -83,8 +83,11 @@ pub fn relay_sovereign_account() -> AccountId {
 /// Returns the parachain's account on a sibling chain
 pub fn sibling_sovereign_account() -> AccountId {
 	use xcm_executor::traits::Convert;
-	statemint::LocationToAccountId::convert(MultiLocation::X2(Junction::Parent, Junction::Parachain(PARA_ID)))
-		.expect("Failed to convert para")
+	statemint::LocationToAccountId::convert(MultiLocation {
+		parents: 1,
+		interior: Junctions::X1(Junction::Parachain(PARA_ID)),
+	})
+	.expect("Failed to convert para")
 }
 
 decl_test_network! {
@@ -197,7 +200,7 @@ pub mod para {
 	use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use sp_runtime::traits::Convert;
-	use xcm::v0::MultiAsset;
+	use xcm::v1::MultiAsset;
 
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
@@ -266,10 +269,12 @@ pub mod para {
 	impl parachain_info::Config for Runtime {}
 
 	parameter_types! {
-		pub const KsmLocation: MultiLocation = MultiLocation::X1(Parent);
+		pub const KsmLocation: MultiLocation = MultiLocation::parent();
 		pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 		pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-		pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+		pub Ancestry: MultiLocation = Junction::Parachain(
+			ParachainInfo::parachain_id().into()
+		).into();
 	}
 
 	pub type LocationToAccountId = (
@@ -288,7 +293,7 @@ pub mod para {
 
 	parameter_types! {
 		pub const UnitWeightCost: Weight = 1;
-		pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), 1);
+		pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 	}
 
 	/// Means for transacting assets on this chain.
@@ -319,14 +324,16 @@ pub mod para {
 		type LocationInverter = LocationInverter<Ancestry>;
 		type Barrier = Barrier;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-		type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ()>;
+		type Trader = FixedRateOfFungible<KsmPerSecond, ()>;
 		type ResponseHandler = ();
+		type SubscriptionService = ();
 	}
 
 	impl cumulus_pallet_xcmp_queue::Config for Runtime {
 		type Event = Event;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type ChannelInfo = ParachainSystem;
+		type VersionWrapper = ();
 	}
 
 	impl cumulus_pallet_dmp_queue::Config for Runtime {
@@ -384,6 +391,7 @@ pub mod para {
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 		type BaseXcmWeight = BaseXcmWeight;
+		type LocationInverter = LocationInverter<Ancestry>;
 	}
 
 	parameter_type_with_key! {
@@ -416,7 +424,7 @@ pub mod para {
 
 		pub const RelayChainAssetId: AssetId = RELAY_CHAIN_ASSET;
 		pub const PINTAssetId: AssetId = PARA_ASSET;
-		pub SelfLocation: MultiLocation = MultiLocation::X2(Junction::Parent, Junction::Parachain(ParachainInfo::parachain_id().into()));
+		pub SelfLocation: MultiLocation = MultiLocation::new(1, Junctions::X1(Junction::Parachain(ParachainInfo::get().into())));
 
 		 // No fees for now
 		pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
@@ -526,12 +534,15 @@ pub mod para {
 
 	impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 		fn convert(location: MultiLocation) -> Option<AssetId> {
-			match &location {
-				MultiLocation::X1(Junction::Parent) => return Some(RelayChainAssetId::get()),
-				MultiLocation::X3(Junction::Parent, Junction::Parachain(id), Junction::GeneralKey(key))
-					if ParaId::from(*id) == ParachainInfo::parachain_id() =>
-				{
-					if let Ok(asset_id) = AssetId::decode(&mut &key.clone()[..]) {
+			match location {
+				MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
+				MultiLocation {
+					parents: 1,
+					interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
+				} if ParaId::from(id) == ParachainInfo::parachain_id() => {
+					// decode the general key
+					if let Ok(asset_id) = AssetId::decode(&mut &key[..]) {
+						// check `asset_id` is supported
 						if AssetIndex::is_liquid_asset(&asset_id) {
 							return Some(asset_id);
 						}
@@ -545,8 +556,8 @@ pub mod para {
 
 	impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 		fn convert(asset: MultiAsset) -> Option<AssetId> {
-			if let MultiAsset::ConcreteFungible { ref id, amount: _ } = asset {
-				Self::convert(id.clone())
+			if let xcm::v1::AssetId::Concrete(location) = asset.id {
+				Self::convert(location)
 			} else {
 				None
 			}
@@ -566,6 +577,11 @@ pub mod para {
 		type XcmReserveTransferFilter = Everything;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 		type LocationInverter = LocationInverter<Ancestry>;
+	}
+
+	impl xcm_test_support::parachain::mock_msg_queue::Config for Runtime {
+		type Event = Event;
+		type XcmExecutor = XcmExecutor<XcmConfig>;
 	}
 
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
@@ -594,6 +610,7 @@ pub mod para {
 
 			XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
 			DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
+			MsgQueue: xcm_test_support::parachain::mock_msg_queue::{Pallet, Storage, Event<T>},
 			CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
 			PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
 		}
@@ -612,16 +629,11 @@ pub mod statemint {
 
 	use pallet_xcm::XcmPassthrough;
 	use polkadot_parachain::primitives::Sibling;
-	pub use xcm::v0::{
-		Junction::{Parachain, Parent},
-		MultiAsset,
-		MultiLocation::{self, X1, X2, X3},
-		NetworkId, Xcm,
-	};
+	pub use xcm::v1::{Junction, Junctions, MultiAsset, MultiLocation, NetworkId, Xcm};
 	pub use xcm_builder::{
 		AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-		CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfConcreteFungible, FixedWeightBounds,
-		IsConcrete, LocationInverter, NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative,
+		CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds, IsConcrete,
+		LocationInverter, NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative,
 		SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 		SovereignSignedViaLocation, TakeWeightCredit,
 	};
@@ -694,10 +706,12 @@ pub mod statemint {
 	impl parachain_info::Config for Runtime {}
 
 	parameter_types! {
-		pub const KsmLocation: MultiLocation = MultiLocation::X1(Parent);
+		pub const KsmLocation: MultiLocation = MultiLocation::parent();
 		pub const RelayNetwork: NetworkId = NetworkId::Kusama;
 		pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-		pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
+		pub Ancestry: MultiLocation = Junction::Parachain(
+			ParachainInfo::parachain_id().into()
+		).into();
 	}
 
 	pub type LocationToAccountId = (
@@ -716,7 +730,7 @@ pub mod statemint {
 
 	parameter_types! {
 		pub const UnitWeightCost: Weight = 1;
-		pub KsmPerSecond: (MultiLocation, u128) = (X1(Parent), 1);
+		pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 	}
 
 	pub type LocalAssetTransactor =
@@ -736,14 +750,16 @@ pub mod statemint {
 		type LocationInverter = LocationInverter<Ancestry>;
 		type Barrier = Barrier;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-		type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ()>;
+		type Trader = FixedRateOfFungible<KsmPerSecond, ()>;
 		type ResponseHandler = ();
+		type SubscriptionService = ();
 	}
 
 	impl cumulus_pallet_xcmp_queue::Config for Runtime {
 		type Event = Event;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type ChannelInfo = ParachainSystem;
+		type VersionWrapper = ();
 	}
 
 	impl cumulus_pallet_dmp_queue::Config for Runtime {

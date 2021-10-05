@@ -10,7 +10,7 @@ use frame_support::{
 	sp_runtime::{app_crypto::sp_core::U256, traits::AtLeast32BitUnsigned, DispatchResult},
 	sp_std::result::Result,
 };
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {

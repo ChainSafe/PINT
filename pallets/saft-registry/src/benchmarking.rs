@@ -6,7 +6,7 @@
 use frame_benchmarking::benchmarks;
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, traits::EnsureOrigin};
 use primitives::traits::AssetRecorderBenchmarks;
-use xcm::v0::{Junction, MultiLocation};
+use xcm::v1::{Junction, MultiLocation};
 
 use crate::Pallet as SaftRegistry;
 
@@ -22,7 +22,7 @@ benchmarks! {
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
 			T::try_convert(3u8).unwrap(),
 			100u32.into(),
-			MultiLocation::Null,
+			MultiLocation::default(),
 			1000u32.into()
 		));
 
@@ -49,7 +49,7 @@ benchmarks! {
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
 			T::try_convert(3u8).unwrap(),
 			100u32.into(),
-			MultiLocation::Null,
+			MultiLocation::default(),
 			1000u32.into()
 		));
 
@@ -74,7 +74,7 @@ benchmarks! {
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
 			T::try_convert(3u8).unwrap(),
 			100u32.into(),
-			MultiLocation::Null,
+			MultiLocation::default(),
 			1000u32.into()
 		));
 
@@ -109,7 +109,7 @@ benchmarks! {
 		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
 			T::try_convert(3u8).unwrap(),
 			100u32.into(),
-			MultiLocation::Null,
+			MultiLocation::default(),
 			1000u32.into()
 		));
 
@@ -127,7 +127,7 @@ benchmarks! {
 
 		let call = Call::<T>::convert_to_liquid(
 			asset,
-			(Junction::Parent, Junction::Parachain(100)).into()
+			(Junction::Parachain(100)).into()
 		);
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
