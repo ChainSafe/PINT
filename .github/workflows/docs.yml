@@ -20,6 +20,7 @@ jobs:
           toolchain: nightly
           
       - run: |
+          rustup target add wasm32-unknown-unknown
           cargo doc --all-features
           mv target/doc docs/api
 
