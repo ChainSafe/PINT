@@ -17,7 +17,7 @@ use frame_support::{
 	PalletId,
 };
 use frame_system as system;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{parameter_type_with_key, MultiCurrency};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use xcm::v1::MultiLocation;
 
@@ -234,6 +234,9 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 			LIQUID_ASSET_ID,
 			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		// mint initial supply first into admin's account
+		assert_ok!(Currency::deposit(LIQUID_ASSET_ID, &ADMIN_ACCOUNT_ID, initial_liquid_supply));
+
 		assert_ok!(AssetIndex::add_asset(
 			Origin::signed(ADMIN_ACCOUNT_ID),
 			LIQUID_ASSET_ID,

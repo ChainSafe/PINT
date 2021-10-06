@@ -120,7 +120,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [
                 config.alice.address,
                 ASSET_ID_A,
-                PINT.mul(new BN(ASSET_ID_A_UNITS)),
+                PINT.mul(ASSET_ID_A_UNITS).mul(new BN(3)),
                 0,
             ],
         },
@@ -532,5 +532,10 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
 
 // main
 (async () => {
-    await Runner.run(TESTS);
+    try {
+        await Runner.run(TESTS);
+    } catch (error) {
+        throw error;
+        process.exit(1);
+    }
 })();
