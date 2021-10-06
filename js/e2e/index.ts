@@ -106,7 +106,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             verify: async () => {
                 assert(
                     (
-                        await api.derive.balances.all(config.ziggy.address)
+                        (await api.derive.balances.all(
+                            config.ziggy.address
+                        )) as any
                     ).freeBalance.toNumber() === 500000000000,
                     "localTreasury.withdraw failed"
                 );

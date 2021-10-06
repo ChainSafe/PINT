@@ -9,7 +9,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types";
 import { ApiPromise } from "@polkadot/api";
 import { waitBlock } from "./util";
 
-const VOTING_PERIOD: number = 10;
+const VOTING_PERIOD: number = 3;
 
 // Substrate transaction
 export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
