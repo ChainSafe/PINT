@@ -12,6 +12,13 @@ jobs:
       - name: Checkout main 
         uses: actions/checkout@v2
 
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+        command: |
+          cargo doc
+          mv target/doc docs/api
+
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
         env:
