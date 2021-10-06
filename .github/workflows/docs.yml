@@ -17,9 +17,9 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-        command: |
-          cargo doc
+          toolchain: nightly
+        run: |
+          cargo doc --all-features
           mv target/doc docs/api
 
       - name: Deploy docs
