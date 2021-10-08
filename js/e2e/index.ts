@@ -12,6 +12,7 @@ import {
 import { ApiPromise } from "@polkadot/api";
 import { Balance } from "@polkadot/types/interfaces/runtime";
 import BN from "bn.js";
+import { Codec } from "@polkadot/types/types";
 
 const ASSET_ID_A: number = 42;
 const ASSET_ID_A_UNITS: BN = new BN(100);
@@ -84,6 +85,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             },
         },
         {
+            required: ["committee.addConstituent"],
             pallet: "committee",
             call: "removeMember",
             args: [config.ziggy.address],
@@ -159,8 +161,9 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             args: [0, 1, 1],
             verify: async () => {
                 assert(
-                    (await api.query.chainlinkFeed.rounds(0, 1)).isEmpty,
-                    "Create feed failed"
+                    !((await api.query.chainlinkFeed.rounds(0, 1)) as Codec)
+                        .isEmpty,
+                    "submit round failed"
                 );
             },
         },
@@ -214,7 +217,6 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
             proposal: true,
             required: ["propose.saftRegistry.addSaft"],
             signed: config.alice,
-
             pallet: "saftRegistry",
             call: "reportNav",
             args: [ASSET_ID_B, 0, ASSET_ID_B_NAV],
@@ -358,7 +360,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
         },
         {
             proposal: true,
-            required: ["tokens.setBalance"],
+            required: ["propose.assetIndex.addAsset"],
             signed: config.alice,
             pallet: "assetIndex",
             call: "deposit",
@@ -371,7 +373,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                                 config.alice.address
                             )
                         ).toJSON() as any
-                    ).length == 1,
+                    ).length === 1,
                     "assetIndex.deposit failed"
                 );
             },
@@ -390,7 +392,7 @@ const TESTS = (api: ApiPromise, config: ExtrinsicConfig): Extrinsic[] => {
                             await api.query.assetIndex.pendingWithdrawals(
                                 config.alice.address
                             )
-                        ).toHuman() as any
+                        ).toJSON() as any
                     ).length === 1,
                     "assetIndex.withdraw failed"
                 );

@@ -31,13 +31,7 @@
           "wsPort": 9988,
           "port": 31200,
           "name": "alice",
-          "flags": [
-            "-lruntime=debug",
-            "--unsafe-ws-external",
-            "--force-authoring",
-            "--",
-            "--execution=wasm"
-          ]
+          "flags": ["--unsafe-ws-external", "--force-authoring"]
         }
       ]
     },

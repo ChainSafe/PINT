@@ -9,7 +9,7 @@ import { SubmittableExtrinsic } from "@polkadot/api/types";
 import { ApiPromise } from "@polkadot/api";
 import { waitBlock } from "./util";
 
-const VOTING_PERIOD: number = 3;
+const VOTING_PERIOD: number = 5;
 
 // Substrate transaction
 export type Transaction = SubmittableExtrinsic<"promise", ISubmittableResult>;
@@ -273,7 +273,7 @@ export class Extrinsic {
                             `\t | waiting for the end of voting peirod ( ${needsToWait} blocks )`
                         );
 
-                        await waitBlock(needsToWait > 0 ? needsToWait : 1);
+                        await waitBlock(needsToWait);
                         if (this.shared && typeof this.shared === "function") {
                             return await this.shared();
                         }
