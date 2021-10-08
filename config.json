@@ -31,7 +31,12 @@
           "wsPort": 9988,
           "port": 31200,
           "name": "alice",
-          "flags": ["--unsafe-ws-external", "--force-authoring"]
+          "flags": [
+            "--unsafe-ws-external",
+            "--force-authoring",
+            "--",
+            "--execution=wasm"
+          ]
         }
       ]
     },
