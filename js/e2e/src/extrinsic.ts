@@ -317,17 +317,17 @@ export class Extrinsic {
             }
         )) as TxResult;
 
-        // thisecute verify script
+        if (res && res.unsub) {
+            (await res.unsub)();
+        }
+
+        // this execute verify script
         if (this.verify) {
             console.log(`\t | verify: ${this.id}`);
             await this.verify(this.shared).catch((err: any) => {
                 console.log(`====> Error: ${this.id} verify failed: ${err}`);
                 errors.push(`====> Error: ${this.id} verify failed: ${err}`);
             });
-        }
-
-        if (res && res.unsub) {
-            (await res.unsub)();
         }
 
         // push hash if is proposal

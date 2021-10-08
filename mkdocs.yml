@@ -30,7 +30,6 @@ theme:
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
-
     # Dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
@@ -56,6 +55,7 @@ nav:
   - Usage:
     - Command Line: ./usage/command-line.md
     - Configuration: ./usage/configuration.md
+  - API Docs: ./api/pint_runtime_dev/index.html
   # - Testing and Debugging: 
   #   - Test Suite: ./testing-and-debugging/test-suite.md
   #   - Debugging: ./testing-and-debugging/debugging.md
