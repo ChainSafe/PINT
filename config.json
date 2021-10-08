@@ -32,7 +32,6 @@
           "port": 31200,
           "name": "alice",
           "flags": [
-            "-lruntime=debug",
             "--unsafe-ws-external",
             "--force-authoring",
             "--",

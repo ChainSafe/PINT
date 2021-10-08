@@ -612,6 +612,7 @@ pub mod pallet {
 			// after this block an asset withdrawal is allowed to advance to the transfer
 			// state
 			let end_block = frame_system::Pallet::<T>::block_number().saturating_add(T::WithdrawalPeriod::get());
+
 			// lock the assets for the withdrawal period starting at current block
 			PendingWithdrawals::<T>::append(&caller, PendingRedemption { end_block, assets });
 

@@ -655,7 +655,7 @@ fn add_asset_less_than_existential_deposit_is_noop() {
 		assert_ok!(AssetIndex::register_asset(
 			Origin::signed(ACCOUNT_ID),
 			ED_ASSET_ID,
-			AssetAvailability::Liquid(MultiLocation::Null)
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
 
 		let ed = ExistentialDeposits::get(&ED_ASSET_ID);

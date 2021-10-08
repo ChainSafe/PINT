@@ -118,8 +118,8 @@ parameter_types! {
 	pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
 	pub const Version: RuntimeVersion = VERSION;
 	// pallet-committee
-	pub const ProposalSubmissionPeriod: BlockNumber = 1;
-	pub const VotingPeriod: BlockNumber = 3;
+	pub const ProposalSubmissionPeriod: BlockNumber = 5;
+	pub const VotingPeriod: BlockNumber = 5;
 }
 
 // Configure FRAME pallets to include in runtime.
