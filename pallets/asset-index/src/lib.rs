@@ -732,7 +732,7 @@ pub mod pallet {
 			Assets::<T>::iter().filter(|(_, holding)| holding.is_saft()).map(|(k, _)| k)
 		}
 
-		fn calculate_nav_proportion(asset: T::AssetId, nav: Ratio) -> Result<Ratio, DispatchError> {
+		fn calculate_nav_proportion(asset: T::AssetId, nav: Price) -> Result<Ratio, DispatchError> {
 			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
 			// `value(asset)/supply / nav`
 			let asset_value = Self::net_asset_value(asset)?;
@@ -1303,13 +1303,13 @@ pub mod pallet {
 			}
 		}
 
-		fn nav() -> Result<Ratio, DispatchError> {
+		fn nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
 
-			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
+			Assets::<T>::iter().try_fold(Price::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
 				let value =
 					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
 
@@ -1319,12 +1319,12 @@ pub mod pallet {
 			})
 		}
 
-		fn liquid_nav() -> Result<Ratio, DispatchError> {
+		fn liquid_nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
-			Self::liquid_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+			Self::liquid_assets().try_fold(Price::zero(), |nav, asset| -> Result<_, DispatchError> {
 				let value = Self::net_liquid_value(asset)?;
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
@@ -1332,12 +1332,12 @@ pub mod pallet {
 			})
 		}
 
-		fn saft_nav() -> Result<Ratio, DispatchError> {
+		fn saft_nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
-			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+			Self::saft_assets().try_fold(Price::zero(), |nav, asset| -> Result<_, DispatchError> {
 				let value = Self::net_saft_value(asset);
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
