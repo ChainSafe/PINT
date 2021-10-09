@@ -4,4 +4,5 @@
 mod kusama;
 mod net;
 mod pint;
+mod statemint;
 mod tests;
