@@ -1752,7 +1752,7 @@ source = "git+https://github.com/paritytech//cumulus?rev=870b214693856e768ba482f
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
- "cumulus-test-relay-sproof-builder",
+ "cumulus-test-relay-sproof-builder 0.1.0 (git+https://github.com/paritytech//cumulus?rev=870b214693856e768ba482fe2d3b9a83b24e4540)",
  "parity-scale-codec",
  "polkadot-client",
  "sc-client-api",
@@ -1793,6 +1793,19 @@ dependencies = [
  "sp-std",
  "sp-trie",
  "xcm",
+]
+
+[[package]]
+name = "cumulus-test-relay-sproof-builder"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.10#870b214693856e768ba482fe2d3b9a83b24e4540"
+dependencies = [
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-std",
 ]
 
 [[package]]
@@ -8585,6 +8598,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "runtime-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "pallet-balances",
+ "pallet-remote-asset-manager",
+ "parachain-info",
+ "pint-runtime-kusama",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "xcm-calls",
+ "xcm-emulator",
+ "xcm-simulator",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12635,6 +12665,30 @@ dependencies = [
  "sp-runtime",
  "sp-staking",
  "xcm",
+]
+
+[[package]]
+name = "xcm-emulator"
+version = "0.1.0"
+source = "git+https://github.com/shaunxw/xcm-simulator?branch=polkadot-v0.9.10#0c71745f7218ac562c45f44f7493981e35e3897d"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder 0.1.0 (git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.10)",
+ "frame-support",
+ "frame-system",
+ "parachain-info",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

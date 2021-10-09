@@ -1,0 +1,28 @@
+[package]
+authors = ['ChainSafe Systems']
+name = "runtime-integration-tests"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+
+# substrate
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.10' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.10' }
+
+# polkadot
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+xcm-simulator = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.10" }
+
+# cumulus
+cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.10' }
+parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.10" }
+
+# pint
+pint-runtime-kusama = { path = "../kusama" }
+pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
+xcm-calls = { path = "../../primitives/xcm-calls" }
+
+# others
+xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator", branch = "polkadot-v0.9.10" }
