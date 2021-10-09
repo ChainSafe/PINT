@@ -5,4 +5,6 @@ mod kusama;
 mod net;
 mod pint;
 mod statemint;
+
+#[cfg(test)]
 mod tests;
