@@ -2,9 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use frame_support::{sp_io, traits::GenesisBuild};
-use pint_runtime_kusama::{
-	AccountId, AssetId, Balance, BuildStorage, DmpQueue, GenesisConfig, Runtime, System, XcmpQueue,
-};
+use pint_runtime_kusama::{AccountId, AssetId, Balance, DmpQueue, Runtime, System, XcmpQueue};
 use xcm_calls::{
 	proxy::{ProxyConfig, ProxyWeights},
 	staking::{RewardDestination, StakingConfig, StakingWeights},
@@ -14,12 +12,12 @@ use xcm_simulator::decl_test_parachain;
 pub const KUSAMA_ASSET: AssetId = 42;
 pub const KUSAMA_STAKING_PALLET_INDEX: u8 = 6u8;
 pub const KUSAMA_PROXY_PALLET_INDEX: u8 = 30u8;
-pub const INITIAL_BALANCE: Balance = 10_000;
+pub const INITIAL_BALANCE: Balance = 10_000_000_000;
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const PARA_ID: u32 = 1u32;
 
 pub fn pint_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
-	let mut t = GenesisConfig::default().build_storage().unwrap();
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
 	let parachain_info_config = parachain_info::GenesisConfig { parachain_id: parachain_id.into() };
 

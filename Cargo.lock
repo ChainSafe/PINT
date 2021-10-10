@@ -8602,6 +8602,7 @@ dependencies = [
  "pallet-asset-index",
  "pallet-assets",
  "pallet-balances",
+ "pallet-committee",
  "pallet-price-feed",
  "pallet-proxy",
  "pallet-remote-asset-manager",

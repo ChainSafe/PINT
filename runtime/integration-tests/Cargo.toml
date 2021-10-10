@@ -42,11 +42,12 @@ orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
 
 # pint
-pint-runtime-kusama = { path = "../kusama" }
-pint-runtime-common = { path = "../common" }
-primitives = { path = "../../primitives/primitives" }
 pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
-pallet-price-feed = { path = "../../pallets/price-feed" }
 pallet-asset-index = { path = "../../pallets/asset-index" }
+pallet-committee = { path = "../../pallets/committee" }
+pallet-price-feed = { path = "../../pallets/price-feed" }
+pint-runtime-common = { path = "../common" }
+pint-runtime-kusama = { path = "../kusama" }
+primitives = { path = "../../primitives/primitives" }
 xcm-calls = { path = "../../primitives/xcm-calls" }
 

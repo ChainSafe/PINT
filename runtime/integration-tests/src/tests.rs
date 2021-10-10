@@ -13,6 +13,7 @@ use frame_support::{
 };
 use kusama_runtime::{ProxyType as RelayProxyType, Runtime as KusamaRuntime};
 use orml_traits::MultiCurrency;
+use pallet_committee::{CommitteeMember, CommitteeOrigin, MemberType, MemberVote, VoteAggregate, VoteKind};
 use pallet_remote_asset_manager::types::StatemintConfig;
 use pint_runtime_kusama::{AccountId, Balance, BlockNumber, Runtime as PintRuntime};
 use primitives::{
@@ -54,22 +55,34 @@ where
 	}
 }
 
+fn approved_by_committee(account: AccountId) -> CommitteeOrigin<AccountId, BlockNumber> {
+	CommitteeOrigin::ApprovedByCommittee(
+		account,
+		VoteAggregate {
+			votes: vec![
+				MemberVote {
+					member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+					vote: VoteKind::Aye
+				};
+				<PintRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1
+			],
+			end: frame_system::Pallet::<PintRuntime>::block_number(),
+		},
+	)
+}
+
 /// registers the relay chain as liquid asset
 fn register_relay() {
 	// prepare index fund so NAV is available
 	let deposit = 1_000;
+	let approved = approved_by_committee(ALICE);
 	assert_ok!(orml_tokens::Pallet::<PintRuntime>::deposit(KUSAMA_ASSET, &ALICE, 1_000));
 	assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::register_asset(
-		pint_runtime_kusama::Origin::signed(ALICE),
+		approved.clone().into(),
 		KUSAMA_ASSET,
 		AssetAvailability::Liquid(MultiLocation::parent()),
 	));
-	assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::add_asset(
-		pint_runtime_kusama::Origin::signed(ALICE),
-		KUSAMA_ASSET,
-		deposit,
-		deposit
-	));
+	assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::add_asset(approved.into(), KUSAMA_ASSET, deposit, deposit));
 	assert!(pallet_asset_index::Pallet::<PintRuntime>::is_liquid_asset(&KUSAMA_ASSET));
 }
 
