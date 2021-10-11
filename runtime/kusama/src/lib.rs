@@ -12,7 +12,9 @@ use codec::Decode;
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
 pub use frame_support::{
-	construct_runtime, match_type, ord_parameter_types, parameter_types,
+	construct_runtime, match_type, ord_parameter_types,
+	pallet_prelude::PhantomData,
+	parameter_types,
 	traits::{IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -22,12 +24,18 @@ pub use frame_support::{
 };
 
 // orml imports
+use frame_support::traits::Everything;
 use orml_currencies::BasicCurrencyAdapter;
+use orml_traits::GetByKey;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 pub use pallet_balances::Call as BalancesCall;
+use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::XcmPassthrough;
+pub use pint_runtime_common::{constants::*, types::*, weights};
 use polkadot_parachain::primitives::Sibling;
+use primitives::traits::MultiAssetRegistry;
+pub use primitives::*;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -52,18 +60,12 @@ use xcm_builder::{
 	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::XcmExecutor;
-
-use frame_support::traits::Everything;
-use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*, weights};
-use primitives::traits::MultiAssetRegistry;
-pub use primitives::*;
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,
 	PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 };
+use xcm_executor::XcmExecutor;
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -109,13 +111,11 @@ pub fn native_version() -> NativeVersion {
 }
 
 parameter_types! {
-	pub Ancestry: MultiLocation = Junction::Parachain(
-		ParachainInfo::parachain_id().into()
-	).into();
+	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
-	pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
-	pub const Version: RuntimeVersion = VERSION;
+	pub SelfLocation: MultiLocation = MultiLocation::new(1, Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into())));
 	pub const ProposalSubmissionPeriod: BlockNumber = 10;
+	pub const Version: RuntimeVersion = VERSION;
 	pub const VotingPeriod: BlockNumber = 27 * DAYS;
 }
 
@@ -212,10 +212,10 @@ impl pallet_sudo::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Pallet<Runtime>;
-	type OutboundXcmpMessageSource = XcmpQueue;
+	type SelfParaId = ParachainInfo;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
+	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 }
@@ -315,7 +315,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type Trader = FixedRateOfFungible<UnitPerSecond, ToTreasury>;
 	type ResponseHandler = (); // Don't handle responses for now.
-	type SubscriptionService = (); // Don't handle subscription for now.
+	type SubscriptionService = PolkadotXcm;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
@@ -540,12 +540,18 @@ impl orml_unknown_tokens::Config for Runtime {
 pub struct AssetIdConvert;
 impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
 	fn convert(asset: AssetId) -> Option<MultiLocation> {
+		frame_support::sp_std::if_std! {
+			println!("aaa");
+		}
 		AssetIndex::native_asset_location(&asset)
 	}
 }
 
 impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 	fn convert(location: MultiLocation) -> Option<AssetId> {
+		frame_support::sp_std::if_std! {
+			println!("aaa");
+		}
 		match location {
 			MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 			MultiLocation {
@@ -568,6 +574,9 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
+		frame_support::sp_std::if_std! {
+			println!("multi asset: {:?}", asset);
+		}
 		if let xcm::v1::AssetId::Concrete(location) = asset.id {
 			Self::convert(location)
 		} else {
@@ -579,46 +588,53 @@ impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 pub struct AccountId32Convert;
 impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> [u8; 32] {
+		frame_support::sp_std::if_std! {
+			println!("account id: {:?}", account_id);
+		}
 		account_id.into()
 	}
 }
 
 impl Convert<AccountId, MultiLocation> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> MultiLocation {
+		frame_support::sp_std::if_std! {
+			println!("aaa");
+		}
 		Junction::AccountId32 { network: NetworkId::Any, id: Self::convert(account_id) }.into()
 	}
 }
 
 /// The encoder to use when transacting `pallet_proxy` calls
-pub struct PalletProxyEncoder;
-impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
+pub struct PalletProxyEncoder<T>(PhantomData<T>);
+impl<T: GetByKey<AssetId, bool>> ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder<T> {
 	type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
 	type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
 	type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
 }
-impl PalletCallEncoder for PalletProxyEncoder {
+
+impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletProxyEncoder<T> {
 	type Context = AssetId;
-	fn can_encode(_ctx: &Self::Context) -> bool {
-		// TODO check in `AssetRegistry`
-		true
+	fn can_encode(ctx: &Self::Context) -> bool {
+		T::get(ctx)
 	}
 }
 
 type AccountLookupSource = sp_runtime::MultiAddress<AccountId, ()>;
 
 /// The encoder to use when transacting `pallet_staking` calls
-pub struct PalletStakingEncoder;
-impl StakingCallEncoder<AccountLookupSource, Balance, AccountId> for PalletStakingEncoder {
+pub struct PalletStakingEncoder<T>(PhantomData<T>);
+impl<T: GetByKey<AssetId, bool>> StakingCallEncoder<AccountLookupSource, Balance, AccountId>
+	for PalletStakingEncoder<T>
+{
 	type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
 	type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
 	type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
 }
 
-impl PalletCallEncoder for PalletStakingEncoder {
+impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletStakingEncoder<T> {
 	type Context = AssetId;
-	fn can_encode(_ctx: &Self::Context) -> bool {
-		// TODO check in `AssetRegistry`
-		true
+	fn can_encode(ctx: &Self::Context) -> bool {
+		T::get(ctx)
 	}
 }
 
@@ -627,9 +643,9 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
-	type PalletStakingCallEncoder = PalletStakingEncoder;
+	type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
-	type PalletProxyCallEncoder = PalletProxyEncoder;
+	type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
 	type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
 	type SelfAssetId = PINTAssetId;
 	type SelfLocation = SelfLocation;

@@ -46,12 +46,16 @@ parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polk
 orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
 orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 # pint
 pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
 pallet-asset-index = { path = "../../pallets/asset-index" }
 pallet-committee = { path = "../../pallets/committee" }
 pallet-price-feed = { path = "../../pallets/price-feed" }
+pallet-saft-registry = { path = "../../pallets/saft-registry" }
 pint-runtime-common = { path = "../common" }
 pint-runtime-kusama = { path = "../kusama" }
 primitives = { path = "../../primitives/primitives" }

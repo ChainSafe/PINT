@@ -1,6 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use crate::{
+	pint::{self, Runtime as PintRuntime},
 	relay_sovereign_account, sibling_sovereign_account, statemint, Net, Pint, Relay, Statemint, ALICE, INITIAL_BALANCE,
 	PARA_ID, RELAY_CHAIN_ASSET, STATEMINT_PARA_ID,
 };
@@ -13,7 +14,7 @@ use kusama_runtime::{ProxyType as RelayProxyType, Runtime as RelayRuntime};
 use orml_traits::MultiCurrency;
 use pallet_committee::{CommitteeMember, CommitteeOrigin, MemberType, MemberVote, VoteAggregate, VoteKind};
 use pallet_remote_asset_manager::types::StatemintConfig;
-use pint_runtime_kusama::Runtime as PintRuntime;
+// use pint_runtime_kusama::Runtime as PintRuntime;
 use polkadot_primitives::v1::{AccountId, Balance, BlockNumber};
 use primitives::{
 	traits::{MultiAssetRegistry, NavProvider},
@@ -54,35 +55,35 @@ where
 	}
 }
 
-fn approved_by_committee(account: AccountId) -> CommitteeOrigin<AccountId, BlockNumber> {
-	CommitteeOrigin::ApprovedByCommittee(
-		account,
-		VoteAggregate {
-			votes: vec![
-				MemberVote {
-					member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
-					vote: VoteKind::Aye
-				};
-				<PintRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1
-			],
-			end: frame_system::Pallet::<PintRuntime>::block_number(),
-		},
-	)
-}
+// fn approved_by_committee(account: AccountId) -> CommitteeOrigin<AccountId, BlockNumber> {
+// 	CommitteeOrigin::ApprovedByCommittee(
+// 		account,
+// 		VoteAggregate {
+// 			votes: vec![
+// 				MemberVote {
+// 					member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+// 					vote: VoteKind::Aye
+// 				};
+// 				<PintRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1
+// 			],
+// 			end: frame_system::Pallet::<PintRuntime>::block_number(),
+// 		},
+// 	)
+// }
 
 /// registers the relay chain as liquid asset
 fn register_relay() {
 	// prepare index fund so NAV is available
 	let deposit = 1_000;
-	let approved = approved_by_committee(ALICE);
+	// let approved = approved_by_committee(ALICE);
 	assert_ok!(orml_tokens::Pallet::<PintRuntime>::deposit(RELAY_CHAIN_ASSET, &ALICE, 1_000));
 	assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::register_asset(
-		approved.clone().into(),
+		pint::Origin::signed(ALICE),
 		RELAY_CHAIN_ASSET,
 		AssetAvailability::Liquid(MultiLocation::parent()),
 	));
 	assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::add_asset(
-		approved.into(),
+		pint::Origin::signed(ALICE),
 		RELAY_CHAIN_ASSET,
 		deposit,
 		deposit
@@ -136,7 +137,7 @@ fn can_deposit_from_relay() {
 
 		// alice has 1000 units of relay chain currency in her account on the parachain
 		assert_ok!(pallet_asset_index::Pallet::<PintRuntime>::deposit(
-			pint_runtime_kusama::Origin::signed(ALICE),
+			pint::Origin::signed(ALICE),
 			RELAY_CHAIN_ASSET,
 			deposit
 		));
@@ -160,7 +161,7 @@ fn can_transact_register_proxy() {
 	Pint::execute_with(|| {
 		register_relay();
 		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::send_add_proxy(
-			pint_runtime_kusama::Origin::signed(ALICE),
+			pint::Origin::signed(ALICE),
 			RELAY_CHAIN_ASSET,
 			ParaProxyType(RelayProxyType::Staking as u8),
 			Option::None
@@ -168,7 +169,7 @@ fn can_transact_register_proxy() {
 
 		assert_noop!(
 			pallet_remote_asset_manager::Pallet::<PintRuntime>::send_add_proxy(
-				pint_runtime_kusama::Origin::signed(ALICE),
+				pint::Origin::signed(ALICE),
 				RELAY_CHAIN_ASSET,
 				ParaProxyType(RelayProxyType::Staking as u8),
 				Option::None
@@ -206,7 +207,7 @@ fn can_transact_staking() {
 
 		// transact a bond call that adds `ALICE` as controller
 		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
-			pint_runtime_kusama::Origin::signed(ALICE),
+			pint::Origin::signed(ALICE),
 			RELAY_CHAIN_ASSET,
 			ALICE.into(),
 			bond,
@@ -215,7 +216,7 @@ fn can_transact_staking() {
 
 		assert_noop!(
 			pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
-				pint_runtime_kusama::Origin::signed(ALICE),
+				pint::Origin::signed(ALICE),
 				RELAY_CHAIN_ASSET,
 				ALICE.into(),
 				bond,
@@ -271,7 +272,7 @@ fn can_transfer_to_statemint() {
 		// try to send PINT, but no config yet
 		assert_noop!(
 			pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-				pint_runtime_kusama::Origin::signed(ALICE),
+				pint::Origin::signed(ALICE),
 				transfer_amount
 			),
 			pallet_remote_asset_manager::Error::<PintRuntime>::NoStatemintConfigFound
@@ -280,26 +281,26 @@ fn can_transfer_to_statemint() {
 		let config = StatemintConfig { parachain_id: STATEMINT_PARA_ID, enabled: false };
 
 		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::set_statemint_config(
-			pint_runtime_kusama::Origin::signed(ALICE),
+			pint::Origin::signed(ALICE),
 			config
 		));
 
 		// not enabled yet
 		assert_noop!(
 			pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-				pint_runtime_kusama::Origin::signed(ALICE),
+				pint::Origin::signed(ALICE),
 				transfer_amount
 			),
 			pallet_remote_asset_manager::Error::<PintRuntime>::StatemintDisabled
 		);
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::enable_statemint_xcm(
-			pint_runtime_kusama::Origin::signed(ALICE)
-		));
+		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::enable_statemint_xcm(pint::Origin::signed(
+			ALICE
+		)));
 
 		// // no funds to transfer from empty account
 		// assert_noop!(
 		// 	pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-		// 		pint_runtime_kusama::Origin::signed(EMPTY_ACCOUNT),
+		// 		pint::Origin::signed(EMPTY_ACCOUNT),
 		// 		transfer_amount
 		// 	),
 		// 	pallet_balances::Error::<PintRuntime>::InsufficientBalance
@@ -307,7 +308,7 @@ fn can_transfer_to_statemint() {
 		//
 		// // transfer from pint -> statemint to mint SPINT
 		// assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-		// 	pint_runtime_kusama::Origin::signed(ALICE),
+		// 	pint::Origin::signed(ALICE),
 		// 	transfer_amount
 		// ));
 	});

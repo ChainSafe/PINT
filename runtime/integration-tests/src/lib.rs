@@ -1,6 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+mod pint;
 mod statemint;
 
 #[cfg(test)]
@@ -24,6 +25,7 @@ pub const RELAY_CHAIN_PROXY_PALLET_INDEX: u8 = 30u8;
 pub const INITIAL_BALANCE: Balance = 10_000_000_000;
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const PARA_ID: u32 = 1u32;
+pub const PARA_ASSET: AssetId = 1;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
 
 pub fn sibling_sovereign_account() -> AccountId {
@@ -38,7 +40,7 @@ pub fn relay_sovereign_account() -> AccountId {
 }
 
 pub fn pint_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
-	use pint_runtime_kusama::{Runtime, System};
+	use pint::{Runtime, System};
 
 	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
 
@@ -164,8 +166,8 @@ pub fn kusama_ext() -> sp_io::TestExternalities {
 
 decl_test_parachain! {
 	pub struct Pint {
-		Runtime = pint_runtime_kusama::Runtime,
-		Origin = pint_runtime_kusama::Origin,
+		Runtime = pint::Runtime,
+		Origin = pint::Origin,
 		new_ext = pint_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
 	}
 }

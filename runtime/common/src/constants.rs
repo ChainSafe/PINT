@@ -87,7 +87,7 @@ parameter_types! {
 	pub const PINTAssetId: AssetId = 1;
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const RelayChainAssetId: AssetId = 0;
+	pub const RelayChainAssetId: AssetId = 42;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
@@ -171,5 +171,11 @@ parameter_type_with_key! {
 	pub MinimumBondExtra: |_asset_id: AssetId| -> Balance {
 		// set this to max for now, effectively preventing automated bond_extra
 		Balance::MAX
+	};
+}
+
+parameter_type_with_key! {
+	pub CanEncodeAsset: |_asset_id: AssetId| -> bool {
+		true
 	};
 }
