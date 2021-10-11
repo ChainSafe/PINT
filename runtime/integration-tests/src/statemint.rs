@@ -1,14 +1,10 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate::{
-	net::STATEMINT_PARA_ID,
-	pint::{ALICE, INITIAL_BALANCE, PARA_ID},
-};
 use frame_support::{
 	construct_runtime, parameter_types,
 	sp_runtime::{self, testing::Header, traits::IdentityLookup},
-	traits::{Everything, GenesisBuild},
+	traits::Everything,
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
 use frame_system::EnsureRoot;
@@ -24,8 +20,7 @@ pub use xcm_builder::{
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 	TakeWeightCredit,
 };
-use xcm_executor::{traits::Convert, Config, XcmExecutor};
-use xcm_simulator::decl_test_parachain;
+use xcm_executor::{Config, XcmExecutor};
 
 parameter_types! {
 	pub const BlockHashCount: u64 = 250;
@@ -124,7 +119,15 @@ parameter_types! {
 pub type LocalAssetTransactor =
 	XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
-pub type XcmRouter = crate::net::ParachainXcmRouter<ParachainInfo>;
+/// The means for routing XCM messages which are not for local execution into
+/// the right message queues.
+pub type XcmRouter = (
+	// Two routers - use UMP to communicate with the relay chain:
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, ()>,
+	// ..and XCMP to communicate with the sibling chains.
+	XcmpQueue,
+);
+
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -222,30 +225,3 @@ construct_runtime!(
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 	}
 );
-
-pub fn sibling_sovereign_account() -> AccountId {
-	LocationToAccountId::convert(MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(PARA_ID)) })
-		.expect("Failed to convert para")
-}
-
-pub fn statemint_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
-	let mut t = frame_system::GenesisConfig::default().build_storage::<Runtime>().unwrap();
-	let parachain_info_config = parachain_info::GenesisConfig { parachain_id: parachain_id.into() };
-
-	<parachain_info::GenesisConfig as GenesisBuild<Runtime, _>>::assimilate_storage(&parachain_info_config, &mut t)
-		.unwrap();
-	pallet_balances::GenesisConfig::<Runtime> { balances }.assimilate_storage(&mut t).unwrap();
-
-	let mut ext = sp_io::TestExternalities::new(t);
-	ext.execute_with(|| System::set_block_number(1));
-	ext
-}
-
-decl_test_parachain! {
-	pub struct Statemint {
-		Runtime = Runtime,
-		XcmpMessageHandler = XcmpQueue,
-		DmpMessageHandler = DmpQueue,
-		new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(ALICE, INITIAL_BALANCE),(sibling_sovereign_account(), INITIAL_BALANCE)]),
-	}
-}
