@@ -1310,9 +1310,6 @@ pub mod pallet {
 			}
 
 			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
-				frame_support::sp_std::if_std! {
-					println!("{:?}", asset);
-				}
 				let value =
 					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
 
