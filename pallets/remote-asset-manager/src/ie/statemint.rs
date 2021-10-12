@@ -4,7 +4,7 @@
 use super::types::*;
 use frame_support::{
 	construct_runtime, parameter_types,
-	sp_runtime::testing::Header,
+	sp_runtime::{self, testing::Header},
 	traits::Everything,
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
@@ -119,7 +119,7 @@ parameter_types! {
 pub type LocalAssetTransactor =
 	XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
-pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
+pub type XcmRouter = crate::mock::ParachainXcmRouter<ParachainInfo>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;

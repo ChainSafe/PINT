@@ -16,6 +16,9 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod ie;
+
 pub mod traits;
 pub mod types;
 
@@ -426,8 +429,8 @@ pub mod pallet {
 					} else if !balances.pending_redemption.is_zero() {
 						// check if we need and able to unbond funds: only with we currently have enough active funds
 						// and room for 1 more unlocking chunk
-						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
-							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance)
+							&& ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
 						{
 							// attempt to send unbond
 							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
@@ -532,6 +535,9 @@ pub mod pallet {
 
 			let dest = Self::asset_destination(asset)?;
 
+			frame_support::sp_std::if_std! {
+				println!("Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
+			}
 			log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
 			// ensures that the call is encodable for the destination
@@ -556,6 +562,9 @@ pub mod pallet {
 			};
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
+			frame_support::sp_std::if_std! {
+				println!("sent pallet_proxy::add_proxy xcm: {:?} ", result);
+			}
 			log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
 			ensure!(result.is_ok(), Error::<T>::FailedToSendAddProxyXcm);
 

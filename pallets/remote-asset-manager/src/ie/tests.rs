@@ -1,13 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-
-use crate::{
+use crate::ie::{
 	pint::{self, MockPriceFeed, Runtime as PintRuntime},
 	relay::{self, ProxyType as RelayProxyType, Runtime as RelayRuntime},
 	relay_sovereign_account, sibling_sovereign_account, statemint,
 	types::*,
 	Net, Pint, Relay, Statemint, ADMIN_ACCOUNT, ALICE, INITIAL_BALANCE, PARA_ID, RELAY_CHAIN_ASSET, STATEMINT_PARA_ID,
 };
+use crate::types::StatemintConfig;
 use frame_support::{
 	assert_noop, assert_ok,
 	sp_runtime::{traits::Zero, FixedPointNumber},
@@ -15,7 +15,6 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 use pallet_price_feed::PriceFeed;
-use pallet_remote_asset_manager::types::StatemintConfig;
 use polkadot_primitives::v1::{AccountId, Balance};
 use primitives::{
 	traits::{MultiAssetRegistry, NavProvider},
@@ -41,14 +40,14 @@ fn print_events<T: frame_system::Config>(context: &str) {
 #[allow(unused)]
 fn run_to_block<Runtime>(n: u64)
 where
-	Runtime: pallet_remote_asset_manager::Config<BlockNumber = BlockNumber>,
+	Runtime: crate::Config<BlockNumber = BlockNumber>,
 {
 	while frame_system::Pallet::<Runtime>::block_number() < n {
-		pallet_remote_asset_manager::Pallet::<Runtime>::on_finalize(frame_system::Pallet::<Runtime>::block_number());
+		crate::Pallet::<Runtime>::on_finalize(frame_system::Pallet::<Runtime>::block_number());
 		frame_system::Pallet::<Runtime>::on_finalize(frame_system::Pallet::<Runtime>::block_number());
 		frame_system::Pallet::<Runtime>::set_block_number(frame_system::Pallet::<Runtime>::block_number() + 1);
 		frame_system::Pallet::<Runtime>::on_initialize(frame_system::Pallet::<Runtime>::block_number());
-		pallet_remote_asset_manager::Pallet::<Runtime>::on_initialize(frame_system::Pallet::<Runtime>::block_number());
+		crate::Pallet::<Runtime>::on_initialize(frame_system::Pallet::<Runtime>::block_number());
 	}
 }
 
@@ -140,7 +139,7 @@ fn can_transact_register_proxy() {
 
 	Pint::execute_with(|| {
 		register_relay();
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::send_add_proxy(
+		assert_ok!(crate::Pallet::<PintRuntime>::send_add_proxy(
 			pint::Origin::signed(ADMIN_ACCOUNT),
 			RELAY_CHAIN_ASSET,
 			ParaProxyType(RelayProxyType::Staking as u8),
@@ -148,13 +147,13 @@ fn can_transact_register_proxy() {
 		));
 
 		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<PintRuntime>::send_add_proxy(
+			crate::Pallet::<PintRuntime>::send_add_proxy(
 				pint::Origin::signed(ADMIN_ACCOUNT),
 				RELAY_CHAIN_ASSET,
 				ParaProxyType(RelayProxyType::Staking as u8),
 				Option::None
 			),
-			pallet_remote_asset_manager::Error::<PintRuntime>::AlreadyProxy
+			crate::Error::<PintRuntime>::AlreadyProxy
 		);
 	});
 
@@ -182,12 +181,12 @@ fn can_transact_staking() {
 
 		// fails to bond extra, no initial bond
 		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<PintRuntime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond,),
-			pallet_remote_asset_manager::Error::<PintRuntime>::NotBonded
+			crate::Pallet::<PintRuntime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond,),
+			crate::Error::<PintRuntime>::NotBonded
 		);
 
 		// transact a bond call that adds `ADMIN_ACCOUNT` as controller
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
+		assert_ok!(crate::Pallet::<PintRuntime>::send_bond(
 			pint::Origin::signed(ADMIN_ACCOUNT),
 			RELAY_CHAIN_ASSET,
 			ADMIN_ACCOUNT,
@@ -196,14 +195,14 @@ fn can_transact_staking() {
 		));
 
 		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
+			crate::Pallet::<PintRuntime>::send_bond(
 				pint::Origin::signed(ADMIN_ACCOUNT),
 				RELAY_CHAIN_ASSET,
 				ADMIN_ACCOUNT,
 				bond,
 				xcm_calls::staking::RewardDestination::Staked
 			),
-			pallet_remote_asset_manager::Error::<PintRuntime>::AlreadyBonded
+			crate::Error::<PintRuntime>::AlreadyBonded
 		);
 	});
 
@@ -215,7 +214,7 @@ fn can_transact_staking() {
 
 	Pint::execute_with(|| {
 		// bond extra
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond));
+		assert_ok!(crate::Pallet::<PintRuntime>::do_send_bond_extra(RELAY_CHAIN_ASSET, bond));
 	});
 
 	Relay::execute_with(|| {
@@ -252,35 +251,24 @@ fn can_transfer_to_statemint() {
 	Pint::execute_with(|| {
 		// try to send PINT, but no config yet
 		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-				pint::Origin::signed(ALICE),
-				transfer_amount
-			),
-			pallet_remote_asset_manager::Error::<PintRuntime>::NoStatemintConfigFound
+			crate::Pallet::<PintRuntime>::transfer_to_statemint(pint::Origin::signed(ALICE), transfer_amount),
+			crate::Error::<PintRuntime>::NoStatemintConfigFound
 		);
 
 		let config = StatemintConfig { parachain_id: STATEMINT_PARA_ID, enabled: false };
 
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::set_statemint_config(
-			pint::Origin::signed(ADMIN_ACCOUNT),
-			config
-		));
+		assert_ok!(crate::Pallet::<PintRuntime>::set_statemint_config(pint::Origin::signed(ADMIN_ACCOUNT), config));
 
 		// not enabled yet
 		assert_noop!(
-			pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
-				pint::Origin::signed(ALICE),
-				transfer_amount
-			),
-			pallet_remote_asset_manager::Error::<PintRuntime>::StatemintDisabled
+			crate::Pallet::<PintRuntime>::transfer_to_statemint(pint::Origin::signed(ALICE), transfer_amount),
+			crate::Error::<PintRuntime>::StatemintDisabled
 		);
-		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::enable_statemint_xcm(pint::Origin::signed(
-			ADMIN_ACCOUNT
-		)));
+		assert_ok!(crate::Pallet::<PintRuntime>::enable_statemint_xcm(pint::Origin::signed(ADMIN_ACCOUNT)));
 
 		// // no funds to transfer from empty account
 		// assert_noop!(
-		// 	pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
+		// 	crate::Pallet::<PintRuntime>::transfer_to_statemint(
 		// 		pint::Origin::signed(EMPTY_ACCOUNT),
 		// 		transfer_amount
 		// 	),
@@ -288,7 +276,7 @@ fn can_transfer_to_statemint() {
 		// );
 		//
 		// // transfer from pint -> statemint to mint SPINT
-		// assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
+		// assert_ok!(crate::Pallet::<PintRuntime>::transfer_to_statemint(
 		// 	pint::Origin::signed(ALICE),
 		// 	transfer_amount
 		// ));

@@ -5,8 +5,8 @@ pub mod pint;
 pub mod relay;
 pub mod statemint;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 pub mod types {
 	use sp_runtime::{traits::IdentityLookup, AccountId32};
@@ -73,7 +73,7 @@ pub fn pint_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 
 	// add xcm transact configs for the native asset of the relay chain
 	// NOTE: weights are raw estimates
-	pallet_remote_asset_manager::GenesisConfig::<Runtime> {
+	crate::GenesisConfig::<Runtime> {
 		staking_configs: vec![(
 			RELAY_CHAIN_ASSET,
 			StakingConfig {

@@ -228,21 +228,21 @@ fn can_transfer_to_statemint() {
 	let spint_id = 1u32;
 	let initial_supply = 5_000;
 	Statemint::execute_with(|| {
-		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::create(
-			statemint::Origin::signed(ALICE),
+		assert_ok!(pallet_assets::Pallet::<crate::ie::statemint::Runtime>::create(
+			crate::ie::statemint::Origin::signed(ALICE),
 			spint_id,
 			sibling_sovereign_account(),
 			100
 		));
 
 		// mint some units
-		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::mint(
-			statemint::Origin::signed(sibling_sovereign_account()),
+		assert_ok!(pallet_assets::Pallet::<crate::ie::statemint::Runtime>::mint(
+			crate::ie::statemint::Origin::signed(sibling_sovereign_account()),
 			spint_id,
 			sibling_sovereign_account(),
 			initial_supply
 		));
-		assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id), initial_supply);
+		assert_eq!(pallet_assets::Pallet::<crate::ie::statemint::Runtime>::total_issuance(spint_id), initial_supply);
 	});
 
 	let transfer_amount = 1_000;

@@ -1,6 +1,3 @@
-// Copyright 2021 ChainSafe Systems
-// SPDX-License-Identifier: LGPL-3.0-only
-
 #[cfg(feature = "runtime-benchmarks")]
 use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 #[cfg(feature = "runtime-benchmarks")]
@@ -24,7 +21,7 @@ use frame_support::{
 use frame_system as system;
 use frame_system::EnsureRoot;
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{parameter_type_with_key, GetByKey};
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_xcm::XcmPassthrough;
@@ -40,7 +37,7 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 pub mod convert {
-	use crate::types::*;
+	use super::super::types::*;
 	use xcm::v1::{Junction, MultiLocation, NetworkId};
 
 	pub struct AccountId32Convert;
@@ -68,7 +65,7 @@ pub mod calls {
 		PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 	};
 
-	use crate::types::*;
+	use super::super::types::*;
 
 	// A type that states that all calls to the asset's native location can be
 	// encoded
@@ -410,7 +407,7 @@ impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
 	}
 }
 
-impl pallet_remote_asset_manager::Config for Runtime {
+impl crate::Config for Runtime {
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
@@ -504,7 +501,7 @@ construct_runtime!(
 		ParachainInfo: parachain_info::{Pallet, Storage, Config},
 
 		// crate dependencies
-		RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>},
+		RemoteAssetManager: crate::{Pallet, Call, Storage, Event<T>, Config<T>},
 		Tokens: orml_tokens::{Pallet, Event<T>},
 		Currency: orml_currencies::{Pallet, Call, Event<T>},
 		XTokens: orml_xtokens::{Pallet, Storage, Call, Event<T>},

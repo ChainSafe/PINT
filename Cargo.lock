@@ -5708,6 +5708,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "kusama-runtime",
  "log",
  "orml-currencies",
  "orml-tokens",
@@ -5731,6 +5732,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "polkadot-parachain",
+ "polkadot-primitives",
  "polkadot-runtime-parachains",
  "primitives",
  "serde",
@@ -8647,6 +8649,7 @@ dependencies = [
  "xcm-calls",
  "xcm-emulator",
  "xcm-executor",
+ "xcm-simulator",
 ]
 
 [[package]]

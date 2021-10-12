@@ -540,18 +540,12 @@ impl orml_unknown_tokens::Config for Runtime {
 pub struct AssetIdConvert;
 impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
 	fn convert(asset: AssetId) -> Option<MultiLocation> {
-		frame_support::sp_std::if_std! {
-			println!("aaa");
-		}
 		AssetIndex::native_asset_location(&asset)
 	}
 }
 
 impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 	fn convert(location: MultiLocation) -> Option<AssetId> {
-		frame_support::sp_std::if_std! {
-			println!("aaa");
-		}
 		match location {
 			MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 			MultiLocation {
@@ -574,9 +568,6 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
-		frame_support::sp_std::if_std! {
-			println!("multi asset: {:?}", asset);
-		}
 		if let xcm::v1::AssetId::Concrete(location) = asset.id {
 			Self::convert(location)
 		} else {
@@ -588,18 +579,12 @@ impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 pub struct AccountId32Convert;
 impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> [u8; 32] {
-		frame_support::sp_std::if_std! {
-			println!("account id: {:?}", account_id);
-		}
 		account_id.into()
 	}
 }
 
 impl Convert<AccountId, MultiLocation> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> MultiLocation {
-		frame_support::sp_std::if_std! {
-			println!("aaa");
-		}
 		Junction::AccountId32 { network: NetworkId::Any, id: Self::convert(account_id) }.into()
 	}
 }

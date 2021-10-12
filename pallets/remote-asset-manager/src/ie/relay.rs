@@ -1,27 +1,27 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use std::{cell::RefCell, collections::HashSet};
-
+use super::types::*;
 use codec::{Decode, Encode, MaxEncodedLen};
+use cumulus_primitives_core::ParaId;
+use frame_election_provider_support::onchain;
 use frame_support::{
 	construct_runtime, parameter_types,
-	sp_runtime::traits::BlakeTwo256,
+	sp_runtime::{
+		curve::PiecewiseLinear,
+		impl_opaque_keys,
+		testing::{Header, TestXt, UintAuthorityId},
+		traits::BlakeTwo256,
+		AccountId32, BoundToRuntimeAppPublic, Perbill,
+	},
 	traits::{Currency, Everything, FindAuthor, Imbalance, InstanceFilter, OnUnbalanced, OneSessionHandler},
 	weights::Weight,
 };
-use sp_core::H256;
-use sp_runtime::{
-	curve::PiecewiseLinear,
-	testing::{Header, TestXt, UintAuthorityId},
-	Perbill,
-};
-
-use cumulus_primitives_core::ParaId;
-use frame_election_provider_support::onchain;
 use pallet_staking as staking;
 use pallet_staking::*;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
+use sp_core::H256;
+use std::{cell::RefCell, collections::HashSet};
 use xcm::v1::{Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative, ChildParachainConvertsVia,
@@ -29,9 +29,6 @@ use xcm_builder::{
 	IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
-
-use super::types::*;
-use frame_support::sp_runtime::AccountId32;
 
 impl frame_system::Config for Runtime {
 	type BaseCallFilter = Everything;
@@ -89,7 +86,7 @@ parameter_types! {
 	pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 }
 
-pub type XcmRouter = super::super::RelayChainXcmRouter;
+pub type XcmRouter = crate::mock::RelayChainXcmRouter;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -175,7 +172,7 @@ impl OneSessionHandler<AccountId> for OtherSessionHandler {
 	}
 }
 
-impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
+impl BoundToRuntimeAppPublic for OtherSessionHandler {
 	type Public = UintAuthorityId;
 }
 
@@ -222,7 +219,7 @@ parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
 }
 
-sp_runtime::impl_opaque_keys! {
+impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub other: OtherSessionHandler,
 	}
@@ -396,11 +393,6 @@ impl pallet_assets::Config for Runtime {
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
-
-// The configured indices for the runtime
-pub const STAKING_PALLET_INDEX: u8 = 7u8;
-pub const PROXY_PALLET_INDEX: u8 = 29u8;
-pub const ASSETS_PALLET_INDEX: u8 = 50u8;
 
 construct_runtime!(
 	pub enum Runtime where

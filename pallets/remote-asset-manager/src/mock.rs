@@ -31,7 +31,7 @@ pub use xcm_builder::{
 	RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia, TakeWeightCredit,
 };
 use xcm_executor::{Config, XcmExecutor};
-use xcm_simulator::{decl_test_network, decl_test_parachain, Get};
+use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain, Get};
 
 use primitives::traits::MultiAssetRegistry;
 
@@ -41,14 +41,11 @@ use xcm_calls::{
 	staking::{RewardDestination, StakingConfig, StakingWeights},
 };
 
-// import this directly so we can override the relay_ext function and XcmRouter
-#[path = "../../../test-utils/xcm-test-support/src/lib.rs"]
-mod xcm_test_support;
-pub use xcm_test_support::{relay, types::*, Relay};
+pub use crate::ie::{relay, types::*, PROXY_PALLET_INDEX, STAKING_PALLET_INDEX};
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
-pub const INITIAL_BALANCE: Balance = 10_000;
+pub const INITIAL_BALANCE: Balance = 10_000_000_000;
 pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 200u32;
 pub const PARA_ASSET: AssetId = 1;
@@ -57,9 +54,17 @@ pub const RELAY_CHAIN_ASSET: AssetId = 42;
 decl_test_parachain! {
 	pub struct Para {
 		Runtime = para::Runtime,
-		XcmpMessageHandler = para::MsgQueue,
-		DmpMessageHandler = para::MsgQueue,
+		XcmpMessageHandler = para::XcmpQueue,
+		DmpMessageHandler = para::DmpQueue,
 		new_ext = para_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
+	}
+}
+
+decl_test_relay_chain! {
+	pub struct Relay {
+		Runtime = relay::Runtime,
+		XcmConfig = relay::XcmConfig,
+		new_ext = relay_ext(),
 	}
 }
 
@@ -68,9 +73,19 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct Statemint {
 		Runtime = statemint::Runtime,
-		XcmpMessageHandler = para::MsgQueue,
-		DmpMessageHandler = para::MsgQueue,
+		XcmpMessageHandler = statemint::XcmpQueue,
+		DmpMessageHandler = statemint::DmpQueue,
 		new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(ALICE, INITIAL_BALANCE),(sibling_sovereign_account(), INITIAL_BALANCE)]),
+	}
+}
+
+decl_test_network! {
+	pub struct MockNet {
+		relay_chain = Relay,
+		parachains = vec![
+			(STATEMINT_PARA_ID, Statemint),
+			(PARA_ID, Para),
+		],
 	}
 }
 
@@ -88,16 +103,6 @@ pub fn sibling_sovereign_account() -> AccountId {
 		interior: Junctions::X1(Junction::Parachain(PARA_ID)),
 	})
 	.expect("Failed to convert para")
-}
-
-decl_test_network! {
-	pub struct MockNet {
-		relay_chain = Relay,
-		parachains = vec![
-			(STATEMINT_PARA_ID, Statemint),
-			(PARA_ID, Para),
-		],
-	}
 }
 
 pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io::TestExternalities {
@@ -118,7 +123,7 @@ pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 		staking_configs: vec![(
 			RELAY_CHAIN_ASSET,
 			StakingConfig {
-				pallet_index: relay::STAKING_PALLET_INDEX,
+				pallet_index: STAKING_PALLET_INDEX,
 				reward_destination: RewardDestination::Staked,
 				minimum_balance: 0,
 				weights: StakingWeights {
@@ -134,7 +139,7 @@ pub fn para_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 		proxy_configs: vec![(
 			RELAY_CHAIN_ASSET,
 			ProxyConfig {
-				pallet_index: relay::PROXY_PALLET_INDEX,
+				pallet_index: PROXY_PALLET_INDEX,
 				weights: ProxyWeights { add_proxy: 180_000_000, remove_proxy: 1000_u64 },
 			},
 		)],
@@ -190,10 +195,8 @@ pub mod para {
 	#[cfg(feature = "runtime-benchmarks")]
 	use pallet_price_feed::PriceFeedBenchmarks;
 
-	use super::{
-		xcm_test_support::calls::{PalletProxyEncoder, PalletStakingEncoder},
-		*,
-	};
+	use super::*;
+	use crate::ie::pint::calls::*;
 	use codec::Decode;
 	use frame_support::dispatch::DispatchError;
 	use orml_currencies::BasicCurrencyAdapter;
@@ -386,7 +389,7 @@ pub mod para {
 		type Balance = Balance;
 		type CurrencyId = AssetId;
 		type CurrencyIdConvert = AssetIdConvert;
-		type AccountIdToMultiLocation = xcm_test_support::convert::AccountId32Convert;
+		type AccountIdToMultiLocation = crate::ie::pint::convert::AccountId32Convert;
 		type SelfLocation = SelfLocation;
 		type XcmExecutor = XcmExecutor<XcmConfig>;
 		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
@@ -579,11 +582,6 @@ pub mod para {
 		type LocationInverter = LocationInverter<Ancestry>;
 	}
 
-	impl xcm_test_support::parachain::mock_msg_queue::Config for Runtime {
-		type Event = Event;
-		type XcmExecutor = XcmExecutor<XcmConfig>;
-	}
-
 	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 	type Block = frame_system::mocking::MockBlock<Runtime>;
 
@@ -610,228 +608,10 @@ pub mod para {
 
 			XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
 			DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
-			MsgQueue: xcm_test_support::parachain::mock_msg_queue::{Pallet, Storage, Event<T>},
 			CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
 			PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
 		}
 	);
 }
 
-pub mod statemint {
-	use super::*;
-	use frame_support::{
-		construct_runtime, parameter_types,
-		weights::{constants::WEIGHT_PER_SECOND, Weight},
-	};
-	use frame_system::EnsureRoot;
-	use sp_core::H256;
-	use sp_runtime::{testing::Header, traits::IdentityLookup};
-
-	use pallet_xcm::XcmPassthrough;
-	use polkadot_parachain::primitives::Sibling;
-	pub use xcm::v1::{Junction, Junctions, MultiAsset, MultiLocation, NetworkId, Xcm};
-	pub use xcm_builder::{
-		AccountId32Aliases, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
-		CurrencyAdapter as XcmCurrencyAdapter, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds, IsConcrete,
-		LocationInverter, NativeAsset, ParentAsSuperuser, ParentIsDefault, RelayChainAsNative,
-		SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-		SovereignSignedViaLocation, TakeWeightCredit,
-	};
-	use xcm_executor::{Config, XcmExecutor};
-
-	parameter_types! {
-		pub const BlockHashCount: u64 = 250;
-	}
-
-	impl frame_system::Config for Runtime {
-		type BaseCallFilter = Everything;
-		type Origin = Origin;
-		type Call = Call;
-		type Index = u64;
-		type BlockNumber = u64;
-		type Hash = H256;
-		type Hashing = ::sp_runtime::traits::BlakeTwo256;
-		type AccountId = AccountId;
-		type Lookup = IdentityLookup<Self::AccountId>;
-		type Header = Header;
-		type Event = Event;
-		type BlockHashCount = BlockHashCount;
-		type BlockWeights = ();
-		type BlockLength = ();
-		type Version = ();
-		type PalletInfo = PalletInfo;
-		type AccountData = pallet_balances::AccountData<Balance>;
-		type OnNewAccount = ();
-		type OnKilledAccount = ();
-		type DbWeight = ();
-		type SystemWeightInfo = ();
-		type SS58Prefix = ();
-		type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
-	}
-
-	parameter_types! {
-		pub ExistentialDeposit: Balance = 1;
-		pub const MaxLocks: u32 = 50;
-		pub const MaxReserves: u32 = 50;
-	}
-
-	impl pallet_balances::Config for Runtime {
-		type MaxLocks = MaxLocks;
-		type Balance = Balance;
-		type Event = Event;
-		type DustRemoval = ();
-		type ExistentialDeposit = ExistentialDeposit;
-		type AccountStore = System;
-		type WeightInfo = ();
-		type MaxReserves = MaxReserves;
-		type ReserveIdentifier = [u8; 8];
-	}
-
-	parameter_types! {
-		pub const ReservedXcmpWeight: Weight = WEIGHT_PER_SECOND / 4;
-		pub const ReservedDmpWeight: Weight = WEIGHT_PER_SECOND / 4;
-	}
-
-	impl cumulus_pallet_parachain_system::Config for Runtime {
-		type Event = Event;
-		type OnValidationData = ();
-		type SelfParaId = ParachainInfo;
-		type DmpMessageHandler = DmpQueue;
-		type ReservedDmpWeight = ReservedDmpWeight;
-		type OutboundXcmpMessageSource = XcmpQueue;
-		type XcmpMessageHandler = XcmpQueue;
-		type ReservedXcmpWeight = ReservedXcmpWeight;
-	}
-
-	impl parachain_info::Config for Runtime {}
-
-	parameter_types! {
-		pub const KsmLocation: MultiLocation = MultiLocation::parent();
-		pub const RelayNetwork: NetworkId = NetworkId::Kusama;
-		pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
-		pub Ancestry: MultiLocation = Junction::Parachain(
-			ParachainInfo::parachain_id().into()
-		).into();
-	}
-
-	pub type LocationToAccountId = (
-		ParentIsDefault<AccountId>,
-		SiblingParachainConvertsVia<Sibling, AccountId>,
-		AccountId32Aliases<RelayNetwork, AccountId>,
-	);
-
-	pub type XcmOriginToCallOrigin = (
-		SovereignSignedViaLocation<LocationToAccountId, Origin>,
-		RelayChainAsNative<RelayChainOrigin, Origin>,
-		SiblingParachainAsNative<cumulus_pallet_xcm::Origin, Origin>,
-		SignedAccountId32AsNative<RelayNetwork, Origin>,
-		XcmPassthrough<Origin>,
-	);
-
-	parameter_types! {
-		pub const UnitWeightCost: Weight = 1;
-		pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
-	}
-
-	pub type LocalAssetTransactor =
-		XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
-
-	pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
-	pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
-
-	pub struct XcmConfig;
-	impl Config for XcmConfig {
-		type Call = Call;
-		type XcmSender = XcmRouter;
-		type AssetTransactor = LocalAssetTransactor;
-		type OriginConverter = XcmOriginToCallOrigin;
-		type IsReserve = NativeAsset;
-		type IsTeleporter = ();
-		type LocationInverter = LocationInverter<Ancestry>;
-		type Barrier = Barrier;
-		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-		type Trader = FixedRateOfFungible<KsmPerSecond, ()>;
-		type ResponseHandler = ();
-		type SubscriptionService = ();
-	}
-
-	impl cumulus_pallet_xcmp_queue::Config for Runtime {
-		type Event = Event;
-		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type ChannelInfo = ParachainSystem;
-		type VersionWrapper = ();
-	}
-
-	impl cumulus_pallet_dmp_queue::Config for Runtime {
-		type Event = Event;
-		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type ExecuteOverweightOrigin = EnsureRoot<AccountId>;
-	}
-
-	impl cumulus_pallet_xcm::Config for Runtime {
-		type Event = Event;
-		type XcmExecutor = XcmExecutor<XcmConfig>;
-	}
-
-	pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
-
-	impl pallet_xcm::Config for Runtime {
-		type Event = Event;
-		type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-		type XcmRouter = XcmRouter;
-		type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-		type XcmExecuteFilter = Everything;
-		type XcmExecutor = XcmExecutor<XcmConfig>;
-		type XcmTeleportFilter = ();
-		type XcmReserveTransferFilter = Everything;
-		type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
-		type LocationInverter = LocationInverter<Ancestry>;
-	}
-
-	parameter_types! {
-		pub const AssetDeposit: Balance = 1_000;
-		pub const ApprovalDeposit: Balance = 1;
-		pub const AssetsStringLimit: u32 = 50;
-		pub const MetadataDepositBase: Balance = 1;
-		pub const MetadataDepositPerByte: Balance = 1;
-	}
-
-	impl pallet_assets::Config for Runtime {
-		type Event = Event;
-		type Balance = Balance;
-		type AssetId = AssetId;
-		type Currency = Balances;
-		type ForceOrigin = EnsureRoot<AccountId>;
-		type AssetDeposit = AssetDeposit;
-		type MetadataDepositBase = MetadataDepositBase;
-		type MetadataDepositPerByte = MetadataDepositPerByte;
-		type ApprovalDeposit = ApprovalDeposit;
-		type StringLimit = AssetsStringLimit;
-		type Freezer = ();
-		type Extra = ();
-		type WeightInfo = ();
-	}
-
-	type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
-	type Block = frame_system::mocking::MockBlock<Runtime>;
-
-	construct_runtime!(
-		pub enum Runtime where
-			Block = Block,
-			NodeBlock = Block,
-			UncheckedExtrinsic = UncheckedExtrinsic,
-		{
-			System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
-			Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-
-			ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Config, Storage, Inherent, Event<T>},
-			ParachainInfo: parachain_info::{Pallet, Storage, Config},
-			XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
-			DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>},
-			CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin},
-
-			PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
-			Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
-		}
-	);
-}
+use crate::ie::statemint;
