@@ -9,21 +9,23 @@ pub mod statemint;
 mod tests;
 
 pub mod types {
-	use sp_runtime::{traits::IdentityLookup, AccountId32};
+	use sp_runtime::traits::AccountIdLookup;
 
-	pub type AccountId = AccountId32;
+	pub type AccountId = primitives::AccountId;
 
-	pub type BlockNumber = u64;
+	pub type BlockNumber = primitives::BlockNumber;
 
-	pub type Balance = u128;
+	pub type Balance = primitives::Balance;
 
 	pub type Amount = i128;
 
-	pub type AssetId = u32;
+	pub type AssetId = primitives::AssetId;
 
-	pub type Lookup = IdentityLookup<AccountId>;
+	pub type Lookup = AccountIdLookup<AccountId, ()>;
 
 	pub type AccountLookupSource = AccountId;
+
+	pub type Header = primitives::Header;
 }
 
 use cumulus_primitives_core::ParaId;

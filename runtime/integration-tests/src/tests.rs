@@ -39,7 +39,7 @@ fn print_events<T: frame_system::Config>(context: &str) {
 }
 
 #[allow(unused)]
-fn run_to_block<Runtime>(n: u64)
+fn run_to_block<Runtime>(n: u32)
 where
 	Runtime: pallet_remote_asset_manager::Config<BlockNumber = BlockNumber>,
 {
@@ -190,7 +190,7 @@ fn can_transact_staking() {
 		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
 			pint::Origin::signed(ADMIN_ACCOUNT),
 			RELAY_CHAIN_ASSET,
-			ADMIN_ACCOUNT,
+			ADMIN_ACCOUNT.into(),
 			bond,
 			xcm_calls::staking::RewardDestination::Staked
 		));
@@ -199,7 +199,7 @@ fn can_transact_staking() {
 			pallet_remote_asset_manager::Pallet::<PintRuntime>::send_bond(
 				pint::Origin::signed(ADMIN_ACCOUNT),
 				RELAY_CHAIN_ASSET,
-				ADMIN_ACCOUNT,
+				ADMIN_ACCOUNT.into(),
 				bond,
 				xcm_calls::staking::RewardDestination::Staked
 			),
@@ -234,7 +234,7 @@ fn can_transfer_to_statemint() {
 		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::create(
 			statemint::Origin::signed(ALICE),
 			spint_id,
-			sibling_sovereign_account(),
+			sibling_sovereign_account().into(),
 			100
 		));
 
@@ -242,7 +242,7 @@ fn can_transfer_to_statemint() {
 		assert_ok!(pallet_assets::Pallet::<statemint::Runtime>::mint(
 			statemint::Origin::signed(sibling_sovereign_account()),
 			spint_id,
-			sibling_sovereign_account(),
+			sibling_sovereign_account().into(),
 			initial_supply
 		));
 		assert_eq!(pallet_assets::Pallet::<statemint::Runtime>::total_issuance(spint_id), initial_supply);

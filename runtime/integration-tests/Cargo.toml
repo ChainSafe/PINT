@@ -64,3 +64,6 @@ xcm-calls = { path = "../../primitives/xcm-calls" }
 
 # others
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator.git", branch = "polkadot-v0.9.10" }
+
+[features]
+runtime-benchmarks = []

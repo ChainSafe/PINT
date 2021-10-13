@@ -10,7 +10,7 @@ use frame_support::{
 	sp_runtime::{
 		curve::PiecewiseLinear,
 		impl_opaque_keys,
-		testing::{Header, TestXt, UintAuthorityId},
+		testing::{TestXt, UintAuthorityId},
 		traits::BlakeTwo256,
 		AccountId32, BoundToRuntimeAppPublic, Perbill,
 	},
@@ -86,7 +86,7 @@ parameter_types! {
 	pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 }
 
-pub type XcmRouter = super::RelayChainXcmRouter;
+pub type XcmRouter = crate::RelayChainXcmRouter;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -188,7 +188,7 @@ impl FindAuthor<AccountId> for Author11 {
 }
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(
 			frame_support::weights::constants::WEIGHT_PER_SECOND * 2

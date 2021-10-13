@@ -4,7 +4,6 @@
 use super::types::*;
 use frame_support::{
 	construct_runtime, parameter_types,
-	sp_runtime::testing::Header,
 	traits::Everything,
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
@@ -23,7 +22,7 @@ pub use xcm_builder::{
 use xcm_executor::{Config, XcmExecutor};
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 }
 
 impl frame_system::Config for Runtime {
@@ -31,7 +30,7 @@ impl frame_system::Config for Runtime {
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
-	type BlockNumber = u64;
+	type BlockNumber = BlockNumber;
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
@@ -119,7 +118,7 @@ parameter_types! {
 pub type LocalAssetTransactor =
 	XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
-pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
+pub type XcmRouter = crate::ParachainXcmRouter<ParachainInfo>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;

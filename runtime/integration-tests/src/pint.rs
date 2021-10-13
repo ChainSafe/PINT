@@ -7,16 +7,11 @@ use frame_support::pallet_prelude::DispatchResultWithPostInfo;
 use pallet_price_feed::PriceFeedBenchmarks;
 
 use super::{types::*, ADMIN_ACCOUNT, PARA_ASSET, RELAY_CHAIN_ASSET};
-use codec::Decode;
-use cumulus_primitives_core::ParaId;
 use frame_support::{
 	construct_runtime,
 	dispatch::DispatchError,
 	ord_parameter_types, parameter_types,
-	sp_runtime::{
-		testing::Header,
-		traits::{AccountIdConversion, Convert, Zero},
-	},
+	sp_runtime::traits::{AccountIdConversion, Zero},
 	traits::{Everything, Get, LockIdentifier},
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 	PalletId,
@@ -28,34 +23,16 @@ use orml_traits::parameter_type_with_key;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_xcm::XcmPassthrough;
+use pint_runtime_kusama::{AccountId32Convert, AssetIdConvert};
 use polkadot_parachain::primitives::Sibling;
-use primitives::traits::MultiAssetRegistry;
 use sp_core::H256;
-use xcm::v1::{Junction, Junctions, MultiAsset, MultiLocation, NetworkId};
+use xcm::v1::{Junction, Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
 	LocationInverter, NativeAsset, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 use xcm_executor::XcmExecutor;
-
-pub mod convert {
-	use crate::types::*;
-	use xcm::v1::{Junction, MultiLocation, NetworkId};
-
-	pub struct AccountId32Convert;
-	impl sp_runtime::traits::Convert<AccountId, [u8; 32]> for AccountId32Convert {
-		fn convert(account_id: AccountId) -> [u8; 32] {
-			account_id.into()
-		}
-	}
-
-	impl sp_runtime::traits::Convert<AccountId, MultiLocation> for AccountId32Convert {
-		fn convert(account_id: AccountId) -> MultiLocation {
-			Junction::AccountId32 { network: NetworkId::Any, id: Self::convert(account_id) }.into()
-		}
-	}
-}
 
 /// Support for call encoders
 pub mod calls {
@@ -112,7 +89,7 @@ pub mod calls {
 }
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 }
 
 impl frame_system::Config for Runtime {
@@ -219,7 +196,7 @@ pub type LocalAssetTransactor = MultiCurrencyAdapter<
 	AssetIdConvert,
 >;
 
-pub type XcmRouter = super::ParachainXcmRouter<ParachainInfo>;
+pub type XcmRouter = crate::ParachainXcmRouter<ParachainInfo>;
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
@@ -295,7 +272,7 @@ impl orml_xtokens::Config for Runtime {
 	type Balance = Balance;
 	type CurrencyId = AssetId;
 	type CurrencyIdConvert = AssetIdConvert;
-	type AccountIdToMultiLocation = convert::AccountId32Convert;
+	type AccountIdToMultiLocation = AccountId32Convert;
 	type SelfLocation = SelfLocation;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
@@ -415,9 +392,9 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
-	type PalletStakingCallEncoder = calls::PalletStakingEncoder<CanEncodeAsset>;
+	type PalletStakingCallEncoder = pint_runtime_kusama::PalletStakingEncoder;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
-	type PalletProxyCallEncoder = calls::PalletProxyEncoder<CanEncodeAsset>;
+	type PalletProxyCallEncoder = pint_runtime_kusama::PalletProxyEncoder;
 	type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
 	type SelfAssetId = PINTAssetId;
 	type SelfLocation = SelfLocation;
@@ -432,45 +409,6 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type XcmSender = XcmRouter;
 	type Event = Event;
 	type WeightInfo = ();
-}
-
-pub struct AssetIdConvert;
-impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
-	fn convert(asset: AssetId) -> Option<MultiLocation> {
-		AssetIndex::native_asset_location(&asset)
-	}
-}
-
-impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
-	fn convert(location: MultiLocation) -> Option<AssetId> {
-		match location {
-			MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
-			MultiLocation {
-				parents: 1,
-				interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
-			} if ParaId::from(id) == ParachainInfo::parachain_id() => {
-				// decode the general key
-				if let Ok(asset_id) = AssetId::decode(&mut &key[..]) {
-					// check `asset_id` is supported
-					if AssetIndex::is_liquid_asset(&asset_id) {
-						return Some(asset_id);
-					}
-				}
-			}
-			_ => {}
-		}
-		None
-	}
-}
-
-impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
-	fn convert(asset: MultiAsset) -> Option<AssetId> {
-		if let xcm::v1::AssetId::Concrete(location) = asset.id {
-			Self::convert(location)
-		} else {
-			None
-		}
-	}
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;

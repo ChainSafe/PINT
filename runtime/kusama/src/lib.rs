@@ -26,7 +26,6 @@ pub use frame_support::{
 // orml imports
 use frame_support::traits::Everything;
 use orml_currencies::BasicCurrencyAdapter;
-use orml_traits::GetByKey;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
@@ -590,36 +589,35 @@ impl Convert<AccountId, MultiLocation> for AccountId32Convert {
 }
 
 /// The encoder to use when transacting `pallet_proxy` calls
-pub struct PalletProxyEncoder<T>(PhantomData<T>);
-impl<T: GetByKey<AssetId, bool>> ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder<T> {
+pub struct PalletProxyEncoder;
+impl ProxyCallEncoder<AccountId, ProxyType, BlockNumber> for PalletProxyEncoder {
 	type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
 	type ProxyTypeEncoder = PassthroughEncoder<ProxyType, AssetId>;
 	type BlockNumberEncoder = PassthroughEncoder<BlockNumber, AssetId>;
 }
-
-impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletProxyEncoder<T> {
+impl PalletCallEncoder for PalletProxyEncoder {
 	type Context = AssetId;
-	fn can_encode(ctx: &Self::Context) -> bool {
-		T::get(ctx)
+	fn can_encode(_ctx: &Self::Context) -> bool {
+		// TODO check in `AssetRegistry`
+		true
 	}
 }
 
 type AccountLookupSource = sp_runtime::MultiAddress<AccountId, ()>;
 
 /// The encoder to use when transacting `pallet_staking` calls
-pub struct PalletStakingEncoder<T>(PhantomData<T>);
-impl<T: GetByKey<AssetId, bool>> StakingCallEncoder<AccountLookupSource, Balance, AccountId>
-	for PalletStakingEncoder<T>
-{
+pub struct PalletStakingEncoder;
+impl StakingCallEncoder<AccountLookupSource, Balance, AccountId> for PalletStakingEncoder {
 	type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
 	type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
 	type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
 }
 
-impl<T: GetByKey<AssetId, bool>> PalletCallEncoder for PalletStakingEncoder<T> {
+impl PalletCallEncoder for PalletStakingEncoder {
 	type Context = AssetId;
-	fn can_encode(ctx: &Self::Context) -> bool {
-		T::get(ctx)
+	fn can_encode(_ctx: &Self::Context) -> bool {
+		// TODO check in `AssetRegistry`
+		true
 	}
 }
 
@@ -628,9 +626,9 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
-	type PalletStakingCallEncoder = PalletStakingEncoder<CanEncodeAsset>;
+	type PalletStakingCallEncoder = PalletStakingEncoder;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
-	type PalletProxyCallEncoder = PalletProxyEncoder<CanEncodeAsset>;
+	type PalletProxyCallEncoder = PalletProxyEncoder;
 	type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
 	type SelfAssetId = PINTAssetId;
 	type SelfLocation = SelfLocation;
