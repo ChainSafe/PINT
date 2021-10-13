@@ -525,9 +525,6 @@ pub mod pallet {
 
 			let dest = Self::asset_destination(asset)?;
 
-			frame_support::sp_std::if_std! {
-				println!("Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
-			}
 			log::info!(target: "pint_xcm", "Attempting add_proxy {:?} on: {:?} with delegate {:?}", proxy_type, dest,  delegate);
 
 			// ensures that the call is encodable for the destination
@@ -552,9 +549,6 @@ pub mod pallet {
 			};
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
-			frame_support::sp_std::if_std! {
-				println!("sent pallet_proxy::add_proxy xcm: {:?} ", result);
-			}
 			log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
 			ensure!(result.is_ok(), Error::<T>::FailedToSendAddProxyXcm);
 
