@@ -1752,7 +1752,7 @@ source = "git+https://github.com/paritytech//cumulus?rev=870b214693856e768ba482f
 dependencies = [
  "async-trait",
  "cumulus-primitives-core",
- "cumulus-test-relay-sproof-builder",
+ "cumulus-test-relay-sproof-builder 0.1.0 (git+https://github.com/paritytech//cumulus?rev=870b214693856e768ba482fe2d3b9a83b24e4540)",
  "parity-scale-codec",
  "polkadot-client",
  "sc-client-api",
@@ -1793,6 +1793,19 @@ dependencies = [
  "sp-std",
  "sp-trie",
  "xcm",
+]
+
+[[package]]
+name = "cumulus-test-relay-sproof-builder"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.10#870b214693856e768ba482fe2d3b9a83b24e4540"
+dependencies = [
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "polkadot-primitives",
+ "sp-runtime",
+ "sp-state-machine",
+ "sp-std",
 ]
 
 [[package]]
@@ -5695,6 +5708,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "kusama-runtime",
  "log",
  "orml-currencies",
  "orml-tokens",
@@ -5718,6 +5732,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "polkadot-parachain",
+ "polkadot-primitives",
  "polkadot-runtime-parachains",
  "primitives",
  "serde",
@@ -8582,6 +8597,59 @@ checksum = "ffc936cf8a7ea60c58f030fd36a612a48f440610214dc54bc36431f9ea0c3efb"
 dependencies = [
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "runtime-integration-tests"
+version = "0.1.0"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcm",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-utility",
+ "frame-election-provider-support",
+ "frame-support",
+ "frame-system",
+ "kusama-runtime",
+ "orml-currencies",
+ "orml-tokens",
+ "orml-traits",
+ "orml-unknown-tokens",
+ "orml-xcm-support",
+ "orml-xtokens",
+ "pallet-asset-index",
+ "pallet-assets",
+ "pallet-balances",
+ "pallet-committee",
+ "pallet-price-feed",
+ "pallet-proxy",
+ "pallet-remote-asset-manager",
+ "pallet-saft-registry",
+ "pallet-session",
+ "pallet-staking",
+ "pallet-staking-reward-curve",
+ "pallet-timestamp",
+ "pallet-xcm",
+ "parachain-info",
+ "parity-scale-codec",
+ "pint-runtime-common",
+ "pint-runtime-kusama",
+ "polkadot-parachain",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "primitives",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-staking",
+ "xcm",
+ "xcm-builder",
+ "xcm-calls",
+ "xcm-emulator",
+ "xcm-executor",
+ "xcm-simulator",
 ]
 
 [[package]]
@@ -12635,6 +12703,30 @@ dependencies = [
  "sp-runtime",
  "sp-staking",
  "xcm",
+]
+
+[[package]]
+name = "xcm-emulator"
+version = "0.1.0"
+source = "git+https://github.com/shaunxw/xcm-simulator.git?branch=polkadot-v0.9.10#0c71745f7218ac562c45f44f7493981e35e3897d"
+dependencies = [
+ "cumulus-pallet-dmp-queue",
+ "cumulus-pallet-parachain-system",
+ "cumulus-pallet-xcmp-queue",
+ "cumulus-primitives-core",
+ "cumulus-primitives-parachain-inherent",
+ "cumulus-test-relay-sproof-builder 0.1.0 (git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.10)",
+ "frame-support",
+ "frame-system",
+ "parachain-info",
+ "parity-scale-codec",
+ "paste",
+ "polkadot-primitives",
+ "polkadot-runtime-parachains",
+ "sp-io",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

@@ -12,7 +12,9 @@ use codec::Decode;
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
 pub use frame_support::{
-	construct_runtime, match_type, ord_parameter_types, parameter_types,
+	construct_runtime, match_type, ord_parameter_types,
+	pallet_prelude::PhantomData,
+	parameter_types,
 	traits::{IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -22,12 +24,17 @@ pub use frame_support::{
 };
 
 // orml imports
+use frame_support::traits::Everything;
 use orml_currencies::BasicCurrencyAdapter;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 pub use pallet_balances::Call as BalancesCall;
+use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::XcmPassthrough;
+pub use pint_runtime_common::{constants::*, types::*, weights};
 use polkadot_parachain::primitives::Sibling;
+use primitives::traits::MultiAssetRegistry;
+pub use primitives::*;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -52,18 +59,12 @@ use xcm_builder::{
 	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
 	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::XcmExecutor;
-
-use frame_support::traits::Everything;
-use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*, weights};
-use primitives::traits::MultiAssetRegistry;
-pub use primitives::*;
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,
 	PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 };
+use xcm_executor::XcmExecutor;
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -109,13 +110,11 @@ pub fn native_version() -> NativeVersion {
 }
 
 parameter_types! {
-	pub Ancestry: MultiLocation = Junction::Parachain(
-		ParachainInfo::parachain_id().into()
-	).into();
+	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
 	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
-	pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
-	pub const Version: RuntimeVersion = VERSION;
+	pub SelfLocation: MultiLocation = MultiLocation::new(1, Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into())));
 	pub const ProposalSubmissionPeriod: BlockNumber = 10;
+	pub const Version: RuntimeVersion = VERSION;
 	pub const VotingPeriod: BlockNumber = 27 * DAYS;
 }
 
@@ -212,10 +211,10 @@ impl pallet_sudo::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Pallet<Runtime>;
-	type OutboundXcmpMessageSource = XcmpQueue;
+	type SelfParaId = ParachainInfo;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
+	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 }
@@ -315,7 +314,7 @@ impl xcm_executor::Config for XcmConfig {
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
 	type Trader = FixedRateOfFungible<UnitPerSecond, ToTreasury>;
 	type ResponseHandler = (); // Don't handle responses for now.
-	type SubscriptionService = (); // Don't handle subscription for now.
+	type SubscriptionService = PolkadotXcm;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, RelayNetwork>;
