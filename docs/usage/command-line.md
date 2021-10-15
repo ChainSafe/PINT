@@ -37,4 +37,10 @@ cargo test --all-features
 
 This will seal blocks instantly. The node will never produce blocks
 
+Use the docker image:
+
+```
+docker run -it -p 9944:9944 chainsafe/pint --tmp --dev --instant-sealing --rpc-external --ws-external --rpc-cors all --rpc-methods Unsafe
+```
+
 If the [polkadot.js UI](https://polkadot.js.org/apps/#/explorer) fails to connect try adding `--rpc-cors all`.
