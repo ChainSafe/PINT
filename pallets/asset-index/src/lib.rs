@@ -260,7 +260,7 @@ pub mod pallet {
 		fn build(&self) {
 			use xcm::v1::{Junction, Junctions, MultiLocation};
 
-			LockupPeriod::<T>::set(LockupPeriod::<T>::get());
+			LockupPeriod::<T>::set(T::LockupPeriod::get());
 
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid(MultiLocation {

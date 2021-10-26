@@ -91,7 +91,7 @@ benchmarks! {
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
 
@@ -254,7 +254,7 @@ benchmarks! {
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
 
@@ -288,7 +288,7 @@ benchmarks! {
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::IndexTokenLocks::<T>::get(&origin_account_id), vec![types::IndexTokenLock{
 			locked: AssetIndex::<T>::index_token_equivalent(asset_id, units).unwrap(),
-			end_block: frame_system::Pallet::<T>::block_number() + T::LockupPeriod::get() - 1u32.into()
+			end_block: frame_system::Pallet::<T>::block_number() + pallet::LockupPeriod::<T>::get() - 1u32.into()
 		}]);
 	}
 }
