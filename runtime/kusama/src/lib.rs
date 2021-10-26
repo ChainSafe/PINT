@@ -481,6 +481,7 @@ impl pallet_asset_index::Config for Runtime {
 	type MaxDecimals = MaxDecimals;
 	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
+	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;

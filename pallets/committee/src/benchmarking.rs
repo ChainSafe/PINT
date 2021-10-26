@@ -130,6 +130,6 @@ benchmarks! {
 		two_weeks
 	) verify {
 		run_to_block::<T>(<T as Config>::VotingPeriod::get());
-		assert_eq!(<pallet::VotingPeriod<T>>::get(), two_weeks);
+		assert_eq!(pallet::VotingPeriod::<T>::get(), two_weeks);
 	}
 }

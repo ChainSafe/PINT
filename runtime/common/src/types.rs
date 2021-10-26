@@ -24,3 +24,16 @@ impl<T: frame_system::Config> pallet_committee::traits::VotingPeriodRange<T::Blo
 		(crate::constants::DAYS * 7).into()
 	}
 }
+
+/// Range of lockup period
+pub struct LockupPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
+	fn min() -> T::BlockNumber {
+		crate::constants::DAYS.into()
+	}
+
+	fn max() -> T::BlockNumber {
+		(crate::constants::DAYS * 28).into()
+	}
+}

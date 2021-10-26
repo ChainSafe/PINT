@@ -120,6 +120,7 @@ parameter_types! {
 	// pallet-committee
 	pub const ProposalSubmissionPeriod: BlockNumber = 5;
 	pub const VotingPeriod: BlockNumber = 5;
+	pub const LockupPeriodDev: BlockNumber = 10;
 }
 
 // Configure FRAME pallets to include in runtime.
@@ -493,6 +494,21 @@ impl pallet_chainlink_feed::Config for Runtime {
 	type WeightInfo = ();
 }
 
+/// Range of lockup period
+pub struct LockupPeriodRangeDev<T>(sp_std::marker::PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber>
+	for LockupPeriodRangeDev<T>
+{
+	fn min() -> T::BlockNumber {
+		10u32.into()
+	}
+
+	fn max() -> T::BlockNumber {
+		(28 * DAYS).into()
+	}
+}
+
 impl pallet_asset_index::Config for Runtime {
 	type AdminOrigin = CommitteeOrigin<Runtime>;
 	type IndexToken = Balances;
@@ -500,7 +516,8 @@ impl pallet_asset_index::Config for Runtime {
 	type MaxActiveDeposits = MaxActiveDeposits;
 	type MaxDecimals = MaxDecimals;
 	type RedemptionFee = ();
-	type LockupPeriod = LockupPeriod;
+	type LockupPeriod = LockupPeriodDev;
+	type LockupPeriodRange = LockupPeriodRangeDev<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;

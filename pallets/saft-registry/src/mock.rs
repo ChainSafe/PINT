@@ -13,7 +13,8 @@ use crate as pallet_saft_registry;
 use core::cell::RefCell;
 use frame_support::{
 	assert_ok, ord_parameter_types, parameter_types,
-	traits::{LockIdentifier, StorageMapShim},
+	sp_std::marker::PhantomData,
+	traits::{Everything, LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
@@ -21,7 +22,6 @@ use orml_traits::{parameter_type_with_key, MultiCurrency};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use xcm::v1::MultiLocation;
 
-use frame_support::traits::Everything;
 use primitives::AssetAvailability;
 use sp_core::H256;
 use sp_runtime::{
@@ -124,6 +124,19 @@ parameter_types! {
 	pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
 }
 
+/// Range of voting period
+pub struct LockupPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
+	fn max() -> T::BlockNumber {
+		0u32.into()
+	}
+
+	fn min() -> T::BlockNumber {
+		10u32.into()
+	}
+}
+
 impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type IndexToken = Balances;
@@ -132,6 +145,7 @@ impl pallet_asset_index::Config for Test {
 	type MaxActiveDeposits = MaxActiveDeposits;
 	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
+	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;

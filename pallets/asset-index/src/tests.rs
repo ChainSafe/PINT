@@ -14,7 +14,7 @@ use primitives::{
 };
 
 use crate as pallet;
-use crate::{mock::*, types::DepositRange};
+use crate::{mock::*, traits::LockupPeriodRange as _, types::DepositRange};
 
 #[test]
 fn can_register_asset() {
@@ -669,5 +669,27 @@ fn add_asset_less_than_existential_deposit_is_noop() {
 			ExistentialDeposit::get().saturating_sub(1)
 		));
 		assert!(AssetIndex::index_token_balance(&ACCOUNT_ID).is_zero());
+	});
+}
+
+#[test]
+fn can_set_lockup_period() {
+	new_test_ext_from_genesis().execute_with(|| {
+		// ensure initial lockup period has been set
+		assert_eq!(pallet::LockupPeriod::<Test>::get(), LockupPeriod::get());
+
+		// cannot set lockup period out of range
+		assert_noop!(
+			AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), LockupPeriodRange::<Test>::max() + 1),
+			pallet::Error::<Test>::InvalidLockupPeriod
+		);
+		assert_noop!(
+			AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), LockupPeriodRange::<Test>::min() - 1),
+			pallet::Error::<Test>::InvalidLockupPeriod
+		);
+
+		// can set lockup period
+		assert_ok!(AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), WEEKS));
+		assert_eq!(pallet::LockupPeriod::<Test>::get(), WEEKS);
 	});
 }

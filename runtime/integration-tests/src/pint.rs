@@ -12,6 +12,7 @@ use frame_support::{
 	dispatch::DispatchError,
 	ord_parameter_types, parameter_types,
 	sp_runtime::traits::{AccountIdConversion, Zero},
+	sp_std::marker::PhantomData,
 	traits::{Everything, Get, LockIdentifier},
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 	PalletId,
@@ -336,6 +337,19 @@ parameter_types! {
 	pub MaxActiveDeposits: u32 = 50;
 }
 
+/// Range of voting period
+pub struct LockupPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
+	fn min() -> T::BlockNumber {
+		10u32.into()
+	}
+
+	fn max() -> T::BlockNumber {
+		70u32.into()
+	}
+}
+
 impl pallet_asset_index::Config for Runtime {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type Event = Event;
@@ -348,6 +362,7 @@ impl pallet_asset_index::Config for Runtime {
 	type MaxDecimals = MaxDecimals;
 	type RedemptionFee = ();
 	type LockupPeriod = LockupPeriod;
+	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
 	type RemoteAssetManager = RemoteAssetManager;

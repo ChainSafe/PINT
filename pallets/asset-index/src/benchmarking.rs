@@ -91,7 +91,7 @@ benchmarks! {
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
 
@@ -254,7 +254,7 @@ benchmarks! {
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
 
@@ -269,6 +269,10 @@ benchmarks! {
 		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 		let amount = 500u32.into();
 		let units = 100u32.into();
+
+		// ensure lockup period has been set
+		pallet::LockupPeriod::<T>::set(T::LockupPeriod::get());
+		assert_eq!(pallet::LockupPeriod::<T>::get(), T::LockupPeriod::get());
 
 		// create price feed
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
@@ -288,8 +292,17 @@ benchmarks! {
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::IndexTokenLocks::<T>::get(&origin_account_id), vec![types::IndexTokenLock{
 			locked: AssetIndex::<T>::index_token_equivalent(asset_id, units).unwrap(),
-			end_block: frame_system::Pallet::<T>::block_number() + T::LockupPeriod::get() - 1u32.into()
+			end_block: frame_system::Pallet::<T>::block_number() + pallet::LockupPeriod::<T>::get() - 1u32.into()
 		}]);
+	}
+
+	set_lockup_period {
+		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
+		let call = Call::<T>::set_lockup_period(week);
+	}: {
+		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
+	} verify {
+		assert_eq!(pallet::LockupPeriod::<T>::get(), week);
 	}
 }
 

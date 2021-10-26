@@ -22,6 +22,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
@@ -55,8 +56,9 @@ pub mod pallet {
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
-	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption,
+	use crate::{
+		traits::LockupPeriodRange,
+		types::{AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption},
 	};
 	use primitives::traits::MaybeAssetIdConvert;
 
@@ -82,6 +84,8 @@ pub mod pallet {
 		/// index
 		#[pallet::constant]
 		type LockupPeriod: Get<Self::BlockNumber>;
+		/// Range of the lockup period
+		type LockupPeriodRange: LockupPeriodRange<Self::BlockNumber>;
 		/// The identifier for the index token lock.
 		/// Used to lock up deposits for `T::LockupPeriod`.
 		#[pallet::constant]
@@ -198,6 +202,10 @@ pub mod pallet {
 	pub type IndexTokenLocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<IndexTokenLock<T::BlockNumber, T::Balance>>, ValueQuery>;
 
+	/// Store a duration (in blocks) of the lockup period
+	#[pallet::storage]
+	pub type LockupPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
 	/// Tracks the amount of the currently locked index token per user.
 	/// This is equal to the sum(IndexTokenLocks[AccountId])
 	///  (AccountId) -> Balance
@@ -251,6 +259,9 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			use xcm::v1::{Junction, Junctions, MultiLocation};
+
+			LockupPeriod::<T>::set(T::LockupPeriod::get());
+
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid(MultiLocation {
 					parents: 0,
@@ -298,6 +309,8 @@ pub mod pallet {
 		MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
 		/// The index token deposit range was updated.\[new_range\]
 		IndexTokenDepositRangeUpdated(DepositRange<T::Balance>),
+		/// Lockup Period has been updated
+		NewLockupPeriod(T::BlockNumber),
 	}
 
 	#[pallet::error]
@@ -336,6 +349,8 @@ pub mod pallet {
 		InvalidDecimals,
 		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
+		/// Attempted to set LockupPeriod out of the range of 1 day ~ 28 days
+		InvalidLockupPeriod,
 		/// The deposited amount is below the minimum value required.
 		DepositAmountBelowMinimum,
 		/// The deposited amount exceeded the cap allowed.
@@ -452,6 +467,23 @@ pub mod pallet {
 			ensure!(new_range.maximum > new_range.minimum, Error::<T>::InvalidDepositRange);
 			IndexTokenDepositRange::<T>::put(&new_range);
 			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
+			Ok(())
+		}
+
+		/// Set lockup period
+		///
+		/// only accept 1 ~ 28 days
+		#[pallet::weight(T::WeightInfo::set_lockup_period())]
+		pub fn set_lockup_period(origin: OriginFor<T>, lockup_period: T::BlockNumber) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::LockupPeriodRange::min() <= lockup_period && lockup_period <= T::LockupPeriodRange::max(),
+				Error::<T>::InvalidLockupPeriod
+			);
+
+			LockupPeriod::<T>::set(lockup_period);
+			Self::deposit_event(Event::<T>::NewLockupPeriod(lockup_period));
 			Ok(())
 		}
 
@@ -948,7 +980,7 @@ pub mod pallet {
 		fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let mut locks = IndexTokenLocks::<T>::get(user);
-			locks.push(IndexTokenLock { locked: amount, end_block: current_block + T::LockupPeriod::get() });
+			locks.push(IndexTokenLock { locked: amount, end_block: current_block + LockupPeriod::<T>::get() });
 			Self::do_insert_index_token_locks(user, locks);
 		}
 
@@ -1408,6 +1440,7 @@ pub mod pallet {
 		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
 		fn set_deposit_range() -> Weight;
+		fn set_lockup_period() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1443,7 +1476,12 @@ pub mod pallet {
 		fn withdraw() -> Weight {
 			Default::default()
 		}
+
 		fn set_deposit_range() -> Weight {
+			Default::default()
+		}
+
+		fn set_lockup_period() -> Weight {
 			Default::default()
 		}
 	}
