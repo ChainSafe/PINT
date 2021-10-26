@@ -12,7 +12,13 @@ use pallet_price_feed::PriceFeedBenchmarks;
 use crate as pallet_asset_index;
 use frame_support::{
 	ord_parameter_types, parameter_types,
-	traits::{GenesisBuild, LockIdentifier},
+	sp_runtime::{
+		testing::Header,
+		traits::{BlakeTwo256, IdentityLookup, Zero},
+		DispatchError,
+	},
+	sp_std::{cell::RefCell, marker::PhantomData, ops::Range},
+	traits::{Everything, GenesisBuild, LockIdentifier},
 	PalletId,
 };
 use frame_system as system;
@@ -20,17 +26,9 @@ use orml_traits::parameter_type_with_key;
 use pallet_price_feed::PriceFeed;
 use primitives::{fee::FeeRate, AssetPricePair, Price};
 use sp_core::H256;
-use sp_std::cell::RefCell;
 use std::collections::HashMap;
 
-use frame_support::traits::Everything;
 use rand::{thread_rng, Rng};
-use sp_runtime::{
-	testing::Header,
-	traits::{BlakeTwo256, IdentityLookup, Zero},
-	DispatchError,
-};
-use std::ops::Range;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -169,6 +167,19 @@ impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
 	}
 }
 
+/// Range of voting period
+pub struct LockupPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
+	fn max() -> T::BlockNumber {
+		0u32.into()
+	}
+
+	fn min() -> T::BlockNumber {
+		10u32.into()
+	}
+}
+
 impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
@@ -177,6 +188,7 @@ impl pallet_asset_index::Config for Test {
 	type MaxActiveDeposits = MaxActiveDeposits;
 	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
+	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;

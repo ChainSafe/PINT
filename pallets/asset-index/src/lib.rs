@@ -22,6 +22,7 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
@@ -55,8 +56,9 @@ pub mod pallet {
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
-	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption,
+	use crate::{
+		traits::LockupPeriodRange,
+		types::{AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption},
 	};
 	use primitives::traits::MaybeAssetIdConvert;
 
@@ -82,6 +84,8 @@ pub mod pallet {
 		/// index
 		#[pallet::constant]
 		type LockupPeriod: Get<Self::BlockNumber>;
+		/// Range of the lockup period
+		type LockupPeriodRange: LockupPeriodRange<Self::BlockNumber>;
 		/// The identifier for the index token lock.
 		/// Used to lock up deposits for `T::LockupPeriod`.
 		#[pallet::constant]
@@ -198,6 +202,10 @@ pub mod pallet {
 	pub type IndexTokenLocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<IndexTokenLock<T::BlockNumber, T::Balance>>, ValueQuery>;
 
+	/// Store a duration (in blocks) of the lockup period
+	#[pallet::storage]
+	pub type LockupPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
 	/// Tracks the amount of the currently locked index token per user.
 	/// This is equal to the sum(IndexTokenLocks[AccountId])
 	///  (AccountId) -> Balance
@@ -251,6 +259,9 @@ pub mod pallet {
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
 			use xcm::v1::{Junction, Junctions, MultiLocation};
+
+			LockupPeriod::<T>::set(LockupPeriod::<T>::get());
+
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid(MultiLocation {
 					parents: 0,
@@ -653,8 +664,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -948,7 +959,7 @@ pub mod pallet {
 		fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let mut locks = IndexTokenLocks::<T>::get(user);
-			locks.push(IndexTokenLock { locked: amount, end_block: current_block + T::LockupPeriod::get() });
+			locks.push(IndexTokenLock { locked: amount, end_block: current_block + LockupPeriod::<T>::get() });
 			Self::do_insert_index_token_locks(user, locks);
 		}
 
