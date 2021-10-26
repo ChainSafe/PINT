@@ -291,6 +291,15 @@ benchmarks! {
 			end_block: frame_system::Pallet::<T>::block_number() + pallet::LockupPeriod::<T>::get() - 1u32.into()
 		}]);
 	}
+
+	set_lockup_period {
+		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
+		let call = Call::<T>::set_lockup_period(week);
+	}: {
+		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
+	} verify {
+		assert_eq!(pallet::LockupPeriod::<T>::get(), week);
+	}
 }
 
 #[cfg(test)]

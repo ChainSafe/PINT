@@ -171,12 +171,12 @@ impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
 pub struct LockupPeriodRange<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
-	fn max() -> T::BlockNumber {
-		0u32.into()
-	}
-
 	fn min() -> T::BlockNumber {
 		10u32.into()
+	}
+
+	fn max() -> T::BlockNumber {
+		70u32.into()
 	}
 }
 
@@ -213,6 +213,7 @@ pub const ASSET_B_ID: AssetId = 2u32;
 pub const UNKNOWN_ASSET_ID: AssetId = 3u32;
 pub const SAFT_ASSET_ID: AssetId = 99u32;
 pub const ED_ASSET_ID: AssetId = 99999999u32;
+pub const WEEKS: <Test as system::Config>::BlockNumber = 70;
 
 pub const ASSET_A_PRICE_MULTIPLIER: Balance = 2;
 pub const ASSET_B_PRICE_MULTIPLIER: Balance = 3;

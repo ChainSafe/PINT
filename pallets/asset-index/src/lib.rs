@@ -309,6 +309,8 @@ pub mod pallet {
 		MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
 		/// The index token deposit range was updated.\[new_range\]
 		IndexTokenDepositRangeUpdated(DepositRange<T::Balance>),
+		/// Lockup Period has been updated
+		NewLockupPeriod(T::BlockNumber),
 	}
 
 	#[pallet::error]
@@ -347,6 +349,8 @@ pub mod pallet {
 		InvalidDecimals,
 		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
+		/// Attempted to set LockupPeriod out of the range of 1 days ~ 28 days
+		InvalidLockupPeriod,
 		/// The deposited amount is below the minimum value required.
 		DepositAmountBelowMinimum,
 		/// The deposited amount exceeded the cap allowed.
@@ -463,6 +467,23 @@ pub mod pallet {
 			ensure!(new_range.maximum > new_range.minimum, Error::<T>::InvalidDepositRange);
 			IndexTokenDepositRange::<T>::put(&new_range);
 			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
+			Ok(())
+		}
+
+		/// Set lockup period
+		///
+		/// only accept 1 ~ 28 days
+		#[pallet::weight(T::WeightInfo::set_lockup_period())]
+		pub fn set_lockup_period(origin: OriginFor<T>, lockup_period: T::BlockNumber) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::LockupPeriodRange::min() <= lockup_period && lockup_period <= T::LockupPeriodRange::max(),
+				Error::<T>::InvalidLockupPeriod
+			);
+
+			LockupPeriod::<T>::set(lockup_period);
+			Self::deposit_event(Event::<T>::NewLockupPeriod(lockup_period));
 			Ok(())
 		}
 
@@ -1419,6 +1440,7 @@ pub mod pallet {
 		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
 		fn set_deposit_range() -> Weight;
+		fn set_lockup_period() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1454,7 +1476,12 @@ pub mod pallet {
 		fn withdraw() -> Weight {
 			Default::default()
 		}
+
 		fn set_deposit_range() -> Weight {
+			Default::default()
+		}
+
+		fn set_lockup_period() -> Weight {
 			Default::default()
 		}
 	}

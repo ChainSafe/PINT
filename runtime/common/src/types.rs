@@ -30,7 +30,7 @@ pub struct LockupPeriodRange<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
 	fn min() -> T::BlockNumber {
-		(crate::constants::HOURS * 24).into()
+		crate::constants::DAYS.into()
 	}
 
 	fn max() -> T::BlockNumber {

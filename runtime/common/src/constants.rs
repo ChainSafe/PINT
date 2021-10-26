@@ -117,7 +117,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 15;
 	pub const TransactionByteFee: Balance = 1 ;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
-	pub const LockupPeriod: BlockNumber = HOURS * 24;
+	pub const LockupPeriod: BlockNumber = DAYS;
 	pub const MaxCandidates: u32 = 200;
 	pub const MaxDecimals: u8 = 18;
 	pub const MaxInvulnerables: u32 = 50;

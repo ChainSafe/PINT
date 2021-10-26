@@ -119,4 +119,8 @@ impl<T: frame_system::Config> pallet_asset_index::WeightInfo for WeightInfo<T> {
 			.saturating_add(T::DbWeight::get().reads(3 as Weight))
 			.saturating_add(T::DbWeight::get().writes(4 as Weight))
 	}
+
+    fn set_lockup_period() -> Weight {
+        Default::default()
+    }
 }
