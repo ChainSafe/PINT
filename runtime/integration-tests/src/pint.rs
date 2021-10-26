@@ -341,12 +341,12 @@ parameter_types! {
 pub struct LockupPeriodRange<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
-	fn max() -> T::BlockNumber {
-		0u32.into()
-	}
-
 	fn min() -> T::BlockNumber {
 		10u32.into()
+	}
+
+	fn max() -> T::BlockNumber {
+		70u32.into()
 	}
 }
 

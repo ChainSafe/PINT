@@ -270,6 +270,10 @@ benchmarks! {
 		let amount = 500u32.into();
 		let units = 100u32.into();
 
+		// ensure lockup period has been set
+		pallet::LockupPeriod::<T>::set(T::LockupPeriod::get());
+		assert_eq!(pallet::LockupPeriod::<T>::get(), T::LockupPeriod::get());
+
 		// create price feed
 		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
 
