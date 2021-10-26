@@ -349,7 +349,7 @@ pub mod pallet {
 		InvalidDecimals,
 		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
-		/// Attempted to set LockupPeriod out of the range of 1 days ~ 28 days
+		/// Attempted to set LockupPeriod out of the range of 1 day ~ 28 days
 		InvalidLockupPeriod,
 		/// The deposited amount is below the minimum value required.
 		DepositAmountBelowMinimum,

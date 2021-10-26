@@ -167,7 +167,7 @@ impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
 	}
 }
 
-/// Range of voting period
+/// Range of lockup period
 pub struct LockupPeriodRange<T>(PhantomData<T>);
 
 impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
