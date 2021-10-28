@@ -4,6 +4,7 @@
 //! Fee types used in PINT pallets
 
 use codec::{Decode, Encode};
+use frame_support::sp_runtime::traits::AtLeast32Bit;
 
 /// Represents the fee rate where fee_rate = numerator / denominator
 #[derive(Debug, Encode, Decode, Copy, Clone, PartialEq, Eq)]
@@ -38,6 +39,36 @@ impl BaseFee for u128 {
 
 	fn fee(&self, rate: FeeRate) -> Option<Self> {
 		self.checked_mul(rate.numerator as Self)?.checked_div(rate.denominator as Self)
+	}
+}
+
+/// Determines the fee upon index token redemptions from range
+#[derive(Decode, Default, Encode)]
+pub struct RedemptionFeeRange<BlockNumber> {
+	pub range: (BlockNumber, BlockNumber),
+	pub fee: (FeeRate, FeeRate, FeeRate),
+}
+
+impl<BlockNumber: AtLeast32Bit> RedemptionFeeRange<BlockNumber> {
+	/// get fee rate by spent time
+	fn get_rate(&self, spent_time: BlockNumber) -> FeeRate {
+		if spent_time < self.range.0 {
+			self.fee.0
+		} else if spent_time <= self.range.1 {
+			self.fee.1
+		} else {
+			self.fee.2
+		}
+	}
+
+	/// Determines the redemption fee based on how long the given amount were held in the index
+	///
+	/// Parameters:
+	///     - `time_spent`: The number of blocks the amount were held in the index. This is `current
+	///       block -  deposit`.
+	///     - `amount`: The amount of index tokens withdrawn
+	pub fn redemption_fee<Balance: BaseFee>(&self, time_spent: BlockNumber, amount: Balance) -> Option<Balance> {
+		amount.fee(self.get_rate(time_spent))
 	}
 }
 

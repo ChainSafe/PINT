@@ -51,8 +51,8 @@ pub mod pallet {
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 	use primitives::{
-		fee::{BaseFee, FeeRate},
-		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RedemptionFee, RemoteAssetManager, SaftRegistry},
+		fee::{BaseFee, FeeRate, RedemptionFeeRange},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry},
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
 
@@ -112,7 +112,7 @@ pub mod pallet {
 		type MaxDecimals: Get<u8>;
 
 		/// Determines the redemption fee in complete_withdraw
-		type RedemptionFee: RedemptionFee<Self::BlockNumber, Self::Balance>;
+		type RedemptionFee: Get<RedemptionFeeRange<Self::BlockNumber>>;
 
 		/// The native asset id
 		#[pallet::constant]
@@ -155,11 +155,9 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	/// Testing storage for RedemptionFee
-	#[cfg(test)]
+	/// stores a range of redemption fee
 	#[pallet::storage]
-	#[pallet::getter(fn last_redemption)]
-	pub type LastRedemption<T: Config> = StorageValue<_, (T::BlockNumber, T::Balance), ValueQuery>;
+	pub type RedemptionFee<T: Config> = StorageValue<_, RedemptionFeeRange<T::BlockNumber>, ValueQuery>;
 
 	/// (AssetId) -> AssetAvailability
 	#[pallet::storage]
@@ -261,6 +259,7 @@ pub mod pallet {
 			use xcm::v1::{Junction, Junctions, MultiLocation};
 
 			LockupPeriod::<T>::set(T::LockupPeriod::get());
+			RedemptionFee::<T>::set(T::RedemptionFee::get());
 
 			for (asset, id) in self.liquid_assets.iter().cloned() {
 				let availability = AssetAvailability::Liquid(MultiLocation {
@@ -355,6 +354,8 @@ pub mod pallet {
 		DepositAmountBelowMinimum,
 		/// The deposited amount exceeded the cap allowed.
 		DepositExceedsMaximum,
+		/// Thrown when calculate reademption fee failed
+		CalculateRedemptionFeeFailed,
 	}
 
 	#[pallet::hooks]
@@ -685,8 +686,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -847,6 +848,8 @@ pub mod pallet {
 				let mut total_fee: T::Balance = T::Balance::zero();
 				let current_block = frame_system::Pallet::<T>::block_number();
 
+				let redemption_fee_range = RedemptionFee::<T>::get();
+				let mut calculate_redemption_fee_failed = false;
 				let mut rem: Option<(T::Balance, T::BlockNumber)> = None;
 				deposits.retain(|(index_tokens, block_number)| {
 					// how long this deposit spent in the index.
@@ -856,18 +859,31 @@ pub mod pallet {
 						true
 					} else if amount >= *index_tokens {
 						amount = amount.saturating_sub(*index_tokens);
-						total_fee =
-							total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, *index_tokens));
+						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, *index_tokens) {
+							total_fee = total_fee.saturating_add(fee);
+						} else {
+							calculate_redemption_fee_failed = true;
+						}
+
 						false
 					} else {
 						// the remaining amount is less than the oldest deposit, so we are simply updating the value of
 						// the now oldest deposit
 						rem = Some((index_tokens.saturating_sub(amount), *block_number));
-						total_fee = total_fee.saturating_add(T::RedemptionFee::redemption_fee(time_spent, amount));
+						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, *index_tokens) {
+							total_fee = total_fee.saturating_add(fee);
+						} else {
+							calculate_redemption_fee_failed = true;
+						}
+
 						amount = T::Balance::zero();
 						true
 					}
 				});
+
+				if calculate_redemption_fee_failed {
+					return Err(Error::<T>::CalculateRedemptionFeeFailed.into());
+				}
 
 				if !deposits.is_empty() {
 					if let Some(rem) = rem {

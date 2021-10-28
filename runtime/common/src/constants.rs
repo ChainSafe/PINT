@@ -14,7 +14,10 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
-use primitives::{fee::FeeRate, AccountId, AssetId, Balance, BlockNumber};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AccountId, AssetId, Balance, BlockNumber,
+};
 use xcm::v1::MultiLocation;
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
@@ -88,6 +91,14 @@ parameter_types! {
 	pub const PINTAssetId: AssetId = 1;
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
+	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
+		range: (DAYS * 7, DAYS * 30),
+		fee: (
+			FeeRate { numerator: 1, denominator: 10 },
+			FeeRate { numerator: 1, denominator: 20 },
+			FeeRate { numerator: 1, denominator: 100 }
+		),
+	};
 	pub const RelayChainAssetId: AssetId = 42;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
