@@ -309,7 +309,7 @@ benchmarks! {
 		assert_eq!(pallet::LockupPeriod::<T>::get(), week);
 	}
 
-	set_redemption_fee {
+	update_redemption_fees {
 		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
 		let range = RedemptionFeeRange {
 			range: [week, week * 4u32.into()],
@@ -319,7 +319,7 @@ benchmarks! {
 				FeeRate { numerator: 1, denominator: 100 }
 			]
 		};
-		let call = Call::<T>::set_redemption_fee(range.clone());
+		let call = Call::<T>::update_redemption_fees(range.clone());
 	}: {
 		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
 	} verify {

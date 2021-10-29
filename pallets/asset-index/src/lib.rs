@@ -481,8 +481,8 @@ pub mod pallet {
 		///
 		/// Parameters:
 		/// - `new_range`: The new valid range for redemption fee.
-		#[pallet::weight(T::WeightInfo::set_redemption_fee())]
-		pub fn set_redemption_fee(
+		#[pallet::weight(T::WeightInfo::update_redemption_fees())]
+		pub fn update_redemption_fees(
 			origin: OriginFor<T>,
 			new_range: RedemptionFeeRange<T::BlockNumber>,
 		) -> DispatchResult {
@@ -1482,7 +1482,7 @@ pub mod pallet {
 		fn set_metadata() -> Weight;
 		fn set_deposit_range() -> Weight;
 		fn set_lockup_period() -> Weight;
-		fn set_redemption_fee() -> Weight;
+		fn update_redemption_fees() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1527,7 +1527,7 @@ pub mod pallet {
 			Default::default()
 		}
 
-		fn set_redemption_fee() -> Weight {
+		fn update_redemption_fees() -> Weight {
 			Default::default()
 		}
 	}
