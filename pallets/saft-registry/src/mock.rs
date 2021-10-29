@@ -122,15 +122,10 @@ parameter_types! {
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
 	pub const PINTAssetId: AssetId = 99;
-	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
-		range: [7, 30],
-		fee: [
-			FeeRate { numerator: 1, denominator: 10 },
-			FeeRate { numerator: 3, denominator: 100 },
-			FeeRate { numerator: 1, denominator: 100 }
-		],
+	pub const RedemptionFee: RedemptionFeeRange<<Test as system::Config>::BlockNumber> = RedemptionFeeRange {
+		range: [(14, FeeRate { numerator: 1, denominator: 10 }), (30, FeeRate { numerator: 1, denominator: 20 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
 	};
-
 	// No fees for now
 	pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
 }

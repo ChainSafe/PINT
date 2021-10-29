@@ -45,19 +45,19 @@ impl BaseFee for u128 {
 /// Determines the fee upon index token redemptions from range
 #[derive(Clone, Decode, Debug, Default, Encode, PartialEq, Eq)]
 pub struct RedemptionFeeRange<BlockNumber> {
-	pub range: [BlockNumber; 2],
-	pub fee: [FeeRate; 3],
+	pub range: [(BlockNumber, FeeRate); 2],
+	pub default_fee: FeeRate,
 }
 
 impl<BlockNumber: AtLeast32Bit> RedemptionFeeRange<BlockNumber> {
 	/// get fee rate by spent time
 	fn get_rate(&self, spent_time: BlockNumber) -> FeeRate {
-		if spent_time < self.range[0] {
-			self.fee[0]
-		} else if spent_time <= self.range[1] {
-			self.fee[1]
+		if spent_time < self.range[0].0 {
+			self.range[0].1
+		} else if spent_time <= self.range[1].0 {
+			self.range[1].1
 		} else {
-			self.fee[2]
+			self.default_fee
 		}
 	}
 

@@ -157,14 +157,9 @@ parameter_types! {
 	pub MaxActiveDeposits: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
 	pub const RedemptionFee: RedemptionFeeRange<<Test as system::Config>::BlockNumber> = RedemptionFeeRange {
-		range: [14, 30],
-		fee: [
-			FeeRate { numerator: 1, denominator: 10 },
-			FeeRate { numerator: 1, denominator: 20 },
-			FeeRate { numerator: 1, denominator: 100 }
-		],
+		range: [(14, FeeRate { numerator: 1, denominator: 10 }), (30, FeeRate { numerator: 1, denominator: 20 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
 	};
-
 	// No fees for now
 	pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
 }

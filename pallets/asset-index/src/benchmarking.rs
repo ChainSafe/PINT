@@ -312,12 +312,8 @@ benchmarks! {
 	update_redemption_fees {
 		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
 		let range = RedemptionFeeRange {
-			range: [week, week * 4u32.into()],
-			fee: [
-				FeeRate { numerator: 1, denominator: 10 },
-				FeeRate { numerator: 1, denominator: 20 },
-				FeeRate { numerator: 1, denominator: 100 }
-			]
+			range: [(week, FeeRate { numerator: 1, denominator: 10 }), (week * 4u32.into(), FeeRate { numerator: 1, denominator: 20 })],
+			default_fee: FeeRate { numerator: 1, denominator: 100 },
 		};
 		let call = Call::<T>::update_redemption_fees(range.clone());
 	}: {
