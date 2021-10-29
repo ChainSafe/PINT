@@ -487,7 +487,7 @@ pub mod pallet {
 			new_range: RedemptionFeeRange<T::BlockNumber>,
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
-			ensure!(new_range.range.0 < new_range.range.1, Error::<T>::InvalidRedemptionFeeRange);
+			ensure!(new_range.range[0] < new_range.range[1], Error::<T>::InvalidRedemptionFeeRange);
 			RedemptionFee::<T>::set(new_range.clone());
 			Self::deposit_event(Event::<T>::NewRedemptionFeeRange(new_range));
 			Ok(())

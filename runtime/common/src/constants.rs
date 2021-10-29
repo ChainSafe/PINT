@@ -92,12 +92,12 @@ parameter_types! {
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
-		range: (DAYS * 7, DAYS * 30),
-		fee: (
+		range: [DAYS * 7, DAYS * 30],
+		fee: [
 			FeeRate { numerator: 1, denominator: 10 },
 			FeeRate { numerator: 3, denominator: 100 },
 			FeeRate { numerator: 1, denominator: 100 }
-		),
+		],
 	};
 	pub const RelayChainAssetId: AssetId = 42;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;

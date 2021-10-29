@@ -116,6 +116,10 @@ export const definitions = {
                     add_proxy: "Weight",
                     remove_proxy: "Weight",
                 },
+                RedemptionFeeRange: {
+                    range: "Vec<BlockNumber>",
+                    fee: "Vec<FeeRate>",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,
