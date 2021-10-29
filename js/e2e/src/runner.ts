@@ -130,8 +130,6 @@ export default class Runner implements Config {
             ziggy,
         };
 
-        console.log(definitions.types);
-
         // create api
         const api = await ApiPromise.create({
             provider,

@@ -558,8 +558,8 @@ fn redemption_fee_works_on_completing_withdraw() {
 		//
 		// ->
 		//
-		// 50 * (initial_units / 50) * 1 / 10
-		let fee = initial_units / 10;
+		// (50 * (initial_units / 50) - initial_units / 100) * 1 / 10
+		let fee = initial_units * 99 / 1000;
 		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit * 99 / 100 - fee);
 
 		// all deposits has been cleaned
