@@ -43,7 +43,7 @@ impl BaseFee for u128 {
 }
 
 /// Determines the fee upon index token redemptions from range
-#[derive(Decode, Default, Encode)]
+#[derive(Clone, Decode, Debug, Default, Encode, PartialEq, Eq)]
 pub struct RedemptionFeeRange<BlockNumber> {
 	pub range: (BlockNumber, BlockNumber),
 	pub fee: (FeeRate, FeeRate, FeeRate),

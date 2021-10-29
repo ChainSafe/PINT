@@ -22,7 +22,10 @@ use orml_traits::{parameter_type_with_key, MultiCurrency};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use xcm::v1::MultiLocation;
 
-use primitives::AssetAvailability;
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AssetAvailability,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
@@ -119,6 +122,14 @@ parameter_types! {
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
 	pub const PINTAssetId: AssetId = 99;
+	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
+		range: (7, 30),
+		fee: (
+			FeeRate { numerator: 1, denominator: 10 },
+			FeeRate { numerator: 3, denominator: 100 },
+			FeeRate { numerator: 1, denominator: 100 }
+		),
+	};
 
 	// No fees for now
 	pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
@@ -143,7 +154,7 @@ impl pallet_asset_index::Config for Test {
 	type Balance = Balance;
 	type MaxDecimals = MaxDecimals;
 	type MaxActiveDeposits = MaxActiveDeposits;
-	type RedemptionFee = ();
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
 	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;

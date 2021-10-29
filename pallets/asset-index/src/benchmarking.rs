@@ -98,7 +98,7 @@ benchmarks! {
 		// start withdraw
 		assert_ok!(AssetIndex::<T>::withdraw(
 			origin.clone(),
-			42_u32.into(),
+			tokens,
 		));
 		let call = Call::<T>::complete_withdraw();
 	}: { call.dispatch_bypass_filter(origin)? } verify {
@@ -258,7 +258,7 @@ benchmarks! {
 				+ 1_u32.into(),
 		);
 
-		let call = Call::<T>::withdraw(42_u32.into());
+		let call = Call::<T>::withdraw(tokens);
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id).expect("pending withdrawals should be present").len(), 1);
 	}

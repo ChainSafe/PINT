@@ -95,7 +95,7 @@ parameter_types! {
 		range: (DAYS * 7, DAYS * 30),
 		fee: (
 			FeeRate { numerator: 1, denominator: 10 },
-			FeeRate { numerator: 1, denominator: 20 },
+			FeeRate { numerator: 3, denominator: 100 },
 			FeeRate { numerator: 1, denominator: 100 }
 		),
 	};

@@ -310,6 +310,8 @@ pub mod pallet {
 		IndexTokenDepositRangeUpdated(DepositRange<T::Balance>),
 		/// Lockup Period has been updated
 		NewLockupPeriod(T::BlockNumber),
+		/// RedemptionFeeRange has been updated
+		NewRedemptionFeeRange(RedemptionFeeRange<T::BlockNumber>),
 	}
 
 	#[pallet::error]
@@ -326,6 +328,8 @@ pub mod pallet {
 		NoDeposits,
 		/// Invalid metadata given.
 		BadMetadata,
+		/// Thrown when calculate reademption fee failed
+		CalculateRedemptionFeeFailed,
 		/// Thrown if no index could be found for an asset identifier.
 		UnsupportedAsset,
 		/// Thrown if the given amount of PINT to redeem is too low
@@ -348,14 +352,14 @@ pub mod pallet {
 		InvalidDecimals,
 		/// Thrown when the given DepositRange is invalid
 		InvalidDepositRange,
+		/// Thrown when the given RedemptionFeeRange is invalid
+		InvalidRedemptionFeeRange,
 		/// Attempted to set LockupPeriod out of the range of 1 day ~ 28 days
 		InvalidLockupPeriod,
 		/// The deposited amount is below the minimum value required.
 		DepositAmountBelowMinimum,
 		/// The deposited amount exceeded the cap allowed.
 		DepositExceedsMaximum,
-		/// Thrown when calculate reademption fee failed
-		CalculateRedemptionFeeFailed,
 	}
 
 	#[pallet::hooks]
@@ -471,9 +475,30 @@ pub mod pallet {
 			Ok(())
 		}
 
-		/// Set lockup period
+		/// Updates the range for redemption fee
 		///
-		/// only accept 1 ~ 28 days
+		/// Only callable by the admin origin
+		///
+		/// Parameters:
+		/// - `new_range`: The new valid range for redemption fee.
+		#[pallet::weight(T::WeightInfo::set_deposit_range())]
+		pub fn set_redemption_fee(
+			origin: OriginFor<T>,
+			new_range: RedemptionFeeRange<T::BlockNumber>,
+		) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			ensure!(new_range.range.0 < new_range.range.1, Error::<T>::InvalidRedemptionFeeRange);
+			RedemptionFee::<T>::set(new_range.clone());
+			Self::deposit_event(Event::<T>::NewRedemptionFeeRange(new_range));
+			Ok(())
+		}
+
+		/// Updates the lockup period
+		///
+		/// Only callable by the admin origin
+		///
+		/// Parameters:
+		/// - `lockup_period`: how long will the depositing assets will be locked
 		#[pallet::weight(T::WeightInfo::set_lockup_period())]
 		pub fn set_lockup_period(origin: OriginFor<T>, lockup_period: T::BlockNumber) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
