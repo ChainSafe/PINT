@@ -481,7 +481,7 @@ pub mod pallet {
 		///
 		/// Parameters:
 		/// - `new_range`: The new valid range for redemption fee.
-		#[pallet::weight(T::WeightInfo::set_deposit_range())]
+		#[pallet::weight(T::WeightInfo::set_redemption_fee())]
 		pub fn set_redemption_fee(
 			origin: OriginFor<T>,
 			new_range: RedemptionFeeRange<T::BlockNumber>,
@@ -895,7 +895,7 @@ pub mod pallet {
 						// the remaining amount is less than the oldest deposit, so we are simply updating the value of
 						// the now oldest deposit
 						rem = Some((index_tokens.saturating_sub(amount), *block_number));
-						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, *index_tokens) {
+						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, amount) {
 							total_fee = total_fee.saturating_add(fee);
 						} else {
 							calculate_redemption_fee_failed = true;
@@ -1482,6 +1482,7 @@ pub mod pallet {
 		fn set_metadata() -> Weight;
 		fn set_deposit_range() -> Weight;
 		fn set_lockup_period() -> Weight;
+		fn set_redemption_fee() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1523,6 +1524,10 @@ pub mod pallet {
 		}
 
 		fn set_lockup_period() -> Weight {
+			Default::default()
+		}
+
+		fn set_redemption_fee() -> Weight {
 			Default::default()
 		}
 	}
