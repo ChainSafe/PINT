@@ -15,7 +15,11 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
-use primitives::{traits::NavProvider, AssetAvailability};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	traits::NavProvider,
+	AssetAvailability,
+};
 use xcm::v1::MultiLocation;
 
 use crate::Pallet as AssetIndex;
@@ -60,11 +64,11 @@ benchmarks! {
 
 	complete_withdraw {
 		let asset_id : T::AssetId = T::try_convert(2u8).unwrap();
-		let units = 100_u32.into();
-		let tokens = 500_u32.into();
+		let units = 10_000u32.into();
+		let tokens = 50_000u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
-		let deposit_units = 1000_u32.into();
+		let deposit_units = 1_000_000u32.into();
 
 		// create liquid assets
 		assert_ok!(AssetIndex::<T>::register_asset(
@@ -98,7 +102,7 @@ benchmarks! {
 		// start withdraw
 		assert_ok!(AssetIndex::<T>::withdraw(
 			origin.clone(),
-			42_u32.into(),
+			tokens,
 		));
 		let call = Call::<T>::complete_withdraw();
 	}: { call.dispatch_bypass_filter(origin)? } verify {
@@ -224,11 +228,11 @@ benchmarks! {
 
 	withdraw {
 		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
-		let units = 100_u32.into();
-		let tokens = 500_u32.into();
+		let units = 10_000u32.into();
+		let tokens = 50_000u32.into();
 		let origin = T::AdminOrigin::successful_origin();
 		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
-		let deposit_units = 1_000_u32.into();
+		let deposit_units = 1_000_000u32.into();
 
 		// create liquid assets
 		assert_ok!(AssetIndex::<T>::register_asset(
@@ -258,7 +262,7 @@ benchmarks! {
 				+ 1_u32.into(),
 		);
 
-		let call = Call::<T>::withdraw(42_u32.into());
+		let call = Call::<T>::withdraw(tokens);
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id).expect("pending withdrawals should be present").len(), 1);
 	}
@@ -303,6 +307,19 @@ benchmarks! {
 		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
 	} verify {
 		assert_eq!(pallet::LockupPeriod::<T>::get(), week);
+	}
+
+	update_redemption_fees {
+		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
+		let range = RedemptionFeeRange {
+			range: [(week, FeeRate { numerator: 1, denominator: 10 }), (week * 4u32.into(), FeeRate { numerator: 1, denominator: 20 })],
+			default_fee: FeeRate { numerator: 1, denominator: 100 },
+		};
+		let call = Call::<T>::update_redemption_fees(range.clone());
+	}: {
+		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
+	} verify {
+		assert_eq!(pallet::RedemptionFee::<T>::get(), range);
 	}
 }
 

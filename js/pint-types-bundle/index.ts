@@ -116,6 +116,10 @@ export const definitions = {
                     add_proxy: "Weight",
                     remove_proxy: "Weight",
                 },
+                RedemptionFeeRange: {
+                    range: "[(BlockNumber, FeeRate); 2]",
+                    default_fee: "FeeRate",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,

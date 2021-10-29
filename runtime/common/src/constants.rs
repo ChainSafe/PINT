@@ -14,7 +14,10 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
-use primitives::{fee::FeeRate, AccountId, AssetId, Balance, BlockNumber};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AccountId, AssetId, Balance, BlockNumber,
+};
 use xcm::v1::MultiLocation;
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
@@ -45,6 +48,7 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+pub const WEEKS: BlockNumber = DAYS * 7;
 
 // Unit = the base number of indivisible units for balances
 pub const UNIT: Balance = 1_000_000_000_000;
@@ -87,6 +91,10 @@ parameter_types! {
 	pub const PINTAssetId: AssetId = 1;
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
+	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
+		range: [(DAYS * 7, FeeRate { numerator: 1, denominator: 10 }), (DAYS * 30, FeeRate{ numerator: 3, denominator: 100 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
+	};
 	pub const RelayChainAssetId: AssetId = 42;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();

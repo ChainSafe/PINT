@@ -525,8 +525,8 @@ fn deposit_fails_on_exceeding_limit() {
 
 #[test]
 fn redemption_fee_works_on_completing_withdraw() {
-	let deposit = 1_000;
-	let initial_units = 1_000;
+	let deposit = 1_000_000;
+	let initial_units = 1_000_000;
 
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::register_asset(
@@ -534,7 +534,12 @@ fn redemption_fee_works_on_completing_withdraw() {
 			ASSET_A_ID,
 			AssetAvailability::Liquid(MultiLocation::default())
 		));
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, initial_units));
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			initial_units / ASSET_A_PRICE_MULTIPLIER,
+			initial_units
+		));
 		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
 		for _ in 0..50 {
 			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, initial_units / 50));
@@ -544,19 +549,18 @@ fn redemption_fee_works_on_completing_withdraw() {
 
 		// advance the block number so that the lock expires
 		let total = AssetIndex::index_token_balance(&ASHLEY);
-		let current_block = frame_system::Pallet::<Test>::block_number();
 		let new_block_number = LockupPeriod::get() + 1;
 		frame_system::Pallet::<Test>::set_block_number(new_block_number);
 		assert_ok!(AssetIndex::withdraw(Origin::signed(ASHLEY), total * 99 / 100));
 		assert_ok!(AssetIndex::complete_withdraw(Origin::signed(ASHLEY)));
-		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit * 99 / 100);
 
-		// ensure the redemption fee hook works
-		let index_token_per_deposit = AssetIndex::index_token_equivalent(ASSET_A_ID, deposit).unwrap() / 50;
-		assert_eq!(
-			crate::LastRedemption::<Test>::get(),
-			(new_block_number - current_block, index_token_per_deposit / 2)
-		);
+		// times * deposit_amount * Rate.0 (1 / 10)
+		//
+		// ->
+		//
+		// (50 * (initial_units / 50) - initial_units / 100) * 1 / 10
+		let fee = initial_units * 99 / 1000;
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit * 99 / 100 - fee);
 
 		// all deposits has been cleaned
 		assert_eq!(crate::Deposits::<Test>::get(&ASHLEY)[0], (total / 100, 1_u64));

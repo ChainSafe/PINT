@@ -24,7 +24,10 @@ use frame_support::{
 use frame_system as system;
 use orml_traits::parameter_type_with_key;
 use pallet_price_feed::PriceFeed;
-use primitives::{fee::FeeRate, AssetPricePair, Price};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AssetPricePair, Price,
+};
 use sp_core::H256;
 use std::collections::HashMap;
 
@@ -153,18 +156,12 @@ parameter_types! {
 	pub MaxDecimals: u8 = 12;
 	pub MaxActiveDeposits: u32 = 50;
 	pub const PINTAssetId: AssetId = PINT_ASSET_ID;
-
+	pub const RedemptionFee: RedemptionFeeRange<<Test as system::Config>::BlockNumber> = RedemptionFeeRange {
+		range: [(14, FeeRate { numerator: 1, denominator: 10 }), (30, FeeRate { numerator: 1, denominator: 20 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
+	};
 	// No fees for now
 	pub const BaseWithdrawalFee: FeeRate = FeeRate{ numerator: 0, denominator: 1_000,};
-}
-
-pub struct RedemptionFee;
-
-impl primitives::traits::RedemptionFee<BlockNumber, Balance> for RedemptionFee {
-	fn redemption_fee(duration: BlockNumber, amount: Balance) -> Balance {
-		crate::LastRedemption::<Test>::set((duration, amount));
-		Default::default()
-	}
 }
 
 /// Range of lockup period
@@ -294,6 +291,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext = ExtBuilder::default().build();
 	ext.execute_with(|| {
 		crate::LockupPeriod::<Test>::set(LockupPeriod::get());
+		crate::RedemptionFee::<Test>::set(RedemptionFee::get());
 		System::set_block_number(1)
 	});
 
@@ -320,7 +318,6 @@ pub fn new_test_ext_with_balance(balances: Vec<(AccountId, AssetId, Balance)>) -
 	ext
 }
 
-#[cfg(feature = "runtime-benchmarks")]
 pub fn new_test_ext_from_genesis() -> sp_io::TestExternalities {
 	let mut ext = ExtBuilder::default().build();
 
