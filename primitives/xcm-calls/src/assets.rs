@@ -75,7 +75,7 @@ where
 /// Represents dispatchable calls of the FRAME `pallet_assets` pallet.
 ///
 /// *NOTE*: `Balance` and `AssetId` are expected to encode with `HasCompact`
-#[derive(Clone, PartialEq, RuntimeDebug)]
+#[derive(Clone, PartialEq, RuntimeDebug, scale_info::TypeInfo)]
 pub enum AssetsCall<AssetId, Source, Balance> {
 	/// The [`mint`](https://crates.parity.io/pallet_assets/pallet/enum.Call.html#variant.mint) extrinsic.
 	///
@@ -165,7 +165,7 @@ impl<AssetId, Source, Balance> PalletCall for AssetsCall<AssetId, Source, Balanc
 }
 
 /// Represents common parameters the `AssetsCall` enum
-#[derive(Clone, PartialEq, RuntimeDebug)]
+#[derive(Clone, PartialEq, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetParams<AssetId, Source, Balance> {
 	/// The identifier for the asset.
 	pub id: AssetId,
@@ -189,7 +189,7 @@ impl<AssetId, Source, Balance> AssetParams<AssetId, Source, Balance> {
 }
 
 /// The `pallet_assets` configuration for a particular chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AssetsConfig {
 	/// The index of `pallet_index` within the parachain's runtime
@@ -199,7 +199,7 @@ pub struct AssetsConfig {
 }
 
 /// Represents an excerpt from the `pallet_asset` weights
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct AssetsWeights {
 	/// Weight for `mint` extrinsic

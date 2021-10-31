@@ -55,10 +55,19 @@ pub mod pallet {
 		type Action: Parameter
 			+ Dispatchable<Origin = <Self as Config>::Origin, PostInfo = PostDispatchInfo>
 			+ From<frame_system::Call<Self>>
-			+ GetDispatchInfo;
+			+ GetDispatchInfo
+			+ scale_info::TypeInfo;
 
 		/// A unique number assigned to each new instance of a proposal
-		type ProposalNonce: Parameter + Member + One + Zero + Codec + Default + MaybeSerializeDeserialize + CheckedAdd;
+		type ProposalNonce: Parameter
+			+ Member
+			+ One
+			+ Zero
+			+ Codec
+			+ Default
+			+ MaybeSerializeDeserialize
+			+ CheckedAdd
+			+ scale_info::TypeInfo;
 
 		/// Duration (in blocks) of the proposal submission period
 		type ProposalSubmissionPeriod: Get<Self::BlockNumber>;
@@ -176,7 +185,6 @@ pub mod pallet {
 	// end storage defs
 
 	#[pallet::event]
-	#[pallet::metadata(T::ProposalNonce = "ProposalNonce",T::Hash = "Hash", AccountIdFor<T> = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new proposal has been created

@@ -7,7 +7,7 @@ use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::AtLeast32Bit;
 
 /// Represents the fee rate where fee_rate = numerator / denominator
-#[derive(Debug, Encode, Decode, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Encode, Decode, Copy, Clone, PartialEq, Eq, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct FeeRate {
 	pub numerator: u32,
@@ -43,7 +43,7 @@ impl BaseFee for u128 {
 }
 
 /// Determines the fee upon index token redemptions from range
-#[derive(Clone, Decode, Debug, Default, Encode, PartialEq, Eq)]
+#[derive(Clone, Decode, Debug, Default, Encode, PartialEq, Eq, scale_info::TypeInfo)]
 pub struct RedemptionFeeRange<BlockNumber> {
 	pub range: [(BlockNumber, FeeRate); 2],
 	pub default_fee: FeeRate,

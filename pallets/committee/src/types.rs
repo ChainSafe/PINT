@@ -10,18 +10,20 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum ProposalStatus {
 	Active,
 	Executed,
 	Timeout,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// This represents an instance of a proposal that can be voted on.
 /// It has been proposed and has an assigned nonce.
 /// This extra abstraction is required since it may be desirable construct
 /// multiple proposal instances out of a single proposal
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+#[codec(mel_bound(T: Config))]
+#[scale_info(skip_type_params(T))]
 pub struct Proposal<T: Config> {
 	pub action: T::Action,
 	pub issuer: T::AccountId,
@@ -39,18 +41,18 @@ impl<T: Config> Proposal<T> {
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council
 /// proposals
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub enum MemberType {
 	Council,
 	Constituent,
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Assignment of a member type to an accountId
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub struct CommitteeMember<AccountId> {
 	pub account_id: AccountId,
 	pub member_type: MemberType,
@@ -66,8 +68,8 @@ impl<AccountId> CommitteeMember<AccountId> {
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// A committee member together with their cast vote.
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub struct MemberVote<AccountId> {
 	pub member: CommitteeMember<AccountId>,
 	pub vote: VoteKind,
@@ -80,7 +82,7 @@ impl<AccountId> MemberVote<AccountId> {
 }
 
 /// Origin for the committee pallet.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
 	/// Action is executed by the committee. Contains the closer account and the
 	/// members that voted Aye
@@ -89,9 +91,9 @@ pub enum CommitteeOrigin<AccountId, BlockNumber> {
 	CommitteeMember(AccountId),
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
 /// Info for keeping track of a motion being voted on.
 /// Default is empty vectors for all votes
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default, scale_info::TypeInfo)]
 pub struct VoteAggregate<AccountId, BlockNumber> {
 	/// The current set of votes.
 	pub votes: Vec<MemberVote<AccountId>>,
@@ -172,7 +174,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 }
 
 /// Possible votes a member can cast
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum VoteKind {
 	Aye,
 	Nay,
