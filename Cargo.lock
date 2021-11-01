@@ -4563,6 +4563,114 @@ dependencies = [
 ]
 
 [[package]]
+name = "node-executor"
+version = "3.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-benchmarking",
+ "node-primitives",
+ "node-runtime",
+ "parity-scale-codec",
+ "sc-executor",
+ "scale-info",
+ "sp-core",
+ "sp-keystore",
+ "sp-state-machine",
+ "sp-trie",
+]
+
+[[package]]
+name = "node-primitives"
+version = "2.0.0"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-application-crypto",
+ "sp-core",
+ "sp-runtime",
+]
+
+[[package]]
+name = "node-runtime"
+version = "3.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-benchmarking",
+ "frame-election-provider-support",
+ "frame-executive",
+ "frame-support",
+ "frame-system",
+ "frame-system-rpc-runtime-api",
+ "frame-try-runtime",
+ "log",
+ "node-primitives",
+ "pallet-assets",
+ "pallet-authority-discovery",
+ "pallet-authorship",
+ "pallet-babe",
+ "pallet-bags-list",
+ "pallet-balances",
+ "pallet-bounties",
+ "pallet-collective",
+ "pallet-contracts",
+ "pallet-contracts-primitives",
+ "pallet-contracts-rpc-runtime-api",
+ "pallet-democracy",
+ "pallet-election-provider-multi-phase",
+ "pallet-elections-phragmen",
+ "pallet-gilt",
+ "pallet-grandpa",
+ "pallet-identity",
+ "pallet-im-online",
+ "pallet-indices",
+ "pallet-lottery",
+ "pallet-membership",
+ "pallet-mmr",
+ "pallet-multisig",
+ "pallet-offences",
+ "pallet-proxy",
+ "pallet-randomness-collective-flip",
+ "pallet-recovery",
+ "pallet-scheduler",
+ "pallet-session",
+ "pallet-society",
+ "pallet-staking",
+ "pallet-staking-reward-curve",
+ "pallet-sudo",
+ "pallet-timestamp",
+ "pallet-tips",
+ "pallet-transaction-payment",
+ "pallet-transaction-payment-rpc-runtime-api",
+ "pallet-transaction-storage",
+ "pallet-treasury",
+ "pallet-uniques",
+ "pallet-utility",
+ "pallet-vesting",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-authority-discovery",
+ "sp-block-builder",
+ "sp-consensus-babe",
+ "sp-core",
+ "sp-inherents",
+ "sp-io",
+ "sp-keyring 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12)",
+ "sp-npos-elections",
+ "sp-offchain",
+ "sp-runtime",
+ "sp-session",
+ "sp-staking",
+ "sp-std",
+ "sp-transaction-pool",
+ "sp-version",
+ "static_assertions",
+ "substrate-wasm-builder",
+]
+
+[[package]]
 name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5199,6 +5307,70 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-contracts"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "bitflags",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "libsecp256k1 0.6.0",
+ "log",
+ "pallet-contracts-primitives",
+ "pallet-contracts-proc-macro",
+ "parity-scale-codec",
+ "pwasm-utils",
+ "rand 0.7.3",
+ "scale-info",
+ "serde",
+ "smallvec",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-sandbox",
+ "sp-std",
+ "wasmi-validation",
+]
+
+[[package]]
+name = "pallet-contracts-primitives"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "bitflags",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-contracts-proc-macro"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "proc-macro2 1.0.30",
+ "quote 1.0.10",
+ "syn 1.0.80",
+]
+
+[[package]]
+name = "pallet-contracts-rpc-runtime-api"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "pallet-contracts-primitives",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-api",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-democracy"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044#d76f39995315ec36980908e4b99709bd14927044"
@@ -5342,7 +5514,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-io",
- "sp-keyring",
+ "sp-keyring 4.0.0-dev (git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044)",
  "sp-runtime",
  "sp-std",
 ]
@@ -5361,6 +5533,19 @@ dependencies = [
  "sp-core",
  "sp-io",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-lottery"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -5868,6 +6053,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-transaction-storage"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-inherents",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "sp-transaction-storage-proof 4.0.0-dev (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12)",
+]
+
+[[package]]
 name = "pallet-treasury"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044#d76f39995315ec36980908e4b99709bd14927044"
@@ -5880,6 +6083,20 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-uniques"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
  "sp-runtime",
  "sp-std",
 ]
@@ -6302,6 +6519,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 name = "pint"
 version = "3.0.0"
 dependencies = [
+ "async-trait",
  "cumulus-client-cli",
  "cumulus-client-collator",
  "cumulus-client-consensus-aura",
@@ -6321,6 +6539,7 @@ dependencies = [
  "hex-literal",
  "jsonrpc-core",
  "log",
+ "node-executor",
  "pallet-asset-index-rpc",
  "pallet-transaction-payment-rpc",
  "pallet-transaction-payment-rpc-runtime-api",
@@ -8416,6 +8635,7 @@ dependencies = [
  "orml-xtokens",
  "pallet-asset-index",
  "pallet-assets",
+ "pallet-bags-list",
  "pallet-balances",
  "pallet-committee",
  "pallet-price-feed",
@@ -8438,6 +8658,7 @@ dependencies = [
  "scale-info",
  "sp-core",
  "sp-io",
+ "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
  "xcm",
@@ -8684,7 +8905,7 @@ dependencies = [
  "serde_json",
  "sp-blockchain",
  "sp-core",
- "sp-keyring",
+ "sp-keyring 4.0.0-dev (git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044)",
  "sp-keystore",
  "sp-panic-handler",
  "sp-runtime",
@@ -9384,7 +9605,7 @@ dependencies = [
  "sp-storage",
  "sp-tracing",
  "sp-transaction-pool",
- "sp-transaction-storage-proof",
+ "sp-transaction-storage-proof 4.0.0-dev (git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044)",
  "sp-trie",
  "sp-version",
  "substrate-prometheus-endpoint",
@@ -10300,6 +10521,17 @@ dependencies = [
 [[package]]
 name = "sp-keyring"
 version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "lazy_static",
+ "sp-core",
+ "sp-runtime",
+ "strum 0.20.0",
+]
+
+[[package]]
+name = "sp-keyring"
+version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044#d76f39995315ec36980908e4b99709bd14927044"
 dependencies = [
  "lazy_static",
@@ -10439,6 +10671,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sp-sandbox"
+version = "0.10.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "log",
+ "parity-scale-codec",
+ "sp-core",
+ "sp-io",
+ "sp-std",
+ "sp-wasm-interface",
+ "wasmi",
+]
+
+[[package]]
 name = "sp-serializer"
 version = "3.0.0"
 source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044#d76f39995315ec36980908e4b99709bd14927044"
@@ -10561,6 +10807,18 @@ source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec3698090
 dependencies = [
  "sp-api",
  "sp-runtime",
+]
+
+[[package]]
+name = "sp-transaction-storage-proof"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+ "sp-inherents",
+ "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]
@@ -11651,6 +11909,7 @@ checksum = "ca00c5147c319a8ec91ec1a0edbec31e566ce2c9cc93b3f9bb86a9efd0eb795d"
 dependencies = [
  "downcast-rs",
  "libc",
+ "libm",
  "memory_units",
  "num-rational 0.2.4",
  "num-traits",

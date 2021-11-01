@@ -12,6 +12,7 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-bags-list = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
@@ -23,6 +24,7 @@ sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-
 sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 # polkadot
 kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }

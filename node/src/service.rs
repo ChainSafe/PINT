@@ -8,7 +8,7 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-
+use sc_consensus_aura::StartAuraParams;
 // Substrate Imports
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 use sc_chain_spec::ChainSpec;
@@ -19,7 +19,6 @@ use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sc_transaction_pool::BasicPool;
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
@@ -29,8 +28,6 @@ use sp_trie::PrefixedMemoryDB;
 use substrate_prometheus_endpoint::Registry;
 
 use std::sync::Arc;
-
-use crate::instant_finalize;
 
 use crate::client::*;
 
@@ -58,7 +55,7 @@ impl sc_executor::NativeExecutionDispatch for DevExecutorDispatch {
 }
 
 #[cfg(feature = "with-kusama-runtime")]
-mod karura_executor {
+mod kusama_executor {
 	pub use pint_runtime_kusama;
 
 	pub struct KusamaExecutorDispatch;
@@ -119,10 +116,11 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 }
 
 /// PINT's full backend.
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 
 /// PINT's full client.
-type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+pub type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 
 /// Maybe PINT Dev full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
@@ -228,7 +226,7 @@ where
 	} else {
 		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-		cumulus_client_consensus_aura::import_queue::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
+		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
 			cumulus_client_consensus_aura::ImportQueueParams {
 				block_import: client.clone(),
 				client: client.clone(),
@@ -512,7 +510,7 @@ where
 pub const KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
 	"pint-kusama runtime is not available. Please compile the node with `--features kusama` to enable it.";
 #[allow(dead_code)]
-pub const pint_runtime_polkadot_NOT_AVAILABLE: &str =
+pub const POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
 	"pint-polkadot runtime is not available. Please compile the node with `--features polkadot` to enable it.";
 
 /// Builds a new object suitable for chain operations.
@@ -547,7 +545,7 @@ pub fn new_chain_ops(
 		}
 
 		#[cfg(not(feature = "polkadot"))]
-		Err(pint_runtime_polkadot_NOT_AVAILABLE.into())
+		Err(POLKADOT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		let PartialComponents { client, backend, import_queue, task_manager, .. } =
 			new_partial(config, config.chain_spec.is_dev(), false)?;
@@ -639,7 +637,7 @@ fn inner_pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskMa
 				slot_duration: sc_consensus_aura::slot_duration(&*client)?,
 				client: client.clone(),
 				select_chain,
-				block_import: instant_finalize::InstantFinalizeBlockImport::new(client.clone()),
+				block_import: crate::instant_finalize::InstantFinalizeBlockImport::new(client.clone()),
 				proposer_factory,
 				create_inherent_data_providers: move |_, ()| async move {
 					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
