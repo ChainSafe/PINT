@@ -163,6 +163,7 @@ std = [
 	'pallet-sudo/std',
 	'pallet-session/std',
 	'pallet-transaction-payment/std',
+	'pallet-xcm/std',
 
 	'parachain-info/std',
 	'cumulus-pallet-aura-ext/std',

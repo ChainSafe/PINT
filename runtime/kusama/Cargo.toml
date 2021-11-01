@@ -188,6 +188,7 @@ std = [
 	'primitives/std',
 	'pallet-asset-index-rpc-runtime-api/std',
 	'pallet-chainlink-feed/std',
+	'pallet-xcm/std',
 
 	'orml-currencies/std',
 	'orml-unknown-tokens/std',
