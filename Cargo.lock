@@ -5303,7 +5303,9 @@ dependencies = [
  "log",
  "parity-scale-codec",
  "scale-info",
+ "sp-api",
  "sp-core",
+ "sp-io",
 ]
 
 [[package]]
@@ -5530,9 +5532,9 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-api",
  "sp-core",
  "sp-io",
- "sp-runtime",
 ]
 
 [[package]]
@@ -5789,6 +5791,7 @@ dependencies = [
  "primitives",
  "scale-info",
  "serde",
+ "sp-api",
  "sp-core",
  "sp-io",
  "sp-runtime",
@@ -5816,9 +5819,9 @@ dependencies = [
  "primitives",
  "scale-info",
  "serde",
+ "sp-api",
  "sp-core",
  "sp-io",
- "sp-runtime",
  "xcm",
  "xcm-executor",
 ]

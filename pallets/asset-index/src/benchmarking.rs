@@ -31,7 +31,7 @@ benchmarks! {
 	add_asset {
 		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone())?;
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 		let million = 1_000_000u32.into();
 		let location = MultiLocation::default();
 
@@ -45,11 +45,11 @@ benchmarks! {
 
 		T::Currency::deposit(asset_id, &origin_account_id, million)?;
 
-		let call = Call::<T>::add_asset(
-					asset_id,
-					million,
-					million
-		);
+		let call = Call::<T>::add_asset{
+					asset_id: asset_id,
+					units: million,
+					amount: million
+		};
 		let balance = T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account());
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
@@ -104,7 +104,7 @@ benchmarks! {
 			origin.clone(),
 			tokens,
 		));
-		let call = Call::<T>::complete_withdraw();
+		let call = Call::<T>::complete_withdraw{};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id), None);
 	}
@@ -135,7 +135,7 @@ benchmarks! {
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 
 		// construct call
-		let call = Call::<T>::deposit(asset_id, units);
+		let call = Call::<T>::deposit{asset_id: asset_id, units: units};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		let nav = AssetIndex::<T>::nav().unwrap();
 		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
@@ -186,10 +186,10 @@ benchmarks! {
 		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let availability = AssetAvailability::Saft;
-		let call = Call::<T>::register_asset(
+		let call = Call::<T>::register_asset {
 						asset_id,
 						availability,
-		);
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			AssetIndex::<T>::assets(asset_id),
@@ -203,12 +203,12 @@ benchmarks! {
 		let symbol = b"pint".to_vec();
 		let decimals = 8_u8;
 		let origin = T::AdminOrigin::successful_origin();
-		let call = Call::<T>::set_metadata(
-						asset_id,
-						name.clone(),
-						symbol.clone(),
+		let call = Call::<T>::set_metadata {
+						id: asset_id,
+						name: name.clone(),
+						symbol: symbol.clone(),
 						decimals
-		);
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		let metadata = Metadata::<T>::get(asset_id);
 		assert_eq!(metadata.name.as_slice(), name.as_slice());
@@ -219,9 +219,9 @@ benchmarks! {
 	set_deposit_range {
 		let origin = T::AdminOrigin::successful_origin();
 		let range = DepositRange {minimum : T::Balance::one(), maximum: T::Balance::max_value()};
-		let call = Call::<T>::set_deposit_range(
-						range.clone()
-		);
+		let call = Call::<T>::set_deposit_range{
+						new_range: range.clone()
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(range, IndexTokenDepositRange::<T>::get());
 	}
@@ -262,7 +262,7 @@ benchmarks! {
 				+ 1_u32.into(),
 		);
 
-		let call = Call::<T>::withdraw(tokens);
+		let call = Call::<T>::withdraw { amount: tokens };
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id).expect("pending withdrawals should be present").len(), 1);
 	}
@@ -292,7 +292,7 @@ benchmarks! {
 		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, units));
 
-		let call = Call::<T>::unlock();
+		let call = Call::<T>::unlock{};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(pallet::IndexTokenLocks::<T>::get(&origin_account_id), vec![types::IndexTokenLock{
 			locked: AssetIndex::<T>::index_token_equivalent(asset_id, units).unwrap(),
@@ -302,7 +302,7 @@ benchmarks! {
 
 	set_lockup_period {
 		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
-		let call = Call::<T>::set_lockup_period(week);
+		let call = Call::<T>::set_lockup_period{ lockup_period: week} ;
 	}: {
 		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
 	} verify {
@@ -315,7 +315,7 @@ benchmarks! {
 			range: [(week, FeeRate { numerator: 1, denominator: 10 }), (week * 4u32.into(), FeeRate { numerator: 1, denominator: 20 })],
 			default_fee: FeeRate { numerator: 1, denominator: 100 },
 		};
-		let call = Call::<T>::update_redemption_fees(range.clone());
+		let call = Call::<T>::update_redemption_fees { new_range: range.clone()};
 	}: {
 		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
 	} verify {

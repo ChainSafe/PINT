@@ -14,10 +14,10 @@ benchmarks! {
 		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let feed_id = 0u32.try_into().ok().unwrap();
-		let call = Call::<T>::map_asset_price_feed(
-					asset_id.clone(),
-					feed_id
-		);
+		let call = Call::<T>::map_asset_price_feed {
+					asset_id: asset_id.clone(),
+					feed_id: feed_id
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			PriceFeed::<T>::asset_feed(asset_id),
@@ -30,9 +30,9 @@ benchmarks! {
 		let origin = T::AdminOrigin::successful_origin();
 		let feed_id = 0u32.try_into().ok().unwrap();
 		assert_ok!(PriceFeed::<T>::map_asset_price_feed(origin.clone(), asset_id.clone(), feed_id));
-		let call = Call::<T>::unmap_asset_price_feed(
-					asset_id.clone(),
-		);
+		let call = Call::<T>::unmap_asset_price_feed {
+					asset_id: asset_id.clone(),
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			PriceFeed::<T>::asset_feed(asset_id),
