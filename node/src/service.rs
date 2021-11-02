@@ -54,7 +54,7 @@ impl sc_executor::NativeExecutionDispatch for DevExecutorDispatch {
 	}
 }
 
-#[cfg(feature = "with-kusama-runtime")]
+#[cfg(feature = "pint-kusama-runtime")]
 mod kusama_executor {
 	pub use pint_runtime_kusama;
 
@@ -72,7 +72,7 @@ mod kusama_executor {
 	}
 }
 
-#[cfg(feature = "with-polkadot-runtime")]
+#[cfg(feature = "pint-runtime-polkadot")]
 mod polkadot_executor {
 	pub use pint_runtime_polkadot;
 
@@ -90,9 +90,9 @@ mod polkadot_executor {
 	}
 }
 
-#[cfg(feature = "with-kusama-runtime")]
+#[cfg(feature = "pint-kusama-runtime")]
 pub use kusama_executor::*;
-#[cfg(feature = "with-polkadot-runtime")]
+#[cfg(feature = "pint-polkadot-runtime")]
 pub use polkadot_executor::*;
 
 pub trait IdentifyVariant {
