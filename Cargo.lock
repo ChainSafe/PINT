@@ -5535,6 +5535,7 @@ dependencies = [
  "sp-api",
  "sp-core",
  "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
@@ -12350,6 +12351,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "pallet-assets",
+ "pallet-bags-list",
  "pallet-balances",
  "pallet-proxy",
  "pallet-session",
@@ -12360,6 +12362,7 @@ dependencies = [
  "scale-info",
  "serde",
  "sp-core",
+ "sp-npos-elections",
  "sp-runtime",
  "sp-staking",
  "xcm",

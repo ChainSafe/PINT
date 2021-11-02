@@ -30,6 +30,8 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'p
 pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-bags-list = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 # Polkadot Dependencies
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.12' }

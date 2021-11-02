@@ -151,10 +151,10 @@ mod tests {
 			SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| x.0.clone()).collect(), HashSet::new()));
 		}
 
-		fn on_disabled(validator_index: usize) {
+		fn on_disabled(validator_index: u32) {
 			SESSION.with(|d| {
 				let mut d = d.borrow_mut();
-				let value = d.0[validator_index];
+				let value = d.0[validator_index as usize];
 				d.1.insert(value);
 			})
 		}
@@ -188,8 +188,22 @@ mod tests {
 			// use statemint index 50
 			Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
 
+			BagsList: pallet_bags_list::{Pallet, Call, Storage, Event<T>},
 		}
 	);
+
+	const THRESHOLDS: [sp_npos_elections::VoteWeight; 9] = [10, 20, 30, 40, 50, 60, 1_000, 2_000, 10_000];
+
+	parameter_types! {
+		pub static BagThresholds: &'static [sp_npos_elections::VoteWeight] = &THRESHOLDS;
+	}
+
+	impl pallet_bags_list::Config for Test {
+		type Event = Event;
+		type WeightInfo = ();
+		type VoteWeightProvider = Staking;
+		type BagThresholds = BagThresholds;
+	}
 
 	/// Author of block is always 11
 	pub struct Author11;
@@ -269,7 +283,6 @@ mod tests {
 		type Event = Event;
 		type ValidatorId = AccountId;
 		type ValidatorIdOf = pallet_staking::StashOf<Test>;
-		type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 		type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
 		type WeightInfo = ();
 	}
@@ -301,6 +314,7 @@ mod tests {
 		pub const BondingDuration: EraIndex = 3;
 		pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
 		pub const MaxNominatorRewardedPerValidator: u32 = 64;
+		pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(75);
 	}
 
 	thread_local! {
@@ -342,6 +356,8 @@ mod tests {
 		type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
 		type GenesisElectionProvider = Self::ElectionProvider;
 		type WeightInfo = ();
+		type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
+		type SortedListProvider = BagsList;
 	}
 
 	parameter_types! {
@@ -354,7 +370,9 @@ mod tests {
 	}
 
 	/// The type used to represent the kinds of proxying allowed.
-	#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen)]
+	#[derive(
+		Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, scale_info::TypeInfo,
+	)]
 	pub enum ProxyType {
 		Any = 0,
 		NonTransfer = 1,
@@ -496,7 +514,7 @@ mod tests {
 
 	#[test]
 	fn test_pallet_staking_call_codec() {
-		let bond_extra = PalletStakingCall::bond_extra(100);
+		let bond_extra = PalletStakingCall::bond_extra { max_additional: 100 };
 		let call: Call = bond_extra.into();
 		let mut encoded: DoubleEncoded<Call> = call.encode().into();
 		assert!(encoded.ensure_decoded().is_ok());
@@ -506,7 +524,7 @@ mod tests {
 	#[test]
 	fn can_encode_decode_bond_extra() {
 		let xcm_bond_extra = XcmStakingCall::BondExtra(100);
-		let call = PalletStakingCall::bond_extra(100);
+		let call = PalletStakingCall::bond_extra { max_additional: 100 };
 		let xcm_encoder = xcm_bond_extra.encoder::<PalletStakingEncoder>(&0);
 
 		encode_decode_call!(PalletStakingCall, call, xcm_encoder, POLKADOT_PALLET_STAKING_INDEX);
@@ -519,7 +537,7 @@ mod tests {
 
 		let xcm_bond =
 			XcmStakingCall::Bond(Bond { controller, value, payee: super::staking::RewardDestination::Stash });
-		let call = PalletStakingCall::bond(controller, value, pallet_staking::RewardDestination::Stash);
+		let call = PalletStakingCall::bond { controller, value, payee: pallet_staking::RewardDestination::Stash };
 
 		let xcm_encoder = xcm_bond.encoder::<PalletStakingEncoder>(&0);
 
@@ -529,7 +547,7 @@ mod tests {
 	#[test]
 	fn can_encode_decode_unbond() {
 		let xcm_unbond = XcmStakingCall::Unbond(100);
-		let call = PalletStakingCall::unbond(100);
+		let call = PalletStakingCall::unbond { value: 100 };
 		let xcm_encoder = xcm_unbond.encoder::<PalletStakingEncoder>(&0);
 
 		encode_decode_call!(PalletStakingCall, call, xcm_encoder, POLKADOT_PALLET_STAKING_INDEX);
@@ -539,7 +557,7 @@ mod tests {
 	fn can_encode_decode_add_proxy() {
 		let delegate = 1337;
 		let xcm_add_proxy = XcmProxyCall::AddProxy(ProxyParams { delegate, proxy_type: ProxyType::Staking, delay: 0 });
-		let call = PalletProxyCall::add_proxy(delegate, ProxyType::Staking, 0);
+		let call = PalletProxyCall::add_proxy { delegate, proxy_type: ProxyType::Staking, delay: 0 };
 		let xcm_encoder = xcm_add_proxy.encoder::<PalletProxyEncoder>(&0);
 
 		encode_decode_call!(PalletProxyCall, call, xcm_encoder, POLKADOT_PALLET_PROXY_INDEX);
@@ -551,7 +569,7 @@ mod tests {
 		let xcm_remove_proxy =
 			XcmProxyCall::RemoveProxy(ProxyParams { delegate, proxy_type: ProxyType::Any, delay: 0 });
 
-		let call = PalletProxyCall::remove_proxy(delegate, ProxyType::Any, 0);
+		let call = PalletProxyCall::remove_proxy { delegate, proxy_type: ProxyType::Any, delay: 0 };
 		let xcm_encoder = xcm_remove_proxy.encoder::<PalletProxyEncoder>(&0);
 
 		encode_decode_call!(PalletProxyCall, call, xcm_encoder, POLKADOT_PALLET_PROXY_INDEX);
@@ -564,7 +582,7 @@ mod tests {
 		let amount = 99;
 		let xmc_call = XcmAssetsCall::Mint(AssetParams { id, beneficiary, amount });
 
-		let call = PalletAssetsCall::mint(id, beneficiary, amount);
+		let call = PalletAssetsCall::mint { id, beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -578,7 +596,7 @@ mod tests {
 		let amount = 4572934273;
 		let xmc_call = XcmAssetsCall::Burn(AssetParams { id, beneficiary, amount });
 
-		let call = PalletAssetsCall::burn(id, beneficiary, amount);
+		let call = PalletAssetsCall::burn { id, who: beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -592,7 +610,7 @@ mod tests {
 		let amount = 4572934273;
 		let xmc_call = XcmAssetsCall::Transfer(AssetParams { id, beneficiary, amount });
 
-		let call = PalletAssetsCall::transfer(id, beneficiary, amount);
+		let call = PalletAssetsCall::transfer { id, target: beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -607,7 +625,7 @@ mod tests {
 		let amount = 4572934273;
 		let xmc_call = XcmAssetsCall::ForceTransfer(id, source, beneficiary, amount);
 
-		let call = PalletAssetsCall::force_transfer(id, source, beneficiary, amount);
+		let call = PalletAssetsCall::force_transfer { id, source, dest: beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -620,7 +638,7 @@ mod tests {
 		let source = 3249234342;
 		let xmc_call = XcmAssetsCall::Freeze(id, source);
 
-		let call = PalletAssetsCall::freeze(id, source);
+		let call = PalletAssetsCall::freeze { id, who: source };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -633,7 +651,7 @@ mod tests {
 		let source = 3249234342;
 		let xmc_call = XcmAssetsCall::Thaw(id, source);
 
-		let call = PalletAssetsCall::thaw(id, source);
+		let call = PalletAssetsCall::thaw { id, who: source };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -645,7 +663,7 @@ mod tests {
 		let id = 2342;
 		let xmc_call = XcmAssetsCall::FreezeAsset(id);
 
-		let call = PalletAssetsCall::freeze_asset(id);
+		let call = PalletAssetsCall::freeze_asset { id };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -657,7 +675,7 @@ mod tests {
 		let id = 2342;
 		let xmc_call = XcmAssetsCall::ThawAsset(id);
 
-		let call = PalletAssetsCall::thaw_asset(id);
+		let call = PalletAssetsCall::thaw_asset { id };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -671,7 +689,7 @@ mod tests {
 		let amount = 4572934273;
 		let xmc_call = XcmAssetsCall::ApproveTransfer(AssetParams { id, beneficiary, amount });
 
-		let call = PalletAssetsCall::approve_transfer(id, beneficiary, amount);
+		let call = PalletAssetsCall::approve_transfer { id, delegate: beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
@@ -686,7 +704,7 @@ mod tests {
 		let amount = 4572934273;
 		let xmc_call = XcmAssetsCall::TransferApproved(id, source, beneficiary, amount);
 
-		let call = PalletAssetsCall::transfer_approved(id, source, beneficiary, amount);
+		let call = PalletAssetsCall::transfer_approved { id, owner: source, destination: beneficiary, amount };
 
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 

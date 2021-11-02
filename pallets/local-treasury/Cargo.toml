@@ -24,6 +24,7 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', features = ["runtime-benchmarks"] }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
