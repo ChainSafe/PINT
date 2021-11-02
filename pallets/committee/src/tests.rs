@@ -28,7 +28,7 @@ const CONSTITUENT: u64 = 42;
 
 /// value is used to make unique actions
 fn make_action(value: u64) -> Call {
-	Call::System(system::Call::remark(value.encode()))
+	Call::System(system::Call::remark { remark: value.encode() })
 }
 
 fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
@@ -507,7 +507,7 @@ fn propose_constituent_works() {
 		// propose a new constituent
 		assert_ok!(Committee::propose(
 			Origin::signed(PROPOSER_ACCOUNT_ID),
-			Box::new(Call::Committee(crate::Call::add_constituent(CONSTITUENT)))
+			Box::new(Call::Committee(crate::Call::add_constituent { constituent: CONSTITUENT }))
 		));
 
 		// test if proposal submitted with event
