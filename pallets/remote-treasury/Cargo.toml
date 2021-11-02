@@ -35,7 +35,7 @@ serde = { version = "1.0.101" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.12" }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', features = ["runtime-benchmarks"] }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
