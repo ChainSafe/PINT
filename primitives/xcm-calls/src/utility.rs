@@ -3,18 +3,16 @@
 
 //! Xcm support for dispatching `pallet_utility` pallet calls
 
-use codec::{Decode, Encode, MaxEncodedLen, Output};
-use frame_support::{sp_std::vec::Vec, weights::Weight, RuntimeDebug};
-#[cfg(feature = "std")]
-use serde::{Deserialize, Serialize};
+use codec::{Decode, Encode, Output};
+use frame_support::{sp_std::vec::Vec, RuntimeDebug};
 
-use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
+use crate::{CallEncoder, PalletCall, PalletCallEncoder};
 
 /// The index of `pallet_utility` in the polkadot runtime
-pub const POLKADOT_PALLET_UTILITY_INDEX: u8 = 29u8;
+pub const POLKADOT_PALLET_UTILITY_INDEX: u8 = 26u8;
 
-/// The identifier the `ProxyType::Staking` variant encodes to
-pub const POLKADOT_PALLET_UTILITY_TYPE_STAKING_INDEX: u8 = 3u8;
+/// The index of `pallet_utility` in the polkadot runtime
+pub const KUSAMA_PALLET_UTILITY_INDEX: u8 = 24u8;
 
 pub trait UtilityCallEncoder: PalletCallEncoder {}
 

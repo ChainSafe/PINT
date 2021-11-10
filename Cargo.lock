@@ -12404,6 +12404,7 @@ dependencies = [
  "pallet-staking",
  "pallet-staking-reward-curve",
  "pallet-timestamp",
+ "pallet-utility",
  "parity-scale-codec",
  "scale-info",
  "serde",

@@ -184,7 +184,10 @@ mod tests {
 	};
 
 	use super::*;
-	use crate::assets::{AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX};
+	use crate::{
+		assets::{AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX},
+		utility::{UtilityCall, UtilityCallEncoder},
+	};
 	use frame_support::traits::Everything;
 
 	/// The AccountId alias in this test module.
@@ -245,6 +248,7 @@ mod tests {
 			System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+			Utility: pallet_utility::{Pallet, Call, Event},
 
 			// use polkadot index 7
 			Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
@@ -265,6 +269,12 @@ mod tests {
 
 	parameter_types! {
 		pub static BagThresholds: &'static [sp_npos_elections::VoteWeight] = &THRESHOLDS;
+	}
+
+	impl pallet_utility::Config for Test {
+		type Event = Event;
+		type Call = Call;
+		type WeightInfo = ();
 	}
 
 	impl pallet_bags_list::Config for Test {
@@ -510,6 +520,16 @@ mod tests {
 		type Freezer = ();
 		type WeightInfo = ();
 		type Extra = ();
+	}
+
+	struct PalletUtilityEncoder;
+	impl UtilityCallEncoder for PalletUtilityEncoder {}
+
+	impl PalletCallEncoder for PalletUtilityEncoder {
+		type Context = AssetId;
+		fn can_encode(_ctx: &u64) -> bool {
+			true
+		}
 	}
 
 	struct PalletStakingEncoder;
@@ -778,5 +798,16 @@ mod tests {
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
 		encode_decode_call!(PalletAssetsCall, call, xcm_encoder, STATEMINT_PALLET_ASSETS_INDEX);
+	}
+
+	#[test]
+	fn can_encode_decode() {
+		let dest = 1;
+		let value = 1_000;
+		let transfers = vec![
+			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
+			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
+		];
+		let xcm_call = UtilityCall::BatchAll(transfers);
 	}
 }
