@@ -1,12 +1,15 @@
 # Polkadot Index Network Token (PINT :beer:)
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](http://www.gnu.org/licenses/lgpl-3.0)
+[![rustdocs](https://img.shields.io/badge/docs-rust-yellow)](https://chainsafe.github.io/PINT/api/pint_runtime_dev/)
 
 A Polkadot ecosystem index for investors. A self sustaining auction treasury for parachains.
 
-Organized by the Stateless Money validator, governed by a community that includes Polychain Capital, Hypersphere Ventures, HashKey Capital, Acala, and built by ChainSafe as a StakerDAO product. 
+Organized by the Stateless Money validator, governed by a community that includes Polychain Capital, Hypersphere
+Ventures, HashKey Capital, Acala, and built by ChainSafe as a StakerDAO product.
 
-For more information on the project please visit [Polkadot Index Network Token](https://docs.polkadotindex.com/) documentation.
+For more information on the project please visit [Polkadot Index Network Token](https://docs.polkadotindex.com/)
+documentation.
 
 ❗**Current development should be considered a work in progress.**
 
@@ -21,12 +24,13 @@ Follow these steps to prepare a local Substrate development environment :hammer_
 
 ### Setup
 
-This project currently builds against Rust nightly-2021-01-26. Assuming you have rustup already insatlled set up your local environment:
+This project currently builds against Rust nightly-2021-08-01. Assuming you have rustup already insatlled set up your
+local environment:
 
 ```shell
-rustup install nightly-2021-01-26
-rustup target add wasm32-unknown-unknown --toolchain nightly-2021-01-26
-rustup override set nightly-2021-01-26
+rustup install nightly-2021-08-01
+rustup target add wasm32-unknown-unknown --toolchain nightly-2021-08-01
+rustup override set nightly-2021-08-01
 ``` 
 
 ### Build
@@ -39,15 +43,42 @@ Once the development environment is set up, build the node template. This comman
 cargo build --release
 ```
 
-Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run out of memory. Try freeing some memory or build on another machine.
+Note: If the build fails with `(signal: 9, SIGKILL: kill)` it has probably run out of memory. Try freeing some memory or
+build on another machine.
 
 ## Run
+
+### Development Chain
+
+You can start a standalone development chain with instant sealing:
+
+```bash
+cargo run -- --tmp --dev --instant-sealing
+```
+
+Use a chain spec file with pre funded Developer accounts
+
+```bash
+cargo run -- --tmp --chain ./resources/pint-dev.json --instant-sealing
+```
+
+__NOTE: the amount of PINT in all the endowed accounts (dev accounts) of the balances pallet (
+see [pint-dev.json](resources/pint-dev.json)) directly affects the NAV, since this is the total amount of PINT in
+curculation at genesis__
+
+Or if already built
+
+```bash
+./target/release/pint --tmp --dev --instant-sealing
+```
+
+This will use the [`node/src/chain_spec/dev.rs`](node/src/chain_spec/dev.rs) chain spec.
 
 ### Local Testnet
 
 Polkadot (release-v0.9.x branch)
 
-```
+```bash
 cargo build --release
 
 ./target/release/polkadot build-spec --chain rococo-local --raw --disable-default-bootnode > rococo_local.json
@@ -59,20 +90,21 @@ cargo build --release
 
 PINT Parachain:
 
-```
+```bash
 # this command assumes the chain spec is in a directory named polkadot that is a sibling of the pint directory
 ./target/release/pint --collator --alice --chain pint-dev --ws-port 9945 --parachain-id 200 --rpc-cors all -- --execution wasm --chain ../polkadot/rococo_local.json --ws-port 9977 --rpc-cors all
 ```
 
 ### Registering on Local Relay Chain
 
-In order to produce blocks you will need to register the parachain as detailed in the [Substrate Cumulus Workshop](https://substrate.dev/cumulus-workshop/#/en/3-parachains/2-register) by going to
+In order to produce blocks you will need to register the parachain as detailed in
+the [Substrate Cumulus Workshop](https://substrate.dev/cumulus-workshop/#/en/3-parachains/2-register) by going to
 
 Developer -> sudo -> paraSudoWrapper -> sudoScheduleParaInitialize(id, genesis)
 
 Ensure you set the `ParaId` to `200` and the `parachain: Bool` to `Yes`.
 
-```
+```bash
 cargo build --release
 # Build the Chain spec
 ./target/release/pint build-spec --disable-default-bootnode > ./pint-local-plain.json
@@ -85,11 +117,18 @@ cargo build --release
 ./target/release/pint export-genesis-wasm > ./para-200.wasm
 ```
 
-
-* [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in the  `./bin` folder and
+* [polkadot-launch](https://github.com/paritytech/polkadot-launch) can be run by dropping the proper polkadot binary in
+  the  `./bin` folder and
     * Run globally
         * `polkadot-launch config.json`
     * Run locally, navigate into polkadot-launch,
         * ``` yarn ```
         * ``` yarn start ```
 
+### Documentation
+
+## Commands
+
+* `mkdocs serve` - Start the live-reloading docs server.
+* `mkdocs build` - Build the documentation site.
+* `mkdocs -h` - Print help message and exit.

@@ -9,7 +9,6 @@ import { definitions } from "@pint/types";
 import { Config, ExtrinsicConfig } from "./config";
 import { Extrinsic } from "./extrinsic";
 import { launch } from "./launch";
-import { expandId } from "./util";
 import { ChildProcess } from "child_process";
 import OrmlTypes from "@open-web3/orml-types";
 
@@ -46,6 +45,8 @@ export default class Runner implements Config {
     public errors: string[];
     public finished: string[];
     public nonce: number;
+    public config: ExtrinsicConfig;
+    public proposals: Record<string, any>;
 
     /**
      * run E2E tests
@@ -63,12 +64,13 @@ export default class Runner implements Config {
         console.log("bootstrap e2e tests...");
         console.log("establishing ws connections... (around 2 mins)");
         const ps = await launch("pipe");
+        let runner: Runner | undefined = undefined;
         if (ps.stdout) {
             ps.stdout.on("data", async (chunk: Buffer) => {
                 process.stdout.write(chunk.toString());
                 if (chunk.includes(LAUNCH_COMPLETE)) {
                     console.log("COMPLETE LAUNCH!");
-                    const runner = await Runner.build(exs, ws, uri);
+                    runner = await Runner.build(exs, ws, uri);
                     await runner.runTxs();
                 }
             });
@@ -83,6 +85,12 @@ export default class Runner implements Config {
 
         // Kill all processes when exiting.
         process.on("exit", () => {
+            if (runner && runner.errors.length > 0) {
+                console.log(`Failed tests: ${runner.errors.length}`);
+                for (const error of runner.errors) {
+                    console.log(error);
+                }
+            }
             console.log("-> exit polkadot-launch...");
             killAll(ps, Number(process.exitCode));
         });
@@ -114,6 +122,13 @@ export default class Runner implements Config {
         const charlie = keyring.addFromUri("//Charlie");
         const dave = keyring.addFromUri("//Dave");
         const ziggy = keyring.addFromUri("//Ziggy");
+        const config = {
+            alice,
+            bob,
+            charlie,
+            dave,
+            ziggy,
+        };
 
         // create api
         const api = await ApiPromise.create({
@@ -124,26 +139,20 @@ export default class Runner implements Config {
                     BalanceLock: "OrmlBalanceLock",
                 },
             },
-            types: Object.assign(
-                {
-                    ...ChainlinkTypes,
-                    ...OrmlTypes,
-                },
-                (definitions.types as any)[0].types
-            ),
+            types: {
+                AmountOf: "Amount",
+                ...ChainlinkTypes,
+                ...OrmlTypes,
+                ...(definitions.types as any)[0].types,
+            },
         });
 
         // new Runner
         return new Runner({
             api,
             pair,
-            exs: exs(api, {
-                alice,
-                bob,
-                charlie,
-                dave,
-                ziggy,
-            }),
+            exs: exs(api, config),
+            config,
         });
     }
 
@@ -154,6 +163,8 @@ export default class Runner implements Config {
         this.errors = [];
         this.nonce = 0;
         this.finished = [];
+        this.config = config.config;
+        this.proposals = {};
     }
 
     /**
@@ -167,10 +178,6 @@ export default class Runner implements Config {
         }
 
         if (this.errors.length > 0) {
-            console.log(`Failed tests: ${this.errors.length}`);
-            for (const error of this.errors) {
-                console.log(error);
-            }
             process.exit(1);
         }
         console.log("COMPLETE TESTS!");
@@ -183,14 +190,15 @@ export default class Runner implements Config {
      * @returns {Promise<void>}
      */
     public async queue(): Promise<void> {
-        const runner = this;
         const queue: Extrinsic[] = [];
+        let missed = [];
         for (const e of this.exs) {
             // 0. check if required ex with ids has finished
             let requiredFinished = true;
             if (e.required) {
                 for (const r of e.required) {
-                    if (this.exs.map((i) => i.id).includes(r)) {
+                    if (!this.finished.includes(r)) {
+                        missed.push(r);
                         requiredFinished = false;
                         break;
                     }
@@ -201,22 +209,17 @@ export default class Runner implements Config {
                 continue;
             }
 
-            // 1. Build shared data
-            if (typeof e.shared === "function") {
-                e.shared = await e.shared.call(this);
-            }
-
-            // 2. Pend transactions
             queue.push(e);
             if (e.with) {
                 for (const w of e.with) {
-                    const ex =
-                        typeof w === "function"
-                            ? expandId(await w(e.shared))
-                            : w;
-                    queue.push(new Extrinsic(ex, this.api, this.pair));
+                    queue.push(new Extrinsic(w, this.api, this.pair));
                 }
             }
+        }
+
+        if (queue.length === 0) {
+            console.error(`Error: required extrinsics missed: ${missed}`);
+            process.exit(1);
         }
 
         // 3. register transactions
@@ -237,14 +240,38 @@ export default class Runner implements Config {
     public async batch(exs: Extrinsic[]): Promise<any> {
         let currentNonce = Number(this.nonce);
         return Promise.all(
-            exs.map((e, i) => {
-                let n = -1;
-                if (!e.signed || e.signed.address === this.pair.address) {
-                    n = Number(currentNonce);
-                    currentNonce += 1;
-                }
-                return e.run(this.errors, n);
-            })
+            exs
+                .filter((e) => {
+                    const isFunction =
+                        typeof this.api.tx[e.pallet][e.call] === "function";
+
+                    if (!isFunction) {
+                        this.errors.push(
+                            `====> Error: ${e.pallet}.${e.call} not exists`
+                        );
+                    }
+                    return isFunction;
+                })
+                .map((e) => {
+                    if (e.proposal) {
+                        return e.propose(this.proposals, this.exs, this.config);
+                    } else {
+                        let n = -1;
+                        if (
+                            !e.signed ||
+                            e.signed.address === this.pair.address
+                        ) {
+                            n = Number(currentNonce);
+                            currentNonce += 1;
+                        }
+                        return e.run(
+                            this.proposals,
+                            this.finished,
+                            this.errors,
+                            n
+                        );
+                    }
+                })
         ).then(() => {
             this.nonce = currentNonce;
         });

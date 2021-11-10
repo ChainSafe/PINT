@@ -18,13 +18,31 @@ export const definitions = {
                     available: "Balance",
                     reserved: "Balance",
                 },
+                Amount: "i128",
                 AssetAvailability: {
                     _enum: {
                         Liquid: "MultiLocation",
                         Saft: null,
                     },
                 },
+                AssetConfig: {
+                    pallet_index: "u8",
+                    weights: "AssetsWeights",
+                },
                 AssetId: "u32",
+                AssetsWeights: {
+                    mint: "Weight",
+                    burn: "Weight",
+                    transfer: "Weight",
+                    force_transfer: "Weight",
+                    freeze: "Weight",
+                    thaw: "Weight",
+                    freeze_asset: "Weight",
+                    thaw_asset: "Weight",
+                    approve_transfer: "Weight",
+                    cancel_approval: "Weight",
+                    transfer_approved: "Weight",
+                },
                 AssetMetadata: {
                     name: "BoundedString",
                     symbol: "BoundedString",
@@ -32,8 +50,9 @@ export const definitions = {
                 },
                 AssetWithdrawal: {
                     asset: "AssetId",
-                    state: "RedemptionState",
+                    reserved: "Balance",
                     units: "Balance",
+                    withdrawn: "bool",
                 },
                 Balance: "u128",
                 BalanceFor: "Balance",
@@ -44,6 +63,10 @@ export const definitions = {
                 },
                 CurrencyId: "AssetId",
                 CurrencyIdOf: "CurrencyId",
+                DepositRange: {
+                    minimum: "Balance",
+                    maximum: "Balance",
+                },
                 FeeRate: {
                     numerator: "u32",
                     denominator: "u32",
@@ -63,7 +86,7 @@ export const definitions = {
                 },
                 MemberVote: {
                     member: "CommitteeMember",
-                    vote: "Vote",
+                    vote: "VoteKind",
                 },
                 OrmlAccountData: {
                     free: "Balance",
@@ -71,8 +94,16 @@ export const definitions = {
                     reserved: "Balance",
                 },
                 PendingRedemption: {
-                    initiated: "BlockNumber",
+                    end_block: "BlockNumber",
                     assets: "Vec<AssetWithdrawal>",
+                },
+                Proposal: {
+                    nonce: "ProposalNonce",
+                    action: "Call",
+                    status: "ProposalStatus",
+                },
+                ProposalStatus: {
+                    _enum: ["Active", "Executed", "Timeout"],
                 },
                 ProposalNonce: "u32",
                 ProxyType: {
@@ -81,6 +112,14 @@ export const definitions = {
                 ProxyState: {
                     added: "Vec<ProxyType>",
                 },
+                ProxyWeights: {
+                    add_proxy: "Weight",
+                    remove_proxy: "Weight",
+                },
+                RedemptionFeeRange: {
+                    range: "[(BlockNumber, FeeRate); 2]",
+                    default_fee: "FeeRate",
+                },
                 RedemptionState: {
                     _enum: {
                         Initiated: null,
@@ -88,17 +127,34 @@ export const definitions = {
                         Transferred: null,
                     },
                 },
+                SAFTId: "u32",
                 SAFTRecord: {
                     nav: "Balance",
                     units: "Balance",
                 },
-                StakingBondState: {
+                StakingLedger: {
                     controller: "LookupSourceFor",
-                    bonded: "Balance",
-                    unbonded: "Balance",
-                    unlocked_chunks: "u32",
+                    active: "Balance",
+                    total: "Balance",
+                    unlocking: "Vec<UnlockChunk>",
                 },
-                Vote: {
+                StakingLedgerFor: "StakingLedger",
+                StakingWeights: {
+                    bond: "Weight",
+                    bond_extra: "Weight",
+                    unbond: "Weight",
+                    withdraw_unbonded: "Weight",
+                },
+                StatemintConfig: {
+                    parachain_id: "u32",
+                    enabled: "bool",
+                    pint_asset_id: "AssetId",
+                },
+                UnlockChunk: {
+                    value: "Balance",
+                    end: "BlockNumber",
+                },
+                VoteKind: {
                     _enum: {
                         Aye: null,
                         Nay: null,

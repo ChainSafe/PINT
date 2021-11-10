@@ -1,0 +1,72 @@
+[package]
+authors = ['ChainSafe Systems']
+name = "runtime-integration-tests"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+codec = { package = 'parity-scale-codec', version = '2.3.1', default-features = false, features = ['derive', 'max-encoded-len']}
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+
+# substrate
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-bags-list = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+
+# polkadot
+kusama-runtime = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+polkadot-runtime-parachains = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+pallet-xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+xcm-simulator = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.12" }
+
+# cumulus
+cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+cumulus-pallet-xcmp-queue = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+cumulus-pallet-dmp-queue = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+cumulus-pallet-parachain-system = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+cumulus-primitives-utility = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12' }
+parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.12" }
+
+# orml
+orml-currencies = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library' }
+orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
+
+# pint
+pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
+pallet-asset-index = { path = "../../pallets/asset-index" }
+pallet-committee = { path = "../../pallets/committee" }
+pallet-price-feed = { path = "../../pallets/price-feed" }
+pallet-saft-registry = { path = "../../pallets/saft-registry" }
+pint-runtime-common = { path = "../common" }
+pint-runtime-kusama = { path = "../kusama" }
+primitives = { path = "../../primitives/primitives" }
+xcm-calls = { path = "../../primitives/xcm-calls" }
+
+# others
+xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator.git", branch = "master" }
+
+[features]
+runtime-benchmarks = []

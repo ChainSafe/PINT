@@ -8,20 +8,20 @@ repository = 'https://github.com/substrate-developer-hub/substrate-parachain-tem
 version = '0.0.1'
 
 [dependencies]
-frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
-sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 
 # xcm
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8', default-features = false }
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.12', default-features = false }
 xcm-calls = { path = "../../primitives/xcm-calls", default-features = false }
-cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.8', default-features = false }
+cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12', default-features = false }
 
 # orml
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 # chainlink
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
+pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.12', default-features = false }
 
 # pint
 primitives = { path = '../../primitives/primitives', default-features = false }

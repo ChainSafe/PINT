@@ -3,13 +3,16 @@
 
 use codec::{Decode, Encode};
 use frame_support::{
-	sp_runtime::{traits::Zero, RuntimeDebug},
+	sp_runtime::{
+		traits::{AtLeast32BitUnsigned, Zero},
+		RuntimeDebug,
+	},
 	sp_std::vec::Vec,
 };
 
 /// Abstraction over the lock of minted index token that are locked up for
 /// `LockupPeriod`
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct IndexTokenLock<BlockNumber, Balance> {
 	/// Locked amount of index token.
 	pub locked: Balance,
@@ -18,61 +21,38 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
 }
 
 /// Metadata for an asset
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetMetadata<BoundedString> {
 	pub name: BoundedString,
 	pub symbol: BoundedString,
 	pub decimals: u8,
 }
 
-/// State of a single asset withdrawal on some parachain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
-pub enum RedemptionState {
-	/// This marks the state in which a withdrawal was initiated but the requested unbonding failed,
-	/// either because the corresponding xcm unbonding failed to execute or because there is nothing
-	/// to unbond and the minimum remote stash balance is exhausted.
-	/// This indicates that the redemption in progress needs get confirmation that the remote asset
-	/// manager followed up on the failed unbonding procedure.
-	Initiated,
-	/// Unbonding was successful due to:
-	///   - the asset does not support staking.
-	///   - the current parachain's stash account is liquid enough to cover the withdrawal after the
-	///     redemption period without falling below the configured minimum stash balance threshold.
-	///   - xcm unbonding call was sent successfully.
-	///
-	/// This state represents a waiting state until the redemption period is over.
-	Unbonding,
-	/// This is a intermediary state in which it will be attempted to transfer the
-	/// units to the LP's account.
-	Transferring,
-	/// Successfully transferred the units to LP's account, the
-	/// `AssetWithdrawal` has thus been completed.
-	Withdrawn,
-}
-
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Represents a single asset being withdrawn
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetWithdrawal<AssetId, Balance> {
 	/// The identifier of the asset
 	pub asset: AssetId,
-	/// The state in which the redemption process currently is.
-	pub state: RedemptionState,
 	/// The amount of asset units about to be transferred to the LP.
 	pub units: Balance,
+	/// The amount still reserved for this withdrawal.
+	pub reserved: Balance,
+	/// Whether this withdrawal was already been closed.
+	pub withdrawn: bool,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
-	/// When the redemption process is over
+	/// The block after which the redemption process is over.
 	pub end_block: BlockNumber,
-	/// All the withdrawals resulted from the redemption
+	/// All the withdrawals resulted from the redemption.
 	pub assets: Vec<AssetWithdrawal<AssetId, Balance>>,
 }
 
 /// Represents the redemption of a given pint amount based on the
 /// `AssetDistribution`.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetRedemption<AssetId, Balance> {
 	/// All the assets together with their redeemed amount
 	pub asset_amounts: Vec<(AssetId, Balance)>,
@@ -83,5 +63,22 @@ pub struct AssetRedemption<AssetId, Balance> {
 impl<AssetId, Balance: Zero> Default for AssetRedemption<AssetId, Balance> {
 	fn default() -> Self {
 		Self { asset_amounts: Vec::new(), redeemed_index_tokens: Balance::zero() }
+	}
+}
+
+/// Limits the amount of deposits
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+#[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
+pub struct DepositRange<Balance> {
+	/// Minimum amount of index tokens a deposit must be worth
+	pub minimum: Balance,
+	/// Maximum amount of index tokens a deposit must be worth
+	pub maximum: Balance,
+}
+
+// Default implementation for bounds [0, MAX]
+impl<Balance: AtLeast32BitUnsigned> Default for DepositRange<Balance> {
+	fn default() -> Self {
+		Self { minimum: Balance::one(), maximum: Balance::max_value() }
 	}
 }

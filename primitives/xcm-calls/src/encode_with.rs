@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 //! Additional types for the remote asset manager pallet
+
 use codec::{Encode, EncodeAsRef, HasCompact, Output};
 use frame_support::{sp_runtime::MultiAddress, sp_std::marker::PhantomData};
 

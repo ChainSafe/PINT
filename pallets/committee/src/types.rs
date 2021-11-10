@@ -10,16 +10,30 @@ use frame_support::{
 };
 use frame_system::RawOrigin;
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub enum ProposalStatus {
+	Active,
+	Executed,
+	Timeout,
+}
+
 /// This represents an instance of a proposal that can be voted on.
 /// It has been proposed and has an assigned nonce.
 /// This extra abstraction is required since it may be desirable construct
 /// multiple proposal instances out of a single proposal
-pub struct Proposal<T: Config>(pub T::ProposalNonce, pub T::Action);
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+#[codec(mel_bound(T: Config))]
+#[scale_info(skip_type_params(T))]
+pub struct Proposal<T: Config> {
+	pub action: T::Action,
+	pub issuer: T::AccountId,
+	pub nonce: T::ProposalNonce,
+	pub status: ProposalStatus,
+}
 
 impl<T: Config> Proposal<T> {
-	pub fn new(nonce: T::ProposalNonce, action: T::Action) -> Self {
-		Self(nonce, action)
+	pub fn new(action: T::Action, issuer: T::AccountId, nonce: T::ProposalNonce, status: ProposalStatus) -> Self {
+		Self { action, nonce, status, issuer }
 	}
 
 	pub fn hash(&self) -> <T as frame_system::Config>::Hash {
@@ -27,18 +41,18 @@ impl<T: Config> Proposal<T> {
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Defines what sub-type a member belongs to.
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council
 /// proposals
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub enum MemberType {
 	Council,
 	Constituent,
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// Assignment of a member type to an accountId
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub struct CommitteeMember<AccountId> {
 	pub account_id: AccountId,
 	pub member_type: MemberType,
@@ -49,26 +63,26 @@ impl<AccountId> CommitteeMember<AccountId> {
 		Self { account_id, member_type }
 	}
 
-	pub fn into_vote(self, vote: Vote) -> MemberVote<AccountId> {
+	pub fn into_vote(self, vote: VoteKind) -> MemberVote<AccountId> {
 		MemberVote { member: self, vote }
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
 /// A committee member together with their cast vote.
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub struct MemberVote<AccountId> {
 	pub member: CommitteeMember<AccountId>,
-	pub vote: Vote,
+	pub vote: VoteKind,
 }
 
 impl<AccountId> MemberVote<AccountId> {
-	pub fn new(member: CommitteeMember<AccountId>, vote: Vote) -> Self {
+	pub fn new(member: CommitteeMember<AccountId>, vote: VoteKind) -> Self {
 		Self { member, vote }
 	}
 }
 
 /// Origin for the committee pallet.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
 	/// Action is executed by the committee. Contains the closer account and the
 	/// members that voted Aye
@@ -77,9 +91,9 @@ pub enum CommitteeOrigin<AccountId, BlockNumber> {
 	CommitteeMember(AccountId),
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default)]
 /// Info for keeping track of a motion being voted on.
 /// Default is empty vectors for all votes
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default, scale_info::TypeInfo)]
 pub struct VoteAggregate<AccountId, BlockNumber> {
 	/// The current set of votes.
 	pub votes: Vec<MemberVote<AccountId>>,
@@ -101,9 +115,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 		end: BlockNumber,
 	) -> Self {
 		let votes = sp_std::iter::empty()
-			.chain(ayes.into_iter().map(|x| x.into_vote(Vote::Aye)))
-			.chain(nays.into_iter().map(|x| x.into_vote(Vote::Nay)))
-			.chain(abstentions.into_iter().map(|x| x.into_vote(Vote::Abstain)))
+			.chain(ayes.into_iter().map(|x| x.into_vote(VoteKind::Aye)))
+			.chain(nays.into_iter().map(|x| x.into_vote(VoteKind::Nay)))
+			.chain(abstentions.into_iter().map(|x| x.into_vote(VoteKind::Abstain)))
 			.collect();
 		Self { votes, end }
 	}
@@ -133,9 +147,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 		self.votes.iter().filter(|x| if let Some(m) = member_type { &x.member.member_type == m } else { true }).fold(
 			(0, 0, 0),
 			|(ayes, nays, abs), x| match x.vote {
-				Vote::Aye => (ayes + 1, nays, abs),
-				Vote::Nay => (ayes, nays + 1, abs),
-				Vote::Abstain => (ayes, nays, abs + 1),
+				VoteKind::Aye => (ayes + 1, nays, abs),
+				VoteKind::Nay => (ayes, nays + 1, abs),
+				VoteKind::Abstain => (ayes, nays, abs + 1),
 			},
 		)
 	}
@@ -159,9 +173,9 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
 /// Possible votes a member can cast
-pub enum Vote {
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+pub enum VoteKind {
 	Aye,
 	Nay,
 	Abstain,
@@ -189,7 +203,20 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(CommitteeOrigin::ApprovedByCommittee(Default::default(), Default::default()))
+		use frame_benchmarking::vec;
+		O::from(CommitteeOrigin::ApprovedByCommittee(
+			Default::default(),
+			VoteAggregate {
+				votes: vec![
+					MemberVote {
+						member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+						vote: VoteKind::Aye
+					};
+					T::MinCouncilVotes::get() + 1
+				],
+				end: <frame_system::Pallet<T>>::block_number() + 1_u32.into(),
+			},
+		))
 	}
 }
 

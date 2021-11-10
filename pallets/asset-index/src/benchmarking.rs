@@ -3,48 +3,54 @@
 
 #![cfg(feature = "runtime-benchmarks")]
 
-use frame_benchmarking::{account, benchmarks, vec};
+use frame_benchmarking::{benchmarks, vec};
 use frame_support::{
 	assert_ok,
 	dispatch::UnfilteredDispatchable,
-	sp_runtime::{traits::AccountIdConversion, FixedPointNumber},
-	traits::{Currency as _, EnsureOrigin, Get},
+	sp_runtime::{
+		traits::{AccountIdConversion, Bounded, One},
+		FixedPointNumber,
+	},
+	traits::{EnsureOrigin, Get},
 };
-use frame_system::RawOrigin;
 use orml_traits::MultiCurrency;
-use pallet_price_feed::PriceFeed;
-use primitives::{traits::NavProvider, AssetAvailability};
-use xcm::v0::MultiLocation;
+use pallet_price_feed::{PriceFeed, PriceFeedBenchmarks};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	traits::NavProvider,
+	AssetAvailability,
+};
+use xcm::v1::MultiLocation;
 
 use crate::Pallet as AssetIndex;
 
 use super::*;
-
-const SEED: u32 = 0;
-
-fn whitelisted_account<T: Config>(name: &'static str, counter: u32) -> T::AccountId {
-	let acc = account(name, counter, SEED);
-	whitelist_acc::<T>(&acc);
-	acc
-}
-
-fn whitelist_acc<T: Config>(acc: &T::AccountId) {
-	frame_benchmarking::benchmarking::add_to_whitelist(frame_system::Account::<T>::hashed_key_for(acc).into());
-}
+use crate::types::DepositRange;
 
 benchmarks! {
 	add_asset {
-		let asset_id: T::AssetId = 1_u32.into();
+		let asset_id :T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 		let million = 1_000_000u32.into();
-		let location = MultiLocation::Null;
-		let call = Call::<T>::add_asset(
-					asset_id,
-					million,
-					location.clone(),
-					million
+		let location = MultiLocation::default();
+
+		assert_ok!(
+			AssetIndex::<T>::register_asset(
+				origin.clone(),
+				asset_id,
+				AssetAvailability::Liquid(MultiLocation::default())
+			)
 		);
 
+		T::Currency::deposit(asset_id, &origin_account_id, million)?;
+
+		let call = Call::<T>::add_asset{
+					asset_id: asset_id,
+					units: million,
+					amount: million
+		};
+		let balance = T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account());
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			AssetIndex::<T>::assets(asset_id),
@@ -52,101 +58,138 @@ benchmarks! {
 		);
 	   assert_eq!(
 			T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account()),
-			million
+			million + balance
 		);
 	}
 
 	complete_withdraw {
-		let asset_id = 1_u32.into();
-		let units = 100_u32.into();
-		let tokens = 500_u32.into();
-		let admin = T::AdminOrigin::successful_origin();
-		let origin = whitelisted_account::<T>("origin", 0);
-		let deposit_units = 1000_u32.into();
+		let asset_id : T::AssetId = T::try_convert(2u8).unwrap();
+		let units = 10_000u32.into();
+		let tokens = 50_000u32.into();
+		let origin = T::AdminOrigin::successful_origin();
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+		let deposit_units = 1_000_000u32.into();
 
 		// create liquid assets
-		assert_ok!(<AssetIndex<T>>::add_asset(
-			admin,
+		assert_ok!(AssetIndex::<T>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+
+		T::Currency::deposit(asset_id, &origin_account_id, tokens)?;
+		assert_ok!(AssetIndex::<T>::add_asset(
+			origin.clone(),
 			asset_id,
 			units,
-			MultiLocation::Null,
 			tokens
 		));
 
+		// create price feed
+		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+
 		// deposit some funds into the index from an user account
-		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
-		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
+		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, deposit_units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, deposit_units));
 
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
 
 		// start withdraw
-		assert_ok!(<AssetIndex<T>>::withdraw(
-			RawOrigin::Signed(origin.clone()).into(),
-			42_u32.into(),
+		assert_ok!(AssetIndex::<T>::withdraw(
+			origin.clone(),
+			tokens,
 		));
-	}: _(
-		RawOrigin::Signed(origin.clone())
-	) verify {
-		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin), None);
+		let call = Call::<T>::complete_withdraw{};
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id), None);
 	}
 
 	deposit {
-		// ASSET_A_ID
-		let asset_id = 1_u32.into();
+		let asset_id = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		let depositor = whitelisted_account::<T>("depositor", 0);
-		let admin_deposit = 5u32.into();
-		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, 100u32.into(),MultiLocation::Null,admin_deposit
-		));
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+		let admin_deposit = 1_000_000u32;
 		let units = 1_000u32.into();
-		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
-		let nav = AssetIndex::<T>::nav().unwrap();
-	}: _(
-		RawOrigin::Signed(depositor.clone()),
-		asset_id,
-		units
-	) verify {
-			let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
-			let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
-			assert_eq!(AssetIndex::<T>::index_token_balance(&depositor).into(), received);
-	}
 
-	remove_asset {
-		let asset_id = 1_u32.into();
-		let origin = T::AdminOrigin::successful_origin();
-		let units: u32 = 100;
-		let amount = 500u32.into();
+		assert_ok!(AssetIndex::<T>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
 
+		T::Currency::deposit(asset_id, &origin_account_id, admin_deposit.into())?;
 		assert_ok!(AssetIndex::<T>::add_asset(
 			origin.clone(),
 			asset_id,
-			units.into(),
-			MultiLocation::Null,
-			amount,
+			100u32.into(),
+			admin_deposit.into(),
 		));
 
-		// ensure
-		assert_eq!(T::IndexToken::total_balance(&Default::default()), 500u32.into());
+		let index_tokens = AssetIndex::<T>::index_token_balance(&origin_account_id).into();
+		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
 
-		// construct remove call
-		let call = Call::<T>::remove_asset(asset_id, units.into(), None);
-	}: { call.dispatch_bypass_filter(origin.clone())? } verify {
-		assert_eq!(T::IndexToken::total_balance(&Default::default()), 0u32.into());
+		// construct call
+		let call = Call::<T>::deposit{asset_id: asset_id, units: units};
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		let nav = AssetIndex::<T>::nav().unwrap();
+		let deposit_value = T::PriceFeed::get_price(asset_id).unwrap().checked_mul_int(units.into()).unwrap();
+		let received = nav.reciprocal().unwrap().saturating_mul_int(deposit_value);
+
+		// NOTE:
+		//
+		// the result will be 0 or 1
+		//
+		// - 0 for tests
+		// - 1 for benchmarks ( transaction fee )
+		assert!(AssetIndex::<T>::index_token_balance(&origin_account_id).into() - (index_tokens + received) < 2);
 	}
 
+	// TODO:
+	//
+	// This extrinsic requires `remote-asset-manager`
+	//
+	// ----
+	//
+	// remove_asset {
+	// 	let asset_id =  T::try_convert(2u8).unwrap();
+	// 	let units = 100_u32.into();
+	// 	let amount = 1_000u32.into();
+	// 	let origin = T::AdminOrigin::successful_origin();
+	// 	let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+	// 	let receiver = whitelisted_account::<T>("receiver", 0);
+	//
+	// 	// create liquid assets
+	// 	assert_ok!(<AssetIndex<T>>::add_asset(
+	// 		origin.clone(),
+	// 		asset_id,
+	// 		units,
+	// 		MultiLocation::default(),
+	// 		amount
+	// 	));
+	//
+	// 	// create price feed
+	// 	T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+	//
+	// 	// construct call
+	// 	let call = Call::<T>::remove_asset(asset_id, units, Some(receiver));
+	// }: { call.dispatch_bypass_filter(origin.clone())? } verify {
+	// 	assert_eq!(T::IndexToken::total_balance(&origin_account_id), 0u32.into());
+	// }
+
 	register_asset {
-		let asset_id = 1337_u32.into();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
 		let availability = AssetAvailability::Saft;
-		let call = Call::<T>::register_asset(
+		let call = Call::<T>::register_asset {
 						asset_id,
 						availability,
-		);
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			AssetIndex::<T>::assets(asset_id),
@@ -155,17 +198,17 @@ benchmarks! {
 	}
 
 	set_metadata {
-		let asset_id = 0_u32.into();
+		let asset_id :T::AssetId =  T::try_convert(0u8).unwrap();
 		let name = b"pint".to_vec();
 		let symbol = b"pint".to_vec();
 		let decimals = 8_u8;
 		let origin = T::AdminOrigin::successful_origin();
-		let call = Call::<T>::set_metadata(
-						asset_id,
-						name.clone(),
-						symbol.clone(),
+		let call = Call::<T>::set_metadata {
+						id: asset_id,
+						name: name.clone(),
+						symbol: symbol.clone(),
 						decimals
-		);
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		let metadata = Metadata::<T>::get(asset_id);
 		assert_eq!(metadata.name.as_slice(), name.as_slice());
@@ -173,57 +216,110 @@ benchmarks! {
 		assert_eq!(metadata.decimals, decimals);
 	}
 
+	set_deposit_range {
+		let origin = T::AdminOrigin::successful_origin();
+		let range = DepositRange {minimum : T::Balance::one(), maximum: T::Balance::max_value()};
+		let call = Call::<T>::set_deposit_range{
+						new_range: range.clone()
+		};
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(range, IndexTokenDepositRange::<T>::get());
+	}
+
 	withdraw {
-		let asset_id = 1_u32.into();
-		let units = 100_u32.into();
-		let tokens = 500_u32.into();
-		let admin = T::AdminOrigin::successful_origin();
-		let origin = whitelisted_account::<T>("origin", 0);
-		let deposit_units = 1_000_u32.into();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
+		let units = 10_000u32.into();
+		let tokens = 50_000u32.into();
+		let origin = T::AdminOrigin::successful_origin();
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+		let deposit_units = 1_000_000u32.into();
 
 		// create liquid assets
-		assert_ok!(<AssetIndex<T>>::add_asset(
-			admin,
+		assert_ok!(AssetIndex::<T>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		T::Currency::deposit(asset_id, &origin_account_id, deposit_units)?;
+		assert_ok!(AssetIndex::<T>::add_asset(
+			origin.clone(),
 			asset_id,
 			units,
-			MultiLocation::Null,
 			tokens
 		));
 
+		// create price feed
+		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+
 		// deposit some funds into the index from an user account
-		assert_ok!(T::Currency::deposit(asset_id, &origin, deposit_units));
-		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(origin.clone()).into(), asset_id, deposit_units));
+		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, deposit_units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, deposit_units));
 
 		// advance the block number so that the lock expires
 		<frame_system::Pallet<T>>::set_block_number(
 			<frame_system::Pallet<T>>::block_number()
-				+ T::LockupPeriod::get()
+				+ pallet::LockupPeriod::<T>::get()
 				+ 1_u32.into(),
 		);
-	}: _(
-		RawOrigin::Signed(origin.clone()),
-		42_u32.into()
-	) verify {
-		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin).expect("pending withdrawals should be present").len(), 1);
+
+		let call = Call::<T>::withdraw { amount: tokens };
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(pallet::PendingWithdrawals::<T>::get(&origin_account_id).expect("pending withdrawals should be present").len(), 1);
 	}
 
 	unlock {
-		let asset_id = 1_u32.into();
+		let asset_id :T::AssetId =  T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		let depositor = whitelisted_account::<T>("depositor", 0);
+		let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
 		let amount = 500u32.into();
 		let units = 100u32.into();
 
-		assert_ok!(AssetIndex::<T>::add_asset(origin, asset_id, units, MultiLocation::Null, amount));
-		assert_ok!(T::Currency::deposit(asset_id, &depositor, units));
-		assert_ok!(<AssetIndex<T>>::deposit(RawOrigin::Signed(depositor.clone()).into(), asset_id, units));
-	}: _(
-		RawOrigin::Signed(depositor.clone())
-	) verify {
-		assert_eq!(<pallet::IndexTokenLocks<T>>::get(&depositor), vec![types::IndexTokenLock{
-			locked: 500_u32.into(),
-			end_block: <frame_system::Pallet<T>>::block_number() + T::LockupPeriod::get(),
+		// ensure lockup period has been set
+		pallet::LockupPeriod::<T>::set(T::LockupPeriod::get());
+		assert_eq!(pallet::LockupPeriod::<T>::get(), T::LockupPeriod::get());
+
+		// create price feed
+		T::PriceFeedBenchmarks::create_feed(origin_account_id.clone(), asset_id).unwrap();
+
+		assert_ok!(AssetIndex::<T>::register_asset(
+			origin.clone(),
+			asset_id,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+
+		T::Currency::deposit(asset_id, &origin_account_id, amount)?;
+		assert_ok!(AssetIndex::<T>::add_asset(origin.clone(), asset_id, units, amount));
+		assert_ok!(T::Currency::deposit(asset_id, &origin_account_id, units));
+		assert_ok!(AssetIndex::<T>::deposit(origin.clone(), asset_id, units));
+
+		let call = Call::<T>::unlock{};
+	}: { call.dispatch_bypass_filter(origin)? } verify {
+		assert_eq!(pallet::IndexTokenLocks::<T>::get(&origin_account_id), vec![types::IndexTokenLock{
+			locked: AssetIndex::<T>::index_token_equivalent(asset_id, units).unwrap(),
+			end_block: frame_system::Pallet::<T>::block_number() + pallet::LockupPeriod::<T>::get() - 1u32.into()
 		}]);
+	}
+
+	set_lockup_period {
+		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
+		let call = Call::<T>::set_lockup_period{ lockup_period: week} ;
+	}: {
+		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
+	} verify {
+		assert_eq!(pallet::LockupPeriod::<T>::get(), week);
+	}
+
+	update_redemption_fees {
+		let week: T::BlockNumber = (10u32 * 60 * 24 * 7).into();
+		let range = RedemptionFeeRange {
+			range: [(week, FeeRate { numerator: 1, denominator: 10 }), (week * 4u32.into(), FeeRate { numerator: 1, denominator: 20 })],
+			default_fee: FeeRate { numerator: 1, denominator: 100 },
+		};
+		let call = Call::<T>::update_redemption_fees { new_range: range.clone()};
+	}: {
+		call.dispatch_bypass_filter(T::AdminOrigin::successful_origin())?
+	} verify {
+		assert_eq!(pallet::RedemptionFee::<T>::get(), range);
 	}
 }
 
@@ -231,63 +327,70 @@ benchmarks! {
 mod tests {
 	use frame_support::assert_ok;
 
-	use crate::mock::{new_test_ext, Test};
+	use crate::mock::{new_test_ext, new_test_ext_from_genesis, Test};
 
 	use super::*;
 
 	#[test]
 	fn add_asset() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_add_asset::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_add_asset());
 		});
 	}
 
 	#[test]
 	fn complete_withdraw() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_complete_withdraw::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_complete_withdraw());
 		});
 	}
 
 	#[test]
 	fn set_metadata() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_set_metadata::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_set_metadata());
+		});
+	}
+
+	#[test]
+	fn set_deposit_range() {
+		new_test_ext().execute_with(|| {
+			assert_ok!(Pallet::<Test>::test_benchmark_set_deposit_range());
 		});
 	}
 
 	#[test]
 	fn deposit() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_deposit::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_deposit());
 		});
 	}
 
 	#[test]
 	fn register_asset() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_register_asset::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_register_asset());
 		});
 	}
 
-	#[test]
-	fn remove_asset() {
-		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_remove_asset::<Test>());
-		});
-	}
+	// #[test]
+	// fn remove_asset() {
+	// 	new_test_ext().execute_with(|| {
+	// 		assert_ok!(Pallet::<Test>::test_benchmark_remove_asset());
+	// 	});
+	// }
 
 	#[test]
 	fn unlock() {
-		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_unlock::<Test>());
+		new_test_ext_from_genesis().execute_with(|| {
+			assert_ok!(Pallet::<Test>::test_benchmark_unlock());
 		});
 	}
 
 	#[test]
 	fn withdraw() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_withdraw::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_withdraw());
 		});
 	}
 }

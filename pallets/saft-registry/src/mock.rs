@@ -4,25 +4,35 @@
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
+#[cfg(feature = "runtime-benchmarks")]
+use frame_support::pallet_prelude::DispatchResultWithPostInfo;
+#[cfg(feature = "runtime-benchmarks")]
+use pallet_price_feed::PriceFeedBenchmarks;
+
 use crate as pallet_saft_registry;
+use core::cell::RefCell;
 use frame_support::{
-	ord_parameter_types, parameter_types,
-	traits::{LockIdentifier, StorageMapShim},
+	assert_ok, ord_parameter_types, parameter_types,
+	sp_std::marker::PhantomData,
+	traits::{Everything, LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
-use orml_traits::parameter_type_with_key;
+use orml_traits::{parameter_type_with_key, MultiCurrency};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-use primitives::traits::{RemoteAssetManager, UnbondingOutcome};
-use sp_runtime::DispatchResult;
+use xcm::v1::MultiLocation;
 
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AssetAvailability,
+};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup, Zero},
 	DispatchError,
 };
-use xcm::v0::Outcome;
+use std::collections::HashMap;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -54,7 +64,7 @@ pub(crate) type AssetId = u32;
 pub(crate) type BlockNumber = u64;
 
 impl system::Config for Test {
-	type BaseCallFilter = ();
+	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
@@ -106,30 +116,52 @@ parameter_types! {
 	pub LockupPeriod: <Test as system::Config>::BlockNumber = 0;
 	pub MinimumRedemption: u32 = 2;
 	pub WithdrawalPeriod: <Test as system::Config>::BlockNumber = 10;
-	pub DOTContributionLimit: Balance = 999;
+	pub MaxDecimals: u8 = 12;
+	pub MaxActiveDeposits: u32 = 50;
 	pub TreasuryPalletId: PalletId = PalletId(*b"12345678");
 	pub IndexTokenLockIdentifier: LockIdentifier = *b"pintlock";
 	pub StringLimit: u32 = 4;
 	pub const PINTAssetId: AssetId = 99;
-
+	pub const RedemptionFee: RedemptionFeeRange<<Test as system::Config>::BlockNumber> = RedemptionFeeRange {
+		range: [(14, FeeRate { numerator: 1, denominator: 10 }), (30, FeeRate { numerator: 1, denominator: 20 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
+	};
 	// No fees for now
 	pub const BaseWithdrawalFee: primitives::fee::FeeRate = primitives::fee::FeeRate{ numerator: 0, denominator: 1_000,};
+}
+
+/// Range of voting period
+pub struct LockupPeriodRange<T>(PhantomData<T>);
+
+impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::BlockNumber> for LockupPeriodRange<T> {
+	fn max() -> T::BlockNumber {
+		0u32.into()
+	}
+
+	fn min() -> T::BlockNumber {
+		10u32.into()
+	}
 }
 
 impl pallet_asset_index::Config for Test {
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
+	type MaxDecimals = MaxDecimals;
+	type MaxActiveDeposits = MaxActiveDeposits;
+	type RedemptionFee = RedemptionFee;
 	type LockupPeriod = LockupPeriod;
+	type LockupPeriodRange = LockupPeriodRange<Self>;
 	type IndexTokenLockIdentifier = IndexTokenLockIdentifier;
 	type MinimumRedemption = MinimumRedemption;
 	type WithdrawalPeriod = WithdrawalPeriod;
-	type DOTContributionLimit = DOTContributionLimit;
-	type RemoteAssetManager = MockRemoteAssetManager;
+	type RemoteAssetManager = ();
 	type AssetId = AssetId;
 	type SelfAssetId = PINTAssetId;
 	type Currency = Currency;
 	type PriceFeed = MockPriceFeed;
+	#[cfg(feature = "runtime-benchmarks")]
+	type PriceFeedBenchmarks = MockPriceFeed;
 	type SaftRegistry = SaftRegistry;
 	type BaseWithdrawalFee = BaseWithdrawalFee;
 	type TreasuryPalletId = TreasuryPalletId;
@@ -138,29 +170,38 @@ impl pallet_asset_index::Config for Test {
 	type WeightInfo = ();
 }
 
-pub struct MockRemoteAssetManager;
-impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for MockRemoteAssetManager {
-	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> Result<Outcome, DispatchError> {
-		Ok(Outcome::Complete(0))
-	}
+pub const LIQUID_ASSET_ID: AssetId = 3u32;
+pub const SAFT_ASSET_ID: AssetId = 43u32;
+pub const LIQUID_ASSET_MULTIPLIER: Balance = 2;
+pub const SAFT_ASSET_MULTIPLIER: Balance = 3;
 
-	fn bond(_: AssetId, _: Balance) -> DispatchResult {
-		Ok(())
-	}
-
-	fn unbond(_: AssetId, _: Balance) -> UnbondingOutcome {
-		UnbondingOutcome::NotSupported
-	}
+thread_local! {
+	pub static PRICES: RefCell<HashMap<AssetId, Price>> = RefCell::new(HashMap::new());
 }
 
 pub struct MockPriceFeed;
+impl MockPriceFeed {
+	pub fn set_prices(prices: impl IntoIterator<Item = (AssetId, Price)>) {
+		PRICES.with(|v| *v.borrow_mut() = prices.into_iter().collect());
+	}
+}
+
 impl PriceFeed<AssetId> for MockPriceFeed {
-	fn get_price(_quote: AssetId) -> Result<Price, DispatchError> {
-		todo!()
+	fn get_price(asset: AssetId) -> Result<Price, DispatchError> {
+		PRICES.with(|v| {
+			v.borrow().get(&asset).cloned().ok_or_else(|| pallet_asset_index::Error::<Test>::UnsupportedAsset.into())
+		})
 	}
 
 	fn get_relative_price_pair(_base: AssetId, _quote: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError> {
 		todo!()
+	}
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl PriceFeedBenchmarks<AccountId, AssetId> for MockPriceFeed {
+	fn create_feed(_caller: AccountId, _asset_id: AssetId) -> DispatchResultWithPostInfo {
+		Ok(().into())
 	}
 }
 
@@ -179,6 +220,7 @@ impl orml_tokens::Config for Test {
 	type ExistentialDeposits = ExistentialDeposits;
 	type MaxLocks = MaxLocks;
 	type OnDust = ();
+	type DustRemovalWhitelist = Everything;
 }
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 1337;
 
@@ -187,6 +229,8 @@ ord_parameter_types! {
 }
 
 impl pallet_saft_registry::Config for Test {
+	#[cfg(feature = "runtime-benchmarks")]
+	type AssetRecorderBenchmarks = AssetIndex;
 	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
 	type Event = Event;
 	type Balance = Balance;
@@ -195,8 +239,37 @@ impl pallet_saft_registry::Config for Test {
 	type WeightInfo = ();
 }
 
+pub const INDEX_TOKEN_SUPPLY: u128 = 2_0000;
+
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
-	t.into()
+	let mut t: sp_io::TestExternalities =
+		frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+
+	t.execute_with(|| {
+		// mint and intial supply of pint
+		let initial_liquid_supply = 1_000;
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			LIQUID_ASSET_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		// mint initial supply first into admin's account
+		assert_ok!(Currency::deposit(LIQUID_ASSET_ID, &ADMIN_ACCOUNT_ID, initial_liquid_supply));
+
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ADMIN_ACCOUNT_ID),
+			LIQUID_ASSET_ID,
+			initial_liquid_supply,
+			INDEX_TOKEN_SUPPLY,
+		));
+
+		// set initial prices
+		MockPriceFeed::set_prices(vec![
+			(LIQUID_ASSET_ID, Price::from(LIQUID_ASSET_MULTIPLIER)),
+			(SAFT_ASSET_ID, Price::from(SAFT_ASSET_MULTIPLIER)),
+		]);
+	});
+
+	t
 }

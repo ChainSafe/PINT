@@ -1,40 +1,37 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use std::{cell::RefCell, collections::HashSet};
-
-use codec::{Decode, Encode};
-use frame_support::{
-	construct_runtime, parameter_types,
-	sp_runtime::traits::BlakeTwo256,
-	traits::{All, Currency, FindAuthor, Imbalance, InstanceFilter, MaxEncodedLen, OnUnbalanced, OneSessionHandler},
-	weights::Weight,
-};
-use sp_core::H256;
-use sp_runtime::{
-	curve::PiecewiseLinear,
-	testing::{Header, TestXt, UintAuthorityId},
-	Perbill,
-};
-
+use super::types::*;
+use codec::{Decode, Encode, MaxEncodedLen};
 use cumulus_primitives_core::ParaId;
 use frame_election_provider_support::onchain;
+use frame_support::{
+	construct_runtime, parameter_types,
+	sp_runtime::{
+		curve::PiecewiseLinear,
+		impl_opaque_keys,
+		testing::{TestXt, UintAuthorityId},
+		traits::BlakeTwo256,
+		AccountId32, BoundToRuntimeAppPublic, Perbill,
+	},
+	traits::{Currency, Everything, FindAuthor, Imbalance, InstanceFilter, Nothing, OnUnbalanced, OneSessionHandler},
+	weights::Weight,
+};
 use pallet_staking as staking;
 use pallet_staking::*;
 use polkadot_runtime_parachains::{configuration, origin, shared, ump};
-use xcm::v0::{MultiAsset, MultiLocation, NetworkId};
+use sp_core::H256;
+use std::{cell::RefCell, collections::HashSet};
+use xcm::v1::{Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
 	AccountId32Aliases, AllowUnpaidExecutionFrom, ChildParachainAsNative, ChildParachainConvertsVia,
-	ChildSystemParachainAsSuperuser, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfConcreteFungible,
-	FixedWeightBounds, IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation,
+	ChildSystemParachainAsSuperuser, CurrencyAdapter as XcmCurrencyAdapter, FixedRateOfFungible, FixedWeightBounds,
+	IsConcrete, LocationInverter, SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation,
 };
 use xcm_executor::{Config, XcmExecutor};
 
-use super::types::*;
-use frame_support::sp_runtime::AccountId32;
-
 impl frame_system::Config for Runtime {
+	type BaseCallFilter = Everything;
 	type Origin = Origin;
 	type Call = Call;
 	type Index = u64;
@@ -54,7 +51,6 @@ impl frame_system::Config for Runtime {
 	type OnNewAccount = ();
 	type OnKilledAccount = ();
 	type DbWeight = ();
-	type BaseCallFilter = ();
 	type SystemWeightInfo = ();
 	type SS58Prefix = ();
 	type OnSetCode = ();
@@ -62,14 +58,17 @@ impl frame_system::Config for Runtime {
 
 impl shared::Config for Runtime {}
 
-impl configuration::Config for Runtime {}
+impl configuration::Config for Runtime {
+	type WeightInfo = configuration::TestWeightInfo;
+}
 
 parameter_types! {
-	pub const KsmLocation: MultiLocation = MultiLocation::Null;
+	pub const KsmLocation: MultiLocation = Junctions::Here.into();
 	pub const KusamaNetwork: NetworkId = NetworkId::Kusama;
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
-	pub Ancestry: MultiLocation = MultiLocation::Null;
+	pub Ancestry: MultiLocation = MultiLocation::default();
 	pub UnitWeightCost: Weight = 1_000;
+	pub const MaxInstructions: u32 = 100;
 }
 
 pub type SovereignAccountOf =
@@ -87,11 +86,11 @@ type LocalOriginConverter = (
 
 parameter_types! {
 	pub const BaseXcmWeight: Weight = 1_000;
-	pub KsmPerSecond: (MultiLocation, u128) = (KsmLocation::get(), 1);
+	pub KsmPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(KsmLocation::get()), 1);
 }
 
-pub type XcmRouter = super::super::RelayChainXcmRouter;
-pub type Barrier = AllowUnpaidExecutionFrom<All<MultiLocation>>;
+pub type XcmRouter = crate::RelayChainXcmRouter;
+pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
 impl Config for XcmConfig {
@@ -103,9 +102,12 @@ impl Config for XcmConfig {
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
-	type Trader = FixedRateOfConcreteFungible<KsmPerSecond, ()>;
-	type ResponseHandler = ();
+	type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
+	type Trader = FixedRateOfFungible<KsmPerSecond, ()>;
+	type ResponseHandler = PolkadotXcm;
+	type AssetTrap = PolkadotXcm;
+	type AssetClaims = PolkadotXcm;
+	type SubscriptionService = PolkadotXcm;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, KusamaNetwork>;
@@ -116,11 +118,16 @@ impl pallet_xcm::Config for Runtime {
 	type XcmRouter = XcmRouter;
 	// Anyone can execute XCM messages locally...
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = ();
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type XcmReserveTransferFilter = All<(MultiLocation, Vec<MultiAsset>)>;
-	type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
+	type XcmTeleportFilter = Nothing;
+	type XcmReserveTransferFilter = Everything;
+	type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
+	type LocationInverter = LocationInverter<Ancestry>;
+	type Origin = Origin;
+	type Call = Call;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 }
 
 parameter_types! {
@@ -131,6 +138,7 @@ impl ump::Config for Runtime {
 	type Event = Event;
 	type UmpSink = ump::XcmSink<XcmExecutor<XcmConfig>, Runtime>;
 	type FirstMessageFactorPercent = FirstMessageFactorPercent;
+	type ExecuteOverweightOrigin = frame_system::EnsureRoot<AccountId>;
 }
 
 impl origin::Config for Runtime {}
@@ -164,16 +172,16 @@ impl OneSessionHandler<AccountId> for OtherSessionHandler {
 		SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| x.0.clone()).collect(), HashSet::new()));
 	}
 
-	fn on_disabled(validator_index: usize) {
+	fn on_disabled(validator_index: u32) {
 		SESSION.with(|d| {
 			let mut d = d.borrow_mut();
-			let value = d.0[validator_index].clone();
+			let value = d.0[validator_index as usize].clone();
 			d.1.insert(value);
 		})
 	}
 }
 
-impl sp_runtime::BoundToRuntimeAppPublic for OtherSessionHandler {
+impl BoundToRuntimeAppPublic for OtherSessionHandler {
 	type Public = UintAuthorityId;
 }
 
@@ -189,7 +197,7 @@ impl FindAuthor<AccountId> for Author11 {
 }
 
 parameter_types! {
-	pub const BlockHashCount: u64 = 250;
+	pub const BlockHashCount: u32 = 250;
 	pub BlockWeights: frame_system::limits::BlockWeights =
 		frame_system::limits::BlockWeights::simple_max(
 			frame_support::weights::constants::WEIGHT_PER_SECOND * 2
@@ -220,7 +228,7 @@ parameter_types! {
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(25);
 }
 
-sp_runtime::impl_opaque_keys! {
+impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub other: OtherSessionHandler,
 	}
@@ -234,7 +242,6 @@ impl pallet_session::Config for Runtime {
 	type Event = Event;
 	type ValidatorId = AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Runtime>;
-	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
 	type WeightInfo = ();
 }
@@ -267,6 +274,7 @@ parameter_types! {
 	pub const BondingDuration: EraIndex = 3;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
 	pub const MaxNominatorRewardedPerValidator: u32 = 64;
+	pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(75);
 }
 
 thread_local! {
@@ -284,13 +292,24 @@ impl OnUnbalanced<NegativeImbalanceOf<Runtime>> for RewardRemainderMock {
 	}
 }
 
+const THRESHOLDS: [sp_npos_elections::VoteWeight; 9] = [10, 20, 30, 40, 50, 60, 1_000, 2_000, 10_000];
+
+parameter_types! {
+	pub static BagThresholds: &'static [sp_npos_elections::VoteWeight] = &THRESHOLDS;
+}
+
+impl pallet_bags_list::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = ();
+	type VoteWeightProvider = Staking;
+	type BagThresholds = BagThresholds;
+}
+
 impl onchain::Config for Runtime {
-	type AccountId = AccountId;
-	type BlockNumber = BlockNumber;
-	type BlockWeights = BlockWeights;
 	type Accuracy = Perbill;
 	type DataProvider = Staking;
 }
+
 impl staking::Config for Runtime {
 	const MAX_NOMINATIONS: u32 = 16;
 	type Currency = Balances;
@@ -311,6 +330,8 @@ impl staking::Config for Runtime {
 	type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
 	type GenesisElectionProvider = Self::ElectionProvider;
 	type WeightInfo = ();
+	type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
+	type SortedListProvider = BagsList;
 }
 
 parameter_types! {
@@ -323,7 +344,7 @@ parameter_types! {
 }
 
 /// The type used to represent the kinds of proxying allowed.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, scale_info::TypeInfo)]
 pub enum ProxyType {
 	Any = 0,
 	NonTransfer = 1,
@@ -395,11 +416,6 @@ impl pallet_assets::Config for Runtime {
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Runtime>;
 type Block = frame_system::mocking::MockBlock<Runtime>;
 
-// The configured indices for the runtime
-pub const STAKING_PALLET_INDEX: u8 = 7u8;
-pub const PROXY_PALLET_INDEX: u8 = 29u8;
-pub const ASSETS_PALLET_INDEX: u8 = 50u8;
-
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -411,7 +427,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		ParasOrigin: origin::{Pallet, Origin},
 		ParasUmp: ump::{Pallet, Call, Storage, Event},
-		XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>},
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin},
 
 		 // use polkadot index 7
 		Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
@@ -423,5 +439,7 @@ construct_runtime!(
 
 		// use statemint index 50
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+
+		BagsList: pallet_bags_list::{Pallet, Call, Storage, Event<T>},
 	}
 );

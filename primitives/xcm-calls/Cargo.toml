@@ -9,29 +9,32 @@ repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
-serde = { version = "1.0.124", features = ["derive"], optional = true }
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false, features = ['derive'] }
-frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
-frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8', default-features = false }
+serde = { version = "1.0.101", features = ["derive"], optional = true }
+codec = { package = 'parity-scale-codec', version = '2.3.1', default-features = false, features = ['derive'] }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 
 [dev-dependencies]
-sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-max-encoded-len = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+frame-election-provider-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+
 
 ## Substrate Pallet Dependencies
-pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8'}
-pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
-pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.8' }
+pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12'}
+pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-bags-list = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 # Polkadot Dependencies
-xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.8' }
+xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.12' }
 
 [features]
 default = ['std']

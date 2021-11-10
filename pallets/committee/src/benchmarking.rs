@@ -4,24 +4,41 @@ use super::*;
 use frame_benchmarking::{account, benchmarks, vec, Box};
 use frame_support::{
 	assert_noop, assert_ok,
-	traits::{EnsureOrigin, Get, UnfilteredDispatchable},
+	traits::{EnsureOrigin, Get, Hooks, UnfilteredDispatchable},
 };
 use frame_system::{ensure_signed, Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
 
 fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pallet::Proposal<T> {
-	let action: T::Action = <SystemCall<T>>::remark(vec![0; 0]).into();
+	let action: T::Action = SystemCall::<T>::remark { remark: vec![0; 0] }.into();
 	let expected_nonce = pallet::ProposalCount::<T>::get();
-	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), ensure_signed(origin.clone()).unwrap(),));
-	let call = <Call<T>>::propose(Box::new(action.clone()));
+
+	let account_id = ensure_signed(origin.clone()).unwrap();
+	assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), account_id.clone()));
+	<System<T>>::set_block_number(
+		<System<T>>::block_number() +
+			<T as Config>::VotingPeriod::get() +
+			<T as Config>::ProposalSubmissionPeriod::get() +
+			1_u32.into(),
+	);
+
+	let call = Call::<T>::propose { action: Box::new(action.clone()) };
 	assert_ok!(call.dispatch_bypass_filter(origin));
-	pallet::Proposal::<T>::new(expected_nonce, action)
+
+	pallet::Proposal::<T>::new(action, account_id, expected_nonce, ProposalStatus::Active)
+}
+
+fn run_to_block<T: Config>(n: T::BlockNumber) {
+	while System::<T>::block_number() < n {
+		System::<T>::set_block_number(System::<T>::block_number() + 1u32.into());
+		Pallet::<T>::on_initialize(System::<T>::block_number());
+	}
 }
 
 benchmarks! {
 	propose {
 		let origin = T::ProposalSubmissionOrigin::successful_origin();
 		let proposal = submit_proposal::<T>(origin.clone());
-		let call = <Call<T>>::propose(Box::new(<SystemCall<T>>::remark(vec![0; 0]).into()));
+		let call = Call::<T>::propose{action: Box::new(SystemCall::<T>::remark{remark:vec![0; 0]}.into())};
 	}: {
 		call.dispatch_bypass_filter(origin)?
 	} verify {
@@ -40,7 +57,7 @@ benchmarks! {
 		);
 
 		// construct call
-		let call = <Call<T>>::vote(proposal.hash(), Vote::Abstain);
+		let call = Call::<T>::vote{ proposal_hash: proposal.hash(), vote: VoteKind::Abstain};
 	}: {
 		call.dispatch_bypass_filter(origin)?
 	} verify {
@@ -59,7 +76,7 @@ benchmarks! {
 			assert_ok!(Votes::<T>::try_mutate(&proposal.hash(), |votes| {
 				if let Some(votes) = votes {
 					votes.cast_vote(
-						MemberVote::new(CommitteeMember::new(voter, MemberType::Council), Vote::Aye),
+						MemberVote::new(CommitteeMember::new(voter, MemberType::Council), VoteKind::Aye),
 					);
 					Ok(())
 				} else {
@@ -77,7 +94,7 @@ benchmarks! {
 		);
 
 		// construct call
-		let call = <Call<T>>::close(proposal.hash());
+		let call = Call::<T>::close{proposal_hash: proposal.hash()};
 	}: {
 		call.dispatch_bypass_filter(T::ProposalExecutionOrigin::successful_origin())?
 	} verify {
@@ -94,5 +111,25 @@ benchmarks! {
 		constituent.clone()
 	) verify {
 		assert!(<pallet::Members<T>>::contains_key(constituent));
+	}
+
+	remove_member {
+		let constituent: T::AccountId = account("constituent", 0, 0);
+		assert_ok!(<Pallet<T>>::add_constituent(SystemOrigin::Root.into(), constituent.clone()));
+	}: _(
+		SystemOrigin::Root,
+		constituent.clone()
+	) verify {
+		assert!(!<pallet::Members<T>>::contains_key(constituent));
+	}
+
+	set_voting_period {
+		let two_weeks: T::BlockNumber = (10u32 * 60 * 24 * 7 * 2).into();
+	}: _(
+		SystemOrigin::Root,
+		two_weeks
+	) verify {
+		run_to_block::<T>(<T as Config>::VotingPeriod::get());
+		assert_eq!(pallet::VotingPeriod::<T>::get(), two_weeks);
 	}
 }

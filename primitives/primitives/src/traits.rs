@@ -5,14 +5,12 @@
 //! circular dependencies
 
 use crate::{AssetAvailability, AssetPricePair, AssetProportions, Price, Ratio};
-use codec::{Decode, Encode};
 use frame_support::{
 	dispatch::DispatchError,
 	sp_runtime::{app_crypto::sp_core::U256, DispatchResult},
-	sp_std::{boxed::Box, result::Result},
-	RuntimeDebug,
+	sp_std::result::Result,
 };
-use xcm::v0::{MultiLocation, Outcome};
+use xcm::v1::MultiLocation;
 
 /// Type that provides the mapping between `AssetId` and `MultiLocation`.
 pub trait MultiAssetRegistry<AssetId> {
@@ -36,31 +34,39 @@ pub trait RemoteAssetManager<AccountId, AssetId, Balance> {
 	///       asset is a reserve location of PINT (Relay Chain)
 	///     - an XCM InitiateReserveWithdraw followed by XCM DepositReserveAsset order will be
 	///       dispatched as XCM ReserveAssetDeposit with an Xcm Deposit order
-	fn transfer_asset(
-		who: AccountId,
-		asset: AssetId,
-		amount: Balance,
-	) -> frame_support::sp_std::result::Result<Outcome, DispatchError>;
+	fn transfer_asset(who: AccountId, asset: AssetId, amount: Balance) -> DispatchResult;
 
-	/// Notification of deposited funds in the index, ready to be`bond` to earn staking rewards.
+	/// Notification of deposited funds in the index, ready to be `bond` to earn staking rewards.
 	///
 	/// This is an abstraction over how staking is supported on the `asset`'s native location.
 	/// In general, this can be one of
 	///     - None, staking is not supported, meaning this asset is idle.
 	///     - Staking via the FRAME `pallet_staking`, (e.g. Relay Chain).
 	///     - Liquid Staking, with support for early unbonding.
-	fn bond(asset: AssetId, amount: Balance) -> DispatchResult;
+	fn deposit(asset: AssetId, amount: Balance);
 
 	/// Notification of an upcoming withdrawal.
-	/// This tells the manager to either reserve the given amount from the free remote balance or
-	/// prepare to unbond those funds.
+	///
+	/// This tells the remote asset manager to either reserve the given amount from the idle remote
+	/// balance or prepare to unbond those active funds.
 	///
 	/// Unbonding an asset will involve:
-	///     - Nothing for assets that do not support staking (idle asset).
+	///     - Nothing for assets that do not support staking (always idle asset).
 	///     - Call `pallet_staking::unbond` + `pallet_staking::withdraw` on the asset's native chain
 	///       (e.g Relay Chain)
 	///     - Execute the unbond mechanism of the liquid staking protocol
-	fn unbond(asset: AssetId, amount: Balance) -> UnbondingOutcome;
+	fn announce_withdrawal(asset: AssetId, amount: Balance);
+}
+
+// Default implementation that does nothing
+impl<AccountId, AssetId, Balance> RemoteAssetManager<AccountId, AssetId, Balance> for () {
+	fn transfer_asset(_: AccountId, _: AssetId, _: Balance) -> DispatchResult {
+		Ok(())
+	}
+
+	fn deposit(_: AssetId, _: Balance) {}
+
+	fn announce_withdrawal(_: AssetId, _: Balance) {}
 }
 
 /// Abstracts net asset value (`NAV`) related calculations
@@ -68,17 +74,19 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// Calculates the amount of index tokens that the given units of the asset
 	/// are worth.
 	///
-	/// This is achieved by dividing the value of the given units by the index' `NAV`.
-	/// The value, or volume, of the `units` is determined by `value(units) = units * Price_asset`
-	/// (see: `asset_net_value`), and since the `NAV` represents the per token value, the equivalent
-	/// number of index token is `vol_asset / NAV`.
+	/// This is achieved by dividing the value of the given units by the index' `NAV` (the on chain
+	/// price of a index token). The value, or volume, of all the `units` is determined by
+	/// `value(units) = units * Price_asset` (see: `asset_net_value`), and since the `NAV`
+	/// represents the per token value of the index token, the equivalent number of index token is
+	/// `value(units) / NAV`.
 	fn index_token_equivalent(asset: AssetId, units: Balance) -> Result<Balance, DispatchError>;
 
 	/// Calculates the units of the given asset that the given number of
 	/// index_tokens are worth.
+	/// This is the reverse of `index_token_equivalent`.
 	///
-	/// This is calculated by determining the net value of the given
-	/// `index_tokens` and dividing it by the current priceof the `asset`:
+	/// This is calculated by determining the net value of the given amount of index tokens
+	/// and dividing it by the current price of the `asset`:
 	/// `units_asset = (NAV * index_tokens) / Price_asset`
 	fn asset_equivalent(index_tokens: Balance, asset: AssetId) -> Result<Balance, DispatchError>;
 
@@ -87,7 +95,8 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// This is a price pair in the form of `base/quote` whereas `base` is the `NAV` of the index
 	/// token and `quote` the current price for the asset:  `NAV / Price_asset`.
 	///
-	/// *Note:* The price (or value of 1 unit) of an asset secured by SAFTs is determined by the
+	/// *Note:*
+	/// The price (or the value of 1 unit) of an asset secured by SAFTs is determined by the
 	/// total asset value secured by all SAFTs divided by the units held in the index, (see:
 	/// [`SaftRegistry::net_saft_value`])
 	fn relative_asset_price(asset: AssetId) -> Result<AssetPricePair<AssetId>, DispatchError>;
@@ -156,15 +165,21 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 
 	/// Calculates the `NAV` of the index token, consisting of liquid assets
 	/// and SAFT.
-	/// This the *per token value* (value of a single unit of index token, or it's
-	/// "price")
+	///
+	/// This the *per token value* (value of a single unit of index token, or its
+	/// on chain price)
 	///
 	/// The the NAV is calculated by dividing the total value of all the
 	/// contributed assets by the total supply of index token:
-	/// `NAV = (NAV_0 + NAV_1+ ... + NAV_n) / Total Supply`. where
-	/// `Asset_n` is the net value of all shares of the specific asset that were
-	/// contributed to the index. And the sum of all of them is the
-	/// `total_asset_net_value`
+	/// `NAV = (NAV_0 + NAV_1+ ... + NAV_n) / TotalSupply(PINT)`. where
+	/// `NAV_n` is the net value of all shares of the specific asset that were
+	/// contributed to the index (see `calculate_net_asset_value`). And the sum of all of them is
+	/// the `total_asset_net_value`.
+	/// *Note:* in contrast to the index' `NAV` (which is a *per token* value) all `NAV_n` are the
+	/// total volume of the specific asset. For example if the index consists of two liquid assets
+	/// `L1` and `L2` then the total formula is `NAV = ( L1_units * L1_price + L2_units * L2_price)
+	/// / TotalSupply(PINT)` which is also equivalent to
+	/// `(L1_units * L1_price / TotalSupply(PINT)) + (L2_units * L2_price / TotalSupply(PINT))`
 	///
 	/// This can be simplified to
 	/// `NAV = (Liquid_net_value + SAFT_net_value) / Total Supply`,
@@ -172,6 +187,7 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	fn nav() -> Result<Price, DispatchError>;
 
 	/// Returns the per token `NAV` of the index token split to (`liquid`, `saft`).
+	///
 	/// Summed up, both of them add up to the total nav [`NavProvider::nav`]
 	fn navs() -> Result<(Price, Price), DispatchError> {
 		Ok((Self::liquid_nav()?, Self::saft_nav()?))
@@ -182,9 +198,9 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// liquid value.
 	///
 	/// Following the `total_nav` calculation, the `NAV_liquids` is determined
-	/// by `NAV_liquids = NAV - (SAFT_net_value / Total Supply)`
+	/// by `NAV_liquids = NAV - (SAFT_net_value / TotalSupply(PINT))`
 	/// Or simplified
-	/// `NAV - NAV_saft`, which is  `Liquid_net_value / Total Supply`
+	/// `NAV - NAV_saft`, which is  `Liquid_net_value / TotalSupply(PINT)`
 	fn liquid_nav() -> Result<Price, DispatchError>;
 
 	/// Calculates the NAV of the index token solely for the SAFT
@@ -192,7 +208,7 @@ pub trait NavProvider<AssetId: Clone, Balance>: SaftRegistry<AssetId, Balance> {
 	/// SAFT value.
 	///
 	/// Following `liquid_nav` calculation, this is determined by:
-	/// `SAFT_net_value / Total Supply`
+	/// `SAFT_net_value / TotalSupply(PINT)`
 	fn saft_nav() -> Result<Price, DispatchError>;
 
 	/// Returns the share of the asset in the total value of the index:
@@ -252,7 +268,7 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 	/// Updates the index by burning the given amount of index token from
 	/// the caller's account.
 	fn remove_liquid(
-		who: AccountId,
+		who: &AccountId,
 		id: AssetId,
 		units: Balance,
 		nav: Balance,
@@ -261,17 +277,42 @@ pub trait AssetRecorder<AccountId, AssetId, Balance> {
 
 	/// Burns the given amount of SAFT token from the index and
 	/// the nav from the caller's account
-	fn remove_saft(who: AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
+	fn remove_saft(who: &AccountId, id: AssetId, units: Balance, nav: Balance) -> DispatchResult;
 }
 
-/// Outcome of an XCM unbonding api call
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
-pub enum UnbondingOutcome {
-	/// Staking is not supported, therefore nothing to unbond
-	NotSupported,
-	/// Staking is supported, but the parachain's reserve account currently
-	/// holds enough units as stash so that no unbonding procedure is necessary
-	SufficientReserve,
-	/// The outcome of the XCM unbond call
-	Outcome(Box<Outcome>),
+/// Helper trait for runtime benchmarks
+#[cfg(feature = "runtime-benchmarks")]
+pub trait AssetRecorderBenchmarks<AssetId, Balance> {
+	fn add_asset(asset_id: AssetId, units: Balance, location: MultiLocation, amount: Balance) -> DispatchResult;
+
+	fn deposit_saft_equivalent(saft_nav: Balance) -> DispatchResult;
+}
+
+/// This is a helper trait only used for constructing `AssetId` types in Runtime Benchmarks
+pub trait MaybeAssetIdConvert<A, B>: Sized {
+	#[cfg(feature = "runtime-benchmarks")]
+	fn try_convert(value: A) -> Option<B>;
+}
+
+#[cfg(feature = "runtime-benchmarks")]
+impl<T> MaybeAssetIdConvert<u8, crate::types::AssetId> for T {
+	fn try_convert(value: u8) -> Option<crate::types::AssetId> {
+		frame_support::sp_std::convert::TryFrom::try_from(value).ok()
+	}
+}
+
+#[cfg(not(feature = "runtime-benchmarks"))]
+impl<T, A, B> MaybeAssetIdConvert<A, B> for T {}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::AssetId;
+
+	fn assert_maybe_from<T: MaybeAssetIdConvert<u8, AssetId>>() {}
+
+	#[test]
+	fn maybe_from_works() {
+		assert_maybe_from::<()>();
+	}
 }

@@ -22,16 +22,20 @@ mod tests;
 
 #[cfg(feature = "runtime-benchmarks")]
 mod benchmarking;
+pub mod traits;
 pub mod types;
 
 #[frame_support::pallet]
 // this is requires as the #[pallet::event] proc macro generates code that violates this lint
 #[allow(clippy::unused_unit, clippy::large_enum_variant, clippy::type_complexity)]
 pub mod pallet {
+	#[cfg(feature = "runtime-benchmarks")]
+	use pallet_price_feed::PriceFeedBenchmarks;
+	#[cfg(feature = "runtime-benchmarks")]
+	use primitives::traits::AssetRecorderBenchmarks;
+
 	use frame_support::{
-		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
-		require_transactional,
 		sp_runtime::{
 			traits::{AccountIdConversion, AtLeast32BitUnsigned, CheckedAdd, CheckedDiv, CheckedSub, Saturating, Zero},
 			ArithmeticError, FixedPointNumber,
@@ -42,27 +46,28 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, MultiReservableCurrency};
-	use polkadot_parachain::primitives::Id as ParaId;
-	use xcm::v0::{Junction, MultiLocation};
+	use sp_core::U256;
+	use xcm::v1::MultiLocation;
 
 	use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
-
-	use crate::types::{
-		AssetMetadata, AssetRedemption, AssetWithdrawal, IndexTokenLock, PendingRedemption, RedemptionState,
-	};
 	use primitives::{
-		fee::{BaseFee, FeeRate},
-		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry, UnbondingOutcome},
+		fee::{BaseFee, FeeRate, RedemptionFeeRange},
+		traits::{AssetRecorder, MultiAssetRegistry, NavProvider, RemoteAssetManager, SaftRegistry},
 		AssetAvailability, AssetProportion, AssetProportions, Ratio,
 	};
-	use sp_core::U256;
+
+	use crate::{
+		traits::LockupPeriodRange,
+		types::{AssetMetadata, AssetRedemption, AssetWithdrawal, DepositRange, IndexTokenLock, PendingRedemption},
+	};
+	use primitives::traits::MaybeAssetIdConvert;
 
 	type AccountIdFor<T> = <T as frame_system::Config>::AccountId;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config {
+	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		/// Origin that is allowed to administer the index
-		type AdminOrigin: EnsureOrigin<Self::Origin>;
+		type AdminOrigin: EnsureOrigin<Self::Origin, Success = <Self as frame_system::Config>::AccountId>;
 		/// Currency implementation to use as the index token
 		type IndexToken: LockableCurrency<Self::AccountId, Balance = Self::Balance>;
 		/// The balance type used within this pallet
@@ -79,6 +84,8 @@ pub mod pallet {
 		/// index
 		#[pallet::constant]
 		type LockupPeriod: Get<Self::BlockNumber>;
+		/// Range of the lockup period
+		type LockupPeriodRange: LockupPeriodRange<Self::BlockNumber>;
 		/// The identifier for the index token lock.
 		/// Used to lock up deposits for `T::LockupPeriod`.
 		#[pallet::constant]
@@ -91,13 +98,21 @@ pub mod pallet {
 		/// and being able to withdraw the awarded assets
 		#[pallet::constant]
 		type WithdrawalPeriod: Get<Self::BlockNumber>;
-		/// The maximum amount of DOT that can exist in the index
-		#[pallet::constant]
-		type DOTContributionLimit: Get<Self::Balance>;
 		/// Type that handles cross chain transfers
 		type RemoteAssetManager: RemoteAssetManager<Self::AccountId, Self::AssetId, Self::Balance>;
 		/// Type used to identify assets
-		type AssetId: Parameter + Member + AtLeast32BitUnsigned + Copy + MaybeSerializeDeserialize;
+		type AssetId: Parameter + Member + Copy + MaybeSerializeDeserialize;
+
+		/// Restricts how many deposits can be active
+		#[pallet::constant]
+		type MaxActiveDeposits: Get<u32>;
+
+		/// Restricts the max limit of decimals in metadata
+		#[pallet::constant]
+		type MaxDecimals: Get<u8>;
+
+		/// Determines the redemption fee in complete_withdraw
+		type RedemptionFee: Get<RedemptionFeeRange<Self::BlockNumber>>;
 
 		/// The native asset id
 		#[pallet::constant]
@@ -109,6 +124,10 @@ pub mod pallet {
 
 		/// The types that provides the necessary asset price pairs
 		type PriceFeed: PriceFeed<Self::AssetId>;
+
+		#[cfg(feature = "runtime-benchmarks")]
+		/// The type that provides benchmark features of pallet_price_feed
+		type PriceFeedBenchmarks: PriceFeedBenchmarks<Self::AccountId, Self::AssetId>;
 
 		/// The type registry that stores all NAV for non liquid assets
 		type SaftRegistry: SaftRegistry<Self::AssetId, Self::Balance>;
@@ -136,12 +155,34 @@ pub mod pallet {
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
+	/// stores a range of redemption fee
+	#[pallet::storage]
+	pub type RedemptionFee<T: Config> = StorageValue<_, RedemptionFeeRange<T::BlockNumber>, ValueQuery>;
+
 	/// (AssetId) -> AssetAvailability
 	#[pallet::storage]
 	#[pallet::getter(fn assets)]
 	pub type Assets<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, AssetAvailability, OptionQuery>;
 
-	///  (AccountId) -> Vec<PendingRedemption>
+	/// All timestamped deposits of an account.
+	///
+	/// This tracks all deposits, the index token a LP received upon `deposit`.
+	/// This will be used to calculate a withdrawal fee depending on how long the deposit remained
+	/// in the index.
+	#[pallet::storage]
+	#[pallet::getter(fn deposits)]
+	pub type Deposits<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		BoundedVec<(T::Balance, T::BlockNumber), T::MaxActiveDeposits>,
+		ValueQuery,
+	>;
+
+	/// All currently pending withdrawal sets for an account.
+	/// Where a single `PendingRedemption` is the result of a `withdraw` call.
+	///
+	/// (AccountId) -> Vec<PendingRedemption>
 	#[pallet::storage]
 	#[pallet::getter(fn pending_withrawals)]
 	pub type PendingWithdrawals<T: Config> = StorageMap<
@@ -159,12 +200,23 @@ pub mod pallet {
 	pub type IndexTokenLocks<T: Config> =
 		StorageMap<_, Blake2_128Concat, T::AccountId, Vec<IndexTokenLock<T::BlockNumber, T::Balance>>, ValueQuery>;
 
+	/// Store a duration (in blocks) of the lockup period
+	#[pallet::storage]
+	pub type LockupPeriod<T: Config> = StorageValue<_, T::BlockNumber, ValueQuery>;
+
 	/// Tracks the amount of the currently locked index token per user.
 	/// This is equal to the sum(IndexTokenLocks[AccountId])
 	///  (AccountId) -> Balance
 	#[pallet::storage]
 	#[pallet::getter(fn locked_index_tokens)]
 	pub type LockedIndexToken<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, T::Balance, ValueQuery>;
+
+	/// The range of the index token equivalent a deposit must be in in order to be allowed.
+	///
+	/// A valid deposit lies within `[deposit_bounds.minimum, deposit_bounds.maximum]`.
+	#[pallet::storage]
+	#[pallet::getter(fn deposit_bounds)]
+	pub type IndexTokenDepositRange<T: Config> = StorageValue<_, DepositRange<T::Balance>, ValueQuery>;
 
 	/// Metadata of an asset ( for reversed usage now ).
 	#[pallet::storage]
@@ -181,9 +233,11 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
+		/// The range that determines valid deposits.
+		pub deposit_range: DepositRange<T::Balance>,
 		/// All the liquid assets together with their parachain id known at
 		/// genesis
-		pub liquid_assets: Vec<(T::AssetId, ParaId)>,
+		pub liquid_assets: Vec<(T::AssetId, polkadot_parachain::primitives::Id)>,
 		/// ALl safts to register at genesis
 		pub saft_assets: Vec<T::AssetId>,
 	}
@@ -191,25 +245,39 @@ pub mod pallet {
 	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { liquid_assets: Default::default(), saft_assets: Default::default() }
+			Self {
+				deposit_range: Default::default(),
+				liquid_assets: Default::default(),
+				saft_assets: Default::default(),
+			}
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
 		fn build(&self) {
+			use xcm::v1::{Junction, Junctions, MultiLocation};
+
+			LockupPeriod::<T>::set(T::LockupPeriod::get());
+			RedemptionFee::<T>::set(T::RedemptionFee::get());
+
 			for (asset, id) in self.liquid_assets.iter().cloned() {
-				let availability = AssetAvailability::Liquid((Junction::Parent, Junction::Parachain(id.into())).into());
+				let availability = AssetAvailability::Liquid(MultiLocation {
+					parents: 0,
+					interior: Junctions::X1(Junction::Parachain(id.into())),
+				});
 				Assets::<T>::insert(asset, availability)
 			}
+
 			for asset in self.saft_assets.iter().cloned() {
 				Assets::<T>::insert(asset, AssetAvailability::Saft)
 			}
+
+			IndexTokenDepositRange::<T>::put(self.deposit_range.clone());
 		}
 	}
 
 	#[pallet::event]
-	#[pallet::metadata(T::AssetId = "AccountId", AccountIdFor < T > = "AccountId", T::Balance = "Balance")]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new asset was added to the index and some index token paid out
@@ -237,15 +305,16 @@ pub mod pallet {
 		/// New metadata has been set for an asset. \[asset_id, name, symbol,
 		/// decimals\]
 		MetadataSet(T::AssetId, Vec<u8>, Vec<u8>, u8),
+		/// The index token deposit range was updated.\[new_range\]
+		IndexTokenDepositRangeUpdated(DepositRange<T::Balance>),
+		/// Lockup Period has been updated
+		NewLockupPeriod(T::BlockNumber),
+		/// RedemptionFeeRange has been updated
+		NewRedemptionFeeRange(RedemptionFeeRange<T::BlockNumber>),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Thrown if adding units to an asset holding causes its numerical type
-		/// to overflow
-		AssetUnitsOverflow,
-		/// The given asset ID is unknown.
-		UnknownAsset,
 		/// Thrown if the given asset was the native asset and is disallowed
 		NativeAssetDisallowed,
 		/// Thrown if a SAFT asset operation was requested for a registered
@@ -254,31 +323,42 @@ pub mod pallet {
 		/// Thrown if a liquid asset operation was requested for a registered
 		/// SAFT asset.
 		ExpectedLiquid,
-		/// Thrown when trying to remove liquid assets without recipient
-		NoRecipient,
+		/// Thrown when trying to remove deposits with no deposits
+		NoDeposits,
 		/// Invalid metadata given.
 		BadMetadata,
+		/// Thrown when calculate reademption fee failed
+		CalculateRedemptionFeeFailed,
 		/// Thrown if no index could be found for an asset identifier.
 		UnsupportedAsset,
-		/// Thrown if calculating the volume of units of an asset with it's
-		/// price overflows.
-		AssetVolumeOverflow,
 		/// Thrown if the given amount of PINT to redeem is too low
 		MinimumRedemption,
 		/// Thrown when the redeemer does not have enough PINT as is requested
 		/// for withdrawal.
 		InsufficientDeposit,
-		/// Thrown when calculating the NAV resulted in a overflow
-		NAVOverflow,
 		/// Thrown when to withdrawals are available to complete
 		NoPendingWithdrawals,
 		/// Thrown if the asset that should be added is already registered
 		AssetAlreadyExists,
-		/// Thrown when adding assets with zero amount or units
-		InvalidPrice,
+		/// Thrown if the asset that should be added has not been registered.
+		AssetNotExists,
 		/// This gets thrown if the total supply of index tokens is 0 so no NAV can be calculated to
 		/// determine the Asset/Index Token rate.
 		InsufficientIndexTokens,
+		/// Thrown if deposits reach limit
+		TooManyDeposits,
+		/// Thrown when the given decimals is zero or too high
+		InvalidDecimals,
+		/// Thrown when the given DepositRange is invalid
+		InvalidDepositRange,
+		/// Thrown when the given RedemptionFeeRange is invalid
+		InvalidRedemptionFeeRange,
+		/// Attempted to set LockupPeriod out of the range of 1 day ~ 28 days
+		InvalidLockupPeriod,
+		/// The deposited amount is below the minimum value required.
+		DepositAmountBelowMinimum,
+		/// The deposited amount exceeded the cap allowed.
+		DepositExceedsMaximum,
 	}
 
 	#[pallet::hooks]
@@ -291,43 +371,33 @@ pub mod pallet {
 		/// The amount of PINT minted and awarded to the LP is specified as part
 		/// of the associated proposal
 		/// Caller's balance is updated to allocate the correct amount of the
-		/// IndexToken. If the asset does not exist yet, it will get
-		/// created with the given location.
+		/// IndexToken.
+		/// The given amount of assets must already exist in the caller's account,
+		/// they are then transferred to the treasury account.
+		///
+		/// The Governance committee decides the tokens that comprise the index,
+		/// as well as the allocation of each and their value.
 		#[pallet::weight(T::WeightInfo::add_asset())]
 		pub fn add_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
-			location: MultiLocation,
 			amount: T::Balance,
-		) -> DispatchResultWithPostInfo {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let caller = ensure_signed(origin)?;
-			if units.is_zero() {
-				return Ok(().into());
-			}
+		) -> DispatchResult {
+			Self::do_add_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, amount)
+		}
 
-			let availability = AssetAvailability::Liquid(location);
-
-			// check whether this is a new asset and make sure locations match otherwise
-			let is_new_asset = if let Some(asset) = Assets::<T>::get(&asset_id) {
-				ensure!(asset == availability, Error::<T>::AssetAlreadyExists);
-				false
-			} else {
-				true
-			};
-
-			// transfer the caller's fund into the treasury account
-			Self::add_liquid(&caller, asset_id, units, amount)?;
-
-			// register asset if not yet known
-			if is_new_asset {
-				Assets::<T>::insert(asset_id, availability.clone());
-				Self::deposit_event(Event::AssetRegistered(asset_id, availability));
-			}
-
-			Self::deposit_event(Event::AssetAdded(asset_id, units, caller, amount));
-			Ok(().into())
+		/// Add liquid asset with root origin, see `add_asset`
+		#[pallet::weight(T::WeightInfo::add_asset())]
+		pub fn force_add_asset(
+			origin: OriginFor<T>,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			amount: T::Balance,
+			recipient: T::AccountId,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::do_add_asset(recipient, asset_id, units, amount)
 		}
 
 		/// Dispatches transfer to move assets out of the index’s account,
@@ -340,28 +410,27 @@ pub mod pallet {
 		/// into the sovereign account of either:
 		/// - the given `recipient` if provided
 		/// - the caller's account if `recipient` is `None`
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::remove_asset())]
 		pub fn remove_asset(
 			origin: OriginFor<T>,
 			asset_id: T::AssetId,
 			units: T::Balance,
 			recipient: Option<T::AccountId>,
-		) -> DispatchResultWithPostInfo {
-			T::AdminOrigin::ensure_origin(origin.clone())?;
-			let caller = ensure_signed(origin)?;
-			if units.is_zero() {
-				return Ok(().into());
-			}
-			Self::ensure_not_native_asset(&asset_id)?;
+		) -> DispatchResult {
+			Self::do_remove_asset(T::AdminOrigin::ensure_origin(origin)?, asset_id, units, recipient)
+		}
 
-			// the amount of index token the given units of the liquid assets are worth
-			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
-
-			// transfer the caller's fund into the treasury account
-			Self::remove_liquid(caller.clone(), asset_id, units, index_tokens, recipient.clone())?;
-
-			Self::deposit_event(Event::AssetRemoved(asset_id, units, caller, recipient, index_tokens));
-			Ok(().into())
+		/// Remove liquid asset with root origin
+		#[pallet::weight(T::WeightInfo::remove_asset())]
+		pub fn force_remove_asset(
+			origin: OriginFor<T>,
+			who: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			recipient: Option<T::AccountId>,
+		) -> DispatchResult {
+			ensure_root(origin)?;
+			Self::do_remove_asset(who, asset_id, units, recipient)
 		}
 
 		/// Registers a new asset in the index together with its availability
@@ -376,6 +445,9 @@ pub mod pallet {
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
+			// native asset can't be registered
+			Self::ensure_not_native_asset(&asset_id)?;
+
 			Assets::<T>::try_mutate(asset_id, |maybe_available| -> DispatchResult {
 				// allow new assets only
 				ensure!(maybe_available.replace(availability.clone()).is_none(), Error::<T>::AssetAlreadyExists);
@@ -383,6 +455,60 @@ pub mod pallet {
 			})?;
 
 			Self::deposit_event(Event::AssetRegistered(asset_id, availability));
+			Ok(())
+		}
+
+		/// Updates the range for how much a deposit must be worth in index token in order to be
+		/// accpedted.
+		/// Only callable by the admin origin
+		///
+		/// Parameters:
+		/// - `new_range`: The new valid range for deposits.
+		#[pallet::weight(T::WeightInfo::set_deposit_range())]
+		pub fn set_deposit_range(origin: OriginFor<T>, new_range: DepositRange<T::Balance>) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			ensure!(!new_range.minimum.is_zero(), Error::<T>::InvalidDepositRange);
+			ensure!(new_range.maximum > new_range.minimum, Error::<T>::InvalidDepositRange);
+			IndexTokenDepositRange::<T>::put(&new_range);
+			Self::deposit_event(Event::<T>::IndexTokenDepositRangeUpdated(new_range));
+			Ok(())
+		}
+
+		/// Updates the range for redemption fee
+		///
+		/// Only callable by the admin origin
+		///
+		/// Parameters:
+		/// - `new_range`: The new valid range for redemption fee.
+		#[pallet::weight(T::WeightInfo::update_redemption_fees())]
+		pub fn update_redemption_fees(
+			origin: OriginFor<T>,
+			new_range: RedemptionFeeRange<T::BlockNumber>,
+		) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+			ensure!(new_range.range[0].0 < new_range.range[1].0, Error::<T>::InvalidRedemptionFeeRange);
+			RedemptionFee::<T>::set(new_range.clone());
+			Self::deposit_event(Event::<T>::NewRedemptionFeeRange(new_range));
+			Ok(())
+		}
+
+		/// Updates the lockup period
+		///
+		/// Only callable by the admin origin
+		///
+		/// Parameters:
+		/// - `lockup_period`: how long will the depositing assets will be locked
+		#[pallet::weight(T::WeightInfo::set_lockup_period())]
+		pub fn set_lockup_period(origin: OriginFor<T>, lockup_period: T::BlockNumber) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+
+			ensure!(
+				T::LockupPeriodRange::min() <= lockup_period && lockup_period <= T::LockupPeriodRange::max(),
+				Error::<T>::InvalidLockupPeriod
+			);
+
+			LockupPeriod::<T>::set(lockup_period);
+			Self::deposit_event(Event::<T>::NewLockupPeriod(lockup_period));
 			Ok(())
 		}
 
@@ -404,24 +530,25 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::set_metadata())]
 		pub fn set_metadata(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
+			id: T::AssetId,
 			name: Vec<u8>,
 			symbol: Vec<u8>,
 			decimals: u8,
 		) -> DispatchResult {
 			T::AdminOrigin::ensure_origin(origin)?;
 
+			ensure!(!name.is_empty(), Error::<T>::BadMetadata);
+			ensure!(!symbol.is_empty(), Error::<T>::BadMetadata);
+			ensure!(decimals <= T::MaxDecimals::get(), Error::<T>::InvalidDecimals);
+
 			let bounded_name: BoundedVec<u8, T::StringLimit> =
-				name.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
+				name.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 			let bounded_symbol: BoundedVec<u8, T::StringLimit> =
-				symbol.clone().try_into().map_err(|_| <Error<T>>::BadMetadata)?;
+				symbol.clone().try_into().map_err(|_| Error::<T>::BadMetadata)?;
 
-			Metadata::<T>::try_mutate_exists(id, |metadata| {
-				*metadata = Some(AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
-
-				Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
-				Ok(())
-			})
+			Metadata::<T>::insert(id, AssetMetadata { name: bounded_name, symbol: bounded_symbol, decimals });
+			Self::deposit_event(Event::MetadataSet(id, name, symbol, decimals));
+			Ok(())
 		}
 
 		/// Initiate a transfer from the user's sovereign account into the
@@ -431,11 +558,13 @@ pub mod pallet {
 		/// account and mints PINT proportionally using the latest
 		/// available price pairs
 		#[pallet::weight(T::WeightInfo::deposit())]
+		#[transactional]
 		pub fn deposit(origin: OriginFor<T>, asset_id: T::AssetId, units: T::Balance) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			if units.is_zero() {
 				return Ok(());
 			}
+
 			// native asset can't be deposited here
 			Self::ensure_not_native_asset(&asset_id)?;
 			// only liquid assets can be deposited
@@ -449,15 +578,21 @@ pub mod pallet {
 			// the amount of index token the given units of the liquid assets are worth
 			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
 
-			if index_tokens.is_zero() {
-				return Err(Error::<T>::InsufficientDeposit.into());
-			}
+			// ensure the index token equivalent worth is within the set bounds
+			Self::ensure_deposit_in_bounds(index_tokens)?;
 
 			// transfer from the caller's sovereign account into the treasury's account
 			T::Currency::transfer(asset_id, &caller, &Self::treasury_account(), units)?;
 
 			// mint index token in caller's account
 			Self::do_mint_index_token(&caller, index_tokens);
+
+			// tell the remote asset manager that assets are available to bond
+			T::RemoteAssetManager::deposit(asset_id, units);
+
+			// insert new deposit
+			Deposits::<T>::try_append(&caller, (index_tokens, frame_system::Pallet::<T>::block_number()))
+				.map_err(|_| Error::<T>::TooManyDeposits)?;
 
 			Self::deposit_event(Event::Deposited(asset_id, units, caller, index_tokens));
 			Ok(())
@@ -474,10 +609,10 @@ pub mod pallet {
 		///
 		/// The distribution of the underlying assets will be equivalent to the
 		/// ratio of the liquid assets in the index.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::withdraw())]
 		#[transactional]
-		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
+		pub fn withdraw(origin: OriginFor<T>, amount: T::Balance) -> DispatchResult {
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			ensure!(amount >= T::MinimumRedemption::get(), Error::<T>::MinimumRedemption);
 
 			// update the locks of prior deposits
@@ -491,8 +626,11 @@ pub mod pallet {
 				free_balance.saturating_sub(amount),
 			)?;
 
-			// amount = fee + redeem
-			let fee = amount.fee(T::BaseWithdrawalFee::get()).ok_or(Error::<T>::AssetUnitsOverflow)?;
+			// amount = fees + redeem
+			let fee = amount
+				.fee(T::BaseWithdrawalFee::get())
+				.ok_or(ArithmeticError::Overflow)?
+				.saturating_add(Self::do_consolidate_deposits(&caller, amount)?);
 			let redeem = amount.checked_sub(&fee).ok_or(Error::<T>::InsufficientDeposit)?.into();
 
 			// calculate the payout for each asset based on the redeem amount
@@ -518,47 +656,25 @@ pub mod pallet {
 
 			// start the redemption process for each withdrawal
 			for (asset, units) in asset_amounts {
-				// start the unbonding routine, and determine the state of this withdrawal after the initial attempt
-				let state = match T::RemoteAssetManager::unbond(asset, units) {
-					UnbondingOutcome::NotSupported | UnbondingOutcome::SufficientReserve => {
-						// nothing to unbond, the funds are assumed to be available after the
-						// redemption period is over
-						RedemptionState::Unbonding
-					}
-					UnbondingOutcome::Outcome(outcome) => {
-						// the outcome of the dispatched xcm call
-						if outcome.ensure_complete().is_ok() {
-							// the XCM call was dispatched successfully, however, this is  *NOT*
-							// synonymous with a successful completion of the unbonding process.
-							// instead, this state implies that XCM is now being processed on a
-							// different parachain
-							RedemptionState::Unbonding
-						} else {
-							// failed to send the unbond xcm
-							RedemptionState::Initiated
-						}
-					}
-				};
-
+				// announce the unbonding routine
+				T::RemoteAssetManager::announce_withdrawal(asset, units);
 				// reserve the funds in the treasury's account until the redemption period is
 				// over after which they can be transferred to the user account
 				// NOTE: this should always succeed due to the way the asset distribution is
 				// calculated
 				T::Currency::reserve(asset, &Self::treasury_account(), units)?;
-				assets.push(AssetWithdrawal { asset, state, units });
+				assets.push(AssetWithdrawal { asset, units, reserved: units, withdrawn: false });
 			}
 
 			// after this block an asset withdrawal is allowed to advance to the transfer
 			// state
 			let end_block = frame_system::Pallet::<T>::block_number().saturating_add(T::WithdrawalPeriod::get());
+
 			// lock the assets for the withdrawal period starting at current block
-			PendingWithdrawals::<T>::mutate(&caller, |maybe_redemption| {
-				let redemption = maybe_redemption.get_or_insert_with(|| Vec::with_capacity(1));
-				redemption.push(PendingRedemption { end_block, assets })
-			});
+			PendingWithdrawals::<T>::append(&caller, PendingRedemption { end_block, assets });
 
 			Self::deposit_event(Event::WithdrawalInitiated(caller, effectively_withdrawn));
-			Ok(().into())
+			Ok(())
 		}
 
 		/// Attempts to complete all currently pending redemption processes
@@ -568,10 +684,9 @@ pub mod pallet {
 		/// tries to close it. Completing a withdrawal will succeed if
 		/// following conditions are met:
 		///   - the `LockupPeriod` has passed since the withdrawal was initiated
-		///   - the unbonding process on other parachains was successful
 		///   - the treasury can cover the asset transfer to the caller's account, from which the
 		///     caller then can initiate an `Xcm::Withdraw` to remove the assets from the PINT
-		///     parachain entirely.
+		///     parachain entirely, if xcm transfers are supported.
 		///
 		/// *NOTE*: All individual withdrawals that resulted from "Withdraw"
 		/// will be completed separately, however, the entire record of pending
@@ -580,11 +695,10 @@ pub mod pallet {
 		/// as soon as the aforementioned conditions are met, regardless of
 		/// whether the other `AssetWithdrawal`s in the same `PendingWithdrawal` set
 		/// can also be closed successfully.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::complete_withdraw())]
 		#[transactional]
-		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let caller = ensure_signed(origin)?;
-
+		pub fn complete_withdraw(origin: OriginFor<T>) -> DispatchResult {
+			let caller = T::AdminOrigin::ensure_origin(origin.clone())?;
 			let current_block = frame_system::Pallet::<T>::block_number();
 
 			PendingWithdrawals::<T>::try_mutate_exists(&caller, |maybe_pending| -> DispatchResult {
@@ -599,7 +713,7 @@ pub mod pallet {
 						if redemption.end_block >= current_block &&
 							Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
-							// all individual redemptions closed, remove from storage
+							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
 							return None;
 						}
@@ -611,18 +725,18 @@ pub mod pallet {
 					// still have redemptions pending
 					*maybe_pending = Some(still_pending);
 				}
+
 				Ok(())
-			})?;
-			Ok(().into())
+			})
 		}
 
 		/// Updates the index token locks of the caller.
 		///
 		/// This removes expired locks and updates the caller's index token
 		/// balance accordingly.
-		#[pallet::weight(10_000)] // TODO: Set weights
+		#[pallet::weight(T::WeightInfo::unlock())]
 		pub fn unlock(origin: OriginFor<T>) -> DispatchResult {
-			let caller = ensure_signed(origin)?;
+			let caller = T::AdminOrigin::ensure_origin(origin)?;
 			Self::do_update_index_token_locks(&caller);
 			Ok(())
 		}
@@ -675,13 +789,140 @@ pub mod pallet {
 			Assets::<T>::iter().filter(|(_, holding)| holding.is_saft()).map(|(k, _)| k)
 		}
 
-		fn calculate_nav_proportion(asset: T::AssetId, nav: Ratio) -> Result<Ratio, DispatchError> {
+		fn calculate_nav_proportion(asset: T::AssetId, nav: Price) -> Result<Ratio, DispatchError> {
 			// the proportion is `value(asset) / value(index)` and since `nav = value(index)/supply`, this is
 			// `value(asset)/supply / nav`
 			let asset_value = Self::net_asset_value(asset)?;
 			let share = Ratio::checked_from_rational(asset_value.into(), Self::index_token_issuance().into())
 				.ok_or(ArithmeticError::Overflow)?;
 			share.checked_div(&nav).ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		/// Determine the index token equivalent value of the given saft_nav
+		///
+		/// Essentially how many index token the given `saft_nav` is worth we get this via `saft_nav
+		/// / NAV` or `NAV^-1 * saft_nav`
+		fn saft_equivalent(saft_nav: T::Balance) -> Result<T::Balance, DispatchError> {
+			Self::nav()?
+				.reciprocal()
+				.and_then(|n| n.checked_mul_int(saft_nav.into()).and_then(|n| TryInto::<T::Balance>::try_into(n).ok()))
+				.ok_or_else(|| ArithmeticError::Overflow.into())
+		}
+
+		/// Adds liquid asset units
+		///
+		/// - If asset exists, deposit more units into matched asset
+		///
+		/// This function is a no-op if:
+		///  - The `units` to be converted is zero, this would be analogous to
+		///    [`LocalTreasury::withdraw`]
+		///  - The `amount` of index tokens to be received is less than the required ED and the
+		///    account does not exist.
+		fn do_add_asset(
+			recipient: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			amount: T::Balance,
+		) -> DispatchResult {
+			ensure!(Assets::<T>::contains_key(&asset_id), Error::<T>::AssetNotExists);
+
+			if units.is_zero() {
+				return Ok(());
+			}
+
+			// transfer the caller's funds into the treasury account in exchange for index tokens
+			Self::add_liquid(&recipient, asset_id, units, amount)?;
+
+			Self::deposit_event(Event::AssetAdded(asset_id, units, recipient, amount));
+			Ok(())
+		}
+
+		/// Removes liquid assets
+		fn do_remove_asset(
+			who: T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			recipient: Option<T::AccountId>,
+		) -> DispatchResult {
+			if units.is_zero() {
+				return Ok(());
+			}
+			Self::ensure_not_native_asset(&asset_id)?;
+
+			// the amount of index token the given units of the liquid assets are worth
+			let index_tokens = Self::index_token_equivalent(asset_id, units)?;
+
+			// transfer the caller's fund into the treasury account
+			Self::remove_liquid(&who, asset_id, units, index_tokens, recipient.clone())?;
+
+			Self::deposit_event(Event::AssetRemoved(asset_id, units, who, recipient, index_tokens));
+			Ok(())
+		}
+
+		/// The fee model depends on how long LP contributions remained in the index.
+		/// Therefore, LP deposits in `deposit` are time-stamped (block number) so that fees can be
+		/// determined as a function of time spent in the index.
+		///
+		/// This function consolidates the oldest deposits and removes the deposits implicated by
+		/// the transferred withdrawal amount and returns the total redemption fee for the given
+		/// amount.
+		fn do_consolidate_deposits(caller: &T::AccountId, mut amount: T::Balance) -> Result<T::Balance, DispatchError> {
+			<Deposits<T>>::try_mutate_exists(&caller, |maybe_deposits| -> Result<T::Balance, DispatchError> {
+				let mut deposits = maybe_deposits.take().ok_or(<Error<T>>::NoDeposits)?;
+				let mut total_fee: T::Balance = T::Balance::zero();
+				let current_block = frame_system::Pallet::<T>::block_number();
+
+				let redemption_fee_range = RedemptionFee::<T>::get();
+				let mut calculate_redemption_fee_failed = false;
+				let mut rem: Option<(T::Balance, T::BlockNumber)> = None;
+				deposits.retain(|(index_tokens, block_number)| {
+					// how long this deposit spent in the index.
+					let time_spent = current_block.saturating_sub(*block_number);
+
+					if amount.is_zero() {
+						true
+					} else if amount >= *index_tokens {
+						amount = amount.saturating_sub(*index_tokens);
+						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, *index_tokens) {
+							total_fee = total_fee.saturating_add(fee);
+						} else {
+							calculate_redemption_fee_failed = true;
+						}
+
+						false
+					} else {
+						// the remaining amount is less than the oldest deposit, so we are simply updating the value of
+						// the now oldest deposit
+						rem = Some((index_tokens.saturating_sub(amount), *block_number));
+						if let Some(fee) = redemption_fee_range.redemption_fee(time_spent, amount) {
+							total_fee = total_fee.saturating_add(fee);
+						} else {
+							calculate_redemption_fee_failed = true;
+						}
+
+						amount = T::Balance::zero();
+						true
+					}
+				});
+
+				if calculate_redemption_fee_failed {
+					return Err(Error::<T>::CalculateRedemptionFeeFailed.into());
+				}
+
+				if !deposits.is_empty() {
+					if let Some(rem) = rem {
+						// update the oldest value
+						deposits[0] = rem;
+					}
+					*maybe_deposits = Some(deposits);
+				}
+
+				if !amount.is_zero() {
+					return Err(<Error<T>>::InsufficientDeposit.into());
+				}
+
+				Ok(total_fee)
+			})
 		}
 
 		/// Returns the relative price pair NAV/Asset to calculate the asset equivalent value:
@@ -699,7 +940,7 @@ pub mod pallet {
 		///
 		/// *NOTE*:
 		///   - This does not account for fees
-		///   - This is a noop for `redeem == 0`
+		///   - This is a no-op for `redeem == 0`
 		pub fn liquid_asset_redemptions(
 			redeem: u128,
 		) -> Result<AssetRedemption<T::AssetId, T::Balance>, DispatchError> {
@@ -740,7 +981,7 @@ pub mod pallet {
 
 			Ok(AssetRedemption {
 				asset_amounts,
-				redeemed_index_tokens: redeemed_index_tokens.try_into().map_err(|_| Error::<T>::AssetUnitsOverflow)?,
+				redeemed_index_tokens: redeemed_index_tokens.try_into().map_err(|_| ArithmeticError::Overflow)?,
 			})
 		}
 
@@ -779,7 +1020,7 @@ pub mod pallet {
 		fn do_add_index_token_lock(user: &T::AccountId, amount: T::Balance) {
 			let current_block = frame_system::Pallet::<T>::block_number();
 			let mut locks = IndexTokenLocks::<T>::get(user);
-			locks.push(IndexTokenLock { locked: amount, end_block: current_block + T::LockupPeriod::get() });
+			locks.push(IndexTokenLock { locked: amount, end_block: current_block + LockupPeriod::<T>::get() });
 			Self::do_insert_index_token_locks(user, locks);
 		}
 
@@ -820,7 +1061,7 @@ pub mod pallet {
 		fn do_update_index_token_locks(user: &T::AccountId) {
 			let locks = IndexTokenLocks::<T>::get(user);
 			if !locks.is_empty() {
-				Self::do_insert_index_token_locks(user, IndexTokenLocks::<T>::get(user))
+				Self::do_insert_index_token_locks(user, locks)
 			}
 		}
 
@@ -830,7 +1071,6 @@ pub mod pallet {
 		///
 		/// Returns `true` if all entries are completed (the have been
 		/// transferred to the caller's account)
-		#[require_transactional]
 		fn do_complete_redemption(
 			caller: &T::AccountId,
 			assets: &mut Vec<AssetWithdrawal<T::AssetId, T::Balance>>,
@@ -839,41 +1079,26 @@ pub mod pallet {
 			let mut all_withdrawn = true;
 
 			for asset in assets {
-				match asset.state {
-					RedemptionState::Initiated => {
-						// unbonding processes failed in previous attempt, we don't initiate another xcm here instead we
-						// rely on the remote asset manager that it followed up on the failing xcm. Instead we check if
-						// the parachain has enough assets available now to cover this pending witdrawal once the
-						// redemption period is over TODO retry or handle this separately?
-						all_withdrawn = false;
+				if !asset.withdrawn {
+					// `unreserve` the previously reserved assets from the treasury.
+					asset.reserved = T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.reserved);
+					if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
+						Self::deposit_event(Event::Withdrawn(caller.clone(), asset.asset, asset.units));
+						asset.withdrawn = true;
+						continue;
 					}
-					RedemptionState::Unbonding => {
-						// funds are unbonded and can be transferred to the caller's account
-
-						// `unreserve` only moves up to `units` from the reserved balance to free.
-						// if this returns `>0` then the treasury's reserved balance is empty, in
-						// which case we simply proceed with attempting to transfer
-						T::Currency::unreserve(asset.asset, &Self::treasury_account(), asset.units);
-
-						if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
-							asset.state = RedemptionState::Withdrawn;
-						} else {
-							asset.state = RedemptionState::Transferring;
-							all_withdrawn = false;
-						}
-					}
-					RedemptionState::Transferring => {
-						// try to transfer again
-						if T::Currency::transfer(asset.asset, &Self::treasury_account(), caller, asset.units).is_ok() {
-							asset.state = RedemptionState::Withdrawn;
-						} else {
-							all_withdrawn = false;
-						}
-					}
-					RedemptionState::Withdrawn => {}
 				}
+				all_withdrawn = false
 			}
 			all_withdrawn
+		}
+
+		/// Ensures the given lies within the configured deposit range
+		pub fn ensure_deposit_in_bounds(amount: T::Balance) -> DispatchResult {
+			let bounds = IndexTokenDepositRange::<T>::get();
+			ensure!(amount >= bounds.minimum, Error::<T>::DepositAmountBelowMinimum);
+			ensure!(amount <= bounds.maximum, Error::<T>::DepositExceedsMaximum);
+			Ok(())
 		}
 	}
 
@@ -891,14 +1116,19 @@ pub mod pallet {
 			}
 			// native asset can't be added
 			Self::ensure_not_native_asset(&asset_id)?;
-			// transfer the given units of asset from the caller into the treasury account
+			// transfer the asset from the caller to treasury account
 			T::Currency::transfer(asset_id, caller, &Self::treasury_account(), units)?;
 			// mint PINT into caller's balance increasing the total issuance
 			T::IndexToken::deposit_creating(caller, nav);
 			Ok(())
 		}
 
-		fn add_saft(caller: &T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn add_saft(
+			caller: &T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -913,10 +1143,14 @@ pub mod pallet {
 				Ok(())
 			})?;
 
-			// mint SAFT into the treasury's account
+			// the current index token equivalent value of the given saft nav
+			let index_token = Self::saft_equivalent(saft_nav)?;
+
+			// mint the given units of the SAFT asset into the treasury's account
 			T::Currency::deposit(asset_id, &Self::treasury_account(), units)?;
+
 			// mint PINT into caller's balance increasing the total issuance
-			T::IndexToken::deposit_creating(caller, nav);
+			T::IndexToken::deposit_creating(caller, index_token);
 			Ok(())
 		}
 
@@ -928,7 +1162,7 @@ pub mod pallet {
 		}
 
 		fn remove_liquid(
-			who: T::AccountId,
+			who: &T::AccountId,
 			asset_id: T::AssetId,
 			units: T::Balance,
 			nav: T::Balance,
@@ -938,7 +1172,7 @@ pub mod pallet {
 				return Ok(());
 			}
 			ensure!(Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedLiquid);
-			ensure!(T::IndexToken::can_slash(&who, nav), Error::<T>::InsufficientDeposit);
+			ensure!(T::IndexToken::can_slash(who, nav), Error::<T>::InsufficientDeposit);
 
 			let recipient = recipient.unwrap_or_else(|| who.clone());
 
@@ -946,26 +1180,71 @@ pub mod pallet {
 			T::RemoteAssetManager::transfer_asset(recipient, asset_id, units)?;
 
 			// burn index token accordingly, no index token changes in the meantime
-			T::IndexToken::slash(&who, nav);
+			T::IndexToken::slash(who, nav);
 
 			Ok(())
 		}
 
-		fn remove_saft(who: T::AccountId, asset_id: T::AssetId, units: T::Balance, nav: T::Balance) -> DispatchResult {
+		fn remove_saft(
+			who: &T::AccountId,
+			asset_id: T::AssetId,
+			units: T::Balance,
+			saft_nav: T::Balance,
+		) -> DispatchResult {
 			if units.is_zero() {
 				return Ok(());
 			}
 			// native asset can't be processed here
 			Self::ensure_not_native_asset(&asset_id)?;
 
+			// the current index token equivalent value of the given saft nav
+			let index_token = Self::saft_equivalent(saft_nav)?;
+
 			ensure!(!Self::is_liquid_asset(&asset_id), Error::<T>::ExpectedSAFT);
-			ensure!(T::IndexToken::can_slash(&who, nav), Error::<T>::InsufficientDeposit);
+			ensure!(T::IndexToken::can_slash(who, index_token), Error::<T>::InsufficientDeposit);
 
 			// burn SAFT by withdrawing from the index
 			T::Currency::withdraw(asset_id, &Self::treasury_account(), units)?;
 			// burn index token accordingly, no index token changes in the meantime
-			T::IndexToken::slash(&who, nav);
+			T::IndexToken::slash(who, index_token);
 
+			Ok(())
+		}
+	}
+
+	#[cfg(feature = "runtime-benchmarks")]
+	impl<T: Config> AssetRecorderBenchmarks<T::AssetId, T::Balance> for Pallet<T> {
+		/// create feed and add new liquid asset
+		fn add_asset(
+			asset_id: T::AssetId,
+			units: T::Balance,
+			location: MultiLocation,
+			amount: T::Balance,
+		) -> DispatchResult {
+			let origin = T::AdminOrigin::successful_origin();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin)?;
+
+			// also mint the funds
+			T::Currency::deposit(asset_id, &origin_account_id, amount)?;
+			T::PriceFeedBenchmarks::create_feed(origin_account_id, asset_id).map_err(|e| e.error)?;
+
+			// the tests of benchmarks register assets by default
+			if Assets::<T>::get(asset_id).is_none() {
+				Self::register_asset(
+					T::AdminOrigin::successful_origin(),
+					asset_id,
+					AssetAvailability::Liquid(location),
+				)?;
+			}
+
+			Self::add_asset(T::AdminOrigin::successful_origin(), asset_id, units, amount)
+		}
+
+		/// deposit index tokens to the testing account with saft_nav
+		fn deposit_saft_equivalent(saft_nav: T::Balance) -> DispatchResult {
+			let origin = T::AdminOrigin::successful_origin();
+			let origin_account_id = T::AdminOrigin::ensure_origin(origin.clone()).unwrap();
+			T::IndexToken::deposit_creating(&origin_account_id, Self::saft_equivalent(saft_nav)?);
 			Ok(())
 		}
 	}
@@ -1065,7 +1344,7 @@ pub mod pallet {
 			Self::liquid_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth
 					.checked_add(U256::from(Self::net_liquid_value(asset)?.into()))
-					.ok_or_else(|| Error::<T>::NAVOverflow.into())
+					.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 
@@ -1073,7 +1352,7 @@ pub mod pallet {
 			Self::saft_assets().into_iter().try_fold(U256::zero(), |worth, asset| -> Result<_, DispatchError> {
 				worth
 					.checked_add(U256::from(Self::net_saft_value(asset).into()))
-					.ok_or_else(|| Error::<T>::NAVOverflow.into())
+					.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 
@@ -1084,7 +1363,7 @@ pub mod pallet {
 				} else {
 					value.checked_add(U256::from(Self::net_saft_value(asset).into()))
 				}
-				.ok_or_else(|| Error::<T>::NAVOverflow.into())
+				.ok_or_else(|| ArithmeticError::Overflow.into())
 			})
 		}
 
@@ -1096,26 +1375,28 @@ pub mod pallet {
 			}
 		}
 
-		fn nav() -> Result<Ratio, DispatchError> {
+		fn nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
-			Assets::<T>::iter().try_fold(Ratio::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
+
+			Assets::<T>::iter().try_fold(Price::zero(), |nav, (asset, availability)| -> Result<_, DispatchError> {
 				let value =
 					if availability.is_liquid() { Self::net_liquid_value(asset)? } else { Self::net_saft_value(asset) };
+
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
 				Ok(nav.checked_add(&proportion).ok_or(ArithmeticError::Overflow)?)
 			})
 		}
 
-		fn liquid_nav() -> Result<Ratio, DispatchError> {
+		fn liquid_nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
-			Self::liquid_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+			Self::liquid_assets().try_fold(Price::zero(), |nav, asset| -> Result<_, DispatchError> {
 				let value = Self::net_liquid_value(asset)?;
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
@@ -1123,12 +1404,12 @@ pub mod pallet {
 			})
 		}
 
-		fn saft_nav() -> Result<Ratio, DispatchError> {
+		fn saft_nav() -> Result<Price, DispatchError> {
 			let total_issuance = T::IndexToken::total_issuance();
 			if total_issuance.is_zero() {
-				return Ok(Ratio::zero());
+				return Ok(Price::zero());
 			}
-			Self::saft_assets().try_fold(Ratio::zero(), |nav, asset| -> Result<_, DispatchError> {
+			Self::saft_assets().try_fold(Price::zero(), |nav, asset| -> Result<_, DispatchError> {
 				let value = Self::net_saft_value(asset);
 				let proportion = Ratio::checked_from_rational(value.into(), total_issuance.into())
 					.ok_or(ArithmeticError::Overflow)?;
@@ -1191,9 +1472,16 @@ pub mod pallet {
 	/// Trait for the asset-index pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn add_asset() -> Weight;
+		fn complete_withdraw() -> Weight;
 		fn register_asset() -> Weight;
+		fn remove_asset() -> Weight;
 		fn deposit() -> Weight;
+		fn unlock() -> Weight;
+		fn withdraw() -> Weight;
 		fn set_metadata() -> Weight;
+		fn set_deposit_range() -> Weight;
+		fn set_lockup_period() -> Weight;
+		fn update_redemption_fees() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -1202,7 +1490,15 @@ pub mod pallet {
 			Default::default()
 		}
 
+		fn complete_withdraw() -> Weight {
+			Default::default()
+		}
+
 		fn register_asset() -> Weight {
+			Default::default()
+		}
+
+		fn remove_asset() -> Weight {
 			Default::default()
 		}
 
@@ -1211,6 +1507,26 @@ pub mod pallet {
 		}
 
 		fn set_metadata() -> Weight {
+			Default::default()
+		}
+
+		fn unlock() -> Weight {
+			Default::default()
+		}
+
+		fn withdraw() -> Weight {
+			Default::default()
+		}
+
+		fn set_deposit_range() -> Weight {
+			Default::default()
+		}
+
+		fn set_lockup_period() -> Weight {
+			Default::default()
+		}
+
+		fn update_redemption_fees() -> Weight {
 			Default::default()
 		}
 	}

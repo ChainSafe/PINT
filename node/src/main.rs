@@ -11,6 +11,7 @@ mod service;
 mod cli;
 mod client;
 mod command;
+mod instant_finalize;
 
 fn main() -> sc_cli::Result<()> {
 	command::run()

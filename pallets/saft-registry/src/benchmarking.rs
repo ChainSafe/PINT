@@ -5,7 +5,8 @@
 
 use frame_benchmarking::benchmarks;
 use frame_support::{assert_ok, dispatch::UnfilteredDispatchable, sp_runtime::traits::Zero, traits::EnsureOrigin};
-use xcm::v0::Junction;
+use primitives::traits::AssetRecorderBenchmarks;
+use xcm::v1::{Junction, MultiLocation};
 
 use crate::Pallet as SaftRegistry;
 
@@ -15,13 +16,21 @@ const MAX_SAFT_RECORDS: u32 = 100;
 
 benchmarks! {
 	add_saft {
-		let asset: T::AssetId = 0u32.into();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		let call = Call::<T>::add_saft(
-				asset,
-				100u32.into(),
-				20u32.into()
-		);
+
+		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
+			T::try_convert(3u8).unwrap(),
+			100u32.into(),
+			MultiLocation::default(),
+			1000u32.into()
+		));
+
+		let call = Call::<T>::add_saft {
+				asset_id: asset,
+				nav: 100u32.into(),
+				units: 20u32.into()
+		};
 	}: { call.dispatch_bypass_filter(origin)? }
 	 verify {
 		let id = SaftRegistry::<T>::saft_counter(asset) - 1;
@@ -32,13 +41,25 @@ benchmarks! {
 	}
 
 	remove_saft {
-		let asset: T::AssetId = 0u32.into();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), 0.into(), 100u32.into(), 20u32.into()));
-		let call = Call::<T>::remove_saft(
-				asset,
-				0u32
-		);
+		let nav = 100u32.into();
+		let units = 20u32.into();
+
+		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
+			T::try_convert(3u8).unwrap(),
+			100u32.into(),
+			MultiLocation::default(),
+			1000u32.into()
+		));
+
+		assert_ok!(T::AssetRecorderBenchmarks::deposit_saft_equivalent(nav));
+		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, nav, units));
+
+		let call = Call::<T>::remove_saft {
+				asset_id: asset,
+				saft_id: 0u32
+		} ;
 	}:  { call.dispatch_bypass_filter(origin)? }
 		verify {
 			assert!(
@@ -47,19 +68,28 @@ benchmarks! {
 	}
 
 	report_nav {
-		let asset: T::AssetId = 0u32.into();
+		let asset: T::AssetId = T::try_convert(2u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
+
+		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
+			T::try_convert(3u8).unwrap(),
+			100u32.into(),
+			MultiLocation::default(),
+			1000u32.into()
+		));
+
 		assert_ok!(SaftRegistry::<T>::add_saft(
 			origin.clone(),
 			asset,
 			100_u32.into(),
 			20_u32.into(),
 		));
-		let call = Call::<T>::report_nav(
-					asset,
-		0,
-		1000_u32.into()
-		);
+
+		let call = Call::<T>::report_nav {
+				asset_id: 	asset,
+		saft_id: 0,
+		latest_nav: 1000_u32.into()
+		};
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		assert_eq!(
@@ -69,26 +99,37 @@ benchmarks! {
 	}
 
 	convert_to_liquid {
+		let o in 1 .. MAX_SAFT_RECORDS;
+
 		let nav = 1337u32;
 		let units = 1234u32;
-		let asset: T::AssetId = 0u32.into();
+		let asset:T::AssetId = T::try_convert(5u8).unwrap();
 		let origin = T::AdminOrigin::successful_origin();
-		// Create saft records
-		for i in 0 .. MAX_SAFT_RECORDS {
-				assert_ok!(SaftRegistry::<T>::add_saft(
-				origin.clone(),
-				asset,
-				nav.into(),
-				units.into(),
-			));
-		}
-		let call = Call::<T>::convert_to_liquid(
-					asset,
-			(Junction::Parent, Junction::Parachain(100)).into()
-		);
-	}: {
-		call.dispatch_bypass_filter(origin)? }
-	verify {
+
+		assert_ok!(T::AssetRecorderBenchmarks::add_asset(
+			T::try_convert(3u8).unwrap(),
+			100u32.into(),
+			MultiLocation::default(),
+			1000u32.into()
+		));
+
+		assert_ok!(SaftRegistry::<T>::add_saft(
+			origin.clone(),
+			asset,
+			nav.into(),
+			units.into(),
+		));
+
+		assert_ok!(<SAFTCounter<T>>::try_mutate(asset, |counter: &mut u32| -> Result<(), ()> {
+			*counter = o;
+			Ok(())
+		}));
+
+		let call = Call::<T>::convert_to_liquid {
+			asset_id: asset,
+			location: (Junction::Parachain(100)).into()
+		};
+	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			SaftRegistry::<T>::saft_counter(asset),
 			0
@@ -110,28 +151,28 @@ mod tests {
 	#[test]
 	fn add_saft() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_add_saft::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_add_saft());
 		});
 	}
 
 	#[test]
 	fn remove_saft() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_remove_saft::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_remove_saft());
 		});
 	}
 
 	#[test]
 	fn report_nav() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_report_nav::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_report_nav());
 		});
 	}
 
 	#[test]
 	fn convert_to_liquid() {
 		new_test_ext().execute_with(|| {
-			assert_ok!(test_benchmark_convert_to_liquid::<Test>());
+			assert_ok!(Pallet::<Test>::test_benchmark_convert_to_liquid());
 		});
 	}
 }

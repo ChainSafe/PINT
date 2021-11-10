@@ -111,9 +111,13 @@ fn pint_testnet_genesis(
 			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
 			changes_trie_config: Default::default(),
 		},
-		balances: BalancesConfig { balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect() },
+		balances: BalancesConfig { balances: vec![(root_key.clone(), 1 << 60)] },
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
-		chainlink_feed: ChainlinkFeedConfig { pallet_admin: Some(root_key.clone()), feed_creators: council_members },
+		chainlink_feed: ChainlinkFeedConfig {
+			feeds: Default::default(),
+			pallet_admin: Some(root_key.clone()),
+			feed_creators: council_members,
+		},
 		sudo: SudoConfig { key: root_key },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
@@ -158,10 +162,12 @@ fn pint_testnet_genesis(
 					minimum_balance: 0,
 					weights: StakingWeights::polkadot(),
 					bonding_duration: POLKADOT_BONDING_DURATION_IN_BLOCKS,
+					is_frozen: true,
 				},
 			)],
 			proxy_configs: vec![(42, ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() })],
 			statemint_config: None,
 		},
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 	}
 }

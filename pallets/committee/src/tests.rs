@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 
 use crate as pallet;
-use crate::{mock::*, CommitteeMember, MemberType, Vote, VoteAggregate};
+
+use crate::{
+	mock::*, traits::VotingPeriodRange as _, CommitteeMember, MemberType, ProposalStatus, Proposals, VoteAggregate,
+	VoteKind, VotingEligibility,
+};
 use frame_support::{assert_noop, assert_ok, codec::Encode, sp_runtime::traits::BadOrigin};
 use frame_system as system;
 use std::convert::{TryFrom, TryInto};
@@ -20,17 +24,18 @@ const EMPTY_RANGE: std::ops::Range<AccountId> = 0..0;
 const START_OF_S1: <Test as system::Config>::BlockNumber = VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
 // Start of first voting period
 const START_OF_V1: <Test as system::Config>::BlockNumber = 2 * VOTING_PERIOD + PROPOSAL_SUBMISSION_PERIOD;
+const CONSTITUENT: u64 = 42;
 
 /// value is used to make unique actions
 fn make_action(value: u64) -> Call {
-	Call::System(system::Call::remark(value.encode()))
+	Call::System(system::Call::remark { remark: value.encode() })
 }
 
 fn submit_proposal(action_value: u64) -> pallet::Proposal<Test> {
 	let action = make_action(action_value);
 	let expected_nonce = pallet::ProposalCount::<Test>::get();
 	assert_ok!(Committee::propose(Origin::signed(PROPOSER_ACCOUNT_ID), Box::new(action.clone())));
-	pallet::Proposal::<Test>::new(expected_nonce, action)
+	pallet::Proposal::<Test>::new(action, PROPOSER_ACCOUNT_ID, expected_nonce, ProposalStatus::Active)
 }
 
 //
@@ -69,7 +74,8 @@ fn can_create_multiple_proposals_from_same_action() {
 
 		for i in 0..repeats {
 			let nonce = u32::try_from(i).unwrap();
-			let proposal = pallet::Proposal::<Test>::new(nonce, action.clone());
+			let proposal =
+				pallet::Proposal::<Test>::new(action.clone(), PROPOSER_ACCOUNT_ID, nonce, ProposalStatus::Active);
 			assert!(Committee::active_proposals().contains(&proposal.hash()));
 			assert!(Committee::get_proposal(&proposal.hash()) == Some(proposal));
 		}
@@ -114,7 +120,7 @@ fn non_member_cannot_vote() {
 		let proposal = submit_proposal(123);
 		let expected_votes = VoteAggregate::new_with_end(START_OF_V1);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			<pallet::Error<Test>>::NotMember,
 		);
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
@@ -124,21 +130,33 @@ fn non_member_cannot_vote() {
 #[test]
 fn cannot_vote_for_non_existent_proposal() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
-		let action = make_action(123);
-		let proposal = pallet::Proposal::<Test>::new(0, action);
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), Default::default(), VoteKind::Aye),
 			pallet::Error::<Test>::NoProposalWithHash
 		);
 	});
 }
 
 #[test]
+fn cannot_vote_without_voting_eligibility() {
+	new_test_ext(ASHLEY_RANGE).execute_with(|| {
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), Default::default(), VoteKind::Nay),
+			pallet::Error::<Test>::NotEligibileToVoteYet
+		);
+	})
+}
+
+#[test]
 fn member_cannot_vote_before_voting_period() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
+		run_to_block(START_OF_S1 + 1);
+
 		let proposal = submit_proposal(123);
+
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 	});
@@ -153,13 +171,13 @@ fn member_can_vote_in_voting_period() {
 		run_to_block(START_OF_S1 - 1);
 		// still not in voting period
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 
 		run_to_block(START_OF_S1);
 		// first block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -169,9 +187,13 @@ fn member_can_vote_aye() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 		let proposal = submit_proposal(123);
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
+
 		run_to_block(START_OF_S1);
+
 		// first block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -182,7 +204,7 @@ fn member_can_vote_nay() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![], vec![ASHLEY_COUNCIL], vec![], START_OF_V1);
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Nay));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Nay));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -193,7 +215,7 @@ fn member_can_vote_abstain() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![], vec![], vec![ASHLEY_COUNCIL], START_OF_V1);
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Abstain));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Abstain));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }
@@ -205,12 +227,12 @@ fn member_cannot_vote_after_voting_period() {
 
 		run_to_block(START_OF_V1 - 1);
 		// last block in voting period
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 
 		run_to_block(START_OF_V1);
 		// first block after voting period
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::NotInVotingPeriod
 		);
 	});
@@ -223,9 +245,9 @@ fn member_cannot_vote_multiple_times() {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 
 		run_to_block(START_OF_S1);
-		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye));
+		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
 		assert_noop!(
-			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), Vote::Aye),
+			Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye),
 			pallet::Error::<Test>::DuplicateVote
 		);
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
@@ -237,7 +259,7 @@ fn member_cannot_vote_multiple_times() {
 //
 
 // iterates through accounts and vote a particular way on a proposal
-fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: Vote)
+fn vote_with_each<I>(accounts: I, proposal_hash: <Test as system::Config>::Hash, vote: VoteKind)
 where
 	I: IntoIterator<Item = AccountId>,
 {
@@ -252,7 +274,7 @@ where
 	I: IntoIterator<Item = AccountId>,
 {
 	for m in accounts.into_iter() {
-		<pallet::Members<Test>>::insert(m, MemberType::Constituent);
+		assert_ok!(Committee::add_constituent(Origin::root(), m));
 	}
 }
 
@@ -263,7 +285,7 @@ fn non_execution_origin_cannot_close() {
 		let proposal = submit_proposal(123);
 		run_to_block(START_OF_S1);
 
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(Committee::close(Origin::signed(non_execution_origin), proposal.hash()), BadOrigin);
@@ -276,7 +298,7 @@ fn cannot_close_until_voting_period_elapsed() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		assert_noop!(
 			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
@@ -291,7 +313,7 @@ fn cannot_close_if_insufficent_council_votes() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(), proposal.hash(), Vote::Aye);
+		vote_with_each(0..(MIN_COUNCIL_VOTES - 1).try_into().unwrap(), proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(
@@ -307,7 +329,7 @@ fn cannot_close_if_council_rejects() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..(MIN_COUNCIL_VOTES).try_into().unwrap(), proposal.hash(), Vote::Nay);
+		vote_with_each(0..(MIN_COUNCIL_VOTES).try_into().unwrap(), proposal.hash(), VoteKind::Nay);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_noop!(
@@ -321,14 +343,15 @@ fn cannot_close_if_council_rejects() {
 fn cannot_close_if_constituents_veto() {
 	new_test_ext(0..4).execute_with(|| {
 		add_constituents(4..8);
+		run_to_block(START_OF_V1);
 
 		let proposal = submit_proposal(123);
+		run_to_block(START_OF_V1 + START_OF_S1 - 1);
 
-		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
-		vote_with_each(4..8, proposal.hash(), Vote::Nay);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
+		vote_with_each(4..8, proposal.hash(), VoteKind::Nay);
 
-		run_to_block(START_OF_V1 + 1);
+		run_to_block(START_OF_V1 + START_OF_S1 + 1);
 		assert_noop!(
 			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()),
 			pallet::Error::<Test>::ProposalNotAcceptedConstituentVeto
@@ -342,7 +365,7 @@ fn executer_can_close_if_voted_for_and_voting_period_elapsed() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()));
@@ -355,7 +378,7 @@ fn cannot_execute_proposal_twice() {
 		let proposal = submit_proposal(123);
 
 		run_to_block(START_OF_S1);
-		vote_with_each(0..4, proposal.hash(), Vote::Aye);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
 
 		run_to_block(START_OF_V1 + 1);
 		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal.hash()));
@@ -366,13 +389,63 @@ fn cannot_execute_proposal_twice() {
 	});
 }
 
+#[test]
+fn new_member_cannot_vote() {
+	new_test_ext(0..4).execute_with(|| {
+		let proposal = submit_proposal(123);
+		let proposal_hash = proposal.hash();
+		let new_voting_period = WEEKS;
+
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_ok!(Committee::set_voting_period(Origin::root(), new_voting_period));
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
+
+		run_to_block(VOTING_PERIOD);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), new_voting_period);
+
+		run_to_block(START_OF_V1 - 1);
+		vote_with_each(0..4, proposal.hash(), VoteKind::Aye);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotEligibileToVoteYet
+		);
+
+		run_to_block(START_OF_V1);
+		assert_noop!(
+			Committee::vote(Origin::signed(CONSTITUENT), proposal_hash, VoteKind::Nay),
+			pallet::Error::<Test>::NotInVotingPeriod
+		);
+
+		run_to_block(START_OF_V1 + 1);
+		assert_ok!(Committee::close(Origin::signed(CONSTITUENT), proposal_hash));
+	})
+}
+
+#[test]
+fn cannot_execute_proposal_after_timeout() {
+	new_test_ext(0..4).execute_with(|| {
+		let proposal = submit_proposal(123);
+		let proposal_hash = proposal.hash();
+
+		run_to_block(START_OF_S1 + VOTING_PERIOD * 2);
+
+		assert_eq!(Proposals::<Test>::get(proposal_hash).unwrap().status, ProposalStatus::Active);
+		assert_ok!(Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal_hash));
+		assert_eq!(Proposals::<Test>::get(proposal_hash).unwrap().status, ProposalStatus::Timeout);
+		assert_noop!(
+			Committee::close(Origin::signed(EXECUTER_ACCOUNT_ID), proposal_hash),
+			pallet::Error::<Test>::ProposalTimeout
+		);
+	});
+}
+
 //
 // Constituent Committee Council Selection
 //
 
 #[test]
 fn cannot_add_constituent_if_already_is_council() {
-	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
+	new_test_ext_without_members().execute_with(|| {
 		assert_noop!(
 			Committee::add_constituent(Origin::root(), PROPOSER_ACCOUNT_ID),
 			<pallet::Error<Test>>::AlreadyCouncilMember
@@ -382,10 +455,47 @@ fn cannot_add_constituent_if_already_is_council() {
 
 #[test]
 fn cannot_add_constituent_if_already_is_constituent() {
-	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 1).execute_with(|| {
-		assert_ok!(Committee::add_constituent(Origin::root(), 42));
+	new_test_ext_without_members().execute_with(|| {
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_noop!(
+			Committee::add_constituent(Origin::root(), CONSTITUENT),
+			<pallet::Error<Test>>::AlreadyConstituentMember
+		);
+	});
+}
 
-		assert_noop!(Committee::add_constituent(Origin::root(), 42), <pallet::Error<Test>>::AlreadyConstituentMember);
+#[test]
+fn can_remove_member() {
+	new_test_ext(0..4).execute_with(|| {
+		let another_constituent = CONSTITUENT + 1;
+
+		// adds two constituents
+		assert_ok!(Committee::add_constituent(Origin::root(), CONSTITUENT));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), Some(MemberType::Constituent));
+		assert_ok!(Committee::add_constituent(Origin::root(), another_constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), Some(MemberType::Constituent));
+
+		// cannot remove account which is not a member
+		assert_noop!(Committee::remove_member(Origin::root(), 4), pallet::Error::<Test>::NotMember);
+
+		// can remove constituent
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), Some(START_OF_V1));
+		assert_ok!(Committee::remove_member(Origin::root(), CONSTITUENT));
+		assert_eq!(pallet::Members::<Test>::get(CONSTITUENT), None);
+		assert_eq!(VotingEligibility::<Test>::get(CONSTITUENT), None);
+
+		// can remove council
+		assert_eq!(pallet::Members::<Test>::get(3), Some(MemberType::Council));
+		assert_ok!(Committee::remove_member(Origin::root(), 3));
+		assert_eq!(pallet::Members::<Test>::get(3), None);
+
+		// can remove constituent again
+		assert_ok!(Committee::remove_member(Origin::root(), another_constituent));
+		assert_eq!(pallet::Members::<Test>::get(another_constituent), None);
+
+		// cannot remove council again
+		assert_eq!(pallet::Members::<Test>::get(2), Some(MemberType::Council));
+		assert_noop!(Committee::remove_member(Origin::root(), 2), pallet::Error::<Test>::MinimalCouncilMembers);
 	});
 }
 
@@ -394,10 +504,10 @@ fn propose_constituent_works() {
 	new_test_ext(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4).execute_with(|| {
 		System::set_block_number(1);
 
-		// propose a new consituent
+		// propose a new constituent
 		assert_ok!(Committee::propose(
 			Origin::signed(PROPOSER_ACCOUNT_ID),
-			Box::new(Call::Committee(crate::Call::add_constituent(42)))
+			Box::new(Call::Committee(crate::Call::add_constituent { constituent: CONSTITUENT }))
 		));
 
 		// test if proposal submitted with event
@@ -406,7 +516,7 @@ fn propose_constituent_works() {
 
 			// vote Aye on adding new constituent
 			run_to_block(START_OF_S1);
-			vote_with_each(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4, hash, Vote::Aye);
+			vote_with_each(PROPOSER_ACCOUNT_ID..PROPOSER_ACCOUNT_ID + 4, hash, VoteKind::Aye);
 
 			// close proposal
 			run_to_block(START_OF_V1 + 1);
@@ -415,7 +525,31 @@ fn propose_constituent_works() {
 			panic!("Could not get proposal hash from events");
 		}
 
-		// check if counstitent committee contains 42
-		assert!(<pallet::Members<Test>>::contains_key(42));
+		// check if constituent committee contains new constituent
+		assert!(<pallet::Members<Test>>::contains_key(CONSTITUENT));
+	});
+}
+
+#[test]
+fn can_set_voting_period() {
+	new_test_ext_without_members().execute_with(|| {
+		// ensure initial voting period has been set
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), VOTING_PERIOD);
+
+		// cannot set voting period out of range
+		assert_noop!(
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::max() + 1),
+			pallet::Error::<Test>::InvalidVotingPeriod
+		);
+		assert_noop!(
+			Committee::set_voting_period(Origin::root(), VotingPeriodRange::<Test>::min() - 1),
+			pallet::Error::<Test>::InvalidVotingPeriod
+		);
+
+		// can set voting period
+		assert_ok!(Committee::set_voting_period(Origin::root(), WEEKS));
+
+		run_to_block(VOTING_PERIOD);
+		assert_eq!(pallet::VotingPeriod::<Test>::get(), WEEKS);
 	});
 }

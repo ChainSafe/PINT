@@ -30,9 +30,10 @@
         {
           "wsPort": 9988,
           "port": 31200,
+          "name": "alice",
           "flags": [
-            "-lruntime=debug",
             "--unsafe-ws-external",
+            "--force-authoring",
             "--",
             "--execution=wasm"
           ]
@@ -48,20 +49,13 @@
         {
           "wsPort": 9999,
           "port": 31300,
-          "flags": ["-lruntime=debug", "--", "--execution=wasm"]
+          "name": "alice",
+          "flags": ["--force-authoring", "--", "--execution=wasm"]
         }
       ]
     }
   ],
   "simpleParachains": [],
-  "hrmpChannels": [
-    {
-      "sender": 1,
-      "recipient": 300,
-      "maxCapacity": 8,
-      "maxMessageSize": 512
-    }
-  ],
   "types": {},
   "finalization": true
 }

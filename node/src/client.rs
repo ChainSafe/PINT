@@ -1,8 +1,7 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
-use primitives::{AccountId, Balance, Block, BlockNumber, Hash, Header, Nonce};
+use primitives::{AccountId, AssetId, Balance, Block, BlockNumber, Hash, Header, Nonce};
 use sc_client_api::{Backend as BackendT, BlockchainEvents, KeyIterator};
-use sc_service::{TFullBackend, TFullClient};
 use sp_api::{CallApiAt, NumberFor, ProvideRuntimeApi};
 use sp_blockchain::HeaderBackend;
 use sp_consensus::BlockStatus;
@@ -14,12 +13,6 @@ use sp_runtime::{
 use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
 use std::sync::Arc;
 
-/// PINT's full backend.
-pub type FullBackend = TFullBackend<Block>;
-
-/// PINT's full client.
-pub type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
-
 /// A set of APIs that polkadot-like runtimes must implement.
 pub trait RuntimeApiCollection:
 	sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block>
@@ -27,6 +20,7 @@ pub trait RuntimeApiCollection:
 	+ sp_block_builder::BlockBuilder<Block>
 	+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 	+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+	+ pallet_asset_index_rpc::AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>
 	+ sp_api::Metadata<Block>
 	+ sp_offchain::OffchainWorkerApi<Block>
 	+ sp_session::SessionKeys<Block>
@@ -43,6 +37,7 @@ where
 		+ sp_block_builder::BlockBuilder<Block>
 		+ frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce>
 		+ pallet_transaction_payment_rpc_runtime_api::TransactionPaymentApi<Block, Balance>
+		+ pallet_asset_index_rpc::AssetIndexRuntimeApi<Block, AccountId, AssetId, Balance>
 		+ sp_api::Metadata<Block>
 		+ sp_offchain::OffchainWorkerApi<Block>
 		+ sp_session::SessionKeys<Block>
@@ -109,7 +104,7 @@ pub trait ExecuteWithClient {
 		<Api as sp_api::ApiExt<Block>>::StateBackend: sp_api::StateBackend<BlakeTwo256>,
 		Backend: sc_client_api::Backend<Block>,
 		Backend::State: sp_api::StateBackend<BlakeTwo256>,
-		Api: crate::client::RuntimeApiCollection<StateBackend = Backend::State>,
+		Api: RuntimeApiCollection<StateBackend = Backend::State>,
 		Client: AbstractClient<Block, Backend, Api = Api> + 'static;
 }
 
@@ -128,21 +123,23 @@ pub trait ClientHandle {
 /// A client instance of Polkadot.
 #[derive(Clone)]
 pub enum Client {
-	Dev(Arc<FullClient<pint_runtime_dev::RuntimeApi, crate::service::DevExecutor>>),
+	Dev(Arc<crate::service::FullClient<pint_runtime_dev::RuntimeApi, crate::service::DevExecutorDispatch>>),
 	#[cfg(feature = "kusama")]
-	Kusama(Arc<FullClient<pint_runtime_kusama::RuntimeApi, crate::service::KusamaExecutor>>),
+	Kusama(Arc<crate::service::FullClient<pint_runtime_kusama::RuntimeApi, crate::service::KusamaExecutorDispatch>>),
 	#[cfg(feature = "polkadot")]
-	Polkadot(Arc<FullClient<pint_runtime_polkadot::RuntimeApi, crate::service::PolkadotExecutor>>),
+	Polkadot(
+		Arc<crate::service::FullClient<pint_runtime_polkadot::RuntimeApi, crate::service::PolkadotExecutorDispatch>>,
+	),
 }
 
 impl ClientHandle for Client {
 	fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output {
 		match self {
-			Self::Dev(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
+			Self::Dev(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
 			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
+			Self::Kusama(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
 			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => T::execute_with_client::<_, _, FullBackend>(t, client.clone()),
+			Self::Polkadot(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
 		}
 	}
 }
@@ -241,7 +238,7 @@ impl sc_client_api::BlockBackend<Block> for Client {
 	}
 }
 
-impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
+impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Client {
 	fn storage(&self, id: &BlockId<Block>, key: &StorageKey) -> sp_blockchain::Result<Option<StorageData>> {
 		match self {
 			Self::Dev(client) => client.storage(id, key),
@@ -295,7 +292,9 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 		id: &BlockId<Block>,
 		prefix: Option<&'a StorageKey>,
 		start_key: Option<&StorageKey>,
-	) -> sp_blockchain::Result<KeyIterator<'a, <FullBackend as sc_client_api::Backend<Block>>::State, Block>> {
+	) -> sp_blockchain::Result<
+		KeyIterator<'a, <crate::service::FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+	> {
 		match self {
 			Self::Dev(client) => client.storage_keys_iter(id, prefix, start_key),
 			#[cfg(feature = "kusama")]
@@ -332,6 +331,24 @@ impl sc_client_api::StorageProvider<Block, FullBackend> for Client {
 			Self::Kusama(client) => client.child_storage_keys(id, child_info, key_prefix),
 			#[cfg(feature = "polkadot")]
 			Self::Polkadot(client) => client.child_storage_keys(id, child_info, key_prefix),
+		}
+	}
+
+	fn child_storage_keys_iter<'a>(
+		&self,
+		id: &BlockId<Block>,
+		child_info: ChildInfo,
+		prefix: Option<&'a StorageKey>,
+		start_key: Option<&StorageKey>,
+	) -> sp_blockchain::Result<
+		KeyIterator<'a, <crate::service::FullBackend as sc_client_api::Backend<Block>>::State, Block>,
+	> {
+		match self {
+			Self::Dev(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "kusama")]
+			Self::Kusama(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "polkadot")]
+			Self::Polkadot(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
 		}
 	}
 

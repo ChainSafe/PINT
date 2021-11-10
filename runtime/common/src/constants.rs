@@ -4,7 +4,8 @@ use cumulus_pallet_xcm::Origin;
 use frame_support::{
 	parameter_types,
 	sp_runtime::{traits::AccountIdConversion, Perbill},
-	traits::LockIdentifier,
+	sp_std::prelude::*,
+	traits::{Contains, LockIdentifier},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, WEIGHT_PER_SECOND},
 		DispatchClass, Weight,
@@ -13,8 +14,11 @@ use frame_support::{
 };
 use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
-use primitives::{fee::FeeRate, AccountId, AssetId, Balance, BlockNumber};
-use xcm::v0::{Junction, MultiLocation};
+use primitives::{
+	fee::{FeeRate, RedemptionFeeRange},
+	AccountId, AssetId, Balance, BlockNumber,
+};
+use xcm::v1::MultiLocation;
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
 // blocks.
@@ -44,6 +48,7 @@ pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
 pub const HOURS: BlockNumber = MINUTES * 60;
 pub const DAYS: BlockNumber = HOURS * 24;
+pub const WEEKS: BlockNumber = DAYS * 7;
 
 // Unit = the base number of indivisible units for balances
 pub const UNIT: Balance = 1_000_000_000_000;
@@ -68,8 +73,9 @@ parameter_types! {
 	// `T::BaseXcmWeight  + T::Weigher::weight(&msg)`
 	pub const BaseXcmWeight: Weight = 100_000_000;
 	pub const BlockHashCount: BlockNumber = 250;
+	pub const MaxActiveDeposits: u32 = 5;
+	pub const Days: BlockNumber = DAYS;
 	pub const DisabledValidatorsThreshold: Perbill = Perbill::from_percent(33);
-	pub const DOTContributionLimit: Balance = 999;
 	/// Same as Polkadot Relay Chain.
 	pub const ExistentialDeposit: Balance = 500;
 	// Used to determine the account for storing the funds used to pay the oracles.
@@ -85,9 +91,13 @@ parameter_types! {
 	pub const PINTAssetId: AssetId = 1;
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
-	pub const RelayChainAssetId: AssetId = 0;
+	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
+		range: [(DAYS * 7, FeeRate { numerator: 1, denominator: 10 }), (DAYS * 30, FeeRate{ numerator: 3, denominator: 100 })],
+		default_fee: FeeRate { numerator: 1, denominator: 100 }
+	};
+	pub const RelayChainAssetId: AssetId = 42;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
-	pub const RelayLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
 	pub RuntimeBlockLength: BlockLength =
@@ -111,18 +121,20 @@ parameter_types! {
 		.avg_block_initialization(AVERAGE_ON_INITIALIZE_RATIO)
 		.build_or_panic();
 	pub const SS58Prefix: u8 = 0;
-	pub StatemintCustodian: AccountId = PalletId(*b"pint/smt").into_account();
 	// Maximum allowed string length for feed names
 	pub const StringLimit: u32 = 15;
 	pub const TransactionByteFee: Balance = 1 ;
+	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
-	pub const LockupPeriod: BlockNumber = 10;
+	pub const LockupPeriod: BlockNumber = DAYS;
 	pub const MaxCandidates: u32 = 200;
+	pub const MaxDecimals: u8 = 18;
 	pub const MaxInvulnerables: u32 = 50;
 	// For weight estimation, we assume that the most locks on an individual account will be 50.
 	// This number may need to be adjusted in the future if this assumption no longer holds true.
 	pub const MaxLocks: u32 = 50;
 	pub const MinCandidates: u32 = 1;
+	pub const MinCouncilMembers: usize = 4;
 	pub const MinCouncilVotes: usize = 4;
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 	pub const MinimumRedemption: u32 = 0;
@@ -131,10 +143,22 @@ parameter_types! {
 	pub const MinimumReserve: Balance = 100;
 	pub const UncleGenerations: u32 = 0;
 	// One UNIT buys 1 second of weight.
-	pub const UnitPerSecond: (MultiLocation, u128) = (MultiLocation::X1(Junction::Parent), UNIT);
+	pub const UnitPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::here()), UNIT);
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
+	pub const MaxInstructions: u32 = 100;
 	pub const WithdrawalPeriod: BlockNumber = 10;
+}
+
+pub fn get_all_pallet_accounts() -> Vec<AccountId> {
+	vec![TreasuryPalletId::get().into_account()]
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		get_all_pallet_accounts().contains(a)
+	}
 }
 
 // --- ORML configurations
@@ -146,8 +170,22 @@ parameter_type_with_key! {
 
 // The minimum amount of assets that should remain unbonded.
 parameter_type_with_key! {
-	pub MinimumRemoteStashBalance: |_asset_id: AssetId| -> Balance {
+	pub MinimumRemoteReserveBalance: |_asset_id: AssetId| -> Balance {
 		// Same as relaychain existential deposit
 		ExistentialDeposit::get()
+	};
+}
+
+// The minimum amount of asset required for an additional bond_extr
+parameter_type_with_key! {
+	pub MinimumBondExtra: |_asset_id: AssetId| -> Balance {
+		// set this to max for now, effectively preventing automated bond_extra
+		Balance::MAX
+	};
+}
+
+parameter_type_with_key! {
+	pub CanEncodeAsset: |_asset_id: AssetId| -> bool {
+		true
 	};
 }

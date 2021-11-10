@@ -1,6 +1,8 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
+//! Shareable PINT types
+
 use frame_support::{
 	pallet_prelude::*,
 	sp_runtime::{
@@ -11,7 +13,7 @@ use frame_support::{
 	},
 	sp_std::vec::Vec,
 };
-use xcm::v0::MultiLocation;
+use xcm::v1::MultiLocation;
 
 /// Some way of identifying an account on the chain. We intentionally make it
 /// equivalent to the public key of our transaction signing scheme.
@@ -77,7 +79,7 @@ pub type Ratio = FixedU128;
 /// SAFT implies the asset is a Simple Agreement for Future Tokens and the
 /// promised tokens are not able to be transferred or traded until some time
 /// in the future.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum AssetAvailability {
 	Liquid(MultiLocation),
 	Saft,
@@ -101,7 +103,7 @@ impl From<MultiLocation> for AssetAvailability {
 	}
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetProportions<AssetId> {
 	/// The per token value used to calculate proportions
 	pub nav: Price,
@@ -110,7 +112,7 @@ pub struct AssetProportions<AssetId> {
 }
 
 /// Represents an asset and its proportion in the value of the index
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetProportion<AssetId> {
 	/// The identifier for the asset
 	pub asset: AssetId,
@@ -130,7 +132,7 @@ impl<AssetId> AssetProportion<AssetId> {
 }
 
 /// Defines an asset pair identifier
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetPricePair<AssetId> {
 	/// The base asset id of this pair.
 	pub base: AssetId,

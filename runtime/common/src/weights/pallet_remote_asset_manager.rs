@@ -34,4 +34,12 @@ impl<T: frame_system::Config> pallet_remote_asset_manager::WeightInfo for Weight
 	fn transfer() -> Weight {
 		(2_000_000 as Weight)
 	}
+
+	fn freeze() -> Weight {
+		(2_000_000 as Weight)
+	}
+
+	fn thaw() -> Weight {
+		(2_000_000 as Weight)
+	}
 }

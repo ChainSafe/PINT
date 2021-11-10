@@ -1,43 +1,58 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use crate as pallet;
-use crate::mock::*;
 use frame_support::{assert_noop, assert_ok, traits::Currency as _};
-use orml_traits::MultiCurrency;
+use orml_traits::{GetByKey, MultiCurrency};
+use rand::Rng;
+use sp_runtime::{traits::Zero, FixedPointNumber};
+use xcm::v1::MultiLocation;
+
 use pallet_price_feed::PriceFeed;
 use primitives::{
 	traits::{AssetRecorder, NavProvider},
 	AssetAvailability, Price,
 };
-use rand::Rng;
-use sp_runtime::{
-	traits::{BadOrigin, Zero},
-	FixedPointNumber,
-};
-use xcm::v0::MultiLocation;
+
+use crate as pallet;
+use crate::{mock::*, traits::LockupPeriodRange as _, types::DepositRange};
 
 #[test]
-fn non_admin_cannot_call_get_asset() {
-	new_test_ext_with_balance(vec![]).execute_with(|| {
-		assert_noop!(
-			AssetIndex::add_asset(Origin::signed(ASHLEY), ASSET_A_ID, 100, MultiLocation::Null, 200),
-			BadOrigin
-		);
-		assert!(!pallet::Assets::<Test>::contains_key(ASSET_A_ID))
-	});
+fn can_register_asset() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::default())));
+	})
 }
 
 #[test]
-fn admin_can_add_asset() {
+fn cannot_add_asset_before_register() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
-		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::Null)));
+		assert_noop!(
+			AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5),
+			pallet::Error::<Test>::AssetNotExists,
+		);
+	})
+}
+
+#[test]
+fn can_add_asset() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5));
+		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::default())));
 		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
 
-		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
+		assert_eq!(Balances::free_balance(ACCOUNT_ID), 5);
 
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), 5);
+		assert_eq!(AssetIndex::index_token_balance(&ACCOUNT_ID), 5);
 		assert_eq!(AssetIndex::index_token_issuance(), 5);
 	});
 }
@@ -46,51 +61,65 @@ fn admin_can_add_asset() {
 fn native_asset_disallowed() {
 	new_test_ext().execute_with(|| {
 		assert_noop!(
-			AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), PINT_ASSET_ID, 100, MultiLocation::Null, 5),
+			AssetIndex::register_asset(
+				Origin::signed(ACCOUNT_ID),
+				PINT_ASSET_ID,
+				AssetAvailability::Liquid(MultiLocation::default())
+			),
 			pallet::Error::<Test>::NativeAssetDisallowed
 		);
 	});
 }
 
 #[test]
-fn admin_can_add_asset_twice_and_units_accumulate() {
+fn can_add_asset_twice_and_units_accumulate() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
-		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::Null)));
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5));
+		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Liquid(MultiLocation::default())));
 		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 200);
-		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 10);
+		assert_eq!(Balances::free_balance(ACCOUNT_ID), 10);
 	});
 }
 
 #[test]
-fn non_admin_cannot_set_metadata() {
-	new_test_ext().execute_with(|| {
-		assert_noop!(
-			AssetIndex::set_metadata(Origin::signed(ASHLEY), ASSET_A_ID, b"dot".to_vec(), b"dot".to_vec(), 8,),
-			BadOrigin
-		);
-	});
-}
-
-#[test]
-fn admin_can_set_metadata() {
+fn can_set_metadata() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::set_metadata(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
 			b"dot".to_vec(),
 			b"dot".to_vec(),
 			8,
 		));
+
+		assert_noop!(
+			AssetIndex::set_metadata(Origin::signed(ACCOUNT_ID), ASSET_A_ID, b"".to_vec(), b"dot".to_vec(), 8,),
+			pallet::Error::<Test>::BadMetadata
+		);
+
+		assert_noop!(
+			AssetIndex::set_metadata(Origin::signed(ACCOUNT_ID), ASSET_A_ID, b"dot".to_vec(), b"".to_vec(), 8,),
+			pallet::Error::<Test>::BadMetadata
+		);
+
+		assert_noop!(
+			AssetIndex::set_metadata(Origin::signed(ACCOUNT_ID), ASSET_A_ID, b"dot".to_vec(), b"dot".to_vec(), 13),
+			pallet::Error::<Test>::InvalidDecimals
+		);
 	});
 }
 
 #[test]
-fn admin_can_update_metadata() {
+fn can_update_metadata() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(AssetIndex::set_metadata(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
 			b"dot".to_vec(),
 			b"dot".to_vec(),
@@ -100,7 +129,7 @@ fn admin_can_update_metadata() {
 		assert_eq!(<pallet::Metadata<Test>>::get(ASSET_A_ID).name, b"dot".to_vec());
 
 		assert_ok!(AssetIndex::set_metadata(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
 			b"pint".to_vec(),
 			b"pint".to_vec(),
@@ -113,31 +142,55 @@ fn admin_can_update_metadata() {
 
 #[test]
 fn can_add_saft() {
+	let units = 5;
+	let saft_nav = 100_000;
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5),);
-		assert_eq!(pallet::Assets::<Test>::get(ASSET_A_ID), Some(AssetAvailability::Saft));
-		assert_eq!(AssetIndex::index_total_asset_balance(ASSET_A_ID), 100);
-		assert_eq!(Balances::free_balance(ADMIN_ACCOUNT_ID), 5);
-		assert_eq!(AssetIndex::index_token_balance(&ADMIN_ACCOUNT_ID), 5);
-		assert_eq!(AssetIndex::index_token_issuance(), 5);
+		// we first need to contribute some assets in order to mint an intial supply of pint
+		let initial_liquid_supply = 1_000;
+		let initial_tokens = 2_0000;
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			initial_liquid_supply,
+			initial_tokens
+		));
+		let index_token_supply = AssetIndex::index_token_issuance();
+		assert_eq!(index_token_supply, initial_tokens);
+		let price = MockPriceFeed::get_price(ASSET_A_ID).unwrap();
+		let value = price.checked_mul_int(initial_liquid_supply).unwrap();
+		assert_eq!(AssetIndex::net_asset_value(ASSET_A_ID).unwrap(), value);
+		let nav = AssetIndex::nav().unwrap();
+		assert_eq!(nav, Price::checked_from_rational(value, index_token_supply).unwrap());
+
+		// now we can add a SAFT
+		let saft_lp = 99;
+		assert_ok!(AssetIndex::add_saft(&saft_lp, SAFT_ASSET_ID, units, saft_nav));
+		assert_eq!(pallet::Assets::<Test>::get(SAFT_ASSET_ID), Some(AssetAvailability::Saft));
+		assert_eq!(AssetIndex::index_total_asset_balance(SAFT_ASSET_ID), units);
+
+		let expected_minted_token = nav.reciprocal().unwrap().saturating_mul_int(saft_nav);
+
+		assert_eq!(AssetIndex::index_token_balance(&saft_lp), expected_minted_token);
+		assert_eq!(AssetIndex::index_token_issuance(), index_token_supply + expected_minted_token);
 	});
 }
 
 #[test]
 fn add_saft_fails_on_liquid_already_registered() {
-	let balance = vec![(ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
+	let balance = vec![(ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
 	new_test_ext_with_balance(balance).execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			UNKNOWN_ASSET_ID,
-			100,
-			MultiLocation::Null,
-			5
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
-		assert_noop!(
-			AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 100, 5),
-			pallet::Error::<Test>::ExpectedSAFT
-		);
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), UNKNOWN_ASSET_ID, 100, 5));
+		assert_noop!(AssetIndex::add_saft(&ACCOUNT_ID, UNKNOWN_ASSET_ID, 100, 5), pallet::Error::<Test>::ExpectedSAFT);
 	})
 }
 
@@ -148,9 +201,26 @@ fn deposit_only_works_for_added_liquid_assets() {
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
 			pallet::Error::<Test>::UnsupportedAsset
 		);
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_A_ID, 100, 5));
+
+		// mint and intial supply of pint
+		let initial_liquid_supply = 1_000;
+		let initial_tokens = 2_0000;
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			initial_liquid_supply,
+			initial_tokens
+		));
+
+		// add saft
+		assert_ok!(AssetIndex::add_saft(&ACCOUNT_ID, ASSET_B_ID, 100, 5));
 		assert_noop!(
-			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1_000),
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_B_ID, 1_000),
 			pallet::Error::<Test>::UnsupportedAsset
 		);
 	});
@@ -169,7 +239,12 @@ fn deposit_fail_for_native_asset() {
 #[test]
 fn deposit_fails_for_unknown_assets() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5));
 		assert_noop!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 1_000),
 			pallet::Error::<Test>::UnsupportedAsset
@@ -189,13 +264,12 @@ fn can_calculate_nav_upon_deposit() {
 		let index_token_units = 5;
 		let asset_amount = 100;
 		let asset_price = MockPriceFeed::get_price(ASSET_A_ID).unwrap();
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
-			asset_amount,
-			MultiLocation::Null,
-			index_token_units
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, asset_amount, index_token_units));
 
 		// per token value (NAV) is now the value of all deposited assets over index token supply
 		let nav = AssetIndex::nav().unwrap();
@@ -218,7 +292,7 @@ fn can_calculate_nav_upon_deposit() {
 fn can_calculate_random_nav() {
 	// generate some random accounts and assets
 	let mut rng = rand::thread_rng();
-	let accounts: Vec<_> = ((ADMIN_ACCOUNT_ID + 1)..rng.gen_range(50..100)).collect();
+	let accounts: Vec<_> = ((ACCOUNT_ID + 1)..rng.gen_range(50..100)).collect();
 	let assets: Vec<_> = ((PINT_ASSET_ID + 1)..rng.gen_range(5..10)).collect();
 	let prefund = 1_000;
 	// make sure all are funded
@@ -235,9 +309,9 @@ fn can_calculate_random_nav() {
 		// register all assets first
 		for asset in assets.iter().cloned() {
 			assert_ok!(AssetIndex::register_asset(
-				Origin::signed(ADMIN_ACCOUNT_ID),
+				Origin::signed(ACCOUNT_ID),
 				asset,
-				AssetAvailability::Liquid(MultiLocation::Null),
+				AssetAvailability::Liquid(MultiLocation::default()),
 			));
 		}
 
@@ -251,7 +325,7 @@ fn can_calculate_random_nav() {
 
 		let initial_index_token_supply: Balance = 100_000_000;
 		// mint some initial index token supply
-		Balances::make_free_balance_be(&ADMIN_ACCOUNT_ID, initial_index_token_supply);
+		Balances::make_free_balance_be(&ACCOUNT_ID, initial_index_token_supply);
 		assert_eq!(AssetIndex::index_token_issuance(), initial_index_token_supply);
 
 		// NAV is still zero because no assets secured, meaning all index tokens are worthless
@@ -290,13 +364,12 @@ fn can_calculate_random_nav() {
 fn deposit_works_with_user_balance() {
 	new_test_ext().execute_with(|| {
 		let initial_units = 1_000;
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
-			100,
-			MultiLocation::Null,
-			initial_units
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, initial_units));
 
 		let nav = AssetIndex::nav().unwrap();
 		let deposit = 1_000;
@@ -320,15 +393,14 @@ fn deposit_works_with_user_balance() {
 
 #[test]
 fn deposit_fail_for_unsupported_assets() {
-	let balance = vec![(ADMIN_ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
+	let balance = vec![(ACCOUNT_ID, UNKNOWN_ASSET_ID, 1000)];
 	new_test_ext_with_balance(balance).execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			UNKNOWN_ASSET_ID,
-			100,
-			MultiLocation::Null,
-			5
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), UNKNOWN_ASSET_ID, 100, 5));
 		assert_ok!(Currency::deposit(UNKNOWN_ASSET_ID, &ASHLEY, 1_000));
 		assert_noop!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), UNKNOWN_ASSET_ID, 100),
@@ -340,12 +412,161 @@ fn deposit_fail_for_unsupported_assets() {
 #[test]
 fn deposit_fails_on_missing_assets() {
 	new_test_ext().execute_with(|| {
-		assert_ok!(AssetIndex::add_asset(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_A_ID, 100, MultiLocation::Null, 5));
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, 5));
 
 		assert_noop!(
 			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, Balance::MAX),
 			orml_tokens::Error::<Test>::BalanceTooLow
 		);
+	})
+}
+
+#[test]
+fn ensure_valid_deposit_range() {
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: 1, maximum: Balance::MAX }
+		));
+
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: Balance::MAX, maximum: Balance::MAX }
+			),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: Balance::MAX, maximum: Balance::MAX - 1 }
+			),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+
+		assert_noop!(
+			AssetIndex::set_deposit_range(
+				Origin::signed(ACCOUNT_ID),
+				DepositRange { minimum: 0, maximum: Balance::MAX }
+			),
+			pallet::Error::<Test>::InvalidDepositRange
+		);
+	});
+}
+
+#[test]
+fn deposit_fails_on_invalid_deposit_range() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, initial_units));
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 100_000));
+
+		// fund account to cover index deposits
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit));
+
+		assert_ok!(AssetIndex::set_deposit_range(
+			Origin::signed(ACCOUNT_ID),
+			DepositRange { minimum: Balance::MAX - 1, maximum: Balance::MAX }
+		));
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+			pallet::Error::<Test>::DepositAmountBelowMinimum
+		);
+
+		assert_ok!(AssetIndex::set_deposit_range(Origin::signed(ACCOUNT_ID), DepositRange { minimum: 1, maximum: 2 }));
+		assert_noop!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, deposit),
+			pallet::Error::<Test>::DepositExceedsMaximum
+		);
+	})
+}
+
+#[test]
+fn deposit_fails_on_exceeding_limit() {
+	let deposit = 1_000;
+	let initial_units = 1_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, 100, initial_units));
+
+		// fund account to cover index deposits
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
+		}
+
+		assert_eq!(
+			AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1),
+			Err(pallet::Error::<Test>::TooManyDeposits.into())
+		);
+	})
+}
+
+#[test]
+fn redemption_fee_works_on_completing_withdraw() {
+	let deposit = 1_000_000;
+	let initial_units = 1_000_000;
+
+	new_test_ext().execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ASSET_A_ID,
+			initial_units / ASSET_A_PRICE_MULTIPLIER,
+			initial_units
+		));
+		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, deposit));
+		for _ in 0..50 {
+			assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, initial_units / 50));
+		}
+
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), 0);
+
+		// advance the block number so that the lock expires
+		let total = AssetIndex::index_token_balance(&ASHLEY);
+		let new_block_number = LockupPeriod::get() + 1;
+		frame_system::Pallet::<Test>::set_block_number(new_block_number);
+		assert_ok!(AssetIndex::withdraw(Origin::signed(ASHLEY), total * 99 / 100));
+		assert_ok!(AssetIndex::complete_withdraw(Origin::signed(ASHLEY)));
+
+		// times * deposit_amount * Rate.0 (1 / 10)
+		//
+		// ->
+		//
+		// (50 * (initial_units / 50) - initial_units / 100) * 1 / 10
+		let fee = initial_units * 99 / 1000;
+		assert_eq!(Currency::total_balance(ASSET_A_ID, &ASHLEY), deposit * 99 / 100 - fee);
+
+		// all deposits has been cleaned
+		assert_eq!(crate::Deposits::<Test>::get(&ASHLEY)[0], (total / 100, 1_u64));
+
+		// can deposit again after withdrawal
+		assert_ok!(AssetIndex::deposit(Origin::signed(ASHLEY), ASSET_A_ID, 1));
 	})
 }
 
@@ -357,21 +578,23 @@ fn can_calculate_nav() {
 		let index_token_units = 5;
 		let saft_units = 50;
 
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
-			a_units,
-			MultiLocation::Null,
-			index_token_units
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, a_units, index_token_units));
+		assert_ok!(AssetIndex::add_saft(&ACCOUNT_ID, ASSET_B_ID, b_units, saft_units));
 
-		assert_ok!(AssetIndex::add_saft(&ADMIN_ACCOUNT_ID, ASSET_B_ID, b_units, saft_units));
 		let total_supply = AssetIndex::index_token_issuance();
-		assert_eq!(total_supply, saft_units + index_token_units);
+		assert_eq!(
+			total_supply,
+			saft_units / AssetIndex::nav().unwrap().checked_mul_int(1_u128).unwrap() + index_token_units
+		);
 
-		let nav = AssetIndex::nav().unwrap();
 		let liquid_nav = AssetIndex::liquid_nav().unwrap();
 		let saft_nav = AssetIndex::saft_nav().unwrap();
+		let nav = AssetIndex::nav().unwrap();
 		assert_eq!(nav, liquid_nav + saft_nav);
 	})
 }
@@ -385,20 +608,19 @@ fn can_withdraw() {
 		let b_tokens = 100;
 
 		// create liquid assets
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			ASSET_A_ID,
-			a_units,
-			MultiLocation::Null,
-			a_tokens
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
-		assert_ok!(AssetIndex::add_asset(
-			Origin::signed(ADMIN_ACCOUNT_ID),
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
 			ASSET_B_ID,
-			b_units,
-			MultiLocation::Null,
-			b_tokens
+			AssetAvailability::Liquid(MultiLocation::default())
 		));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_A_ID, a_units, a_tokens));
+		assert_ok!(AssetIndex::add_asset(Origin::signed(ACCOUNT_ID), ASSET_B_ID, b_units, b_tokens));
 
 		// deposit some funds into the index from an user account
 		assert_ok!(Currency::deposit(ASSET_A_ID, &ASHLEY, 1_000));
@@ -429,4 +651,49 @@ fn can_withdraw() {
 		let pending = pending.remove(0);
 		assert_eq!(pending.assets.len(), 2);
 	})
+}
+
+#[test]
+fn add_asset_less_than_existential_deposit_is_noop() {
+	new_test_ext_with_balance(vec![]).execute_with(|| {
+		assert_ok!(AssetIndex::register_asset(
+			Origin::signed(ACCOUNT_ID),
+			ED_ASSET_ID,
+			AssetAvailability::Liquid(MultiLocation::default())
+		));
+
+		let ed = ExistentialDeposits::get(&ED_ASSET_ID);
+		assert_ok!(Currency::deposit(ED_ASSET_ID, &ACCOUNT_ID, ed));
+
+		// index token payout less than ED is a no-op
+		assert_ok!(AssetIndex::add_asset(
+			Origin::signed(ACCOUNT_ID),
+			ED_ASSET_ID,
+			ed,
+			ExistentialDeposit::get().saturating_sub(1)
+		));
+		assert!(AssetIndex::index_token_balance(&ACCOUNT_ID).is_zero());
+	});
+}
+
+#[test]
+fn can_set_lockup_period() {
+	new_test_ext_from_genesis().execute_with(|| {
+		// ensure initial lockup period has been set
+		assert_eq!(pallet::LockupPeriod::<Test>::get(), LockupPeriod::get());
+
+		// cannot set lockup period out of range
+		assert_noop!(
+			AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), LockupPeriodRange::<Test>::max() + 1),
+			pallet::Error::<Test>::InvalidLockupPeriod
+		);
+		assert_noop!(
+			AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), LockupPeriodRange::<Test>::min() - 1),
+			pallet::Error::<Test>::InvalidLockupPeriod
+		);
+
+		// can set lockup period
+		assert_ok!(AssetIndex::set_lockup_period(Origin::signed(ACCOUNT_ID), WEEKS));
+		assert_eq!(pallet::LockupPeriod::<Test>::get(), WEEKS);
+	});
 }

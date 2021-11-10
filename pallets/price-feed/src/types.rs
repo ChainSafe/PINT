@@ -4,7 +4,7 @@
 use frame_support::pallet_prelude::*;
 
 /// Represents an answer of a feed at a certain point of time
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct TimestampedValue<Value, Moment> {
 	/// The timestamped value
 	pub value: Value,
