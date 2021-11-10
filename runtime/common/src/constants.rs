@@ -124,6 +124,7 @@ parameter_types! {
 	// Maximum allowed string length for feed names
 	pub const StringLimit: u32 = 15;
 	pub const TransactionByteFee: Balance = 1 ;
+	pub const OperationalFeeMultiplier: u8 = 5;
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
 	pub const LockupPeriod: BlockNumber = DAYS;
 	pub const MaxCandidates: u32 = 200;
@@ -145,6 +146,7 @@ parameter_types! {
 	pub const UnitPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::here()), UNIT);
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
+	pub const MaxInstructions: u32 = 100;
 	pub const WithdrawalPeriod: BlockNumber = 10;
 }
 

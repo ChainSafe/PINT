@@ -8,29 +8,26 @@ use cumulus_client_service::{
 	prepare_node_config, start_collator, start_full_node, StartCollatorParams, StartFullNodeParams,
 };
 use cumulus_primitives_core::ParaId;
-
+use sc_consensus_aura::StartAuraParams;
 // Substrate Imports
 use cumulus_primitives_parachain_inherent::MockValidationDataInherentDataProvider;
 use sc_chain_spec::ChainSpec;
 use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_consensus_aura::ImportQueueParams;
-pub use sc_executor::NativeExecutor;
-use sc_executor::{native_executor_instance, NativeExecutionDispatch};
+use sc_executor::NativeElseWasmExecutor;
 use sc_network::NetworkService;
-use sc_service::{
-	error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TFullClient, TaskManager,
-};
+use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
-use sc_transaction_pool::BasicPool;
 use sp_api::ConstructRuntimeApi;
 use sp_consensus::SlotData;
 use sp_consensus_aura::sr25519::{AuthorityId as AuraId, AuthorityPair as AuraPair};
 use sp_keystore::SyncCryptoStorePtr;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::PrefixedMemoryDB;
-use std::sync::Arc;
 use substrate_prometheus_endpoint::Registry;
+
+use std::sync::Arc;
 
 use crate::client::*;
 
@@ -40,28 +37,63 @@ type Header = sp_runtime::generic::Header<BlockNumber, sp_runtime::traits::Blake
 pub type Block = sp_runtime::generic::Block<Header, sp_runtime::OpaqueExtrinsic>;
 type Hash = sp_core::H256;
 
-native_executor_instance!(
-	pub DevExecutor,
-	pint_runtime_dev::api::dispatch,
-	pint_runtime_dev::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+pub fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
+	MockValidationDataInherentDataProvider { current_para_block: 0, relay_offset: 1000, relay_blocks_per_para_block: 2 }
+}
+
+pub struct DevExecutorDispatch;
+impl sc_executor::NativeExecutionDispatch for DevExecutorDispatch {
+	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		pint_runtime_dev::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		pint_runtime_dev::native_version()
+	}
+}
 
 #[cfg(feature = "kusama")]
-native_executor_instance!(
-	pub KusamaExecutor,
-	pint_runtime_kusama::api::dispatch,
-	pint_runtime_kusama::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+mod kusama_executor {
+	pub use pint_runtime_kusama;
+
+	pub struct KusamaExecutorDispatch;
+	impl sc_executor::NativeExecutionDispatch for KusamaExecutorDispatch {
+		type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+		fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+			pint_runtime_kusama::api::dispatch(method, data)
+		}
+
+		fn native_version() -> sc_executor::NativeVersion {
+			pint_runtime_kusama::native_version()
+		}
+	}
+}
 
 #[cfg(feature = "polkadot")]
-native_executor_instance!(
-	pub PolkadotExecutor,
-	pint_runtime_polkadot::api::dispatch,
-	pint_runtime_polkadot::native_version,
-	frame_benchmarking::benchmarking::HostFunctions,
-);
+mod polkadot_executor {
+	pub use pint_runtime_polkadot;
+
+	pub struct PolkadotExecutorDispatch;
+	impl sc_executor::NativeExecutionDispatch for PolkadotExecutorDispatch {
+		type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
+
+		fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+			pint_runtime_polkadot::api::dispatch(method, data)
+		}
+
+		fn native_version() -> sc_executor::NativeVersion {
+			pint_runtime_polkadot::native_version()
+		}
+	}
+}
+
+#[cfg(feature = "kusama")]
+pub use kusama_executor::*;
+#[cfg(feature = "polkadot")]
+pub use polkadot_executor::*;
 
 pub trait IdentifyVariant {
 	fn is_kusama(&self) -> bool;
@@ -84,17 +116,14 @@ impl IdentifyVariant for Box<dyn ChainSpec> {
 }
 
 /// PINT's full backend.
-type FullBackend = TFullBackend<Block>;
+pub type FullBackend = TFullBackend<Block>;
 
 /// PINT's full client.
-type FullClient<RuntimeApi, Executor> = TFullClient<Block, RuntimeApi, Executor>;
+pub type FullClient<RuntimeApi, ExecutorDispatch> =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
 
 /// Maybe PINT Dev full select chain.
 type MaybeFullSelectChain = Option<LongestChain<FullBackend, Block>>;
-
-fn default_mock_parachain_inherent_data_provider() -> MockValidationDataInherentDataProvider {
-	MockValidationDataInherentDataProvider { current_para_block: 0, relay_offset: 1000, relay_blocks_per_para_block: 2 }
-}
 
 pub fn new_partial<RuntimeApi, Executor>(
 	config: &Configuration,
@@ -115,7 +144,7 @@ where
 	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-	Executor: NativeExecutionDispatch + 'static,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	let telemetry = config
 		.telemetry_endpoints
@@ -128,10 +157,18 @@ where
 		})
 		.transpose()?;
 
-	let (client, backend, keystore_container, task_manager) = sc_service::new_full_parts::<Block, RuntimeApi, Executor>(
-		&config,
-		telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
-	)?;
+	let executor = NativeElseWasmExecutor::<Executor>::new(
+		config.wasm_method,
+		config.default_heap_pages,
+		config.max_runtime_instances,
+	);
+
+	let (client, backend, keystore_container, task_manager) =
+		sc_service::new_full_parts::<Block, RuntimeApi, NativeElseWasmExecutor<Executor>>(
+			config,
+			telemetry.as_ref().map(|(_, telemetry)| telemetry.handle()),
+			executor,
+		)?;
 	let client = Arc::new(client);
 
 	let telemetry_worker_handle = telemetry.as_ref().map(|(worker, _)| worker.handle());
@@ -143,7 +180,7 @@ where
 
 	let registry = config.prometheus_registry();
 
-	let transaction_pool = BasicPool::new_full(
+	let transaction_pool = sc_transaction_pool::BasicPool::new_full(
 		config.transaction_pool.clone(),
 		config.role.is_authority().into(),
 		registry,
@@ -189,7 +226,7 @@ where
 	} else {
 		let slot_duration = cumulus_client_consensus_aura::slot_duration(&*client)?;
 
-		cumulus_client_consensus_aura::import_queue::<sp_consensus_aura::sr25519::AuthorityPair, _, _, _, _, _, _>(
+		cumulus_client_consensus_aura::import_queue::<AuraPair, _, _, _, _, _, _>(
 			cumulus_client_consensus_aura::ImportQueueParams {
 				block_import: client.clone(),
 				client: client.clone(),
@@ -237,18 +274,22 @@ async fn start_node_impl<RB, RuntimeApi, Executor, BIC>(
 	build_consensus: BIC,
 ) -> sc_service::error::Result<(TaskManager, Arc<FullClient<RuntimeApi, Executor>>)>
 where
-	RB: Fn(Arc<FullClient<RuntimeApi, Executor>>) -> jsonrpc_core::IoHandler<sc_rpc::Metadata> + Send + 'static,
+	RB: Fn(
+			Arc<FullClient<RuntimeApi, Executor>>,
+		) -> Result<jsonrpc_core::IoHandler<sc_rpc::Metadata>, sc_service::Error>
+		+ Send
+		+ 'static,
 	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-	Executor: NativeExecutionDispatch + 'static,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
 	BIC: FnOnce(
-		Arc<TFullClient<Block, RuntimeApi, Executor>>,
+		Arc<FullClient<RuntimeApi, Executor>>,
 		Option<&Registry>,
 		Option<TelemetryHandle>,
 		&TaskManager,
 		&polkadot_service::NewFull<polkadot_service::Client>,
-		Arc<sc_transaction_pool::FullPool<Block, TFullClient<Block, RuntimeApi, Executor>>>,
+		Arc<sc_transaction_pool::FullPool<Block, FullClient<RuntimeApi, Executor>>>,
 		Arc<NetworkService<Block, Hash>>,
 		SyncCryptoStorePtr,
 		bool,
@@ -392,13 +433,13 @@ where
 	RuntimeApi: ConstructRuntimeApi<Block, FullClient<RuntimeApi, Executor>> + Send + Sync + 'static,
 	RuntimeApi::RuntimeApi: RuntimeApiCollection<StateBackend = sc_client_api::StateBackendFor<FullBackend, Block>>,
 	RuntimeApi::RuntimeApi: sp_consensus_aura::AuraApi<Block, AuraId>,
-	Executor: NativeExecutionDispatch + 'static,
+	Executor: sc_executor::NativeExecutionDispatch + 'static,
 {
 	start_node_impl(
 		parachain_config,
 		polkadot_config,
 		id,
-		|_| Default::default(),
+		|_| Ok(Default::default()),
 		|client,
 		 prometheus_registry,
 		 telemetry,
@@ -482,14 +523,14 @@ pub fn new_chain_ops(
 		sc_consensus::import_queue::BasicQueue<Block, PrefixedMemoryDB<BlakeTwo256>>,
 		TaskManager,
 	),
-	sc_service::Error,
+	ServiceError,
 > {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
 	if config.chain_spec.is_kusama() {
 		#[cfg(feature = "kusama")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<pint_runtime_kusama::RuntimeApi, KusamaExecutor>(config, false, false)?;
+				new_partial::<pint_runtime_kusama::RuntimeApi, KusamaExecutorDispatch>(config, false, false)?;
 			Ok((Arc::new(Client::Kusama(client)), backend, import_queue, task_manager))
 		}
 
@@ -499,7 +540,7 @@ pub fn new_chain_ops(
 		#[cfg(feature = "polkadot")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<pint_runtime_polkadot::RuntimeApi, PolkadotExecutor>(config, false, false)?;
+				new_partial::<pint_runtime_polkadot::RuntimeApi, PolkadotExecutorDispatch>(config, false, false)?;
 			Ok((Arc::new(Client::Polkadot(client)), backend, import_queue, task_manager))
 		}
 
@@ -524,7 +565,7 @@ fn inner_pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskMa
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (mut telemetry, _),
-	} = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutor>(&config, true, instant_sealing)?;
+	} = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutorDispatch>(&config, true, instant_sealing)?;
 
 	let (network, system_rpc_tx, network_starter) = sc_service::build_network(sc_service::BuildNetworkParams {
 		config: &config,
@@ -592,36 +633,34 @@ fn inner_pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskMa
 			// aura
 			let can_author_with = sp_consensus::CanAuthorWithNativeVersion::new(client.executor().clone());
 			let slot_duration = sc_consensus_aura::slot_duration(&*client)?.slot_duration();
-			let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(
-				sc_consensus_aura::StartAuraParams {
-					slot_duration: sc_consensus_aura::slot_duration(&*client)?,
-					client: client.clone(),
-					select_chain,
-					block_import: client.clone(),
-					proposer_factory,
-					create_inherent_data_providers: move |_, ()| async move {
-						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+			let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _, _>(StartAuraParams {
+				slot_duration: sc_consensus_aura::slot_duration(&*client)?,
+				client: client.clone(),
+				select_chain,
+				block_import: crate::instant_finalize::InstantFinalizeBlockImport::new(client.clone()),
+				proposer_factory,
+				create_inherent_data_providers: move |_, ()| async move {
+					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-						let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
-							*timestamp,
-							slot_duration,
-						);
+					let slot = sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_duration(
+						*timestamp,
+						slot_duration,
+					);
 
-						Ok((timestamp, slot, default_mock_parachain_inherent_data_provider()))
-					},
-					force_authoring,
-					backoff_authoring_blocks,
-					keystore: keystore_container.sync_keystore(),
-					can_author_with,
-					sync_oracle: network.clone(),
-					justification_sync_link: network.clone(),
-					// We got around 500ms for proposing
-					block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
-					// And a maximum of 750ms if slots are skipped
-					max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
-					telemetry: telemetry.as_ref().map(|x| x.handle()),
+					Ok((timestamp, slot, default_mock_parachain_inherent_data_provider()))
 				},
-			)?;
+				force_authoring,
+				backoff_authoring_blocks,
+				keystore: keystore_container.sync_keystore(),
+				can_author_with,
+				sync_oracle: network.clone(),
+				justification_sync_link: network.clone(),
+				// We got around 500ms for proposing
+				block_proposal_slot_portion: SlotProportion::new(1f32 / 24f32),
+				// And a maximum of 750ms if slots are skipped
+				max_block_proposal_slot_portion: Some(SlotProportion::new(1f32 / 16f32)),
+				telemetry: telemetry.as_ref().map(|x| x.handle()),
+			})?;
 
 			// the AURA authoring task is considered essential, i.e. if it
 			// fails we take down the service with it.

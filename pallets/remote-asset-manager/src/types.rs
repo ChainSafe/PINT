@@ -6,7 +6,7 @@ use frame_support::{sp_runtime::traits::AtLeast32BitUnsigned, RuntimeDebug};
 use xcm::v1::{AssetId, Fungibility, Junction, Junctions, MultiAsset, MultiLocation};
 
 /// Represents all XCM calls of the `pallet_staking` pallet transacted on a parachain
-#[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug, scale_info::TypeInfo)]
 pub struct XcmStakingMessageCount {
 	/// Total number of all `pallet_staking::Pallet::bond_extra` calls transacted
 	pub bond_extra: u32,
@@ -17,7 +17,7 @@ pub struct XcmStakingMessageCount {
 }
 
 /// Represents the different balances of an asset
-#[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Default, Encode, Decode, Clone, PartialEq, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetLedger<Balance> {
 	/// The real deposits contributed to the index
 	pub deposited: Balance,
@@ -38,7 +38,7 @@ where
 }
 
 /// Represents the config for the statemint parachain
-#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug)]
+#[derive(Encode, Decode, Clone, PartialEq, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct StatemintConfig {
 	/// The id of the `statemint` parachain

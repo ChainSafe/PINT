@@ -9,7 +9,7 @@ use frame_support::{
 use frame_system::{ensure_signed, Call as SystemCall, Pallet as System, RawOrigin as SystemOrigin};
 
 fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pallet::Proposal<T> {
-	let action: T::Action = <SystemCall<T>>::remark(vec![0; 0]).into();
+	let action: T::Action = SystemCall::<T>::remark { remark: vec![0; 0] }.into();
 	let expected_nonce = pallet::ProposalCount::<T>::get();
 
 	let account_id = ensure_signed(origin.clone()).unwrap();
@@ -21,7 +21,7 @@ fn submit_proposal<T: Config>(origin: <T as frame_system::Config>::Origin) -> pa
 			1_u32.into(),
 	);
 
-	let call = <Call<T>>::propose(Box::new(action.clone()));
+	let call = Call::<T>::propose { action: Box::new(action.clone()) };
 	assert_ok!(call.dispatch_bypass_filter(origin));
 
 	pallet::Proposal::<T>::new(action, account_id, expected_nonce, ProposalStatus::Active)
@@ -38,7 +38,7 @@ benchmarks! {
 	propose {
 		let origin = T::ProposalSubmissionOrigin::successful_origin();
 		let proposal = submit_proposal::<T>(origin.clone());
-		let call = <Call<T>>::propose(Box::new(<SystemCall<T>>::remark(vec![0; 0]).into()));
+		let call = Call::<T>::propose{action: Box::new(SystemCall::<T>::remark{remark:vec![0; 0]}.into())};
 	}: {
 		call.dispatch_bypass_filter(origin)?
 	} verify {
@@ -57,7 +57,7 @@ benchmarks! {
 		);
 
 		// construct call
-		let call = <Call<T>>::vote(proposal.hash(), VoteKind::Abstain);
+		let call = Call::<T>::vote{ proposal_hash: proposal.hash(), vote: VoteKind::Abstain};
 	}: {
 		call.dispatch_bypass_filter(origin)?
 	} verify {
@@ -94,7 +94,7 @@ benchmarks! {
 		);
 
 		// construct call
-		let call = <Call<T>>::close(proposal.hash());
+		let call = Call::<T>::close{proposal_hash: proposal.hash()};
 	}: {
 		call.dispatch_bypass_filter(T::ProposalExecutionOrigin::successful_origin())?
 	} verify {

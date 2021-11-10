@@ -162,7 +162,6 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::metadata(T::AssetId = "AssetId", FeedIdFor<T> = "FeedId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new assetId -> feedId mapping was inserted

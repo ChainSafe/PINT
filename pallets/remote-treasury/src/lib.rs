@@ -78,7 +78,6 @@ pub mod pallet {
 	}
 
 	#[pallet::event]
-	#[pallet::metadata(T::AssetId = "AssetId", T::AccountId = "AccountId", T::Balance = "Balance")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Admin successfully transferred some funds from the treasury to

@@ -64,7 +64,7 @@ pub mod pallet {
 	}
 
 	/// Represents a single off-chain SAFT Record of a non liquid asset
-	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+	#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 	pub struct SAFTRecord<Balance, NAV> {
 		/// Net asset value of the SAFT, or the total value of `units`
 		nav: NAV,
@@ -114,7 +114,6 @@ pub mod pallet {
 	pub type SAFTNetAssetValue<T: Config> = StorageMap<_, Blake2_128Concat, T::AssetId, T::Balance, ValueQuery>;
 
 	#[pallet::event]
-	#[pallet::metadata(T::AssetId = "AssetId", T::Balance = "Balance")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A new SAFT was added

@@ -138,7 +138,7 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn copyright_start_year() -> i32 {
-		2017
+		2021
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
@@ -151,17 +151,17 @@ impl SubstrateCli for RelayChainCli {
 }
 
 fn set_default_ss58_version(spec: &Box<dyn sc_chain_spec::ChainSpec>) {
-	use sp_core::crypto::Ss58AddressFormat;
+	use sp_core::crypto::Ss58AddressFormatRegistry;
 
 	let ss58_version = if spec.is_kusama() {
-		Ss58AddressFormat::KusamaAccount
+		Ss58AddressFormatRegistry::KusamaAccount
 	} else if spec.is_polkadot() {
-		Ss58AddressFormat::PolkadotAccount
+		Ss58AddressFormatRegistry::PolkadotAccount
 	} else {
-		Ss58AddressFormat::SubstrateAccount
+		Ss58AddressFormatRegistry::SubstrateAccount
 	};
 
-	sp_core::crypto::set_default_ss58_version(ss58_version);
+	sp_core::crypto::set_default_ss58_version(ss58_version.into());
 }
 
 fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
@@ -180,7 +180,7 @@ macro_rules! with_runtime {
             #[cfg(feature = "kusama")]
             use pint_runtime_kusama::{Block, RuntimeApi};
             #[cfg(feature = "kusama")]
-            use service::{KusamaExecutor as Executor};
+            use service::{KusamaExecutorDispatch as Executor};
             #[cfg(feature = "kusama")]
             $( $code )*
 
@@ -191,7 +191,7 @@ macro_rules! with_runtime {
             #[cfg(feature = "polkadot")]
             use pint_runtime_polkadot::{Block, RuntimeApi};
             #[cfg(feature = "polkadot")]
-            use service::{PolkadotExecutor as Executor};
+            use service::{PolkadotExecutorDispatch as Executor};
             #[cfg(feature = "polkadot")]
             $( $code )*
 
@@ -200,7 +200,7 @@ macro_rules! with_runtime {
 		} else {
 			#[allow(unused_imports)]
             use pint_runtime_dev::{Block, RuntimeApi};
-            use service::{DevExecutor as Executor};
+            use service::{DevExecutorDispatch as Executor};
             $( $code )*
 		}
     }
@@ -237,11 +237,11 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| {
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name().to_string()].iter().chain(cli.relaychain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
 				let polkadot_config =
-					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, config.task_executor.clone())
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, config.tokio_handle.clone())
 						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				cmd.run(config, polkadot_config)
@@ -275,6 +275,7 @@ pub fn run() -> Result<()> {
 
 			Ok(())
 		}
+
 		Some(Subcommand::ExportGenesisWasm(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
@@ -299,6 +300,9 @@ pub fn run() -> Result<()> {
 			if cfg!(feature = "runtime-benchmarks") {
 				let runner = cli.create_runner(cmd)?;
 				let chain_spec = &runner.config().chain_spec;
+
+				set_default_ss58_version(chain_spec);
+
 				with_runtime!(chain_spec, {
 					return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
 				})
@@ -326,7 +330,7 @@ pub fn run() -> Result<()> {
 
 				let polkadot_cli = RelayChainCli::new(
 					&config,
-					[RelayChainCli::executable_name().to_string()].iter().chain(cli.relaychain_args.iter()),
+					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
 				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(200));
@@ -336,9 +340,9 @@ pub fn run() -> Result<()> {
 				let block: Block = generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
-				let task_executor = config.task_executor.clone();
-				let polkadot_config = SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
-					.map_err(|err| format!("Relay chain argument error: {}", err))?;
+				let polkadot_config =
+					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, config.tokio_handle.clone())
+						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
@@ -447,10 +451,6 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_cors(is_dev)
 	}
 
-	fn telemetry_external_transport(&self) -> Result<Option<sc_service::config::ExtTransport>> {
-		self.base.base.telemetry_external_transport()
-	}
-
 	fn default_heap_pages(&self) -> Result<Option<u64>> {
 		self.base.base.default_heap_pages()
 	}
@@ -469,9 +469,5 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn announce_block(&self) -> Result<bool> {
 		self.base.base.announce_block()
-	}
-
-	fn telemetry_endpoints(&self, chain_spec: &Box<dyn ChainSpec>) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
-		self.base.base.telemetry_endpoints(chain_spec)
 	}
 }

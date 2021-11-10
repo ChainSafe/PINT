@@ -168,5 +168,6 @@ fn pint_testnet_genesis(
 			proxy_configs: vec![(42, ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() })],
 			statemint_config: None,
 		},
+		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 	}
 }

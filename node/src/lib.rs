@@ -3,4 +3,5 @@
 
 pub mod chain_spec;
 pub mod client;
+pub mod instant_finalize;
 pub mod service;

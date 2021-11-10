@@ -14,7 +14,7 @@ use frame_support::{
 		traits::BlakeTwo256,
 		AccountId32, BoundToRuntimeAppPublic, Perbill,
 	},
-	traits::{Currency, Everything, FindAuthor, Imbalance, InstanceFilter, OnUnbalanced, OneSessionHandler},
+	traits::{Currency, Everything, FindAuthor, Imbalance, InstanceFilter, Nothing, OnUnbalanced, OneSessionHandler},
 	weights::Weight,
 };
 use pallet_staking as staking;
@@ -58,7 +58,9 @@ impl frame_system::Config for Runtime {
 
 impl shared::Config for Runtime {}
 
-impl configuration::Config for Runtime {}
+impl configuration::Config for Runtime {
+	type WeightInfo = configuration::TestWeightInfo;
+}
 
 parameter_types! {
 	pub const KsmLocation: MultiLocation = Junctions::Here.into();
@@ -66,6 +68,7 @@ parameter_types! {
 	pub const AnyNetwork: NetworkId = NetworkId::Any;
 	pub Ancestry: MultiLocation = MultiLocation::default();
 	pub UnitWeightCost: Weight = 1_000;
+	pub const MaxInstructions: u32 = 100;
 }
 
 pub type SovereignAccountOf =
@@ -99,10 +102,12 @@ impl Config for XcmConfig {
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
+	type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
 	type Trader = FixedRateOfFungible<KsmPerSecond, ()>;
-	type ResponseHandler = ();
-	type SubscriptionService = ();
+	type ResponseHandler = PolkadotXcm;
+	type AssetTrap = PolkadotXcm;
+	type AssetClaims = PolkadotXcm;
+	type SubscriptionService = PolkadotXcm;
 }
 
 pub type LocalOriginToLocation = SignedToAccountId32<Origin, AccountId, KusamaNetwork>;
@@ -115,10 +120,14 @@ impl pallet_xcm::Config for Runtime {
 	type ExecuteXcmOrigin = xcm_builder::EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Everything;
+	type XcmTeleportFilter = Nothing;
 	type XcmReserveTransferFilter = Everything;
-	type Weigher = FixedWeightBounds<BaseXcmWeight, Call>;
+	type Weigher = FixedWeightBounds<BaseXcmWeight, Call, MaxInstructions>;
 	type LocationInverter = LocationInverter<Ancestry>;
+	type Origin = Origin;
+	type Call = Call;
+	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
+	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
 }
 
 parameter_types! {
@@ -163,10 +172,10 @@ impl OneSessionHandler<AccountId> for OtherSessionHandler {
 		SESSION.with(|x| *x.borrow_mut() = (validators.map(|x| x.0.clone()).collect(), HashSet::new()));
 	}
 
-	fn on_disabled(validator_index: usize) {
+	fn on_disabled(validator_index: u32) {
 		SESSION.with(|d| {
 			let mut d = d.borrow_mut();
-			let value = d.0[validator_index].clone();
+			let value = d.0[validator_index as usize].clone();
 			d.1.insert(value);
 		})
 	}
@@ -233,7 +242,6 @@ impl pallet_session::Config for Runtime {
 	type Event = Event;
 	type ValidatorId = AccountId;
 	type ValidatorIdOf = pallet_staking::StashOf<Runtime>;
-	type DisabledValidatorsThreshold = DisabledValidatorsThreshold;
 	type NextSessionRotation = pallet_session::PeriodicSessions<Period, Offset>;
 	type WeightInfo = ();
 }
@@ -266,6 +274,7 @@ parameter_types! {
 	pub const BondingDuration: EraIndex = 3;
 	pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
 	pub const MaxNominatorRewardedPerValidator: u32 = 64;
+	pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(75);
 }
 
 thread_local! {
@@ -283,13 +292,24 @@ impl OnUnbalanced<NegativeImbalanceOf<Runtime>> for RewardRemainderMock {
 	}
 }
 
+const THRESHOLDS: [sp_npos_elections::VoteWeight; 9] = [10, 20, 30, 40, 50, 60, 1_000, 2_000, 10_000];
+
+parameter_types! {
+	pub static BagThresholds: &'static [sp_npos_elections::VoteWeight] = &THRESHOLDS;
+}
+
+impl pallet_bags_list::Config for Runtime {
+	type Event = Event;
+	type WeightInfo = ();
+	type VoteWeightProvider = Staking;
+	type BagThresholds = BagThresholds;
+}
+
 impl onchain::Config for Runtime {
-	type AccountId = AccountId;
-	type BlockNumber = BlockNumber;
-	type BlockWeights = BlockWeights;
 	type Accuracy = Perbill;
 	type DataProvider = Staking;
 }
+
 impl staking::Config for Runtime {
 	const MAX_NOMINATIONS: u32 = 16;
 	type Currency = Balances;
@@ -310,6 +330,8 @@ impl staking::Config for Runtime {
 	type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
 	type GenesisElectionProvider = Self::ElectionProvider;
 	type WeightInfo = ();
+	type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
+	type SortedListProvider = BagsList;
 }
 
 parameter_types! {
@@ -322,7 +344,7 @@ parameter_types! {
 }
 
 /// The type used to represent the kinds of proxying allowed.
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, scale_info::TypeInfo)]
 pub enum ProxyType {
 	Any = 0,
 	NonTransfer = 1,
@@ -405,7 +427,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		ParasOrigin: origin::{Pallet, Origin},
 		ParasUmp: ump::{Pallet, Call, Storage, Event},
-		XcmPallet: pallet_xcm::{Pallet, Call, Storage, Event<T>},
+		PolkadotXcm: pallet_xcm::{Pallet, Call, Storage, Event<T>, Origin},
 
 		 // use polkadot index 7
 		Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
@@ -417,5 +439,7 @@ construct_runtime!(
 
 		// use statemint index 50
 		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>} = 50,
+
+		BagsList: pallet_bags_list::{Pallet, Call, Storage, Event<T>},
 	}
 );

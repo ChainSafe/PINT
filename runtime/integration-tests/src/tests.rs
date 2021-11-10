@@ -6,7 +6,8 @@ use crate::{
 	relay::{self, ProxyType as RelayProxyType, Runtime as RelayRuntime},
 	relay_sovereign_account, sibling_sovereign_account, statemint,
 	types::*,
-	Net, Pint, Relay, Statemint, ADMIN_ACCOUNT, ALICE, INITIAL_BALANCE, PARA_ID, RELAY_CHAIN_ASSET, STATEMINT_PARA_ID,
+	Net, Pint, Relay, Statemint, ADMIN_ACCOUNT, ALICE, EMPTY_ACCOUNT, INITIAL_BALANCE, PARA_ID, RELAY_CHAIN_ASSET,
+	STATEMINT_PARA_ID,
 };
 use frame_support::{
 	assert_noop, assert_ok,
@@ -84,7 +85,6 @@ fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 			)),
 			Box::new(VersionedMultiAssets::V1((Junctions::Here, relay_deposit_amount).into())),
 			0,
-			600_000_000,
 		));
 	});
 	Pint::execute_with(|| {
@@ -173,7 +173,7 @@ fn can_transact_staking() {
 	// `- 1` for avoiding dust account issue
 	//
 	// see also https://github.com/open-web3-stack/open-runtime-module-library/issues/427
-	let bond = 1_000 - 1;
+	let bond = 10_000 - 1;
 
 	Pint::execute_with(|| {
 		register_relay();
@@ -274,6 +274,7 @@ fn can_transfer_to_statemint() {
 			),
 			pallet_remote_asset_manager::Error::<PintRuntime>::StatemintDisabled
 		);
+
 		assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::enable_statemint_xcm(pint::Origin::signed(
 			ADMIN_ACCOUNT
 		)));
@@ -287,7 +288,12 @@ fn can_transfer_to_statemint() {
 		// 	pallet_balances::Error::<PintRuntime>::InsufficientBalance
 		// );
 		//
-		// // transfer from pint -> statemint to mint SPINT
+		// pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
+		// 	pint::Origin::signed(ALICE),
+		// 	transfer_amount
+		// );
+
+		// transfer from pint -> statemint to mint SPINT
 		// assert_ok!(pallet_remote_asset_manager::Pallet::<PintRuntime>::transfer_to_statemint(
 		// 	pint::Origin::signed(ALICE),
 		// 	transfer_amount

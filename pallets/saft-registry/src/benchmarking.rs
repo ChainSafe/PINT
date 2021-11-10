@@ -26,11 +26,11 @@ benchmarks! {
 			1000u32.into()
 		));
 
-		let call = Call::<T>::add_saft(
-				asset,
-				100u32.into(),
-				20u32.into()
-		);
+		let call = Call::<T>::add_saft {
+				asset_id: asset,
+				nav: 100u32.into(),
+				units: 20u32.into()
+		};
 	}: { call.dispatch_bypass_filter(origin)? }
 	 verify {
 		let id = SaftRegistry::<T>::saft_counter(asset) - 1;
@@ -56,10 +56,10 @@ benchmarks! {
 		assert_ok!(T::AssetRecorderBenchmarks::deposit_saft_equivalent(nav));
 		assert_ok!(SaftRegistry::<T>::add_saft(origin.clone(), asset, nav, units));
 
-		let call = Call::<T>::remove_saft(
-				asset,
-				0u32
-		);
+		let call = Call::<T>::remove_saft {
+				asset_id: asset,
+				saft_id: 0u32
+		} ;
 	}:  { call.dispatch_bypass_filter(origin)? }
 		verify {
 			assert!(
@@ -85,11 +85,11 @@ benchmarks! {
 			20_u32.into(),
 		));
 
-		let call = Call::<T>::report_nav(
-					asset,
-		0,
-		1000_u32.into()
-		);
+		let call = Call::<T>::report_nav {
+				asset_id: 	asset,
+		saft_id: 0,
+		latest_nav: 1000_u32.into()
+		};
 	}: { call.dispatch_bypass_filter(origin)? }
 	verify {
 		assert_eq!(
@@ -125,10 +125,10 @@ benchmarks! {
 			Ok(())
 		}));
 
-		let call = Call::<T>::convert_to_liquid(
-			asset,
-			(Junction::Parachain(100)).into()
-		);
+		let call = Call::<T>::convert_to_liquid {
+			asset_id: asset,
+			location: (Junction::Parachain(100)).into()
+		};
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			SaftRegistry::<T>::saft_counter(asset),

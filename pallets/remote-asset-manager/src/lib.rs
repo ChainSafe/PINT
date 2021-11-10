@@ -27,7 +27,9 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, XcmTransfer};
-	use xcm::v1::{Error as XcmError, ExecuteXcm, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm};
+	use xcm::latest::{
+		Error as XcmError, ExecuteXcm, Instruction, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm,
+	};
 
 	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
 	use xcm_calls::{
@@ -489,11 +491,13 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Bond(Bond { controller: controller.clone(), value, payee });
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let xcm = Xcm::Transact {
+			let transact = Instruction::Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.bond,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
+			let mut xcm = Xcm::new();
+			xcm.0.push(transact);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond xcm: {:?} ",result);
@@ -542,11 +546,13 @@ pub mod pallet {
 			});
 			let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
 
-			let xcm = Xcm::Transact {
+			let transact = Instruction::Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.add_proxy,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
+			let mut xcm = Xcm::new();
+			xcm.0.push(transact);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
@@ -776,14 +782,18 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::BondExtra(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let xcm = Xcm::Transact {
+			let transact = Instruction::Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.bond_extra,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
+			let mut xcm = Xcm::new();
+			xcm.0.push(transact);
+
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
-			result
+
+			result.map_err(|e| e.into())
 		}
 
 		/// Sends an XCM [`unbond`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.unbond) call
@@ -835,14 +845,17 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Unbond(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let xcm = Xcm::Transact {
+			let transact = Instruction::Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.unbond,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
+			let mut xcm = Xcm::new();
+			xcm.0.push(transact);
+
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
-			result
+			result.map_err(|e| e.into())
 		}
 
 		/// Sends an XCM [`withdraw_unbonded`](https://crates.parity.io/pallet_staking/enum.Call.html#variant.withdraw_unbonded) call
@@ -871,11 +884,13 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let xcm = Xcm::Transact {
+			let transact = Instruction::Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.withdraw_unbonded,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
 			};
+			let mut xcm = Xcm::new();
+			xcm.0.push(transact);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::withdraw_unbonded xcm: {:?} ",result);

@@ -12,7 +12,7 @@ use frame_support::{
 
 /// Abstraction over the lock of minted index token that are locked up for
 /// `LockupPeriod`
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct IndexTokenLock<BlockNumber, Balance> {
 	/// Locked amount of index token.
 	pub locked: Balance,
@@ -21,7 +21,7 @@ pub struct IndexTokenLock<BlockNumber, Balance> {
 }
 
 /// Metadata for an asset
-#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Default, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetMetadata<BoundedString> {
 	pub name: BoundedString,
 	pub symbol: BoundedString,
@@ -29,7 +29,7 @@ pub struct AssetMetadata<BoundedString> {
 }
 
 /// Represents a single asset being withdrawn
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetWithdrawal<AssetId, Balance> {
 	/// The identifier of the asset
 	pub asset: AssetId,
@@ -41,7 +41,7 @@ pub struct AssetWithdrawal<AssetId, Balance> {
 	pub withdrawn: bool,
 }
 
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 /// Describes an in progress withdrawal of a collection of assets from the index
 pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
 	/// The block after which the redemption process is over.
@@ -52,7 +52,7 @@ pub struct PendingRedemption<AssetId, Balance, BlockNumber> {
 
 /// Represents the redemption of a given pint amount based on the
 /// `AssetDistribution`.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct AssetRedemption<AssetId, Balance> {
 	/// All the assets together with their redeemed amount
 	pub asset_amounts: Vec<(AssetId, Balance)>,
@@ -67,7 +67,7 @@ impl<AssetId, Balance: Zero> Default for AssetRedemption<AssetId, Balance> {
 }
 
 /// Limits the amount of deposits
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepositRange<Balance> {
 	/// Minimum amount of index tokens a deposit must be worth

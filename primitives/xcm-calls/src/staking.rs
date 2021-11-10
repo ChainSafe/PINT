@@ -157,7 +157,7 @@ impl<Source, Balance, AccountId> PalletCall for StakingCall<Source, Balance, Acc
 /// The [`bond_extra`](https://crates.parity.io/pallet_staking/pallet/enum.Call.html#variant.bond_extra) extrinsic.
 ///
 /// The dispatch origin for this call must be _Signed_ by the stash account.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, scale_info::TypeInfo)]
 pub struct Bond<Source, Balance, AccountId> {
 	/// The lookup type of the controller,
 	pub controller: Source,
@@ -168,7 +168,7 @@ pub struct Bond<Source, Balance, AccountId> {
 }
 
 /// A destination account for payment. mirrored from `pallet_staking`
-#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Copy, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub enum RewardDestination<AccountId> {
 	/// Pay into the stash account, increasing the amount at stake accordingly.
@@ -184,7 +184,7 @@ pub enum RewardDestination<AccountId> {
 }
 
 /// The `pallet_staking` configuration for a particular chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct StakingConfig<AccountId, Balance, BlockNumber> {
 	/// The index of `pallet_index` within the parachain's runtime
@@ -213,7 +213,7 @@ pub struct StakingConfig<AccountId, Balance, BlockNumber> {
 pub type EraIndex = u32;
 
 /// Just a Balance/BlockNumber tuple to encode when a chunk of funds will be unlocked.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct UnlockChunk<Balance, BlockNumber> {
 	/// Amount of funds to be unlocked.
 	pub value: Balance,
@@ -224,7 +224,7 @@ pub struct UnlockChunk<Balance, BlockNumber> {
 }
 
 /// Represents the state of staking of the PINT's sovereign account on another chain
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub struct StakingLedger<Source, Balance, BlockNumber> {
 	/// The controller account
 	pub controller: Source,
@@ -277,7 +277,7 @@ where
 }
 
 /// Represents an excerpt from the `pallet_staking` weights
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct StakingWeights {
 	/// Weight for `bond` extrinsic
@@ -292,7 +292,7 @@ pub struct StakingWeights {
 
 /// Represents all staking related durations required to determine the correct chain-specific
 /// bonding duration.
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
 #[cfg_attr(feature = "std", derive(Serialize, Deserialize))]
 pub struct StakingDurations {
 	/// This determines the average expected block time that the chain is targeting.

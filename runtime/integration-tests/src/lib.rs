@@ -42,6 +42,7 @@ use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chai
 
 pub const ALICE: AccountId = AccountId::new([0u8; 32]);
 pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
+pub const EMPTY_ACCOUNT: AccountId = AccountId::new([2u8; 32]);
 pub const RELAY_CHAIN_ASSET: AssetId = 42;
 pub const PROXY_PALLET_INDEX: u8 = 29u8;
 pub const STAKING_PALLET_INDEX: u8 = 7u8;
@@ -84,8 +85,8 @@ pub fn pint_ext(parachain_id: u32, balances: Vec<(AccountId, Balance)>) -> sp_io
 				minimum_balance: 0,
 				weights: StakingWeights {
 					bond: 650_000_000,
-					bond_extra: 350_000_000,
-					unbond: 1000_u64,
+					bond_extra: 1_350_000_000u64,
+					unbond: 1_350_000_000u64,
 					withdraw_unbonded: 1000_u64,
 				},
 				bonding_duration: 1_000,
