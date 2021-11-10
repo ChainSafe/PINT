@@ -27,8 +27,9 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, XcmTransfer};
+	use xcm::latest::prelude::*;
 	use xcm::latest::{
-		Error as XcmError, ExecuteXcm, Instruction, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm,
+		Error as XcmError, Result as XcmResult
 	};
 
 	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
@@ -126,6 +127,10 @@ pub mod pallet {
 		/// Identifier for the relay chain's specific asset
 		#[pallet::constant]
 		type RelayChainAssetId: Get<Self::AssetId>;
+
+		/// Unbonding slashing spans for unbonding on the relaychain.
+		#[pallet::constant]
+		type AssetUnbondingSlashingSpans: Get<u32>;
 
 		/// Determines the threshold amounts when operating with staked assets.
 		type AssetStakingCap: StakingCap<Self::AssetId, Self::Balance>;
@@ -491,7 +496,7 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Bond(Bond { controller: controller.clone(), value, payee });
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
+			let transact = Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.bond,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
@@ -546,7 +551,7 @@ pub mod pallet {
 			});
 			let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
+			let transact = Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.add_proxy,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
@@ -782,7 +787,7 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::BondExtra(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
+			let transact = Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.bond_extra,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
@@ -845,7 +850,7 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Unbond(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
+			let transact = Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.unbond,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
@@ -863,15 +868,19 @@ pub mod pallet {
 		/// Remove any unlocked chunks from the `unlocking` queue.
 		/// An `withdraw_unbonded` call must be signed by the controller
 		/// account.
-		/// This essentially gives the PNIT's sovereign hold of the balance
+		/// This essentially gives the PINT's reserve account hold of the balance
 		pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
 			let dest = Self::asset_destination(asset)?;
+
 			// ensures that the call is encodable for the destination
 			ensure!(T::PalletProxyCallEncoder::can_encode(&asset), Error::<T>::NotEncodableForLocation);
+
+			// get the config for how staking is configured
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
 			let mut ledger = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
+			// only controller account is allowed to send unbonded
 			Self::ensure_staking_controller(ledger.controller.clone())?;
 
 			// ensure that at least one chunk is withdrawable
@@ -884,7 +893,7 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
+			let transact = Transact {
 				origin_type: OriginKind::SovereignAccount,
 				require_weight_at_most: config.weights.withdraw_unbonded,
 				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
