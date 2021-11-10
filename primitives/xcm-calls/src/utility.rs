@@ -10,19 +10,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::{CallEncoder, EncodeWith, PalletCall, PalletCallEncoder};
 
-
 /// The index of `pallet_utility` in the polkadot runtime
 pub const POLKADOT_PALLET_UTILITY_INDEX: u8 = 29u8;
 
 /// The identifier the `ProxyType::Staking` variant encodes to
 pub const POLKADOT_PALLET_UTILITY_TYPE_STAKING_INDEX: u8 = 3u8;
 
-pub trait UtilityCallEncoder: PalletCallEncoder{}
+pub trait UtilityCallEncoder: PalletCallEncoder {}
 
-impl<'a, 'b, Config> Encode
-for CallEncoder<'a, 'b, UtilityCall, Config>
-	where
-		Config: UtilityEncoder,
+impl<'a, 'b, Config> Encode for CallEncoder<'a, 'b, UtilityCall, Config>
+where
+	Config: UtilityCallEncoder,
 {
 	fn encode_to<T: Output + ?Sized>(&self, dest: &mut T) {
 		// include the pallet identifier
@@ -43,11 +41,11 @@ pub enum UtilityCall {
 	BatchAll(Vec<Vec<u8>>),
 }
 
-impl  PalletCall for UtilityCall {
+impl PalletCall for UtilityCall {
 	/// the indices of the corresponding calls within the `pallet_utility`
 	fn pallet_call_index(&self) -> u8 {
 		match self {
-			UtilityCall::AsDerivative(_,_) => 1,
+			UtilityCall::AsDerivative(_, _) => 1,
 			UtilityCall::BatchAll(_) => 2,
 		}
 	}

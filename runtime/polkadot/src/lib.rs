@@ -650,6 +650,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type RelayChainAssetId = RelayChainAssetId;
+	type AssetUnbondingSlashingSpans = AssetUnbondingSlashingSpans;
 	type AssetStakingCap = (MinimumRemoteReserveBalance, MinimumBondExtra);
 	type Assets = Currencies;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

@@ -27,10 +27,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, XcmTransfer};
-	use xcm::latest::prelude::*;
-	use xcm::latest::{
-		Error as XcmError, Result as XcmResult
-	};
+	use xcm::latest::{prelude::*, Error as XcmError, Result as XcmResult};
 
 	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
 	use xcm_calls::{
