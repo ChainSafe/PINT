@@ -16,6 +16,7 @@ substrate-wasm-builder = { git = 'https://github.com/paritytech/substrate', bran
 [dependencies]
 codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ['derive', 'max-encoded-len'] }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
+
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.130", optional = true, features = ['derive'] }
 hex-literal = { version = "0.3.3", optional = true }
@@ -55,6 +56,7 @@ pallet-sudo = { git = 'https://github.com/paritytech/substrate', branch = 'polka
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 
 # Cumulus Dependencies
 pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12', default-features = false }
@@ -94,7 +96,7 @@ pallet-price-feed = {path = '../../pallets/price-feed', default-features = false
 pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', default-features = false }
 pallet-remote-treasury = { path = '../../pallets/remote-treasury', default-features = false }
 primitives = { path = '../../primitives/primitives', default-features = false }
-xcm-calls = {path = '../../primitives/xcm-calls', default-features = false }
+xcm-calls = { path = '../../primitives/xcm-calls', default-features = false }
 pallet-asset-index-rpc-runtime-api = { path = '../../pallets/asset-index/rpc/runtime-api', default-features = false }
 
 pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.12', default-features = false }
@@ -105,6 +107,7 @@ hex = "0.4.3"
 
 [features]
 default = ['std']
+no_std = []
 runtime-benchmarks = [
 	'hex-literal',
 	'sp-runtime/runtime-benchmarks',
@@ -116,7 +119,8 @@ runtime-benchmarks = [
 	'pallet-collator-selection/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
-	
+	'pallet-utility/runtime-benchmarks',
+
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
@@ -125,11 +129,11 @@ runtime-benchmarks = [
     'pallet-xcm/runtime-benchmarks',
     'pallet-saft-registry/runtime-benchmarks',
     'pallet-remote-asset-manager/runtime-benchmarks',
-	'pallet-remote-treasury/runtime-benchmarks',
+    'pallet-remote-treasury/runtime-benchmarks',
     'pallet-collective/runtime-benchmarks',
 	'primitives/runtime-benchmarks',
 
-	'orml-tokens/runtime-benchmarks'
+	'orml-tokens/runtime-benchmarks',
 ]
 std = [
 	'codec/std',
@@ -162,6 +166,9 @@ std = [
 	'pallet-sudo/std',
 	'pallet-session/std',
 	'pallet-transaction-payment/std',
+	'pallet-xcm/std',
+	'pallet-asset-tx-payment/std',
+	'pallet-utility/std',
 
 	'parachain-info/std',
 	'cumulus-pallet-aura-ext/std',
@@ -176,7 +183,7 @@ std = [
 	'xcm-builder/std',
 	'xcm-executor/std',
 
-	'pint-runtime-common/std',
+    'pint-runtime-common/std',
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',
@@ -189,7 +196,6 @@ std = [
 	'primitives/std',
 	'pallet-asset-index-rpc-runtime-api/std',
 	'pallet-chainlink-feed/std',
-	'pallet-xcm/std',
 
 	'orml-currencies/std',
 	'orml-unknown-tokens/std',
