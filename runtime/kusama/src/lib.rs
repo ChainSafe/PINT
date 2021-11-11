@@ -31,6 +31,7 @@ pub use pallet_balances::Call as BalancesCall;
 use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::XcmPassthrough;
+use pint_runtime_common::payment::BalanceToAssetBalance;
 pub use pint_runtime_common::{constants::*, types::*, weights};
 use polkadot_parachain::primitives::Sibling;
 use primitives::traits::MultiAssetRegistry;
@@ -657,6 +658,11 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
+impl pallet_asset_tx_payment::Config for Runtime {
+	type Fungibles = Tokens;
+	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<BalanceToAssetBalance<AssetIndex>, ()>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -670,6 +676,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
 
 		// Parachain
 		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Config, Event<T>} = 20,
@@ -724,7 +731,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_transaction_payment::ChargeTransactionPayment<Runtime>,
+	pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;

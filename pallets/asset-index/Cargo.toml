@@ -33,7 +33,7 @@ primitives = { path = "../../primitives/primitives", default-features = false }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 [dev-dependencies]
-serde = { version = "1.0.101" }
+serde = { version = "1.0.124" }
 
 sp-io = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }

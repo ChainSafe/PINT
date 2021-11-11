@@ -5000,6 +5000,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-asset-tx-payment"
+version = "0.1.0"
+source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.12#935bac869a72baef17e46d2ae1abc8c0c650cef5"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "pallet-transaction-payment",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-assets"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.12#d76f39995315ec36980908e4b99709bd14927044"
@@ -6634,7 +6651,9 @@ dependencies = [
  "pallet-price-feed",
  "pallet-remote-asset-manager",
  "pallet-saft-registry",
+ "parity-scale-codec",
  "primitives",
+ "scale-info",
  "sp-std",
  "xcm",
  "xcm-calls",
@@ -6670,6 +6689,7 @@ dependencies = [
  "orml-xtokens",
  "pallet-asset-index",
  "pallet-asset-index-rpc-runtime-api",
+ "pallet-asset-tx-payment",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -6745,6 +6765,7 @@ dependencies = [
  "orml-xtokens",
  "pallet-asset-index",
  "pallet-asset-index-rpc-runtime-api",
+ "pallet-asset-tx-payment",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -6820,6 +6841,7 @@ dependencies = [
  "orml-xtokens",
  "pallet-asset-index",
  "pallet-asset-index-rpc-runtime-api",
+ "pallet-asset-tx-payment",
  "pallet-aura",
  "pallet-authorship",
  "pallet-balances",
@@ -10830,8 +10852,6 @@ name = "sp-transaction-storage-proof"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate?rev=d76f39995315ec36980908e4b99709bd14927044#d76f39995315ec36980908e4b99709bd14927044"
 dependencies = [
- "async-trait",
- "log",
  "parity-scale-codec",
  "scale-info",
  "sp-core",

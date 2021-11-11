@@ -8,9 +8,11 @@ repository = 'https://github.com/substrate-developer-hub/substrate-parachain-tem
 version = '0.0.1'
 
 [dependencies]
+codec = { package = 'parity-scale-codec', version = '2.3.1', default-features = false, features = ['derive']}
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # xcm
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.12', default-features = false }
@@ -36,10 +38,12 @@ pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', def
 [features]
 default = ['std']
 std = [
+    'codec/std',
     "frame-support/std",
     'frame-system/std',
     'sp-std/std',
-    
+    'scale-info/std',
+
     "xcm/std",
     "xcm-calls/std",
     "cumulus-pallet-xcm/std",
