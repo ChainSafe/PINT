@@ -808,6 +808,6 @@ mod tests {
 			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
 			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
 		];
-		let xcm_call = UtilityCall::BatchAll(transfers);
+		let _xcm_call = UtilityCall::BatchAll(transfers);
 	}
 }
