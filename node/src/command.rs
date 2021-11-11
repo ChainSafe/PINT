@@ -23,16 +23,16 @@ use std::{io::Write, net::SocketAddr};
 
 fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
-		"pint-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
-		"dev" | "pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
-		#[cfg(feature = "kusama")]
-		"pint-kusama-local" => Box::new(chain_spec::kusama::pint_local_config(para_id)),
-		#[cfg(feature = "kusama")]
-		"pint-kusama-dev" => Box::new(chain_spec::kusama::pint_development_config(para_id)),
-		#[cfg(feature = "polkadot")]
-		"pint-polkadot-local" => Box::new(chain_spec::polkadot::pint_local_config(para_id)),
-		#[cfg(feature = "polkadot")]
-		"pint-polkadot-dev" => Box::new(chain_spec::polkadot::pint_development_config(para_id)),
+		"dev-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
+		"dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
+		#[cfg(feature = "shot")]
+		"shot-local" => Box::new(chain_spec::kusama::pint_local_config(para_id)),
+		#[cfg(feature = "shot")]
+		"shot-dev" => Box::new(chain_spec::kusama::pint_development_config(para_id)),
+		#[cfg(feature = "pint")]
+		"pint-local" => Box::new(chain_spec::polkadot::pint_local_config(para_id)),
+		#[cfg(feature = "pint")]
+		"pint-dev" => Box::new(chain_spec::polkadot::pint_development_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			let starts_with = |prefix: &str| {

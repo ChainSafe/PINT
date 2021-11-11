@@ -103,15 +103,15 @@ pub trait IdentifyVariant {
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
 	fn is_shot(&self) -> bool {
-		self.id().contains("kusama")
+		self.id().contains("shot")
 	}
 
 	fn is_pint(&self) -> bool {
-		self.id().contains("polkadot")
+		self.id().contains("pint")
 	}
 
 	fn is_dev(&self) -> bool {
-		self.id().starts_with("pint_dev")
+		self.id().starts_with("dev")
 	}
 }
 
