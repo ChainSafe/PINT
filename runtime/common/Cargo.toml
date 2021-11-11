@@ -14,6 +14,11 @@ scale-info = { version = "1.0", default-features = false, features = ["derive"] 
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 sp-std = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+
+pallet-collective = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-membership = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+
 
 # xcm
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.12', default-features = false }
@@ -43,7 +48,10 @@ std = [
     "frame-support/std",
     'frame-system/std',
     'sp-std/std',
+    'sp-core/std',
     'scale-info/std',
+    'pallet-collective/std',
+    'pallet-membership/std',
 
     "xcm/std",
     "xcm-calls/std",

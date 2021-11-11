@@ -4,6 +4,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 pub mod constants;
+pub mod governance;
 pub mod payment;
 pub mod traits;
 pub mod types;

@@ -56,6 +56,9 @@ pallet-sudo = { git = 'https://github.com/paritytech/substrate', branch = 'polka
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-democracy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-membership = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-treasury = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 
 # Cumulus Dependencies
 pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12', default-features = false }
@@ -119,7 +122,11 @@ runtime-benchmarks = [
 	'pallet-collator-selection/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
-	
+	'pallet-democracy/runtime-benchmarks',
+	'pallet-collective/runtime-benchmarks',
+	'pallet-membership/runtime-benchmarks',
+	'pallet-treasury/runtime-benchmarks',
+
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
@@ -167,6 +174,10 @@ std = [
 	'pallet-transaction-payment/std',
 	'pallet-xcm/std',
 	'pallet-asset-tx-payment/std',
+	'pallet-democracy/std',
+	'pallet-collective/std',
+	'pallet-membership/std',
+	'pallet-treasury/std',
 
 	'parachain-info/std',
 	'cumulus-pallet-aura-ext/std',
