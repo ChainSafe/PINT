@@ -1,7 +1,7 @@
 [package]
 authors = ['ChainSafe Systems']
 description = 'FRAME pallet to implement PINT remote treasury.'
-edition = '2018'
+edition = '2021'
 license = 'LGPL-3.0-only'
 name = 'pallet-remote-treasury'
 readme = 'README.md'

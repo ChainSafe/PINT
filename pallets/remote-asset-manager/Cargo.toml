@@ -1,7 +1,7 @@
 [package]
 authors = ['ChainSafe Systems']
 description = 'FRAME pallet to bond/unbond and transfer assets on other chains.'
-edition = '2018'
+edition = '2021'
 license = 'LGPL-3.0-only'
 name = 'pallet-remote-asset-manager'
 readme = 'README.md'
