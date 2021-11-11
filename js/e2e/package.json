@@ -8,7 +8,7 @@
   "license": "GNU-v3",
   "private": true,
   "devDependencies": {
-    "@polkadot/types": "^6.1.2",
+    "@polkadot/types": "^6.7.1",
     "@types/bn.js": "^5.1.0",
     "@types/node": "^15.3.1",
     "ts-node": "^10.0.0",
@@ -18,9 +18,10 @@
   "dependencies": {
     "@open-web3/orml-types": "^0.9.3",
     "@pint/types": "^1.0.0",
-    "@polkadot/api": "^6.1.2",
-    "@polkadot/keyring": "^7.4.1",
-    "@polkadot/util-crypto": "^7.4.1",
+    "@polkadot/api": "^6.7.2",
+    "@polkadot/keyring": "^7.8.2",
+    "@polkadot/types": "^6.7.2",
+    "@polkadot/util-crypto": "^7.8.2",
     "bn.js": "^5.2.0",
     "find-up": "^5.0.0"
   },
