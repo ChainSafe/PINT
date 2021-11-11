@@ -210,6 +210,12 @@ pub mod pallet {
 	pub type Proxies<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, T::AssetId, Twox64Concat, AccountIdFor<T>, ProxyState, ValueQuery>;
 
+	/// The extra weight for cross-chain XCM transfers.
+	/// xcm_dest_weight: value: Weight
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_dest_weight)]
+	pub type XcmDestWeight<T: Config> = StorageValue<_, Weight, ValueQuery>;
+
 	/// The config of the statemint parachain.
 	///
 	/// Provides information that is required when sending XCM calls to transfer PINT:,
@@ -218,6 +224,7 @@ pub mod pallet {
 	///  - `parachain id`: the parachain of the statemint chain
 	///  - `weights`: the weights to use for the call
 	#[pallet::storage]
+	#[pallet::getter(fn statemint_para_config)]
 	pub type StatemintParaConfig<T> = StorageValue<_, StatemintConfig, OptionQuery>;
 
 	#[pallet::genesis_config]
@@ -301,6 +308,8 @@ pub mod pallet {
 		Frozen(T::AssetId),
 		/// The asset was thawed for XCM related operations.  \[asset id\]
 		Thawed(T::AssetId),
+		/// A new weight for XCM transfers has been set.\[new_weight\]
+		XcmDestWeightSet(Weight),
 	}
 
 	#[pallet::error]
@@ -660,6 +669,22 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Sets the `xcm_dest_weight` for XCM transfers.
+		///
+		/// Callable by the admin origin
+		///
+		/// Parameters:
+		/// - `xcm_dest_weight`: The new weight for XCM transfers.
+		#[pallet::weight(< T as Config >::WeightInfo::set_xcm_dest_weight())]
+		#[transactional]
+		pub fn set_xcm_dest_weight(origin: OriginFor<T>, #[pallet::compact] xcm_dest_weight: Weight) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+
+			XcmDestWeight::<T>::put(xcm_dest_weight);
+			Self::deposit_event(Event::<T>::XcmDestWeightSet(xcm_dest_weight));
+			Ok(())
+		}
+
 		/// Enables XCM transactions for the statemint parachain, if configured.
 		///
 		/// This is a noop if it's already enabled
@@ -921,6 +946,25 @@ pub mod pallet {
 			let dest = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAssetChainLocation)?;
 			Ok(dest)
 		}
+
+		/// Wrap the call into a Xcm instance.
+		///  params:
+		/// - call: The encoded call to be executed
+		/// - extra_fee: Extra fee (in staking currency) used for buy the `weight` and `debt`.
+		/// - require_weight_at_most: the weight limit used for XCM.
+		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, extra_fee: u128) -> Xcm<()> {
+			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(extra_fee) };
+			Xcm(vec![
+				WithdrawAsset(asset.clone().into()),
+				BuyExecution { fees: asset, weight_limit: Unlimited },
+				Transact { origin_type: OriginKind::SovereignAccount, require_weight_at_most, call: call.into() },
+				DepositAsset {
+					assets: All.into(),
+					max_assets: u32::MAX,
+					beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
+				},
+			])
+		}
 	}
 
 	impl<T: Config> RemoteAssetManager<T::AccountId, T::AssetId, T::Balance> for Pallet<T> {
@@ -973,6 +1017,7 @@ pub mod pallet {
 		fn transfer() -> Weight;
 		fn freeze() -> Weight;
 		fn thaw() -> Weight;
+		fn set_xcm_dest_weight() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -984,6 +1029,9 @@ pub mod pallet {
 			Default::default()
 		}
 		fn thaw() -> Weight {
+			Default::default()
+		}
+		fn set_xcm_dest_weight() -> Weight {
 			Default::default()
 		}
 	}
