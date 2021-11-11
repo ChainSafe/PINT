@@ -105,7 +105,7 @@ impl SubstrateCli for Cli {
 			#[cfg(feature = "pint")]
 			return &pint_runtime::VERSION;
 			#[cfg(not(feature = "pint"))]
-			panic!("{}", service::POLKADOT_RUNTIME_NOT_AVAILABLE);
+			panic!("{}", service::PINT_RUNTIME_NOT_AVAILABLE);
 		} else {
 			return &dev_runtime::VERSION;
 		}
