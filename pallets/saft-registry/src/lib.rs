@@ -176,7 +176,7 @@ pub mod pallet {
 			nav: T::Balance,
 			units: T::Balance,
 		) -> DispatchResult {
-			Self::do_add_saft(T::AdminOrigin::ensure_origin(origin.clone())?, asset_id, nav, units)
+			Self::do_add_saft(T::AdminOrigin::ensure_origin(origin)?, asset_id, nav, units)
 		}
 
 		/// Adds saft with root origin

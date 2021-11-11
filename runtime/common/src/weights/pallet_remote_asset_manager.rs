@@ -42,4 +42,8 @@ impl<T: frame_system::Config> pallet_remote_asset_manager::WeightInfo for Weight
 	fn thaw() -> Weight {
 		(2_000_000 as Weight)
 	}
+
+	fn set_xcm_dest_weight() -> Weight {
+		(10_000_000 as Weight).saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
 }

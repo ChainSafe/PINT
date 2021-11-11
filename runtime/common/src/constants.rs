@@ -138,6 +138,7 @@ parameter_types! {
 	pub const MinCouncilVotes: usize = 4;
 	pub const MinimumPeriod: u64 = SLOT_DURATION / 2;
 	pub const MinimumRedemption: u32 = 0;
+	pub const AssetUnbondingSlashingSpans: u32 = 5;
 	pub const MinimumStatemintTransferAmount: Balance = 1;
 	// Minimum amount of funds that need to be present in the fund account
 	pub const MinimumReserve: Balance = 100;

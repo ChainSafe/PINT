@@ -24,6 +24,7 @@ use orml_traits::parameter_type_with_key;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_xcm::XcmPassthrough;
+use pint_runtime_common::constants::AssetUnbondingSlashingSpans;
 use pint_runtime_kusama::{AccountId32Convert, AssetIdConvert};
 use polkadot_parachain::primitives::Sibling;
 use sp_core::H256;
@@ -418,6 +419,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type RelayChainAssetId = RelayChainAssetId;
+	type AssetUnbondingSlashingSpans = AssetUnbondingSlashingSpans;
 	type AssetStakingCap = (MinimumReserve, MinimumBondExtra);
 	type Assets = Currency;
 	type XcmExecutor = XcmExecutor<XcmConfig>;

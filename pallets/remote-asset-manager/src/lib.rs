@@ -27,9 +27,7 @@ pub mod pallet {
 	};
 	use frame_system::pallet_prelude::*;
 	use orml_traits::{MultiCurrency, XcmTransfer};
-	use xcm::latest::{
-		Error as XcmError, ExecuteXcm, Instruction, MultiLocation, OriginKind, Result as XcmResult, SendXcm, Xcm,
-	};
+	use xcm::latest::{prelude::*, Error as XcmError, Result as XcmResult};
 
 	use primitives::traits::{MaybeAssetIdConvert, RemoteAssetManager};
 	use xcm_calls::{
@@ -127,6 +125,10 @@ pub mod pallet {
 		#[pallet::constant]
 		type RelayChainAssetId: Get<Self::AssetId>;
 
+		/// Unbonding slashing spans for unbonding on the relaychain.
+		#[pallet::constant]
+		type AssetUnbondingSlashingSpans: Get<u32>;
+
 		/// Determines the threshold amounts when operating with staked assets.
 		type AssetStakingCap: StakingCap<Self::AssetId, Self::Balance>;
 
@@ -208,6 +210,12 @@ pub mod pallet {
 	pub type Proxies<T: Config> =
 		StorageDoubleMap<_, Blake2_128Concat, T::AssetId, Twox64Concat, AccountIdFor<T>, ProxyState, ValueQuery>;
 
+	/// The extra weight for cross-chain XCM transfers.
+	/// xcm_dest_weight: value: Weight
+	#[pallet::storage]
+	#[pallet::getter(fn xcm_dest_weight)]
+	pub type XcmDestWeight<T: Config> = StorageValue<_, Weight, ValueQuery>;
+
 	/// The config of the statemint parachain.
 	///
 	/// Provides information that is required when sending XCM calls to transfer PINT:,
@@ -216,6 +224,7 @@ pub mod pallet {
 	///  - `parachain id`: the parachain of the statemint chain
 	///  - `weights`: the weights to use for the call
 	#[pallet::storage]
+	#[pallet::getter(fn statemint_para_config)]
 	pub type StatemintParaConfig<T> = StorageValue<_, StatemintConfig, OptionQuery>;
 
 	#[pallet::genesis_config]
@@ -299,6 +308,8 @@ pub mod pallet {
 		Frozen(T::AssetId),
 		/// The asset was thawed for XCM related operations.  \[asset id\]
 		Thawed(T::AssetId),
+		/// A new weight for XCM transfers has been set.\[new_weight\]
+		XcmDestWeightSet(Weight),
 	}
 
 	#[pallet::error]
@@ -384,8 +395,9 @@ pub mod pallet {
 		///
 		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
 		/// assets with staking support.
-		fn on_finalize(now: T::BlockNumber) {
+		fn on_idle(now: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
 			// check all assets with enabled cross chain staking support and a valid destination
+			// TODO handle weight
 			for (asset, config, dest) in PalletStakingConfig::<T>::iter()
 				.filter_map(|(asset, config)| Self::asset_destination(asset).ok().map(|dest| (asset, config, dest)))
 			{
@@ -452,6 +464,8 @@ pub mod pallet {
 					AssetBalance::<T>::insert(asset, balances);
 				}
 			}
+
+			remaining_weight
 		}
 	}
 
@@ -491,13 +505,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Bond(Bond { controller: controller.clone(), value, payee });
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.bond,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.bond,
+				Self::xcm_dest_weight().into(),
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond xcm: {:?} ",result);
@@ -546,13 +558,11 @@ pub mod pallet {
 			});
 			let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.add_proxy,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.add_proxy,
+				Self::xcm_dest_weight().into(),
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
@@ -658,6 +668,22 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Sets the `xcm_dest_weight` for XCM transfers.
+		///
+		/// Callable by the admin origin
+		///
+		/// Parameters:
+		/// - `xcm_dest_weight`: The new weight for XCM transfers.
+		#[pallet::weight(< T as Config >::WeightInfo::set_xcm_dest_weight())]
+		#[transactional]
+		pub fn set_xcm_dest_weight(origin: OriginFor<T>, #[pallet::compact] xcm_dest_weight: Weight) -> DispatchResult {
+			T::AdminOrigin::ensure_origin(origin)?;
+
+			XcmDestWeight::<T>::put(xcm_dest_weight);
+			Self::deposit_event(Event::<T>::XcmDestWeightSet(xcm_dest_weight));
+			Ok(())
+		}
+
 		/// Enables XCM transactions for the statemint parachain, if configured.
 		///
 		/// This is a noop if it's already enabled
@@ -725,7 +751,7 @@ pub mod pallet {
 				who.clone(),
 				config.multi_asset(amount.into()),
 				config.parahain_location(),
-				100_000_000,
+				Self::xcm_dest_weight().into(),
 			)?;
 
 			Self::deposit_event(Event::StatemintTransfer(who, amount));
@@ -782,13 +808,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::BondExtra(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.bond_extra,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.bond_extra,
+				Self::xcm_dest_weight().into(),
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
@@ -845,13 +869,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Unbond(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.unbond,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.unbond,
+				Self::xcm_dest_weight().into(),
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
@@ -863,15 +885,19 @@ pub mod pallet {
 		/// Remove any unlocked chunks from the `unlocking` queue.
 		/// An `withdraw_unbonded` call must be signed by the controller
 		/// account.
-		/// This essentially gives the PNIT's sovereign hold of the balance
+		/// This essentially gives the PINT's reserve account hold of the balance
 		pub fn do_send_withdraw_unbonded(asset: T::AssetId) -> DispatchResult {
 			let dest = Self::asset_destination(asset)?;
+
 			// ensures that the call is encodable for the destination
 			ensure!(T::PalletProxyCallEncoder::can_encode(&asset), Error::<T>::NotEncodableForLocation);
+
+			// get the config for how staking is configured
 			let config = PalletStakingConfig::<T>::get(&asset).ok_or(Error::<T>::NoPalletConfigFound)?;
 
 			let mut ledger = PalletStakingLedger::<T>::get(&asset).ok_or(Error::<T>::NotBonded)?;
 
+			// only controller account is allowed to send unbonded
 			Self::ensure_staking_controller(ledger.controller.clone())?;
 
 			// ensure that at least one chunk is withdrawable
@@ -880,17 +906,14 @@ pub mod pallet {
 				Error::<T>::NothingToWithdraw
 			);
 
-			// NOTE: this sets `num_slashing_spans` to 0, to not clear slashing metadata
-			let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
+			let call = PalletStakingCall::<T>::WithdrawUnbonded(T::AssetUnbondingSlashingSpans::get());
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Instruction::Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.withdraw_unbonded,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.withdraw_unbonded,
+				Self::xcm_dest_weight().into(),
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::withdraw_unbonded xcm: {:?} ",result);
@@ -911,9 +934,29 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// The destination address of the asset's native location
 		fn asset_destination(asset: T::AssetId) -> Result<MultiLocation, DispatchError> {
 			let dest = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAssetChainLocation)?;
 			Ok(dest)
+		}
+
+		/// Wrap the call into a Xcm instance.
+		///  params:
+		/// - call: The encoded call to be executed
+		/// - fee: fee (in remote currency) used to buy the `weight` and `debt`.
+		/// - require_weight_at_most: the weight limit used for the xcm transacted call.
+		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, fee: u128) -> Xcm<()> {
+			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
+			Xcm(vec![
+				WithdrawAsset(asset.clone().into()),
+				BuyExecution { fees: asset, weight_limit: Unlimited },
+				Transact { origin_type: OriginKind::SovereignAccount, require_weight_at_most, call: call.into() },
+				DepositAsset {
+					assets: All.into(),
+					max_assets: u32::MAX,
+					beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
+				},
+			])
 		}
 	}
 
@@ -967,6 +1010,7 @@ pub mod pallet {
 		fn transfer() -> Weight;
 		fn freeze() -> Weight;
 		fn thaw() -> Weight;
+		fn set_xcm_dest_weight() -> Weight;
 	}
 
 	/// For backwards compatibility and tests
@@ -978,6 +1022,9 @@ pub mod pallet {
 			Default::default()
 		}
 		fn thaw() -> Weight {
+			Default::default()
+		}
+		fn set_xcm_dest_weight() -> Weight {
 			Default::default()
 		}
 	}
