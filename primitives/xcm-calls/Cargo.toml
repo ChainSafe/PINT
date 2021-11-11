@@ -26,6 +26,7 @@ frame-election-provider-support = { git = 'https://github.com/paritytech/substra
 pallet-assets = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-staking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-proxy = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
+pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12'}
 pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }

@@ -187,13 +187,13 @@ fn member_can_vote_aye() {
 	new_test_ext(ASHLEY_RANGE).execute_with(|| {
 		let expected_votes = VoteAggregate::<AccountId, u64>::new(vec![ASHLEY_COUNCIL], vec![], vec![], START_OF_V1);
 		let proposal = submit_proposal(123);
-		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64));
 
 		run_to_block(START_OF_S1);
 
 		// first block in voting period
 		assert_ok!(Committee::vote(Origin::signed(ASHLEY), proposal.hash(), VoteKind::Aye));
-		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64.into()));
+		assert_eq!(VotingEligibility::<Test>::get(ASHLEY), Some(0u64));
 		assert_eq!(Committee::get_votes_for(&proposal.hash()), Some(expected_votes));
 	});
 }

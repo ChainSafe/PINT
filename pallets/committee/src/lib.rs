@@ -416,7 +416,7 @@ pub mod pallet {
 				let votes = maybe_votes.as_mut().ok_or(Error::<T>::NoProposalWithHash)?;
 
 				// Can only vote within the allowed range of blocks for this proposal
-				ensure!(Self::within_voting_period(&votes), Error::<T>::NotInVotingPeriod);
+				ensure!(Self::within_voting_period(votes), Error::<T>::NotInVotingPeriod);
 				// members can vote only once
 				ensure!(!votes.has_voted(&voter.account_id), Error::<T>::DuplicateVote);
 				votes.cast_vote(MemberVote::new(voter.clone(), vote.clone())); // mutates votes in place
