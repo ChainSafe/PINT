@@ -102,11 +102,11 @@ pub trait IdentifyVariant {
 }
 
 impl IdentifyVariant for Box<dyn ChainSpec> {
-	fn is_kusama(&self) -> bool {
+	fn is_shot(&self) -> bool {
 		self.id().contains("kusama")
 	}
 
-	fn is_polkadot(&self) -> bool {
+	fn is_pint(&self) -> bool {
 		self.id().contains("polkadot")
 	}
 
@@ -526,7 +526,7 @@ pub fn new_chain_ops(
 	ServiceError,
 > {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
-	if config.chain_spec.is_kusama() {
+	if config.chain_spec.is_shot() {
 		#[cfg(feature = "shot")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
@@ -536,7 +536,7 @@ pub fn new_chain_ops(
 
 		#[cfg(not(feature = "shot"))]
 		Err(SHOT_RUNTIME_NOT_AVAILABLE.into())
-	} else if config.chain_spec.is_polkadot() {
+	} else if config.chain_spec.is_pint() {
 		#[cfg(feature = "pint")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
