@@ -56,10 +56,17 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use frame_support::traits::{Everything, Nothing};
+use frame_system::EnsureRoot;
 use pallet_committee::EnsureMember;
 
-use pint_runtime_common::payment::BalanceToAssetBalance;
 pub use pint_runtime_common::{constants::*, types::*, weights};
+use pint_runtime_common::{
+	governance::{
+		CommitteeInstance, ConstituentMembershipInstance, CouncilInstance, EnsureRootOrAllGeneralCouncil,
+		EnsureRootOrHalfGeneralCouncil,
+	},
+	payment::BalanceToAssetBalance,
+};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
 use xcm_calls::{
@@ -218,6 +225,79 @@ impl pallet_transaction_payment::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
+}
+
+parameter_types! {
+	pub const GeneralCouncilMotionDuration: BlockNumber = 3 * DAYS;
+	pub const GeneralCouncilMaxProposals: u32 = 20;
+	pub const GeneralCouncilMaxMembers: u32 = 7;
+}
+
+impl pallet_collective::Config<CommitteeInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = GeneralCouncilMotionDuration;
+	type MaxProposals = GeneralCouncilMaxProposals;
+	type MaxMembers = GeneralCouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const LaunchPeriod: BlockNumber = 5 * DAYS;
+	pub const VotingPeriod: BlockNumber = 5 * DAYS;
+	pub const FastTrackVotingPeriod: BlockNumber = 3 * HOURS;
+	pub MinimumDeposit: Balance = 100 * dollar(KAR);
+	pub const EnactmentPeriod: BlockNumber = 2 * DAYS;
+	pub const VoteLockingPeriod: BlockNumber = 7 * DAYS;
+	pub const CooloffPeriod: BlockNumber = 7 * DAYS;
+	pub PreimageByteDeposit: Balance = deposit(0, 1);
+	pub const InstantAllowed: bool = true;
+	pub const MaxVotes: u32 = 100;
+	pub const MaxProposals: u32 = 100;
+}
+
+impl pallet_democracy::Config for Runtime {
+	type Proposal = Call;
+	type Event = Event;
+	type Currency = Balances;
+	type EnactmentPeriod = EnactmentPeriod;
+	type LaunchPeriod = LaunchPeriod;
+	type VotingPeriod = VotingPeriod;
+	type VoteLockingPeriod = VoteLockingPeriod;
+	type MinimumDeposit = MinimumDeposit;
+	/// A straight majority of the council can decide what their next motion is.
+	type ExternalOrigin = EnsureRootOrHalfGeneralCouncil;
+	/// A majority can have the next scheduled referendum be a straight majority-carries vote.
+	type ExternalMajorityOrigin = EnsureRootOrHalfGeneralCouncil;
+	/// A unanimous council can have the next scheduled referendum be a straight default-carries
+	/// (NTB) vote.
+	type ExternalDefaultOrigin = EnsureRootOrAllGeneralCouncil;
+	/// Two thirds of the technical committee can have an ExternalMajority/ExternalDefault vote
+	/// be tabled immediately and with a shorter voting/enactment period.
+	type FastTrackOrigin = EnsureRootOrAllGeneralCouncil;
+	type InstantOrigin = EnsureRootOrAllGeneralCouncil;
+	type InstantAllowed = InstantAllowed;
+	type FastTrackVotingPeriod = FastTrackVotingPeriod;
+	// To cancel a proposal which has been passed, 1/2 of the council must agree to it.
+	type CancellationOrigin = EnsureRootOrHalfGeneralCouncil;
+	type BlacklistOrigin = EnsureRoot<AccountId>;
+	// To cancel a proposal before it has been passed, the council must be unanimous
+	// Root must agree.
+	type CancelProposalOrigin = EnsureRootOrHalfGeneralCouncil;
+	// Any single constituent member may veto a coming council proposal, however they can
+	// only do it once and it lasts only for the cooloff period.
+	type VetoOrigin = pallet_collective::EnsureMember<AccountId, ConstituentMembershipInstance>;
+	type CooloffPeriod = CooloffPeriod;
+	type PreimageByteDeposit = PreimageByteDeposit;
+	type OperationalPreimageOrigin = pallet_collective::EnsureMember<AccountId, CouncilInstance>;
+	type Slash = Treasury;
+	type Scheduler = Scheduler;
+	type PalletsOrigin = OriginCaller;
+	type MaxVotes = MaxVotes;
+	type WeightInfo = pallet_democracy::weights::SubstrateWeight<Runtime>;
+	type MaxProposals = MaxProposals;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -753,7 +833,14 @@ construct_runtime!(
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 100,
 		DmpQueue: cumulus_pallet_dmp_queue::{Pallet, Call, Storage, Event<T>} = 101,
 		PolkadotXcm: pallet_xcm::{Pallet, Storage, Call, Event<T>, Origin, Config} = 102,
-		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 103
+		CumulusXcm: cumulus_pallet_xcm::{Pallet, Event<T>, Origin} = 103,
+
+		// Governance
+		GeneralCommittee: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>} = 110,
+		// CouncilMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>} = 111,
+		// ConstituentMembership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 112,
+		// Democracy: pallet_democracy::{Pallet, Call, Storage, Config<T>, Event<T>} = 113,
+
 	}
 );
 
