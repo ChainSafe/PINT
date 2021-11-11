@@ -395,8 +395,9 @@ pub mod pallet {
 		///
 		/// The maximum number of separate xcm calls we send here is limited to the number of liquid
 		/// assets with staking support.
-		fn on_finalize(now: T::BlockNumber) {
+		fn on_idle(now: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
 			// check all assets with enabled cross chain staking support and a valid destination
+			// TODO handle weight
 			for (asset, config, dest) in PalletStakingConfig::<T>::iter()
 				.filter_map(|(asset, config)| Self::asset_destination(asset).ok().map(|dest| (asset, config, dest)))
 			{
@@ -463,6 +464,8 @@ pub mod pallet {
 					AssetBalance::<T>::insert(asset, balances);
 				}
 			}
+
+			remaining_weight
 		}
 	}
 
@@ -502,13 +505,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Bond(Bond { controller: controller.clone(), value, payee });
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.bond,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.bond,
+				0,
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond xcm: {:?} ",result);
@@ -557,13 +558,11 @@ pub mod pallet {
 			});
 			let encoder = call.encoder::<T::PalletProxyCallEncoder>(&asset);
 
-			let transact = Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.add_proxy,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.add_proxy,
+				0,
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_proxy::add_proxy xcm: {:?} ",result);
@@ -809,13 +808,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::BondExtra(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.bond_extra,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.bond_extra,
+				0,
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::bond_extra xcm: {:?} ",result);
@@ -872,13 +869,11 @@ pub mod pallet {
 			let call = PalletStakingCall::<T>::Unbond(amount);
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.unbond,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.unbond,
+				0,
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::unbond xcm: {:?} ",result);
@@ -911,17 +906,14 @@ pub mod pallet {
 				Error::<T>::NothingToWithdraw
 			);
 
-			// NOTE: this sets `num_slashing_spans` to 0, to not clear slashing metadata
-			let call = PalletStakingCall::<T>::WithdrawUnbonded(0);
+			let call = PalletStakingCall::<T>::WithdrawUnbonded(T::AssetUnbondingSlashingSpans::get());
 			let encoder = call.encoder::<T::PalletStakingCallEncoder>(&asset);
 
-			let transact = Transact {
-				origin_type: OriginKind::SovereignAccount,
-				require_weight_at_most: config.weights.withdraw_unbonded,
-				call: encoder.encode_runtime_call(config.pallet_index).encode().into(),
-			};
-			let mut xcm = Xcm::new();
-			xcm.0.push(transact);
+			let xcm = Self::wrap_call_into_xcm(
+				encoder.encode_runtime_call(config.pallet_index).encode(),
+				config.weights.withdraw_unbonded,
+				0,
+			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
 			log::info!(target: "pint_xcm", "sent pallet_staking::withdraw_unbonded xcm: {:?} ",result);
@@ -942,6 +934,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// The destination address of the asset's native location
 		fn asset_destination(asset: T::AssetId) -> Result<MultiLocation, DispatchError> {
 			let dest = T::AssetIdConvert::convert(asset).ok_or(Error::<T>::InvalidAssetChainLocation)?;
 			Ok(dest)
