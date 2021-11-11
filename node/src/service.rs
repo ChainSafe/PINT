@@ -96,8 +96,8 @@ pub use pint_executor::*;
 pub use shot_executor::*;
 
 pub trait IdentifyVariant {
-	fn is_kusama(&self) -> bool;
-	fn is_polkadot(&self) -> bool;
+	fn is_shot(&self) -> bool;
+	fn is_pint(&self) -> bool;
 	fn is_dev(&self) -> bool;
 }
 

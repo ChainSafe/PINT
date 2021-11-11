@@ -39,14 +39,14 @@ fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_servic
 				path.file_name().map(|f| f.to_str().map(|s| s.starts_with(&prefix))).flatten().unwrap_or(false)
 			};
 
-			if starts_with("pint_kusama") {
+			if starts_with("shot") {
 				#[cfg(feature = "shot")]
 				{
 					Box::new(chain_spec::shot::ChainSpec::from_json_file(path)?)
 				}
 				#[cfg(not(feature = "shot"))]
 				return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
-			} else if starts_with("pint_polkadot") {
+			} else if starts_with("pint") {
 				#[cfg(feature = "pint")]
 				{
 					Box::new(chain_spec::pint::ChainSpec::from_json_file(path)?)
@@ -96,12 +96,12 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if chain_spec.is_kusama() {
+		if chain_spec.is_shot() {
 			#[cfg(feature = "shot")]
 			return &shot_runtime::VERSION;
 			#[cfg(not(feature = "shot"))]
 			panic!("{}", service::SHOT_RUNTIME_NOT_AVAILABLE);
-		} else if chain_spec.is_polkadot() {
+		} else if chain_spec.is_pint() {
 			#[cfg(feature = "pint")]
 			return &pint_runtime::VERSION;
 			#[cfg(not(feature = "pint"))]
@@ -153,9 +153,9 @@ impl SubstrateCli for RelayChainCli {
 fn set_default_ss58_version(spec: &Box<dyn sc_chain_spec::ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormatRegistry;
 
-	let ss58_version = if spec.is_kusama() {
+	let ss58_version = if spec.is_shot() {
 		Ss58AddressFormatRegistry::KusamaAccount
-	} else if spec.is_polkadot() {
+	} else if spec.is_pint() {
 		Ss58AddressFormatRegistry::PolkadotAccount
 	} else {
 		Ss58AddressFormatRegistry::SubstrateAccount
@@ -175,7 +175,7 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 
 macro_rules! with_runtime {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_kusama() {
+		if $chain_spec.is_shot() {
             #[allow(unused_imports)]
             #[cfg(feature = "shot")]
             use shot_runtime::{Block, RuntimeApi};
@@ -186,7 +186,7 @@ macro_rules! with_runtime {
 
             #[cfg(not(feature = "shot"))]
             return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_polkadot() {
+		} else if $chain_spec.is_pint() {
 			#[allow(unused_imports)]
             #[cfg(feature = "pint")]
             use pint_runtime::{Block, RuntimeApi};

@@ -22,7 +22,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 		// Name
 		"PINT Development",
 		// ID
-		"pint_dev",
+		"dev",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(
@@ -58,7 +58,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 		// Name
 		"Local Testnet",
 		// ID
-		"pint_dev_local_testnet",
+		"dev_local_testnet",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(

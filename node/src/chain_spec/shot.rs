@@ -20,9 +20,9 @@ pub type ChainSpec = sc_service::GenericChainSpec<GenesisConfig, Extensions>;
 pub fn pint_development_config(id: ParaId) -> ChainSpec {
 	ChainSpec::from_genesis(
 		// Name
-		"PINT Development",
+		"SHOT Development",
 		// ID
-		"pint_kusama_dev",
+		"shot_dev",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(
@@ -58,7 +58,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 		// Name
 		"Local Testnet",
 		// ID
-		"pint_kusama_local_testnet",
+		"shot_local_testnet",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(
