@@ -1,7 +1,7 @@
 [package]
 authors = ['ChainSafe Systems']
 description = 'PINT specific RPC.'
-edition = '2018'
+edition = '2021'
 license = 'LGPL-3.0-only'
 name = 'pint-rpc'
 repository = 'https://github.com/ChainSafe/PINT/'

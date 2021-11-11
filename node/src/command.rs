@@ -320,6 +320,7 @@ pub fn run() -> Result<()> {
 			set_default_ss58_version(chain_spec);
 
 			runner.run_node_until_exit(|config| async move {
+				let _ = &cli;
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
 				if is_pint_dev {

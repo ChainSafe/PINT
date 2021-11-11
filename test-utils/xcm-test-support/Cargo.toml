@@ -1,7 +1,7 @@
 [package]
 authors = ['ChainSafe Systems']
 description = 'Support for testing xcm within PINT.'
-edition = '2018'
+edition = '2021'
 license = 'LGPL-3.0-only'
 name = 'xcm-test-support'
 readme = 'README.md'
