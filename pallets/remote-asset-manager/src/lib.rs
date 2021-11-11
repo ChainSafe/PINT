@@ -508,7 +508,7 @@ pub mod pallet {
 			let xcm = Self::wrap_call_into_xcm(
 				encoder.encode_runtime_call(config.pallet_index).encode(),
 				config.weights.bond,
-				0,
+				Self::xcm_dest_weight().into(),
 			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
@@ -561,7 +561,7 @@ pub mod pallet {
 			let xcm = Self::wrap_call_into_xcm(
 				encoder.encode_runtime_call(config.pallet_index).encode(),
 				config.weights.add_proxy,
-				0,
+				Self::xcm_dest_weight().into(),
 			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
@@ -751,7 +751,7 @@ pub mod pallet {
 				who.clone(),
 				config.multi_asset(amount.into()),
 				config.parahain_location(),
-				100_000_000,
+				Self::xcm_dest_weight().into(),
 			)?;
 
 			Self::deposit_event(Event::StatemintTransfer(who, amount));
@@ -811,7 +811,7 @@ pub mod pallet {
 			let xcm = Self::wrap_call_into_xcm(
 				encoder.encode_runtime_call(config.pallet_index).encode(),
 				config.weights.bond_extra,
-				0,
+				Self::xcm_dest_weight().into(),
 			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
@@ -872,7 +872,7 @@ pub mod pallet {
 			let xcm = Self::wrap_call_into_xcm(
 				encoder.encode_runtime_call(config.pallet_index).encode(),
 				config.weights.unbond,
-				0,
+				Self::xcm_dest_weight().into(),
 			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
@@ -912,7 +912,7 @@ pub mod pallet {
 			let xcm = Self::wrap_call_into_xcm(
 				encoder.encode_runtime_call(config.pallet_index).encode(),
 				config.weights.withdraw_unbonded,
-				0,
+				Self::xcm_dest_weight().into(),
 			);
 
 			let result = T::XcmSender::send_xcm(dest, xcm);
@@ -943,10 +943,10 @@ pub mod pallet {
 		/// Wrap the call into a Xcm instance.
 		///  params:
 		/// - call: The encoded call to be executed
-		/// - extra_fee: Extra fee (in staking currency) used for buy the `weight` and `debt`.
-		/// - require_weight_at_most: the weight limit used for XCM.
-		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, extra_fee: u128) -> Xcm<()> {
-			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(extra_fee) };
+		/// - fee: fee (in remote currency) used to buy the `weight` and `debt`.
+		/// - require_weight_at_most: the weight limit used for the xcm transacted call.
+		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, fee: u128) -> Xcm<()> {
+			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
 			Xcm(vec![
 				WithdrawAsset(asset.clone().into()),
 				BuyExecution { fees: asset, weight_limit: Unlimited },

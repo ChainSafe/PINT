@@ -56,9 +56,10 @@ use xcm::v1::{
 	BodyId, Fungibility, Junction, Junction::*, Junctions, Junctions::*, MultiAsset, MultiLocation, NetworkId,
 };
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom,
+	EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
@@ -280,7 +281,14 @@ match_type! {
 	};
 }
 
-pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<PolkadotXcm>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
+);
 
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
