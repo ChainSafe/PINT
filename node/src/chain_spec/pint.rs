@@ -4,8 +4,8 @@
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 use cumulus_primitives_core::ParaId;
 use frame_support::PalletId;
-use pint_runtime_common::traits::XcmRuntimeCallWeights;
-use pint_runtime_kusama::*;
+use pint_runtime::*;
+use runtime_common::traits::XcmRuntimeCallWeights;
 use sc_service::ChainType;
 use sp_core::sr25519;
 use sp_runtime::traits::{AccountIdConversion, Zero};
@@ -22,7 +22,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 		// Name
 		"PINT Development",
 		// ID
-		"pint_kusama_dev",
+		"pint_polkadot_dev",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(
@@ -58,7 +58,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 		// Name
 		"Local Testnet",
 		// ID
-		"pint_kusama_local_testnet",
+		"pint_polkadot_local_testnet",
 		ChainType::Local,
 		move || {
 			pint_testnet_genesis(
@@ -161,7 +161,7 @@ fn pint_testnet_genesis(
 					reward_destination: RewardDestination::Staked,
 					minimum_balance: 0,
 					weights: StakingWeights::polkadot(),
-					bonding_duration: KUSAMA_BONDING_DURATION_IN_BLOCKS,
+					bonding_duration: POLKADOT_BONDING_DURATION_IN_BLOCKS,
 					is_frozen: true,
 				},
 			)],

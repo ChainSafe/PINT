@@ -24,8 +24,8 @@ use orml_traits::parameter_type_with_key;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter};
 use pallet_price_feed::{AssetPricePair, Price, PriceFeed};
 use pallet_xcm::XcmPassthrough;
-use pint_runtime_kusama::{AccountId32Convert, AssetIdConvert};
 use polkadot_parachain::primitives::Sibling;
+use shot_runtime::{AccountId32Convert, AssetIdConvert};
 use sp_core::H256;
 use xcm::v1::{Junction, Junctions, MultiLocation, NetworkId};
 use xcm_builder::{
@@ -410,9 +410,9 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type AssetId = AssetId;
 	type AssetIdConvert = AssetIdConvert;
 	// Encodes `pallet_staking` calls before transaction them to other chains
-	type PalletStakingCallEncoder = pint_runtime_kusama::PalletStakingEncoder;
+	type PalletStakingCallEncoder = shot_runtime::PalletStakingEncoder;
 	// Encodes `pallet_proxy` calls before transaction them to other chains
-	type PalletProxyCallEncoder = pint_runtime_kusama::PalletProxyEncoder;
+	type PalletProxyCallEncoder = shot_runtime::PalletProxyEncoder;
 	type MinimumStatemintTransferAmount = MinimumStatemintTransferAmount;
 	type SelfAssetId = PINTAssetId;
 	type SelfLocation = SelfLocation;

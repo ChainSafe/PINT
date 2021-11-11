@@ -3,9 +3,9 @@
 
 use super::{get_account_id_from_seed, get_collator_keys_from_seed, Extensions};
 use cumulus_primitives_core::ParaId;
+use dev_runtime::*;
 use frame_support::PalletId;
-use pint_runtime_common::traits::XcmRuntimeCallWeights;
-use pint_runtime_dev::*;
+use runtime_common::traits::XcmRuntimeCallWeights;
 use sc_service::ChainType;
 use sp_core::sr25519;
 use sp_runtime::traits::{AccountIdConversion, Zero};

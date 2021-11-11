@@ -16,12 +16,12 @@ targets = ['x86_64-unknown-linux-gnu']
 substrate-build-script-utils = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 [features]
-kusama = [ 'pint-runtime-kusama' ]
-polkadot = [ 'pint-runtime-polkadot' ]
+shot = [ 'shot-runtime' ]
+pint = [ 'pint-runtime' ]
 runtime-benchmarks = [
-    'pint-runtime-dev/runtime-benchmarks',
-    'pint-runtime-kusama/runtime-benchmarks',
-    'pint-runtime-polkadot/runtime-benchmarks',
+    'dev-runtime/runtime-benchmarks',
+    'shot-runtime/runtime-benchmarks',
+    'pint-runtime/runtime-benchmarks',
     'polkadot-service/runtime-benchmarks'
 ]
 
@@ -39,10 +39,10 @@ async-trait = "0.1.51"
 jsonrpc-core = "18.0.0"
 
 # Local Dependencies
-pint-runtime-dev = { path = '../runtime/dev' }
-pint-runtime-kusama = { path = '../runtime/kusama', optional = true }
-pint-runtime-polkadot = { path = '../runtime/polkadot', optional = true }
-pint-runtime-common = { path = '../runtime/common' }
+dev-runtime = { path = '../runtime/dev' }
+shot-runtime = { path = '../runtime/shot', optional = true }
+pint-runtime = { path = '../runtime/pint', optional = true }
+runtime-common = { path = '../runtime/common' }
 primitives = { path = "../primitives/primitives" }
 xcm-calls = { path = '../primitives/xcm-calls' }
 pint-rpc  = { path = '../rpc' }

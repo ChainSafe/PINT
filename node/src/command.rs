@@ -40,19 +40,19 @@ fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_servic
 			};
 
 			if starts_with("pint_kusama") {
-				#[cfg(feature = "kusama")]
+				#[cfg(feature = "shot")]
 				{
-					Box::new(chain_spec::kusama::ChainSpec::from_json_file(path)?)
+					Box::new(chain_spec::shot::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "kusama"))]
-				return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(feature = "shot"))]
+				return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
 			} else if starts_with("pint_polkadot") {
-				#[cfg(feature = "polkadot")]
+				#[cfg(feature = "pint")]
 				{
-					Box::new(chain_spec::polkadot::ChainSpec::from_json_file(path)?)
+					Box::new(chain_spec::pint::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "polkadot"))]
-				return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(feature = "pint"))]
+				return Err(service::PINT_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				Box::new(chain_spec::dev::ChainSpec::from_json_file(path)?)
 			}
@@ -97,17 +97,17 @@ impl SubstrateCli for Cli {
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
 		if chain_spec.is_kusama() {
-			#[cfg(feature = "kusama")]
-			return &pint_runtime_kusama::VERSION;
-			#[cfg(not(feature = "kusama"))]
-			panic!("{}", service::KUSAMA_RUNTIME_NOT_AVAILABLE);
+			#[cfg(feature = "shot")]
+			return &shot_runtime::VERSION;
+			#[cfg(not(feature = "shot"))]
+			panic!("{}", service::SHOT_RUNTIME_NOT_AVAILABLE);
 		} else if chain_spec.is_polkadot() {
-			#[cfg(feature = "polkadot")]
-			return &pint_runtime_polkadot::VERSION;
-			#[cfg(not(feature = "polkadot"))]
+			#[cfg(feature = "pint")]
+			return &pint_runtime::VERSION;
+			#[cfg(not(feature = "pint"))]
 			panic!("{}", service::POLKADOT_RUNTIME_NOT_AVAILABLE);
 		} else {
-			return &pint_runtime_dev::VERSION;
+			return &dev_runtime::VERSION;
 		}
 	}
 }
@@ -177,29 +177,29 @@ macro_rules! with_runtime {
 	($chain_spec:expr, { $( $code:tt )* }) => {
 		if $chain_spec.is_kusama() {
             #[allow(unused_imports)]
-            #[cfg(feature = "kusama")]
-            use pint_runtime_kusama::{Block, RuntimeApi};
-            #[cfg(feature = "kusama")]
-            use service::{KusamaExecutorDispatch as Executor};
-            #[cfg(feature = "kusama")]
+            #[cfg(feature = "shot")]
+            use shot_runtime::{Block, RuntimeApi};
+            #[cfg(feature = "shot")]
+            use service::{ShotExecutorDispatch as Executor};
+            #[cfg(feature = "shot")]
             $( $code )*
 
-            #[cfg(not(feature = "kusama"))]
-            return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
+            #[cfg(not(feature = "shot"))]
+            return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
 		} else if $chain_spec.is_polkadot() {
 			#[allow(unused_imports)]
-            #[cfg(feature = "polkadot")]
-            use pint_runtime_polkadot::{Block, RuntimeApi};
-            #[cfg(feature = "polkadot")]
-            use service::{PolkadotExecutorDispatch as Executor};
-            #[cfg(feature = "polkadot")]
+            #[cfg(feature = "pint")]
+            use pint_runtime::{Block, RuntimeApi};
+            #[cfg(feature = "pint")]
+            use service::{PintExecutorDispatch as Executor};
+            #[cfg(feature = "pint")]
             $( $code )*
 
-            #[cfg(not(feature = "polkadot"))]
-            return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+            #[cfg(not(feature = "pint"))]
+            return Err(service::PINT_RUNTIME_NOT_AVAILABLE.into());
 		} else {
 			#[allow(unused_imports)]
-            use pint_runtime_dev::{Block, RuntimeApi};
+            use dev_runtime::{Block, RuntimeApi};
             use service::{DevExecutorDispatch as Executor};
             $( $code )*
 		}

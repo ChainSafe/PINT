@@ -46,54 +46,54 @@ impl sc_executor::NativeExecutionDispatch for DevExecutorDispatch {
 	type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-		pint_runtime_dev::api::dispatch(method, data)
+		dev_runtime::api::dispatch(method, data)
 	}
 
 	fn native_version() -> sc_executor::NativeVersion {
-		pint_runtime_dev::native_version()
+		dev_runtime::native_version()
 	}
 }
 
-#[cfg(feature = "kusama")]
-mod kusama_executor {
-	pub use pint_runtime_kusama;
+#[cfg(feature = "shot")]
+mod shot_executor {
+	pub use shot_runtime;
 
-	pub struct KusamaExecutorDispatch;
-	impl sc_executor::NativeExecutionDispatch for KusamaExecutorDispatch {
+	pub struct ShotExecutorDispatch;
+	impl sc_executor::NativeExecutionDispatch for ShotExecutorDispatch {
 		type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 		fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-			pint_runtime_kusama::api::dispatch(method, data)
+			shot_runtime::api::dispatch(method, data)
 		}
 
 		fn native_version() -> sc_executor::NativeVersion {
-			pint_runtime_kusama::native_version()
+			shot_runtime::native_version()
 		}
 	}
 }
 
-#[cfg(feature = "polkadot")]
-mod polkadot_executor {
-	pub use pint_runtime_polkadot;
+#[cfg(feature = "pint")]
+mod pint_executor {
+	pub use pint_runtime;
 
-	pub struct PolkadotExecutorDispatch;
-	impl sc_executor::NativeExecutionDispatch for PolkadotExecutorDispatch {
+	pub struct PintExecutorDispatch;
+	impl sc_executor::NativeExecutionDispatch for PintExecutorDispatch {
 		type ExtendHostFunctions = frame_benchmarking::benchmarking::HostFunctions;
 
 		fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
-			pint_runtime_polkadot::api::dispatch(method, data)
+			pint_runtime::api::dispatch(method, data)
 		}
 
 		fn native_version() -> sc_executor::NativeVersion {
-			pint_runtime_polkadot::native_version()
+			pint_runtime::native_version()
 		}
 	}
 }
 
-#[cfg(feature = "kusama")]
-pub use kusama_executor::*;
-#[cfg(feature = "polkadot")]
-pub use polkadot_executor::*;
+#[cfg(feature = "pint")]
+pub use pint_executor::*;
+#[cfg(feature = "shot")]
+pub use shot_executor::*;
 
 pub trait IdentifyVariant {
 	fn is_kusama(&self) -> bool;
@@ -507,11 +507,11 @@ where
 }
 
 #[allow(dead_code)]
-pub const KUSAMA_RUNTIME_NOT_AVAILABLE: &str =
-	"pint-kusama runtime is not available. Please compile the node with `--features kusama` to enable it.";
+pub const SHOT_RUNTIME_NOT_AVAILABLE: &str =
+	"shot runtime is not available. Please compile the node with `--features shot` to enable it.";
 #[allow(dead_code)]
-pub const POLKADOT_RUNTIME_NOT_AVAILABLE: &str =
-	"pint-polkadot runtime is not available. Please compile the node with `--features polkadot` to enable it.";
+pub const PINT_RUNTIME_NOT_AVAILABLE: &str =
+	"pint runtime is not available. Please compile the node with `--features pint` to enable it.";
 
 /// Builds a new object suitable for chain operations.
 pub fn new_chain_ops(
@@ -527,25 +527,25 @@ pub fn new_chain_ops(
 > {
 	config.keystore = sc_service::config::KeystoreConfig::InMemory;
 	if config.chain_spec.is_kusama() {
-		#[cfg(feature = "kusama")]
+		#[cfg(feature = "shot")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<pint_runtime_kusama::RuntimeApi, KusamaExecutorDispatch>(config, false, false)?;
-			Ok((Arc::new(Client::Kusama(client)), backend, import_queue, task_manager))
+				new_partial::<shot_runtime::RuntimeApi, ShotExecutorDispatch>(config, false, false)?;
+			Ok((Arc::new(Client::Shot(client)), backend, import_queue, task_manager))
 		}
 
-		#[cfg(not(feature = "kusama"))]
-		Err(KUSAMA_RUNTIME_NOT_AVAILABLE.into())
+		#[cfg(not(feature = "shot"))]
+		Err(SHOT_RUNTIME_NOT_AVAILABLE.into())
 	} else if config.chain_spec.is_polkadot() {
-		#[cfg(feature = "polkadot")]
+		#[cfg(feature = "pint")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<pint_runtime_polkadot::RuntimeApi, PolkadotExecutorDispatch>(config, false, false)?;
-			Ok((Arc::new(Client::Polkadot(client)), backend, import_queue, task_manager))
+				new_partial::<pint_runtime::RuntimeApi, PintExecutorDispatch>(config, false, false)?;
+			Ok((Arc::new(Client::Pint(client)), backend, import_queue, task_manager))
 		}
 
-		#[cfg(not(feature = "polkadot"))]
-		Err(POLKADOT_RUNTIME_NOT_AVAILABLE.into())
+		#[cfg(not(feature = "pint"))]
+		Err(PINT_RUNTIME_NOT_AVAILABLE.into())
 	} else {
 		let PartialComponents { client, backend, import_queue, task_manager, .. } =
 			new_partial(config, config.chain_spec.is_dev(), false)?;
@@ -565,7 +565,7 @@ fn inner_pint_dev(config: Configuration, instant_sealing: bool) -> Result<TaskMa
 		select_chain: maybe_select_chain,
 		transaction_pool,
 		other: (mut telemetry, _),
-	} = new_partial::<pint_runtime_dev::RuntimeApi, DevExecutorDispatch>(&config, true, instant_sealing)?;
+	} = new_partial::<dev_runtime::RuntimeApi, DevExecutorDispatch>(&config, true, instant_sealing)?;
 
 	let (network, system_rpc_tx, network_starter) = sc_service::build_network(sc_service::BuildNetworkParams {
 		config: &config,

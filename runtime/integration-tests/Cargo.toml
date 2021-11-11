@@ -60,8 +60,7 @@ pallet-asset-index = { path = "../../pallets/asset-index" }
 pallet-committee = { path = "../../pallets/committee" }
 pallet-price-feed = { path = "../../pallets/price-feed" }
 pallet-saft-registry = { path = "../../pallets/saft-registry" }
-pint-runtime-common = { path = "../common" }
-pint-runtime-kusama = { path = "../kusama" }
+shot-runtime = { path = "../shot" }
 primitives = { path = "../../primitives/primitives" }
 xcm-calls = { path = "../../primitives/xcm-calls" }
 
