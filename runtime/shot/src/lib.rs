@@ -12,7 +12,9 @@ use codec::Decode;
 // Polkadot imports
 use cumulus_primitives_core::ParaId;
 pub use frame_support::{
-	construct_runtime, match_type, ord_parameter_types, parameter_types,
+	construct_runtime, match_type, ord_parameter_types,
+	pallet_prelude::PhantomData,
+	parameter_types,
 	traits::{IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -22,13 +24,18 @@ pub use frame_support::{
 };
 
 // orml imports
+use frame_support::traits::{Everything, Nothing};
 use orml_currencies::BasicCurrencyAdapter;
 use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset};
 pub use pallet_balances::Call as BalancesCall;
+use pallet_committee::EnsureMember;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::XcmPassthrough;
-use pint_runtime_common::payment::BalanceToAssetBalance;
 use polkadot_parachain::primitives::Sibling;
+use primitives::traits::MultiAssetRegistry;
+pub use primitives::*;
+use runtime_common::payment::BalanceToAssetBalance;
+pub use runtime_common::{constants::*, types::*, weights};
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -54,18 +61,12 @@ use xcm_builder::{
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
 	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
-use xcm_executor::XcmExecutor;
-
-use frame_support::traits::{Everything, Nothing};
-use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*, weights};
-use primitives::traits::MultiAssetRegistry;
-pub use primitives::*;
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,
 	PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder,
 };
+use xcm_executor::XcmExecutor;
 
 // Make the WASM binary available.
 #[cfg(feature = "std")]
@@ -111,15 +112,11 @@ pub fn native_version() -> NativeVersion {
 }
 
 parameter_types! {
-	// network
-	pub Ancestry: MultiLocation = Junction::Parachain(
-		ParachainInfo::parachain_id().into()
-	).into();
-	pub const RelayNetwork: NetworkId = NetworkId::Polkadot;
-	pub SelfLocation: MultiLocation = MultiLocation { parents: 1, interior: Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into()))};
-	pub const Version: RuntimeVersion = VERSION;
-	// pallet-committee
+	pub Ancestry: MultiLocation = Junction::Parachain(ParachainInfo::parachain_id().into()).into();
+	pub const RelayNetwork: NetworkId = NetworkId::Kusama;
+	pub SelfLocation: MultiLocation = MultiLocation::new(1, Junctions::X1(Junction::Parachain(ParachainInfo::parachain_id().into())));
 	pub const ProposalSubmissionPeriod: BlockNumber = 10;
+	pub const Version: RuntimeVersion = VERSION;
 	pub const VotingPeriod: BlockNumber = 27 * DAYS;
 }
 
@@ -217,10 +214,10 @@ impl pallet_sudo::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Pallet<Runtime>;
-	type OutboundXcmpMessageSource = XcmpQueue;
+	type SelfParaId = ParachainInfo;
 	type DmpMessageHandler = DmpQueue;
 	type ReservedDmpWeight = ReservedDmpWeight;
+	type OutboundXcmpMessageSource = XcmpQueue;
 	type XcmpMessageHandler = XcmpQueue;
 	type ReservedXcmpWeight = ReservedXcmpWeight;
 }
@@ -299,10 +296,12 @@ impl TakeRevenue for ToTreasury {
 		use orml_traits::currency::MultiCurrency;
 		match revenue.fun.clone() {
 			Fungibility::Fungible(amount) => {
-				if let Some(id) = AssetIdConvert::convert(revenue) {
-					// ensure PINT Treasury account have ed for all of the cross-chain asset.
-					// Ignore the result.
-					let _ = Currencies::deposit(id, &PintTreasuryAccount::get(), amount);
+				if let xcm::v1::AssetId::Concrete(MultiLocation { parents: 1, interior }) = revenue.id {
+					if let Junctions::X1(Junction::Parachain(id)) = interior {
+						// ensure PINT Treasury account have ed for all of the cross-chain asset.
+						// Ignore the result.
+						let _ = Currencies::deposit(id, &PintTreasuryAccount::get(), amount);
+					}
 				}
 			}
 			_ => {}
@@ -346,7 +345,7 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
 	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<Origin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Everything;
+	type XcmExecuteFilter = Nothing;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Nothing;
 	type XcmReserveTransferFilter = Everything;
@@ -424,7 +423,6 @@ impl pallet_collator_selection::Config for Runtime {
 }
 
 impl pallet_local_treasury::Config for Runtime {
-	// Using root as the admin origin for now
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
@@ -465,15 +463,14 @@ impl pallet_committee::Config for Runtime {
 	type VotingPeriod = VotingPeriod;
 	type VotingPeriodRange = VotingPeriodRange<Self>;
 	type MinCouncilVotes = MinCouncilVotes;
-	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ProposalExecutionOrigin = EnsureMember<Self>;
+	type ProposalSubmissionOrigin = EnsureMember<Self>;
 	type ApprovedByCommitteeOrigin = GovernanceOrigin<AccountId, Runtime>;
 	type Event = Event;
 	type WeightInfo = weights::pallet_committee::WeightInfo<Runtime>;
 }
 
 impl pallet_price_feed::Config for Runtime {
-	// Using root as the admin origin for now
 	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
 	type SelfAssetId = PINTAssetId;
 	type AssetId = AssetId;
@@ -572,7 +569,7 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 		match location {
 			MultiLocation { parents: 1, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 			MultiLocation {
-				parents: 1,
+				parents: 0,
 				interior: Junctions::X2(Junction::Parachain(id), Junction::GeneralKey(key)),
 			} if ParaId::from(id) == ParachainInfo::parachain_id() => {
 				// decode the general key
@@ -878,7 +875,7 @@ impl_runtime_apis! {
 			Vec<frame_benchmarking::BenchmarkList>,
 			Vec<frame_support::traits::StorageInfo>,
 		) {
-			use frame_benchmarking:: {BenchmarkList, list_benchmark, Benchmarking};
+			use frame_benchmarking::{BenchmarkList, list_benchmark, Benchmarking};
 			use frame_support::traits::StorageInfoTrait;
 
 			let mut list = Vec::<BenchmarkList>::new();

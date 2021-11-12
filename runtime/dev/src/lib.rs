@@ -58,10 +58,10 @@ use xcm_executor::XcmExecutor;
 use frame_support::traits::{Everything, Nothing};
 use pallet_committee::EnsureMember;
 
-use pint_runtime_common::payment::BalanceToAssetBalance;
-pub use pint_runtime_common::{constants::*, types::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
+use runtime_common::payment::BalanceToAssetBalance;
+pub use runtime_common::{constants::*, types::*, weights};
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,

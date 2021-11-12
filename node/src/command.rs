@@ -23,36 +23,36 @@ use std::{io::Write, net::SocketAddr};
 
 fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
-		"pint-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
-		"dev" | "pint-dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
-		#[cfg(feature = "kusama")]
-		"pint-kusama-local" => Box::new(chain_spec::kusama::pint_local_config(para_id)),
-		#[cfg(feature = "kusama")]
-		"pint-kusama-dev" => Box::new(chain_spec::kusama::pint_development_config(para_id)),
-		#[cfg(feature = "polkadot")]
-		"pint-polkadot-local" => Box::new(chain_spec::polkadot::pint_local_config(para_id)),
-		#[cfg(feature = "polkadot")]
-		"pint-polkadot-dev" => Box::new(chain_spec::polkadot::pint_development_config(para_id)),
+		"dev-local" => Box::new(chain_spec::dev::pint_local_config(para_id)),
+		"dev" => Box::new(chain_spec::dev::pint_development_config(para_id)),
+		#[cfg(feature = "shot")]
+		"shot-local" => Box::new(chain_spec::shot::pint_local_config(para_id)),
+		#[cfg(feature = "shot")]
+		"shot-dev" => Box::new(chain_spec::shot::pint_development_config(para_id)),
+		#[cfg(feature = "pint")]
+		"pint-local" => Box::new(chain_spec::pint::pint_local_config(para_id)),
+		#[cfg(feature = "pint")]
+		"pint-dev" => Box::new(chain_spec::pint::pint_development_config(para_id)),
 		path => {
 			let path = std::path::PathBuf::from(path);
 			let starts_with = |prefix: &str| {
 				path.file_name().map(|f| f.to_str().map(|s| s.starts_with(&prefix))).flatten().unwrap_or(false)
 			};
 
-			if starts_with("pint_kusama") {
-				#[cfg(feature = "kusama")]
+			if starts_with("shot") {
+				#[cfg(feature = "shot")]
 				{
-					Box::new(chain_spec::kusama::ChainSpec::from_json_file(path)?)
+					Box::new(chain_spec::shot::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "kusama"))]
-				return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-			} else if starts_with("pint_polkadot") {
-				#[cfg(feature = "polkadot")]
+				#[cfg(not(feature = "shot"))]
+				return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
+			} else if starts_with("pint") {
+				#[cfg(feature = "pint")]
 				{
-					Box::new(chain_spec::polkadot::ChainSpec::from_json_file(path)?)
+					Box::new(chain_spec::pint::ChainSpec::from_json_file(path)?)
 				}
-				#[cfg(not(feature = "polkadot"))]
-				return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+				#[cfg(not(feature = "pint"))]
+				return Err(service::PINT_RUNTIME_NOT_AVAILABLE.into());
 			} else {
 				Box::new(chain_spec::dev::ChainSpec::from_json_file(path)?)
 			}
@@ -96,18 +96,18 @@ impl SubstrateCli for Cli {
 	}
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		if chain_spec.is_kusama() {
-			#[cfg(feature = "kusama")]
-			return &pint_runtime_kusama::VERSION;
-			#[cfg(not(feature = "kusama"))]
-			panic!("{}", service::KUSAMA_RUNTIME_NOT_AVAILABLE);
-		} else if chain_spec.is_polkadot() {
-			#[cfg(feature = "polkadot")]
-			return &pint_runtime_polkadot::VERSION;
-			#[cfg(not(feature = "polkadot"))]
-			panic!("{}", service::POLKADOT_RUNTIME_NOT_AVAILABLE);
+		if chain_spec.is_shot() {
+			#[cfg(feature = "shot")]
+			return &shot_runtime::VERSION;
+			#[cfg(not(feature = "shot"))]
+			panic!("{}", service::SHOT_RUNTIME_NOT_AVAILABLE);
+		} else if chain_spec.is_pint() {
+			#[cfg(feature = "pint")]
+			return &pint_runtime::VERSION;
+			#[cfg(not(feature = "pint"))]
+			panic!("{}", service::PINT_RUNTIME_NOT_AVAILABLE);
 		} else {
-			return &pint_runtime_dev::VERSION;
+			return &dev_runtime::VERSION;
 		}
 	}
 }
@@ -153,9 +153,9 @@ impl SubstrateCli for RelayChainCli {
 fn set_default_ss58_version(spec: &Box<dyn sc_chain_spec::ChainSpec>) {
 	use sp_core::crypto::Ss58AddressFormatRegistry;
 
-	let ss58_version = if spec.is_kusama() {
+	let ss58_version = if spec.is_shot() {
 		Ss58AddressFormatRegistry::KusamaAccount
-	} else if spec.is_polkadot() {
+	} else if spec.is_pint() {
 		Ss58AddressFormatRegistry::PolkadotAccount
 	} else {
 		Ss58AddressFormatRegistry::SubstrateAccount
@@ -175,31 +175,31 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 
 macro_rules! with_runtime {
 	($chain_spec:expr, { $( $code:tt )* }) => {
-		if $chain_spec.is_kusama() {
+		if $chain_spec.is_shot() {
             #[allow(unused_imports)]
-            #[cfg(feature = "kusama")]
-            use pint_runtime_kusama::{Block, RuntimeApi};
-            #[cfg(feature = "kusama")]
-            use service::{KusamaExecutorDispatch as Executor};
-            #[cfg(feature = "kusama")]
+            #[cfg(feature = "shot")]
+            use shot_runtime::{Block, RuntimeApi};
+            #[cfg(feature = "shot")]
+            use service::{ShotExecutorDispatch as Executor};
+            #[cfg(feature = "shot")]
             $( $code )*
 
-            #[cfg(not(feature = "kusama"))]
-            return Err(service::KUSAMA_RUNTIME_NOT_AVAILABLE.into());
-		} else if $chain_spec.is_polkadot() {
+            #[cfg(not(feature = "shot"))]
+            return Err(service::SHOT_RUNTIME_NOT_AVAILABLE.into());
+		} else if $chain_spec.is_pint() {
 			#[allow(unused_imports)]
-            #[cfg(feature = "polkadot")]
-            use pint_runtime_polkadot::{Block, RuntimeApi};
-            #[cfg(feature = "polkadot")]
-            use service::{PolkadotExecutorDispatch as Executor};
-            #[cfg(feature = "polkadot")]
+            #[cfg(feature = "pint")]
+            use pint_runtime::{Block, RuntimeApi};
+            #[cfg(feature = "pint")]
+            use service::{PintExecutorDispatch as Executor};
+            #[cfg(feature = "pint")]
             $( $code )*
 
-            #[cfg(not(feature = "polkadot"))]
-            return Err(service::POLKADOT_RUNTIME_NOT_AVAILABLE.into());
+            #[cfg(not(feature = "pint"))]
+            return Err(service::PINT_RUNTIME_NOT_AVAILABLE.into());
 		} else {
 			#[allow(unused_imports)]
-            use pint_runtime_dev::{Block, RuntimeApi};
+            use dev_runtime::{Block, RuntimeApi};
             use service::{DevExecutorDispatch as Executor};
             $( $code )*
 		}
