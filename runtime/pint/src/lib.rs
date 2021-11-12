@@ -27,8 +27,8 @@ use orml_xcm_support::{IsNativeConcrete, MultiCurrencyAdapter, MultiNativeAsset}
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 use pallet_xcm::XcmPassthrough;
-use pint_runtime_common::payment::BalanceToAssetBalance;
 use polkadot_parachain::primitives::Sibling;
+use runtime_common::payment::BalanceToAssetBalance;
 use sp_api::impl_runtime_apis;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -58,9 +58,9 @@ use xcm_executor::XcmExecutor;
 
 use frame_support::traits::{Everything, Nothing};
 use pallet_committee::EnsureMember;
-pub use pint_runtime_common::{constants::*, types::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
+pub use runtime_common::{constants::*, types::*, weights};
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,

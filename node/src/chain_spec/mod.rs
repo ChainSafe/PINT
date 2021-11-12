@@ -8,10 +8,10 @@ use sp_core::{Pair, Public};
 use sp_runtime::traits::IdentifyAccount;
 
 pub mod dev;
-#[cfg(feature = "kusama")]
-pub mod kusama;
-#[cfg(feature = "polkadot")]
-pub mod polkadot;
+#[cfg(feature = "pint")]
+pub mod pint;
+#[cfg(feature = "shot")]
+pub mod shot;
 
 /// The extensions for the [`DevChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]

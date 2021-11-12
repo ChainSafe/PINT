@@ -123,23 +123,21 @@ pub trait ClientHandle {
 /// A client instance of Polkadot.
 #[derive(Clone)]
 pub enum Client {
-	Dev(Arc<crate::service::FullClient<pint_runtime_dev::RuntimeApi, crate::service::DevExecutorDispatch>>),
-	#[cfg(feature = "kusama")]
-	Kusama(Arc<crate::service::FullClient<pint_runtime_kusama::RuntimeApi, crate::service::KusamaExecutorDispatch>>),
-	#[cfg(feature = "polkadot")]
-	Polkadot(
-		Arc<crate::service::FullClient<pint_runtime_polkadot::RuntimeApi, crate::service::PolkadotExecutorDispatch>>,
-	),
+	Dev(Arc<crate::service::FullClient<dev_runtime::RuntimeApi, crate::service::DevExecutorDispatch>>),
+	#[cfg(feature = "shot")]
+	Shot(Arc<crate::service::FullClient<shot_runtime::RuntimeApi, crate::service::ShotExecutorDispatch>>),
+	#[cfg(feature = "pint")]
+	Pint(Arc<crate::service::FullClient<pint_runtime::RuntimeApi, crate::service::PintExecutorDispatch>>),
 }
 
 impl ClientHandle for Client {
 	fn execute_with<T: ExecuteWithClient>(&self, t: T) -> T::Output {
 		match self {
 			Self::Dev(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => T::execute_with_client::<_, _, crate::service::FullBackend>(t, client.clone()),
 		}
 	}
 }
@@ -148,10 +146,10 @@ impl sc_client_api::UsageProvider<Block> for Client {
 	fn usage_info(&self) -> sc_client_api::ClientInfo<Block> {
 		match self {
 			Self::Dev(client) => client.usage_info(),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.usage_info(),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.usage_info(),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.usage_info(),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.usage_info(),
 		}
 	}
 }
@@ -160,80 +158,80 @@ impl sc_client_api::BlockBackend<Block> for Client {
 	fn block_body(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<Vec<<Block as BlockT>::Extrinsic>>> {
 		match self {
 			Self::Dev(client) => client.block_body(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.block_body(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.block_body(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.block_body(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.block_body(id),
 		}
 	}
 
 	fn block(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<SignedBlock<Block>>> {
 		match self {
 			Self::Dev(client) => client.block(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.block(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.block(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.block(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.block(id),
 		}
 	}
 
 	fn block_status(&self, id: &BlockId<Block>) -> sp_blockchain::Result<BlockStatus> {
 		match self {
 			Self::Dev(client) => client.block_status(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.block_status(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.block_status(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.block_status(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.block_status(id),
 		}
 	}
 
 	fn justifications(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<Justifications>> {
 		match self {
 			Self::Dev(client) => client.justifications(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.justifications(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.justifications(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.justifications(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.justifications(id),
 		}
 	}
 
 	fn block_hash(&self, number: NumberFor<Block>) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
 			Self::Dev(client) => client.block_hash(number),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.block_hash(number),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.block_hash(number),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.block_hash(number),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.block_hash(number),
 		}
 	}
 
 	fn indexed_transaction(&self, hash: &<Block as BlockT>::Hash) -> sp_blockchain::Result<Option<Vec<u8>>> {
 		match self {
 			Self::Dev(client) => client.indexed_transaction(hash),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.indexed_transaction(hash),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.indexed_transaction(hash),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.indexed_transaction(hash),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.indexed_transaction(hash),
 		}
 	}
 
 	fn has_indexed_transaction(&self, hash: &<Block as BlockT>::Hash) -> sp_blockchain::Result<bool> {
 		match self {
 			Self::Dev(client) => client.has_indexed_transaction(hash),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.has_indexed_transaction(hash),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.has_indexed_transaction(hash),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.has_indexed_transaction(hash),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.has_indexed_transaction(hash),
 		}
 	}
 
 	fn block_indexed_body(&self, id: &BlockId<Block>) -> sp_blockchain::Result<Option<Vec<Vec<u8>>>> {
 		match self {
 			Self::Dev(client) => client.block_indexed_body(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.block_indexed_body(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.block_indexed_body(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.block_indexed_body(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.block_indexed_body(id),
 		}
 	}
 }
@@ -242,20 +240,20 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	fn storage(&self, id: &BlockId<Block>, key: &StorageKey) -> sp_blockchain::Result<Option<StorageData>> {
 		match self {
 			Self::Dev(client) => client.storage(id, key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.storage(id, key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.storage(id, key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.storage(id, key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.storage(id, key),
 		}
 	}
 
 	fn storage_keys(&self, id: &BlockId<Block>, key_prefix: &StorageKey) -> sp_blockchain::Result<Vec<StorageKey>> {
 		match self {
 			Self::Dev(client) => client.storage_keys(id, key_prefix),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.storage_keys(id, key_prefix),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.storage_keys(id, key_prefix),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.storage_keys(id, key_prefix),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.storage_keys(id, key_prefix),
 		}
 	}
 
@@ -266,10 +264,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
 			Self::Dev(client) => client.storage_hash(id, key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.storage_hash(id, key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.storage_hash(id, key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.storage_hash(id, key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.storage_hash(id, key),
 		}
 	}
 
@@ -280,10 +278,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Vec<(StorageKey, StorageData)>> {
 		match self {
 			Self::Dev(client) => client.storage_pairs(id, key_prefix),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.storage_pairs(id, key_prefix),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.storage_pairs(id, key_prefix),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.storage_pairs(id, key_prefix),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.storage_pairs(id, key_prefix),
 		}
 	}
 
@@ -297,10 +295,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	> {
 		match self {
 			Self::Dev(client) => client.storage_keys_iter(id, prefix, start_key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.storage_keys_iter(id, prefix, start_key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.storage_keys_iter(id, prefix, start_key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.storage_keys_iter(id, prefix, start_key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.storage_keys_iter(id, prefix, start_key),
 		}
 	}
 
@@ -312,10 +310,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Option<StorageData>> {
 		match self {
 			Self::Dev(client) => client.child_storage(id, child_info, key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.child_storage(id, child_info, key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.child_storage(id, child_info, key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.child_storage(id, child_info, key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.child_storage(id, child_info, key),
 		}
 	}
 
@@ -327,10 +325,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Vec<StorageKey>> {
 		match self {
 			Self::Dev(client) => client.child_storage_keys(id, child_info, key_prefix),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.child_storage_keys(id, child_info, key_prefix),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.child_storage_keys(id, child_info, key_prefix),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.child_storage_keys(id, child_info, key_prefix),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.child_storage_keys(id, child_info, key_prefix),
 		}
 	}
 
@@ -345,10 +343,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	> {
 		match self {
 			Self::Dev(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.child_storage_keys_iter(id, child_info, prefix, start_key),
 		}
 	}
 
@@ -360,10 +358,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Option<<Block as BlockT>::Hash>> {
 		match self {
 			Self::Dev(client) => client.child_storage_hash(id, child_info, key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.child_storage_hash(id, child_info, key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.child_storage_hash(id, child_info, key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.child_storage_hash(id, child_info, key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.child_storage_hash(id, child_info, key),
 		}
 	}
 
@@ -374,10 +372,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Option<(NumberFor<Block>, BlockId<Block>)>> {
 		match self {
 			Self::Dev(client) => client.max_key_changes_range(first, last),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.max_key_changes_range(first, last),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.max_key_changes_range(first, last),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.max_key_changes_range(first, last),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.max_key_changes_range(first, last),
 		}
 	}
 
@@ -390,10 +388,10 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 	) -> sp_blockchain::Result<Vec<(NumberFor<Block>, u32)>> {
 		match self {
 			Self::Dev(client) => client.key_changes(first, last, storage_key, key),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.key_changes(first, last, storage_key, key),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.key_changes(first, last, storage_key, key),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.key_changes(first, last, storage_key, key),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.key_changes(first, last, storage_key, key),
 		}
 	}
 }
@@ -402,50 +400,50 @@ impl sp_blockchain::HeaderBackend<Block> for Client {
 	fn header(&self, id: BlockId<Block>) -> sp_blockchain::Result<Option<Header>> {
 		match self {
 			Self::Dev(client) => client.header(&id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.header(&id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.header(&id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.header(&id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.header(&id),
 		}
 	}
 
 	fn info(&self) -> sp_blockchain::Info<Block> {
 		match self {
 			Self::Dev(client) => client.info(),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.info(),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.info(),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.info(),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.info(),
 		}
 	}
 
 	fn status(&self, id: BlockId<Block>) -> sp_blockchain::Result<sp_blockchain::BlockStatus> {
 		match self {
 			Self::Dev(client) => client.status(id),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.status(id),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.status(id),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.status(id),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.status(id),
 		}
 	}
 
 	fn number(&self, hash: Hash) -> sp_blockchain::Result<Option<BlockNumber>> {
 		match self {
 			Self::Dev(client) => client.number(hash),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.number(hash),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.number(hash),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.number(hash),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.number(hash),
 		}
 	}
 
 	fn hash(&self, number: BlockNumber) -> sp_blockchain::Result<Option<Hash>> {
 		match self {
 			Self::Dev(client) => client.hash(number),
-			#[cfg(feature = "kusama")]
-			Self::Kusama(client) => client.hash(number),
-			#[cfg(feature = "polkadot")]
-			Self::Polkadot(client) => client.hash(number),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.hash(number),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.hash(number),
 		}
 	}
 }
