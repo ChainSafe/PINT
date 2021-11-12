@@ -25,7 +25,7 @@ pallet-asset-index = {path = "../asset-index", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
 [dev-dependencies]
-serde = { version = "1.0.124" }
+serde = "1.0.130"
 
 # substrate
 sp-core = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }

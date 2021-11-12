@@ -1,7 +1,75 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-//! Support for creating XCM calls that are used within `Xcm::Transact`
+//! Support for generically creating XCM calls that are used within `Xcm::Transact`
+//!
+//! Receiving chains will decode incoming XCM calls based on their native types, therefore the
+//! encoding of `Xcm::Transact` is runtime agnostic.
+//!
+//! This crate provides a set of abstractions for commonly used pallets.
+//! To create chain agnostic bindings for pallets, a few things are required.
+//!
+//! First, an exact replica of the pallet's call enum, but not bound to `T: Config`, but with
+//! generic types. like for `pallet_staking`:
+//!
+//! ```ignore
+//! pub enum StakingCall<Source, Balance, AccountId> {
+//!   Bond(/* -snip */ ),
+//!   UnBond(/* -snip */ ),
+//!   BondExtra(/* -snip */ ),
+//! }
+//! ```
+//!
+//! each enum variant represents the corresponding extrinsic of the pallet.
+//!
+//! All the pallet's type that would be configured as part of `Config` trait and are part of the
+//! public interface are now generics: `<Source, Balance, AccountId>`.
+//!
+//! In the event that bindings for different runtimes are required for the pallet, we may still need
+//! to support different types, e.g. `RuntimeA::Balance = u128;` and `RuntimeB::Balance = u64;`.
+//!
+//! Instead of maintaining multiple configs of `StakingCall` with different types, we maintain a
+//! config with a single type configuration, preferably those from our local chain's
+//! `frame_system::Config`, and then provide a separate encoder, that handle encoding context aware,
+//! for example a `CurrencyId` or `AssetId`.
+//!
+//! For that we configure the pallet's `PalletCallEncoder` trait according to the set of different
+//! runtime configs.
+//!
+//! For the `pallet_staking` that is `StakingCallEncoder` that can be configured with encoders for
+//! all the `StakingCall`'s generic types
+//!
+//! ```
+//! use xcm_calls::{PalletCallEncoder, PassthroughCompactEncoder, PassthroughEncoder};
+//! use xcm_calls::staking::StakingCallEncoder;
+//! // native types
+//! type AssetId = u64;
+//! type Balance = u128;
+//! type AccountId = u64;
+//! type AccountLookupSource =  sp_runtime::MultiAddress<AccountId, ()>;
+//!  /// The encoder to use when transacting `pallet_staking` calls
+//!  pub struct PalletStakingEncoder;
+//!  impl StakingCallEncoder<AccountLookupSource, Balance, AccountId> for PalletStakingEncoder {
+//!     // encode the `Balance` as the same type as configured but compactly
+//!  	type CompactBalanceEncoder = PassthroughCompactEncoder<Balance, AssetId>;
+//!     // encode the `AccountLookupSource` as the same type as configured
+//!  	type SourceEncoder = PassthroughEncoder<AccountLookupSource, AssetId>;
+//!     // encode the `AccountId` as the same type as configured
+//!  	type AccountIdEncoder = PassthroughEncoder<AccountId, AssetId>;
+//!  }
+//!
+//! // Implement the `PalletCallEncoder` that determines whether a call can be encoded based
+//! // on the context
+//! impl PalletCallEncoder for PalletStakingEncoder {
+//! 	type Context = AssetId;
+//! 	fn can_encode(_ctx: &Self::Context) -> bool {
+//! 		// allow all calls
+//!         // handling this separately here allows us to eventually support additional chains
+//!         // without runtime upgrades
+//! 		true
+//! 	}
+//! }
+//! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -14,6 +82,7 @@ pub mod assets;
 mod encode_with;
 pub mod proxy;
 pub mod staking;
+pub mod utility;
 
 /// Represents an extrinsic of a pallet configured inside a runtime
 #[derive(Encode)]
@@ -115,7 +184,10 @@ mod tests {
 	};
 
 	use super::*;
-	use crate::assets::{AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX};
+	use crate::{
+		assets::{AssetParams, AssetsCall, AssetsCallEncoder, STATEMINT_PALLET_ASSETS_INDEX},
+		utility::{UtilityCall, UtilityCallEncoder},
+	};
 	use frame_support::traits::Everything;
 
 	/// The AccountId alias in this test module.
@@ -176,6 +248,7 @@ mod tests {
 			System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 			Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
 			Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+			Utility: pallet_utility::{Pallet, Call, Event},
 
 			// use polkadot index 7
 			Staking: staking::{Pallet, Call, Storage, Event<T>} = 7,
@@ -196,6 +269,12 @@ mod tests {
 
 	parameter_types! {
 		pub static BagThresholds: &'static [sp_npos_elections::VoteWeight] = &THRESHOLDS;
+	}
+
+	impl pallet_utility::Config for Test {
+		type Event = Event;
+		type Call = Call;
+		type WeightInfo = ();
 	}
 
 	impl pallet_bags_list::Config for Test {
@@ -441,6 +520,16 @@ mod tests {
 		type Freezer = ();
 		type WeightInfo = ();
 		type Extra = ();
+	}
+
+	struct PalletUtilityEncoder;
+	impl UtilityCallEncoder for PalletUtilityEncoder {}
+
+	impl PalletCallEncoder for PalletUtilityEncoder {
+		type Context = AssetId;
+		fn can_encode(_ctx: &u64) -> bool {
+			true
+		}
 	}
 
 	struct PalletStakingEncoder;
@@ -709,5 +798,16 @@ mod tests {
 		let xcm_encoder = xmc_call.encoder::<PalletAssetsEncoder>(&0);
 
 		encode_decode_call!(PalletAssetsCall, call, xcm_encoder, STATEMINT_PALLET_ASSETS_INDEX);
+	}
+
+	#[test]
+	fn can_encode_decode() {
+		let dest = 1;
+		let value = 1_000;
+		let transfers = vec![
+			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
+			pallet_balances::Call::<Test>::transfer { dest, value }.encode(),
+		];
+		let _xcm_call = UtilityCall::BatchAll(transfers);
 	}
 }

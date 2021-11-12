@@ -48,19 +48,20 @@ use xcm::v1::{
 	BodyId, Fungibility, Junction, Junction::*, Junctions, Junctions::*, MultiAsset, MultiLocation, NetworkId,
 };
 use xcm_builder::{
-	AccountId32Aliases, AllowTopLevelPaidExecutionFrom, EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds,
-	LocationInverter, ParentIsDefault, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
-	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
+	AccountId32Aliases, AllowKnownQueryResponses, AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom,
+	EnsureXcmOrigin, FixedRateOfFungible, FixedWeightBounds, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
+	SovereignSignedViaLocation, TakeRevenue, TakeWeightCredit,
 };
 use xcm_executor::XcmExecutor;
 
 use frame_support::traits::{Everything, Nothing};
 use pallet_committee::EnsureMember;
 
-use pint_runtime_common::payment::BalanceToAssetBalance;
-pub use pint_runtime_common::{constants::*, types::*, weights};
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
+use runtime_common::payment::BalanceToAssetBalance;
+pub use runtime_common::{constants::*, types::*, weights};
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,
@@ -289,7 +290,14 @@ match_type! {
 	};
 }
 
-pub type Barrier = (TakeWeightCredit, AllowTopLevelPaidExecutionFrom<Everything>);
+pub type Barrier = (
+	TakeWeightCredit,
+	AllowTopLevelPaidExecutionFrom<Everything>,
+	// Expected responses are OK.
+	AllowKnownQueryResponses<PolkadotXcm>,
+	// Subscriptions for version tracking are OK.
+	AllowSubscriptionsFrom<Everything>,
+);
 
 pub struct ToTreasury;
 impl TakeRevenue for ToTreasury {
@@ -682,6 +690,7 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type SelfLocation = SelfLocation;
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type RelayChainAssetId = RelayChainAssetId;
+	type AssetUnbondingSlashingSpans = AssetUnbondingSlashingSpans;
 	type AssetStakingCap = (MinimumRemoteReserveBalance, MinimumBondExtra);
 	type Assets = Currencies;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
@@ -698,6 +707,12 @@ impl pallet_asset_tx_payment::Config for Runtime {
 	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<BalanceToAssetBalance<AssetIndex>, ()>;
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -711,6 +726,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+		Utility: pallet_utility::{Pallet, Call, Event} = 5,
 		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
 
 		// Parachain

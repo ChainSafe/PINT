@@ -9,7 +9,7 @@ repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
-serde = { version = "1.0.124", features = ["derive"] }
+serde = { version = "1.0.130", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "2.3.1" }
 jsonrpc-core = "18.0.0"
 jsonrpc-core-client = "18.0.0"
@@ -25,7 +25,7 @@ pallet-asset-index-rpc-runtime-api = { path = "runtime-api" }
 primitives = { path = "../../../primitives/primitives", default-features = false }
 
 [dev-dependencies]
-serde_json = "1.0.64"
+serde_json = "1.0.69"
 
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']

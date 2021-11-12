@@ -3,7 +3,7 @@ authors = ['ChainSafe Systems']
 edition = '2018'
 homepage = 'https://substrate.dev'
 license = 'LGPL-3.0-only'
-name = 'pint-runtime-dev'
+name = 'dev-runtime'
 repository = 'https://github.com/substrate-developer-hub/substrate-parachain-template'
 
 version = '2.0.0'
@@ -14,12 +14,12 @@ targets = ['x86_64-unknown-linux-gnu']
 substrate-wasm-builder = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12' }
 
 [dependencies]
-codec = { package = 'parity-scale-codec', version = '2.3.1', default-features = false, features = ['derive', 'max-encoded-len']}
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ['derive', 'max-encoded-len'] }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
-log = { version = '0.4.14', default-features = false }
-serde = { version = '1.0.119', optional = true, features = ['derive'] }
-hex-literal = { version = '0.3.1', optional = true }
+log = { version = "0.4.14", default-features = false }
+serde = { version = "1.0.130", optional = true, features = ['derive'] }
+hex-literal = { version = "0.3.3", optional = true }
 
 # Substrate Dependencies
 ## Substrate Primitive Dependencies
@@ -56,6 +56,7 @@ pallet-sudo = { git = 'https://github.com/paritytech/substrate', branch = 'polka
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
+pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.12', default-features = false }
 
 # Cumulus Dependencies
 pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.12', default-features = false }
@@ -87,7 +88,7 @@ orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-modu
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
 
 # PINT dependencies
-pint-runtime-common = {path = '../common', default-features = false }
+runtime-common = {path = '../common', default-features = false }
 pallet-committee = {path = '../../pallets/committee', default-features = false }
 pallet-local-treasury = {path = '../../pallets/local-treasury', default-features = false }
 pallet-asset-index = {path = '../../pallets/asset-index', default-features = false }
@@ -102,8 +103,8 @@ pallet-asset-index-rpc-runtime-api = { path = '../../pallets/asset-index/rpc/run
 pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.12', default-features = false }
 
 [dev-dependencies]
-hex-literal = '0.3.1'
-hex = '0.4.3'
+hex-literal = "0.3.3"
+hex = "0.4.3"
 
 [features]
 default = ['std']
@@ -119,7 +120,8 @@ runtime-benchmarks = [
 	'pallet-collator-selection/runtime-benchmarks',
 	'pallet-balances/runtime-benchmarks',
 	'pallet-timestamp/runtime-benchmarks',
-	
+	'pallet-utility/runtime-benchmarks',
+
     'pallet-asset-index/runtime-benchmarks',
     'pallet-price-feed/runtime-benchmarks',
     'pallet-local-treasury/runtime-benchmarks',
@@ -167,6 +169,7 @@ std = [
 	'pallet-transaction-payment/std',
 	'pallet-xcm/std',
 	'pallet-asset-tx-payment/std',
+	'pallet-utility/std',
 
 	'parachain-info/std',
 	'cumulus-pallet-aura-ext/std',
@@ -181,7 +184,7 @@ std = [
 	'xcm-builder/std',
 	'xcm-executor/std',
 
-    'pint-runtime-common/std',
+    'runtime-common/std',
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',

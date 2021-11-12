@@ -24,7 +24,6 @@ pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrat
 
 # PINT dependencies
 pallet-asset-index-rpc= { path = "../pallets/asset-index/rpc" }
-pint-runtime-common = { path = "../runtime/common" }
 primitives = { path = "../primitives/primitives" }
 
 [package.metadata.docs.rs]

@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-codec = { package = 'parity-scale-codec', version = '2.3.1', default-features = false, features = ['derive', 'max-encoded-len']}
+codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ['derive', 'max-encoded-len'] }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
 # substrate
@@ -60,8 +60,7 @@ pallet-asset-index = { path = "../../pallets/asset-index" }
 pallet-committee = { path = "../../pallets/committee" }
 pallet-price-feed = { path = "../../pallets/price-feed" }
 pallet-saft-registry = { path = "../../pallets/saft-registry" }
-pint-runtime-common = { path = "../common" }
-pint-runtime-kusama = { path = "../kusama" }
+shot-runtime = { path = "../shot" }
 primitives = { path = "../../primitives/primitives" }
 xcm-calls = { path = "../../primitives/xcm-calls" }
 
