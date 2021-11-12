@@ -56,6 +56,7 @@ use xcm_builder::{
 use xcm_executor::XcmExecutor;
 
 use frame_support::traits::{Everything, Nothing};
+use frame_system::EnsureRoot;
 use pallet_committee::EnsureMember;
 
 use primitives::traits::MultiAssetRegistry;
@@ -713,6 +714,22 @@ impl pallet_utility::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub MaximumSchedulerWeight: Weight = Perbill::from_percent(10) * RuntimeBlockWeights::get().max_block;
+	pub const MaxScheduledPerBlock: u32 = 10;
+}
+
+impl pallet_scheduler::Config for Runtime {
+	type Event = Event;
+	type Origin = Origin;
+	type PalletsOrigin = OriginCaller;
+	type Call = Call;
+	type MaximumWeight = MaximumSchedulerWeight;
+	type ScheduleOrigin = EnsureRoot<AccountId>;
+	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -727,6 +744,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
 		Utility: pallet_utility::{Pallet, Call, Event} = 5,
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
 		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
 
 		// Parachain
