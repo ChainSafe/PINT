@@ -672,6 +672,12 @@ impl pallet_asset_tx_payment::Config for Runtime {
 	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<BalanceToAssetBalance<AssetIndex>, ()>;
 }
 
+impl pallet_utility::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type WeightInfo = ();
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -685,6 +691,7 @@ construct_runtime!(
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>} = 2,
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage} = 3,
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
+		Utility: pallet_utility::{Pallet, Call, Event} = 5,
 		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
 
 		// Parachain
