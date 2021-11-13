@@ -3,7 +3,7 @@
 use cumulus_pallet_xcm::Origin;
 use frame_support::{
 	parameter_types,
-	sp_runtime::{traits::AccountIdConversion, Perbill},
+	sp_runtime::{traits::AccountIdConversion, Perbill, Permill},
 	sp_std::prelude::*,
 	traits::{Contains, LockIdentifier},
 	weights::{
@@ -19,6 +19,18 @@ use primitives::{
 	AccountId, AssetId, Balance, BlockNumber,
 };
 use xcm::v1::MultiLocation;
+
+/// Money matters.
+pub use currency::*;
+pub mod currency {
+	use primitives::Balance;
+
+	pub const DECIMALS: u8 = 10u8;
+	pub const UNITS: Balance = 10_000_000_000;
+	pub const DOLLARS: Balance = UNITS; // 10_000_000_000
+	pub const CENTS: Balance = DOLLARS / 100; // 100_000_000
+	pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+}
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
 // blocks.
@@ -125,7 +137,6 @@ parameter_types! {
 	pub const StringLimit: u32 = 15;
 	pub const TransactionByteFee: Balance = 1 ;
 	pub const OperationalFeeMultiplier: u8 = 5;
-	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
 	pub const LockupPeriod: BlockNumber = DAYS;
 	pub const MaxCandidates: u32 = 200;
 	pub const MaxDecimals: u8 = 18;
@@ -149,6 +160,14 @@ parameter_types! {
 	pub const UnitWeightCost: Weight = 200_000_000;
 	pub const MaxInstructions: u32 = 100;
 	pub const WithdrawalPeriod: BlockNumber = 10;
+
+	// Treasury
+	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
+	pub const ProposalBond: Permill = Permill::from_percent(3);
+	pub const ProposalBondMinimum: Balance = 5 * DOLLARS;
+	pub const SpendPeriod: BlockNumber = 7 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(0);
+	pub const MaxApprovals: u32 = 100;
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {

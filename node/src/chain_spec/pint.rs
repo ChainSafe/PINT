@@ -112,6 +112,7 @@ fn pint_testnet_genesis(
 			changes_trie_config: Default::default(),
 		},
 		balances: BalancesConfig { balances: vec![(root_key.clone(), 1 << 60)] },
+		treasury: Default::default(),
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
 		chainlink_feed: ChainlinkFeedConfig {
 			feeds: Default::default(),
