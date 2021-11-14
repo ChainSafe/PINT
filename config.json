@@ -23,7 +23,7 @@
   "parachains": [
     {
       "bin": "./bin/pint",
-      "chain": "dev",
+      "chain": "dev-local",
       "id": "1",
       "balance": "1000000000000000000000",
       "nodes": [
