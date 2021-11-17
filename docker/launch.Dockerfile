@@ -8,8 +8,7 @@ FROM debian:buster-slim
 COPY config.json config.json
 COPY js/polkadot-launch polkadot-launch
 COPY --from=chainsafe/pint /usr/local/bin/pint bin/
-COPY --from=clearloop/rococo-v1 /polkadot bin/
-COPY --from=clearloop/statemint /statemint bin/
+COPY --from=parity/polkadot:v0.9.12 /usr/bin/polkadot bin/
 ENV CARGO_TERM_COLOR=always
 RUN apt-get update -y \
     && apt-get install openssl curl git -y \

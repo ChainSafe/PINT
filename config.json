@@ -39,20 +39,6 @@
           ]
         }
       ]
-    },
-    {
-      "bin": "./bin/statemint",
-      "chain": "statemint-dev",
-      "id": "300",
-      "balance": "1000000000000000000000",
-      "nodes": [
-        {
-          "wsPort": 9999,
-          "port": 31300,
-          "name": "alice",
-          "flags": ["--force-authoring", "--", "--execution=wasm"]
-        }
-      ]
     }
   ],
   "simpleParachains": [],

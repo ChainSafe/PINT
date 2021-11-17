@@ -1,3 +1,3 @@
 [submodule "js/polkadot-launch"]
 	path = js/polkadot-launch
-	url = https://github.com/paritytech/polkadot-launch.git
+	url = https://github.com/ChainSafe/polkadot-launch.git
