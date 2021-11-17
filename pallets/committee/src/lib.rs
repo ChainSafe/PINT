@@ -369,9 +369,14 @@ pub mod pallet {
 		/// Extrinsic to propose a new action to be voted upon in the next
 		/// voting period.
 		///
+		/// Requires the sender to be `ProposalSubmissionOrigin`
+		///
 		/// The provided action will be turned into a proposal and added to the list of current
 		/// active proposals to be voted on in the next voting period.
-		#[pallet::weight(T::WeightInfo::propose())]
+		#[pallet::weight((
+			T::WeightInfo::propose().saturating_add(action.get_dispatch_info().weight),
+			DispatchClass::Operational
+		))]
 		pub fn propose(origin: OriginFor<T>, action: Box<T::Action>) -> DispatchResultWithPostInfo {
 			let proposer = T::ProposalSubmissionOrigin::ensure_origin(origin)?;
 
@@ -501,8 +506,11 @@ pub mod pallet {
 				}
 			})?;
 
-			let block_numer = frame_system::Pallet::<T>::block_number();
-			VotingEligibility::<T>::insert(&constituent, block_numer + Self::get_next_voting_period_end(&block_numer)?);
+			let block_number = frame_system::Pallet::<T>::block_number();
+			VotingEligibility::<T>::insert(
+				&constituent,
+				block_number + Self::get_next_voting_period_end(&block_number)?,
+			);
 
 			Self::deposit_event(Event::NewConstituent(constituent));
 			Ok(())
