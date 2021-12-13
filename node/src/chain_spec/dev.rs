@@ -107,10 +107,7 @@ fn pint_testnet_genesis(
 	id: ParaId,
 ) -> GenesisConfig {
 	GenesisConfig {
-		system: SystemConfig {
-			code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec(),
-			changes_trie_config: Default::default(),
-		},
+		system: SystemConfig { code: WASM_BINARY.expect("WASM binary was not build, please build it!").to_vec() },
 		balances: BalancesConfig { balances: vec![(root_key.clone(), 1 << 60)] },
 		treasury: Default::default(),
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },

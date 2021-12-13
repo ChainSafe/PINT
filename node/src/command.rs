@@ -91,8 +91,11 @@ impl SubstrateCli for Cli {
 		2021
 	}
 
+	// FIXME:
+	//
+	// using fixed parachain_id 200 now
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(200).into())
+		load_spec(id, ParaId::from(200))
 	}
 
 	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -321,6 +324,7 @@ pub fn run() -> Result<()> {
 
 			runner.run_node_until_exit(|config| async move {
 				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
+				let id = ParaId::from(para_id.unwrap_or(200));
 
 				if is_pint_dev {
 					return service::pint_dev(config, cli.instant_sealing).map_err(Into::into);
@@ -332,8 +336,6 @@ pub fn run() -> Result<()> {
 					&config,
 					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
-
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(200));
 
 				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 

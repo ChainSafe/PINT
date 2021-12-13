@@ -39,7 +39,7 @@ pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 pub type BlockNumber = u32;
 
 /// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
+pub type DigestItem = generic::DigestItem;
 
 /// Identifier for price feeds.
 pub type FeedId = u64;
