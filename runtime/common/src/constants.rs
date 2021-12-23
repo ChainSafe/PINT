@@ -23,13 +23,28 @@ use xcm::v1::MultiLocation;
 /// Money matters.
 pub use currency::*;
 pub mod currency {
+	use frame_support::weights::constants::{ExtrinsicBaseWeight, WEIGHT_PER_SECOND};
 	use primitives::Balance;
 
-	pub const DECIMALS: u8 = 10u8;
-	pub const UNITS: Balance = 10_000_000_000;
-	pub const DOLLARS: Balance = UNITS; // 10_000_000_000
-	pub const CENTS: Balance = DOLLARS / 100; // 100_000_000
-	pub const MILLICENTS: Balance = CENTS / 1_000; // 100_000
+	pub const DECIMALS: u8 = 0u8;
+	pub const UNITS: Balance = 1;
+	pub const DOLLARS: Balance = UNITS; // 1
+	pub const CENTS: Balance = DOLLARS / 100; // 1/100
+	pub const MILLICENTS: Balance = CENTS / 1_000; // 1/100_000
+
+	pub fn basic_per_second() -> u128 {
+		let base_weight = Balance::from(ExtrinsicBaseWeight::get());
+		let base_tx_per_second = (WEIGHT_PER_SECOND as u128) / base_weight;
+		base_tx_per_second * CENTS
+	}
+
+	pub fn ksm_per_second() -> u128 {
+		basic_per_second() / 50
+	}
+
+	pub fn dot_per_second() -> u128 {
+		basic_per_second() / 50
+	}
 }
 
 // 1 in 4 blocks (on average, not counting collisions) will be primary babe
@@ -154,8 +169,8 @@ parameter_types! {
 	// Minimum amount of funds that need to be present in the fund account
 	pub const MinimumReserve: Balance = 100;
 	pub const UncleGenerations: u32 = 0;
-	// One UNIT buys 1 second of weight.
-	pub const UnitPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::here()), UNIT);
+	// Basic UNITs buying 1 second of weight.
+	pub BasicPerSecond: (xcm::v1::AssetId, u128) = (xcm::v1::AssetId::Concrete(MultiLocation::here()), basic_per_second());
 	// One XCM operation is 200_000_000 weight, cross-chain transfer ~= 2x of transfer.
 	pub const UnitWeightCost: Weight = 200_000_000;
 	pub const MaxInstructions: u32 = 100;
