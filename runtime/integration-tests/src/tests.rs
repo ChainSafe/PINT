@@ -6,8 +6,7 @@ use crate::{
 	relay::{self, ProxyType as RelayProxyType, Runtime as RelayRuntime},
 	relay_sovereign_account, sibling_sovereign_account, statemint,
 	types::*,
-	Net, Pint, Relay, Statemint, ADMIN_ACCOUNT, ALICE, EMPTY_ACCOUNT, INITIAL_BALANCE, PARA_ID, RELAY_CHAIN_ASSET,
-	STATEMINT_PARA_ID,
+	Net, Pint, Relay, Statemint, ADMIN_ACCOUNT, ALICE, INITIAL_BALANCE, PARA_ID, RELAY_CHAIN_ASSET, STATEMINT_PARA_ID,
 };
 use frame_support::{
 	assert_noop, assert_ok,

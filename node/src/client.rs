@@ -10,7 +10,7 @@ use sp_runtime::{
 	traits::{BlakeTwo256, Block as BlockT},
 	Justifications,
 };
-use sp_storage::{ChildInfo, PrefixedStorageKey, StorageData, StorageKey};
+use sp_storage::{ChildInfo, StorageData, StorageKey};
 use std::sync::Arc;
 
 /// A set of APIs that polkadot-like runtimes must implement.
@@ -362,36 +362,6 @@ impl sc_client_api::StorageProvider<Block, crate::service::FullBackend> for Clie
 			Self::Shot(client) => client.child_storage_hash(id, child_info, key),
 			#[cfg(feature = "pint")]
 			Self::Pint(client) => client.child_storage_hash(id, child_info, key),
-		}
-	}
-
-	fn max_key_changes_range(
-		&self,
-		first: NumberFor<Block>,
-		last: BlockId<Block>,
-	) -> sp_blockchain::Result<Option<(NumberFor<Block>, BlockId<Block>)>> {
-		match self {
-			Self::Dev(client) => client.max_key_changes_range(first, last),
-			#[cfg(feature = "shot")]
-			Self::Shot(client) => client.max_key_changes_range(first, last),
-			#[cfg(feature = "pint")]
-			Self::Pint(client) => client.max_key_changes_range(first, last),
-		}
-	}
-
-	fn key_changes(
-		&self,
-		first: NumberFor<Block>,
-		last: BlockId<Block>,
-		storage_key: Option<&PrefixedStorageKey>,
-		key: &StorageKey,
-	) -> sp_blockchain::Result<Vec<(NumberFor<Block>, u32)>> {
-		match self {
-			Self::Dev(client) => client.key_changes(first, last, storage_key, key),
-			#[cfg(feature = "shot")]
-			Self::Shot(client) => client.key_changes(first, last, storage_key, key),
-			#[cfg(feature = "pint")]
-			Self::Pint(client) => client.key_changes(first, last, storage_key, key),
 		}
 	}
 }

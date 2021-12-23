@@ -56,7 +56,7 @@ use xcm_builder::{
 };
 use xcm_executor::XcmExecutor;
 
-use frame_support::traits::{Everything, Nothing};
+use frame_support::traits::{EqualPrivilegeOnly, Everything, Nothing};
 use frame_system::EnsureRoot;
 use pallet_committee::EnsureMember;
 use primitives::traits::MultiAssetRegistry;
@@ -679,6 +679,7 @@ impl pallet_asset_tx_payment::Config for Runtime {
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
+	type PalletsOrigin = OriginCaller;
 	type WeightInfo = ();
 }
 
@@ -695,6 +696,7 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 	type WeightInfo = ();
 }
 

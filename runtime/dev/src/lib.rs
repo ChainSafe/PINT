@@ -13,7 +13,7 @@ use codec::Decode;
 use cumulus_primitives_core::ParaId;
 pub use frame_support::{
 	construct_runtime, match_type, ord_parameter_types, parameter_types,
-	traits::{IsInVec, Randomness},
+	traits::{EqualPrivilegeOnly, IsInVec, Randomness},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -711,6 +711,7 @@ impl pallet_asset_tx_payment::Config for Runtime {
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
 	type Call = Call;
+	type PalletsOrigin = OriginCaller;
 	type WeightInfo = ();
 }
 
@@ -727,6 +728,7 @@ impl pallet_scheduler::Config for Runtime {
 	type MaximumWeight = MaximumSchedulerWeight;
 	type ScheduleOrigin = EnsureRoot<AccountId>;
 	type MaxScheduledPerBlock = MaxScheduledPerBlock;
+	type OriginPrivilegeCmp = EqualPrivilegeOnly;
 	type WeightInfo = ();
 }
 

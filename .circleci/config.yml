@@ -10,7 +10,8 @@ executors:
       IMAGE_NAME: chainsafe/pint
       CARGO_AUDIT: /home/circleci/.cargo/bin/cargo-audit
       RUSTC_WRAPPER: /home/circleci/.cargo/bin/sccache
-      RUSTC_TOOLCHAIN: nightly-2021-08-01
+      # https://github.com/rust-osdev/uefi-rs/issues/329
+      RUSTC_TOOLCHAIN: nightly-2021-12-07
       SCCACHE_CACHE_SIZE: 5G
 
 commands:
