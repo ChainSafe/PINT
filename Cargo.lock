@@ -8584,6 +8584,7 @@ dependencies = [
  "pallet-assets",
  "pallet-bags-list",
  "pallet-balances",
+ "pallet-chainlink-feed",
  "pallet-committee",
  "pallet-price-feed",
  "pallet-proxy",
