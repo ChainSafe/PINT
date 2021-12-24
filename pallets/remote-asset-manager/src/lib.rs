@@ -433,8 +433,8 @@ pub mod pallet {
 					} else if !balances.pending_redemption.is_zero() {
 						// check if we need and able to unbond funds: only with we currently have enough active funds
 						// and room for 1 more unlocking chunk
-						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
-							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance)
+							&& ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
 						{
 							// attempt to send unbond
 							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
@@ -946,16 +946,16 @@ pub mod pallet {
 		/// - fee: fee (in remote currency) used to buy the `weight` and `debt`.
 		/// - require_weight_at_most: the weight limit used for the xcm transacted call.
 		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, fee: u128) -> Xcm<()> {
-			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
+			// let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
 			Xcm(vec![
-				WithdrawAsset(asset.clone().into()),
-				BuyExecution { fees: asset, weight_limit: Unlimited },
+				// WithdrawAsset(asset.clone().into()),
+				// BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact { origin_type: OriginKind::SovereignAccount, require_weight_at_most, call: call.into() },
-				DepositAsset {
-					assets: All.into(),
-					max_assets: u32::MAX,
-					beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
-				},
+				// DepositAsset {
+				// 	assets: All.into(),
+				// 	max_assets: u32::MAX,
+				// 	beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
+				// },
 			])
 		}
 	}

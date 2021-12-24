@@ -66,6 +66,7 @@ xcm-calls = { path = "../../primitives/xcm-calls" }
 
 # others
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator.git", branch = "master" }
+env_logger = "0.9"
 
 [features]
 runtime-benchmarks = []

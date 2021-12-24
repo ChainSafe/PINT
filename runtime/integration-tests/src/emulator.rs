@@ -39,8 +39,8 @@ pub const ADMIN_ACCOUNT: AccountId = AccountId::new([1u8; 32]);
 pub const RELAY_CHAIN_ASSET: AssetId = 42;
 pub const PROXY_PALLET_INDEX: u8 = 30u8;
 pub const STAKING_PALLET_INDEX: u8 = 6u8;
-pub const INITIAL_BALANCE: Balance = 10_000_000_000;
-pub const PARA_ID: u32 = 200u32;
+pub const INITIAL_BALANCE: Balance = 10_000_000_000_000;
+pub const PARA_ID: u32 = 1u32;
 pub const STATEMINT_PARA_ID: u32 = 201u32;
 
 decl_test_relay_chain! {
@@ -71,7 +71,7 @@ decl_test_network! {
 	pub struct Net {
 		relay_chain = Kusama,
 		parachains = vec![
-			(200, Shot),
+			(1, Shot),
 		],
 	}
 }
@@ -342,7 +342,8 @@ fn can_transact_register_proxy() {
 }
 
 #[test]
-fn can_transact_staking() {
+fn tcan_transact_staking() {
+	env_logger::init();
 	Net::reset();
 	// `- 1` for avoiding dust account issue
 	//

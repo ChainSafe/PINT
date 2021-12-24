@@ -8569,6 +8569,7 @@ dependencies = [
  "cumulus-pallet-xcmp-queue",
  "cumulus-primitives-core",
  "cumulus-primitives-utility",
+ "env_logger 0.9.0",
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
