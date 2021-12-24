@@ -495,7 +495,8 @@ impl pallet_chainlink_feed::Config for Runtime {
 }
 
 impl pallet_asset_index::Config for Runtime {
-	type AdminOrigin = CommitteeOrigin<Runtime>;
+	// type AdminOrigin = CommitteeOrigin<Runtime>;
+	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type MaxActiveDeposits = MaxActiveDeposits;
