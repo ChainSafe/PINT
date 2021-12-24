@@ -4,6 +4,8 @@ pub mod types {
 	pub type AccountId = primitives::AccountId;
 
 	pub type Balance = primitives::Balance;
+
+	pub type BlockNumber = primitives::BlockNumber;
 }
 
 use cumulus_primitives_core::ParaId;
@@ -17,6 +19,10 @@ use frame_support::{
 };
 use kusama_runtime::ProxyType as RelayProxyType;
 use orml_traits::MultiCurrency;
+use pallet_committee::{
+	types::{CommitteeMember, MemberType, MemberVote, VoteAggregate, VoteKind},
+	CommitteeOrigin,
+};
 use pallet_remote_asset_manager::types::StatemintConfig;
 use primitives::{
 	traits::{MultiAssetRegistry, NavProvider},
@@ -231,12 +237,12 @@ fn register_relay() {
 	let deposit = 1_000;
 	assert_ok!(orml_tokens::Pallet::<ShotRuntime>::deposit(RELAY_CHAIN_ASSET, &ADMIN_ACCOUNT, 1_000));
 	assert_ok!(pallet_asset_index::Pallet::<ShotRuntime>::register_asset(
-		shot_runtime::Origin::signed(ADMIN_ACCOUNT),
+		committee_origin(ADMIN_ACCOUNT).into(),
 		RELAY_CHAIN_ASSET,
 		AssetAvailability::Liquid(MultiLocation::parent()),
 	));
 	assert_ok!(pallet_asset_index::Pallet::<ShotRuntime>::add_asset(
-		shot_runtime::Origin::signed(ADMIN_ACCOUNT),
+		committee_origin(ADMIN_ACCOUNT).into(),
 		RELAY_CHAIN_ASSET,
 		deposit,
 		deposit
@@ -296,6 +302,22 @@ fn create_and_submit_feed(caller: AccountId, asset_id: AssetId, price: u128) {
 	));
 }
 
+fn committee_origin(origin: AccountId) -> CommitteeOrigin<AccountId, BlockNumber> {
+	CommitteeOrigin::ApprovedByCommittee(
+		origin,
+		VoteAggregate {
+			votes: vec![
+				MemberVote {
+					member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+					vote: VoteKind::Aye
+				};
+				<ShotRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1
+			],
+			end: <frame_system::Pallet<ShotRuntime>>::block_number() + 1,
+		},
+	)
+}
+
 #[test]
 fn para_account_funded_on_relay() {
 	Net::reset();
@@ -326,7 +348,7 @@ fn can_deposit_from_relay() {
 
 		// alice has 1000 units of relay chain currency in her account on the parachain
 		assert_ok!(pallet_asset_index::Pallet::<ShotRuntime>::deposit(
-			shot_runtime::Origin::signed(ALICE),
+			committee_origin(ALICE).into(),
 			RELAY_CHAIN_ASSET,
 			deposit
 		));

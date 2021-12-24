@@ -22,7 +22,7 @@ mod mock;
 mod tests;
 
 pub mod traits;
-mod types;
+pub mod types;
 mod utils;
 
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates
@@ -527,9 +527,9 @@ pub mod pallet {
 				let ty = maybe_member.take().ok_or(Error::<T>::NotMember)?;
 
 				// Check if have enough council members
-				if ty == MemberType::Constituent ||
-					Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count() >
-						T::MinCouncilVotes::get()
+				if ty == MemberType::Constituent
+					|| Members::<T>::iter_values().filter(|m| *m == MemberType::Council).count()
+						> T::MinCouncilVotes::get()
 				{
 					VotingEligibility::<T>::take(&member);
 					Ok(ty)
