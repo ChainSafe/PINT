@@ -32,9 +32,7 @@
           "name": "alice",
           "flags": [
             "--unsafe-ws-external",
-            "--force-authoring",
-            "--",
-            "--execution=wasm"
+            "--force-authoring"
           ]
         }
       ]

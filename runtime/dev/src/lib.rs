@@ -454,7 +454,8 @@ impl pallet_remote_treasury::Config for Runtime {
 }
 
 impl pallet_saft_registry::Config for Runtime {
-	type AdminOrigin = CommitteeOrigin<Runtime>;
+	// type AdminOrigin = CommitteeOrigin<Runtime>;
+	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type AssetRecorder = AssetIndex;
 	#[cfg(feature = "runtime-benchmarks")]
 	type AssetRecorderBenchmarks = AssetIndex;
@@ -530,7 +531,8 @@ impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::B
 }
 
 impl pallet_asset_index::Config for Runtime {
-	type AdminOrigin = CommitteeOrigin<Runtime>;
+	// type AdminOrigin = CommitteeOrigin<Runtime>;
+	type AdminOrigin = frame_system::EnsureSigned<AccountId>;
 	type IndexToken = Balances;
 	type Balance = Balance;
 	type MaxActiveDeposits = MaxActiveDeposits;
@@ -596,12 +598,14 @@ impl orml_unknown_tokens::Config for Runtime {
 pub struct AssetIdConvert;
 impl Convert<AssetId, Option<MultiLocation>> for AssetIdConvert {
 	fn convert(asset: AssetId) -> Option<MultiLocation> {
+		frame_support::log::trace!("convert asset id to multi location {:?}", asset);
 		AssetIndex::native_asset_location(&asset)
 	}
 }
 
 impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 	fn convert(location: MultiLocation) -> Option<AssetId> {
+		frame_support::log::trace!("convert location to asset id {:?}", location);
 		match location {
 			MultiLocation { parents: 0, interior: Junctions::Here } => return Some(RelayChainAssetId::get()),
 			MultiLocation {
@@ -624,6 +628,7 @@ impl Convert<MultiLocation, Option<AssetId>> for AssetIdConvert {
 
 impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 	fn convert(asset: MultiAsset) -> Option<AssetId> {
+		frame_support::log::trace!("convert multi asset to asset id {:?}", asset);
 		if let xcm::v1::AssetId::Concrete(location) = asset.id {
 			Self::convert(location)
 		} else {
@@ -635,12 +640,14 @@ impl Convert<MultiAsset, Option<AssetId>> for AssetIdConvert {
 pub struct AccountId32Convert;
 impl Convert<AccountId, [u8; 32]> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> [u8; 32] {
+		frame_support::log::trace!("convert account id {:?}", account_id);
 		account_id.into()
 	}
 }
 
 impl Convert<AccountId, MultiLocation> for AccountId32Convert {
 	fn convert(account_id: AccountId) -> MultiLocation {
+		frame_support::log::trace!("convert account id to location {:?}", account_id);
 		Junction::AccountId32 { network: NetworkId::Any, id: Self::convert(account_id) }.into()
 	}
 }
