@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `pallets&#x2F;remote-asset-manager&#x2F;src&#x2F;types.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>types.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../pallet_remote_asset_manager/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1"> 1</span>
+<span id="2"> 2</span>
+<span id="3"> 3</span>
+<span id="4"> 4</span>
+<span id="5"> 5</span>
+<span id="6"> 6</span>
+<span id="7"> 7</span>
+<span id="8"> 8</span>
+<span id="9"> 9</span>
+<span id="10">10</span>
+<span id="11">11</span>
+<span id="12">12</span>
+<span id="13">13</span>
+<span id="14">14</span>
+<span id="15">15</span>
+<span id="16">16</span>
+<span id="17">17</span>
+<span id="18">18</span>
+<span id="19">19</span>
+<span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
+<span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+</pre><pre class="rust"><code><span class="comment">// Copyright 2021 ChainSafe Systems</span>
+<span class="comment">// SPDX-License-Identifier: LGPL-3.0-only</span>
+
+<span class="kw">use</span> <span class="ident">codec</span>::{<span class="ident">Decode</span>, <span class="ident">Encode</span>};
+<span class="kw">use</span> <span class="ident">frame_support</span>::{<span class="ident">sp_runtime::traits::AtLeast32BitUnsigned</span>, <span class="ident">RuntimeDebug</span>};
+<span class="kw">use</span> <span class="ident">xcm::v1</span>::{<span class="ident">AssetId</span>, <span class="ident">Fungibility</span>, <span class="ident">Junction</span>, <span class="ident">Junctions</span>, <span class="ident">MultiAsset</span>, <span class="ident">MultiLocation</span>};
+
+<span class="doccomment">/// Represents all XCM calls of the `pallet_staking` pallet transacted on a parachain</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Encode</span>, <span class="ident">Decode</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">RuntimeDebug</span>, <span class="ident">scale_info::TypeInfo</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">XcmStakingMessageCount</span> {
+	<span class="doccomment">/// Total number of all `pallet_staking::Pallet::bond_extra` calls transacted</span>
+	<span class="kw">pub</span> <span class="ident">bond_extra</span>: <span class="ident">u32</span>,
+	<span class="doccomment">/// Total number of all `pallet_staking::Pallet::unbond` calls transacted</span>
+	<span class="kw">pub</span> <span class="ident">unbond</span>: <span class="ident">u32</span>,
+	<span class="doccomment">/// Total number of all `pallet_staking::Pallet::withdraw_unbonded` calls transacted</span>
+	<span class="kw">pub</span> <span class="ident">withdraw_unbonded</span>: <span class="ident">u32</span>,
+}
+
+<span class="doccomment">/// Represents the different balances of an asset</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Default</span>, <span class="ident">Encode</span>, <span class="ident">Decode</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">RuntimeDebug</span>, <span class="ident">scale_info::TypeInfo</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AssetLedger</span><span class="op">&lt;</span><span class="ident">Balance</span><span class="op">&gt;</span> {
+	<span class="doccomment">/// The real deposits contributed to the index</span>
+	<span class="kw">pub</span> <span class="ident">deposited</span>: <span class="ident">Balance</span>,
+	<span class="doccomment">/// the amount of the asset about to be withdrawn</span>
+	<span class="kw">pub</span> <span class="ident">pending_redemption</span>: <span class="ident">Balance</span>,
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">Balance</span><span class="op">&gt;</span> <span class="ident">AssetLedger</span><span class="op">&lt;</span><span class="ident">Balance</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+	<span class="ident">Balance</span>: <span class="ident">AtLeast32BitUnsigned</span> <span class="op">+</span> <span class="ident">Copy</span>,
+{
+	<span class="doccomment">/// Cancel each balance out, after which at least 1 balance is zero.</span>
+	<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">consolidate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+		<span class="kw">let</span> <span class="ident">deposited</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">deposited</span>;
+		<span class="self">self</span>.<span class="ident">deposited</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">deposited</span>.<span class="ident">saturating_sub</span>(<span class="self">self</span>.<span class="ident">pending_redemption</span>);
+		<span class="self">self</span>.<span class="ident">pending_redemption</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">pending_redemption</span>.<span class="ident">saturating_sub</span>(<span class="ident">deposited</span>);
+	}
+}
+
+<span class="doccomment">/// Represents the config for the statemint parachain</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Encode</span>, <span class="ident">Decode</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">RuntimeDebug</span>, <span class="ident">scale_info::TypeInfo</span>)]</span>
+<span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>, <span class="ident">derive</span>(<span class="ident">serde::Serialize</span>, <span class="ident">serde::Deserialize</span>))]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StatemintConfig</span> {
+	<span class="doccomment">/// The id of the `statemint` parachain</span>
+	<span class="doccomment">///</span>
+	<span class="doccomment">/// *NOTE* using `u32` here instead of location, since `MultiLocation` has</span>
+	<span class="doccomment">/// no serde support</span>
+	<span class="kw">pub</span> <span class="ident">parachain_id</span>: <span class="ident">u32</span>,
+	<span class="doccomment">/// Whether interacting with the parachain is currently active</span>
+	<span class="kw">pub</span> <span class="ident">enabled</span>: <span class="ident">bool</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">StatemintConfig</span> {
+	<span class="doccomment">/// The path to the `statemint` parachain</span>
+	<span class="doccomment">///</span>
+	<span class="doccomment">/// *NOTE:* this is not the full path to the asset on the statemint chain</span>
+	<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parahain_location</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="ident">MultiLocation</span> {
+		<span class="ident">MultiLocation::new</span>(<span class="number">1</span>, <span class="ident">Junctions::X1</span>(<span class="ident">Junction::Parachain</span>(<span class="self">self</span>.<span class="ident">parachain_id</span>)))
+	}
+}
+<span class="kw">impl</span> <span class="ident">StatemintConfig</span> {
+	<span class="doccomment">/// The XCM `MultiAsset` the statemint parachain expects in order to convert it correctly to the</span>
+	<span class="doccomment">/// pint asset</span>
+	<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">multi_asset</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">amount</span>: <span class="ident">u128</span>) -&gt; <span class="ident">MultiAsset</span> {
+		<span class="comment">// TODO simplify when on polkadot-v0.9.9 (xcm-latest) with the correct asset id converter:</span>
+		<span class="comment">// AsPrefixedGeneralIndex&lt;Local, AssetId, JustTry&gt;::reverse_ref(&amp;self.pint_asset_id.into())</span>
+		<span class="comment">// where Local is MultiLocation = Junctions::Here.into()</span>
+		<span class="ident">MultiAsset</span> { <span class="ident">id</span>: <span class="ident">AssetId::Concrete</span>(<span class="ident">MultiLocation::here</span>()), <span class="ident">fun</span>: <span class="ident">Fungibility::Fungible</span>(<span class="ident">amount</span>) }
+	}
+}
+</code></pre></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="pallet_remote_asset_manager" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>

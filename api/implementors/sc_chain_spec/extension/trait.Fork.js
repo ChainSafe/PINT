@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["pint"] = [{"text":"impl <a class=\"trait\" href=\"sc_chain_spec/extension/trait.Fork.html\" title=\"trait sc_chain_spec::extension::Fork\">Fork</a> for <a class=\"struct\" href=\"pint/chain_spec/struct.ExtensionsFork.html\" title=\"struct pint::chain_spec::ExtensionsFork\">ExtensionsFork</a>","synthetic":false,"types":["pint::chain_spec::ExtensionsFork"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

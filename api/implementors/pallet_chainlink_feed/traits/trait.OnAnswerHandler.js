@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["pallet_chainlink_feed"] = [];
+implementors["pallet_price_feed"] = [{"text":"impl&lt;T:&nbsp;<a class=\"trait\" href=\"pallet_price_feed/pallet/trait.Config.html\" title=\"trait pallet_price_feed::pallet::Config\">Config</a>&gt; <a class=\"trait\" href=\"pallet_chainlink_feed/traits/trait.OnAnswerHandler.html\" title=\"trait pallet_chainlink_feed::traits::OnAnswerHandler\">OnAnswerHandler</a>&lt;T&gt; for <a class=\"struct\" href=\"pallet_price_feed/pallet/struct.Pallet.html\" title=\"struct pallet_price_feed::pallet::Pallet\">Pallet</a>&lt;T&gt;","synthetic":false,"types":["pallet_price_feed::pallet::Pallet"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

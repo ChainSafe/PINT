@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error",""]],"mod":[["gen_client","The generated client module."]],"struct":[["AssetIndexApiClient","The Client."],["AssetIndexBackend","A struct that implements the [`AssetIndexApi`]."],["AssetIndexClient","The Client."]],"trait":[["AssetIndexApi","Asset index state API"],["AssetIndexRuntimeApi",""]]});

@@ -1,0 +1,936 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="The Official Documentation for PINT | A Polkadot ecosystem index for investors">
+      
+      
+      
+      <link rel="icon" href="../../../assets/favicon.ico">
+      <meta name="generator" content="mkdocs-1.2.3, mkdocs-material-8.1.3">
+    
+    
+      
+        <title>Architecture - PINT Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.edf004c2.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.e6a45f82.min.css">
+        
+          
+          
+          <meta name="theme-color" content="#795649">
+        
+      
+    
+    
+    
+      
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="" data-md-color-primary="brown" data-md-color-accent="yellow">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#architecture" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="PINT Docs" class="md-header__button md-logo" aria-label="PINT Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PINT Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Architecture
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ChainSafe/pint/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chainsafe/pint
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-tabs__inner md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+    
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link md-tabs__link--active">
+        Getting Started
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../usage/command-line/" class="md-tabs__link">
+        Usage
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+
+
+  <li class="md-tabs__item">
+    <a href="../../../api/pint_runtime_dev/index.html" class="md-tabs__link">
+      API Docs
+    </a>
+  </li>
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="PINT Docs" class="md-nav__button md-logo" aria-label="PINT Docs" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54z"/></svg>
+
+    </a>
+    PINT Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ChainSafe/pint/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    chainsafe/pint
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_1" type="checkbox" id="__nav_1" checked>
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_1">
+          Getting Started
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Getting Started" data-md-level="1">
+        <label class="md-nav__title" for="__nav_1">
+          <span class="md-nav__icon md-icon"></span>
+          Getting Started
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        Overview
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" data-md-toggle="toc" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Architecture
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        Architecture
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    Terminology
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pallets" class="md-nav__link">
+    Pallets
+  </a>
+  
+    <nav class="md-nav" aria-label="Pallets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#committee-pallet" class="md-nav__link">
+    Committee Pallet
+  </a>
+  
+    <nav class="md-nav" aria-label="Committee Pallet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#voting" class="md-nav__link">
+    Voting
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-treasury-pallet" class="md-nav__link">
+    Local Treasury Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-treasury-pallet" class="md-nav__link">
+    Remote Treasury Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price-feed-pallet" class="md-nav__link">
+    Price feed Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#saft-registry-pallet" class="md-nav__link">
+    SAFT Registry Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asset-index-pallet" class="md-nav__link">
+    Asset Index Pallet
+  </a>
+  
+    <nav class="md-nav" aria-label="Asset Index Pallet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#depositing" class="md-nav__link">
+    Depositing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#withdrawing" class="md-nav__link">
+    Withdrawing
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-asset-manager-pallet" class="md-nav__link">
+    Remote Asset Manager Pallet
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        Installation
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/general-resources/" class="md-nav__link">
+        General Resources
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../resources/developer-resources/" class="md-nav__link">
+        Developer Resources
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_2" type="checkbox" id="__nav_2" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_2">
+          Usage
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Usage" data-md-level="1">
+        <label class="md-nav__title" for="__nav_2">
+          <span class="md-nav__icon md-icon"></span>
+          Usage
+        </label>
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../usage/command-line/" class="md-nav__link">
+        Command Line
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../usage/configuration/" class="md-nav__link">
+        Configuration
+      </a>
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/pint_runtime_dev/index.html" class="md-nav__link">
+        API Docs
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#terminology" class="md-nav__link">
+    Terminology
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pallets" class="md-nav__link">
+    Pallets
+  </a>
+  
+    <nav class="md-nav" aria-label="Pallets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#committee-pallet" class="md-nav__link">
+    Committee Pallet
+  </a>
+  
+    <nav class="md-nav" aria-label="Committee Pallet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#voting" class="md-nav__link">
+    Voting
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#local-treasury-pallet" class="md-nav__link">
+    Local Treasury Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-treasury-pallet" class="md-nav__link">
+    Remote Treasury Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#price-feed-pallet" class="md-nav__link">
+    Price feed Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#saft-registry-pallet" class="md-nav__link">
+    SAFT Registry Pallet
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#asset-index-pallet" class="md-nav__link">
+    Asset Index Pallet
+  </a>
+  
+    <nav class="md-nav" aria-label="Asset Index Pallet">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#depositing" class="md-nav__link">
+    Depositing
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#withdrawing" class="md-nav__link">
+    Withdrawing
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remote-asset-manager-pallet" class="md-nav__link">
+    Remote Asset Manager Pallet
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+<a href="https://github.com/ChainSafe/pint/edit/development/docs/getting-started/overview/architecture.md" title="Edit this page" class="md-content__button md-icon">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"/></svg>
+</a>
+
+
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<p>This document describes the high-level architecture of the PINT codebase.</p>
+<p>You might also find the higher-level conceptual documentation of PINT
+helpful: <a href="https://docs.polkadotindex.com/">docs.polkadotindex.com</a></p>
+<p>See also these implementation-related community blog posts:</p>
+<ul>
+<li>https://polkadotindex.substack.com/p/pint-update-1</li>
+<li>https://polkadotindex.substack.com/p/pint-community-update-2</li>
+</ul>
+<h2 id="terminology">Terminology<a class="headerlink" href="#terminology" title="Permanent link">&para;</a></h2>
+<p><strong>SAFT</strong> (<em>Simple Agreement for Future Token</em>) represent asset contributions (from project) that may become liquid
+tokens in the future. Their value will be updated regularly</p>
+<p><strong>NAV</strong> (<em>Net Asset Value</em>) represents:</p>
+<ul>
+<li>the net value of an asset in the index and is calculated by multiplying the per-unit price with the total amount of
+  tokens held in the index.</li>
+<li>In the context of the index token itself (PINT) this however represents the unit value of the token and is calculated
+  by taking the value of each of the underlying tokens over the total supply of PINT:</li>
+</ul>
+<div style="text-align:center"><img src="../../../assets/img/nav-formula.png"  alt="NAV formula"/></div>
+
+<h2 id="pallets">Pallets<a class="headerlink" href="#pallets" title="Permanent link">&para;</a></h2>
+<p>All custom PINT pallets are located in the <a href="../pallets">pallets</a> folder in the root of the repository which includes.</p>
+<h3 id="committee-pallet">Committee Pallet<a class="headerlink" href="#committee-pallet" title="Permanent link">&para;</a></h3>
+<p>This includes the core governance mechanics. PINT Governance will be administered in two layers: the PINT Council, and
+the Constituent Committee. However, we treat both holistically as a <code>Committee</code> within the code base. The pallet
+includes a set of privileged accounts that are either of type <code>MemberType::Council</code> or <code>MemberType::Constituent</code>.</p>
+<h4 id="voting">Voting<a class="headerlink" href="#voting" title="Permanent link">&para;</a></h4>
+<p>All proposals are described as dispatchable calls, which means that any method on any other pallet can be executed as
+the result of a proposal. For example, a proposal to transfer 100 PINT to a community member from the treasury would
+take the form of a call to the Treasury pallet: <code>Treasury::withdraw(recipient, 100)</code>. Proposals need to reach a majority
+within a certain voting period for them to be executable.</p>
+<h3 id="local-treasury-pallet">Local Treasury Pallet<a class="headerlink" href="#local-treasury-pallet" title="Permanent link">&para;</a></h3>
+<p>Manages PINT exclusively. The treasury is a single account which is derived from the configured <code>PalletId</code>. It maintains
+ownership of various assets and is controlled by the Governance Committee. Deposits to the Treasury can be done by
+simply transferring funds to its AccountId. The committee can execute proposals to withdraw funds from the Treasury.</p>
+<h3 id="remote-treasury-pallet">Remote Treasury Pallet<a class="headerlink" href="#remote-treasury-pallet" title="Permanent link">&para;</a></h3>
+<p>Similar to the local treasury, but this pallet will be responsible for DOT (or other liquid assets in the Network). It
+will execute withdrawals via XCM.</p>
+<h3 id="price-feed-pallet">Price feed Pallet<a class="headerlink" href="#price-feed-pallet" title="Permanent link">&para;</a></h3>
+<p>In order to exchange assets for PINT, the value of those assets as well as PINT’s NAV needs to be computed. This pallet
+is an abstraction over the <a href="https://github.com/smartcontractkit/chainlink-polkadot"><code>chainlink-feed-pallet</code></a> which
+provides oracle data from the chainlink network. It provides a lookup table for mapping PINT internal asset identifiers
+with the chainlink pallet internal price feed identifiers (<code>AssetId -&gt; FeedId</code>). Since the NAV calculation requires that
+all asset values are measured in the same currency. All price feeds are expected to be configured with the same quote
+currency (e.g. USD). This currency will then also be the currency the NAV is measured in, since the NAV of the index is
+then <code>PINT/USD</code>, effectively the on-chain price of PINT.</p>
+<p><em>Note:</em> All the core functionality of the <code>asset-index</code>, like depositing and redeeming, relies on price feeds and a
+mapping from <code>AssetId -&gt; ChainlinkFeed</code> in the <code>price-feed</code> pallet.</p>
+<p>The chainlink pallet is managed by the <code>PalletAdmin</code> account which can assign accounts the role of <code>FeedCreator</code>. In
+the <code>pint-dev</code> chainspec <code>Alice</code> is the <code>PalletAdmin</code> and the council accounts (<code>Alice</code>, <code>Bob</code>, <code>Charlie</code>, <code>Dave</code>)
+are <code>FeedCreators</code> and are allowed to create feeds.</p>
+<h3 id="saft-registry-pallet">SAFT Registry Pallet<a class="headerlink" href="#saft-registry-pallet" title="Permanent link">&para;</a></h3>
+<p>This pallet consists of records of off-chain SAFTs. An SAFT asset can have multiple SAFT Records. Each <code>SAFTRecord</code>
+holds the number of units of its asset and their value. This value is expected to in the same currency the liquid assets
+use for their price feeds, so that the NAV can easily be calculated according to the NAV formula. The SAFT registry
+pallet requires the <code>AssetRecorder</code> trait which is an abstraction over the features for adding/removing assets, which is
+implemented for the <code>AssetIndex</code>. Adding a SAFT record will call into the <code>AssetRecorder::add_saft</code> function, in mints
+new PINT according to the value of the SAFT record. SAFTs can be converted to liquid tokens once they're available in
+the network with a location.</p>
+<h3 id="asset-index-pallet">Asset Index Pallet<a class="headerlink" href="#asset-index-pallet" title="Permanent link">&para;</a></h3>
+<p>This pallet provides all user facing extrinsics for depositing assets (<code>AssetIndex::deposit</code>) and redeeming
+PINT (<code>AssetIndex::withdraw</code>). It provides all NAV related calculations which is abstracted over the <code>NavProvider</code>
+trait. Assets are distinguished by their kind, either they are liquid, or SAFT. The value of liquid assets will be
+calculated using the price feeds whereas the value of a SAFT asset is determined by the total value of all SAFT records.
+Since the SAFT records are stored in the <code>SaftRegistry</code> the <code>AssetIndex</code> requires the <code>SaftRegistry</code> trait abstraction
+for that.</p>
+<h4 id="depositing">Depositing<a class="headerlink" href="#depositing" title="Permanent link">&para;</a></h4>
+<p>Any user may deposit liquid assets. A new liquid asset class is created either by registering it with its native
+location in the network  (<code>AssetIndex::register</code>) or by being added via  (<code>AssetIndex::add_asset</code>). In order to be able
+to deposit, a user must first send liquid assets (e.g.) from its native location (e.g. relay chain) to PINT, upon which
+it gets stored in the user
+personal <a href="https://github.com/open-web3-stack/open-runtime-module-library/tree/master/currencies"><code>MultiCurrency</code></a>
+balance. This process will be handled by the <code>LocalAssetTransactor</code> configured in the runtime which transacts
+incoming <code>Xcm::Deposit</code> messages into deposit into the sender's <code>MultiCurrency</code> balance for that very asset.
+Since <code>deposit</code> is fallible this is a 2-step process:</p>
+<ol>
+<li>send x amount of liquid asset A from chain A to PINT.</li>
+<li>call  <code>AssetIndex::deposit(A, x)</code></li>
+</ol>
+<p>The deposit call determines how much PINT the amount is worth and transfers the asset amount to the index account and
+mints PINT in exchange into the caller's PINT balance. The total value of the index increases by the value of the
+deposited amount, but the NAV will stay consistent since the newly minted PINT will counteract that.</p>
+<h4 id="withdrawing">Withdrawing<a class="headerlink" href="#withdrawing" title="Permanent link">&para;</a></h4>
+<p>All new deposits (received PINT) are locked for a certain period and timestamped to calculate withdrawal fees based on
+time spent in the index. After the <code>LockupPeriod</code> is over PINT can be redeemed by the user for a distribution of the
+underlying <em>liquid</em> assets. The liquid assets in the index are awarded to the redeemer, totalling the value of the
+redeemed PINT, but in proportion to their representation in the index. This will lock the pending withdrawals for a
+certain <code>WithdrawalPeriod</code> kick off the unbonding process in which the <code>RemoteAssetManager</code> will ensure that the pending
+withdrawals are available on their native location. If for example a pending withdrawal exceeds the amount held as a
+reserve (e.g. <em>not</em> staked) then they need to be unbonded first. After the <code>WithdrawalPeriod</code> a user may try to complete
+their withdrawals (<code>AssetIndex::complete_withdrawal</code>), which will try to complete every single <code>AssetWithdrawal</code> but it
+will only get closed entirely after the last <code>AssetWithdrawal</code> was completed.</p>
+<h3 id="remote-asset-manager-pallet">Remote Asset Manager Pallet<a class="headerlink" href="#remote-asset-manager-pallet" title="Permanent link">&para;</a></h3>
+<p>This pallet provides all the cross chain capabilities PINT relies on. Most importantly bonding and unbonding liquid
+assets. Remote Staking is still experimental and rather complex endeavor. The remote asset manager comes with bindings
+for the substrate FRAME <code>pallet_staking</code>. Assets that were sent to PINT using XCM reserved based transfer are kept in an
+account derived from PINT's parachain ID (sovereign account) to which only the PINT parachain has access to during XCM
+execution. In other words, all liquid assets that were deposited to the index (e.g. DOT) are sitting in an account on
+the asset's native location (e.g. relay chain) to which the PINT parachain has access via XCM. Withdrawing an amount of
+liquid assets from PINT, will then transfer the amount from this account back to recipient included in the destination
+of the XCM message. XCM also supports dispatching calls on other chains whose origin then will be the sovereign account
+of the parachain. This means funds held in PINT's sovereign account can be staked by calling the necessary functions of
+the staking pallet, staked assets are called <code>active</code>, the default is <code>idle</code>. In order to execute a <code>Xcm::Transact</code> the
+payload (dispatchable) must be encoded as it would be represented by the <code>Call</code> enum of the runtime of the xcm's
+destination. The encoding of a dispatchable call in the <code>Runtime::Call</code> enum is further dependent on the index of the
+pallet as it is configured in the <code>construct_runtime!</code> macro. To make things worse, the encoding of course depends on
+the runtime specific types. So in order to generalize remote staking it is required that:</p>
+<ul>
+<li>the index of <code>pallet_staking</code> in the runtime is known</li>
+<li>the remote asset manager can encode the runtime specific types. For the <code>pallet_staking</code> these are: <code>AccountId</code>
+  , <code>Balance</code>, <code>LookupSource</code>.</li>
+</ul>
+<p>The remote handles this by requiring the <code>StakingCallEncoder</code> type, which takes care of asset specific encoding
+of <code>pallet_staking</code> dispatchables.</p>
+<p>It also has experimental support for transferring PINT
+to <a href="https://medium.com/polkadot-network/statemint-generic-assets-chain-proposing-a-common-good-parachain-to-polkadot-governance-d318071b238">Statemint parachain</a></p>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    <nav class="md-footer__inner md-grid" aria-label="Footer">
+      
+        
+        <a href="../../.." class="md-footer__link md-footer__link--prev" aria-label="Previous: Overview" rel="prev">
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"/></svg>
+          </div>
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              Overview
+            </div>
+          </div>
+        </a>
+      
+      
+        
+        <a href="../../installation/" class="md-footer__link md-footer__link--next" aria-label="Next: Installation" rel="next">
+          <div class="md-footer__title">
+            <div class="md-ellipsis">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              Installation
+            </div>
+          </div>
+          <div class="md-footer__button md-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/></svg>
+          </div>
+        </a>
+      
+    </nav>
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+      
+      
+    
+    <a href="https://github.com/ChainSafe/pint" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 512"><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"/></svg>
+    </a>
+  
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/ChainSafeth" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky"], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.e1a181d9.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,610 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `&#x2F;home&#x2F;runner&#x2F;.cargo&#x2F;git&#x2F;checkouts&#x2F;polkadot-9da13ac14bbabc7b&#x2F;7d8f00b&#x2F;bridges&#x2F;primitives&#x2F;chain-rialto&#x2F;src&#x2F;lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs - source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../light.css"  id="themeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css" disabled ><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled ><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a href='../../bp_rialto/index.html'><div class='logo-container rust-logo'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><nav class="sub"><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" disabled autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav><section id="main" class="content"><div class="example-wrap"><pre class="line-numbers"><span id="1">  1</span>
+<span id="2">  2</span>
+<span id="3">  3</span>
+<span id="4">  4</span>
+<span id="5">  5</span>
+<span id="6">  6</span>
+<span id="7">  7</span>
+<span id="8">  8</span>
+<span id="9">  9</span>
+<span id="10"> 10</span>
+<span id="11"> 11</span>
+<span id="12"> 12</span>
+<span id="13"> 13</span>
+<span id="14"> 14</span>
+<span id="15"> 15</span>
+<span id="16"> 16</span>
+<span id="17"> 17</span>
+<span id="18"> 18</span>
+<span id="19"> 19</span>
+<span id="20"> 20</span>
+<span id="21"> 21</span>
+<span id="22"> 22</span>
+<span id="23"> 23</span>
+<span id="24"> 24</span>
+<span id="25"> 25</span>
+<span id="26"> 26</span>
+<span id="27"> 27</span>
+<span id="28"> 28</span>
+<span id="29"> 29</span>
+<span id="30"> 30</span>
+<span id="31"> 31</span>
+<span id="32"> 32</span>
+<span id="33"> 33</span>
+<span id="34"> 34</span>
+<span id="35"> 35</span>
+<span id="36"> 36</span>
+<span id="37"> 37</span>
+<span id="38"> 38</span>
+<span id="39"> 39</span>
+<span id="40"> 40</span>
+<span id="41"> 41</span>
+<span id="42"> 42</span>
+<span id="43"> 43</span>
+<span id="44"> 44</span>
+<span id="45"> 45</span>
+<span id="46"> 46</span>
+<span id="47"> 47</span>
+<span id="48"> 48</span>
+<span id="49"> 49</span>
+<span id="50"> 50</span>
+<span id="51"> 51</span>
+<span id="52"> 52</span>
+<span id="53"> 53</span>
+<span id="54"> 54</span>
+<span id="55"> 55</span>
+<span id="56"> 56</span>
+<span id="57"> 57</span>
+<span id="58"> 58</span>
+<span id="59"> 59</span>
+<span id="60"> 60</span>
+<span id="61"> 61</span>
+<span id="62"> 62</span>
+<span id="63"> 63</span>
+<span id="64"> 64</span>
+<span id="65"> 65</span>
+<span id="66"> 66</span>
+<span id="67"> 67</span>
+<span id="68"> 68</span>
+<span id="69"> 69</span>
+<span id="70"> 70</span>
+<span id="71"> 71</span>
+<span id="72"> 72</span>
+<span id="73"> 73</span>
+<span id="74"> 74</span>
+<span id="75"> 75</span>
+<span id="76"> 76</span>
+<span id="77"> 77</span>
+<span id="78"> 78</span>
+<span id="79"> 79</span>
+<span id="80"> 80</span>
+<span id="81"> 81</span>
+<span id="82"> 82</span>
+<span id="83"> 83</span>
+<span id="84"> 84</span>
+<span id="85"> 85</span>
+<span id="86"> 86</span>
+<span id="87"> 87</span>
+<span id="88"> 88</span>
+<span id="89"> 89</span>
+<span id="90"> 90</span>
+<span id="91"> 91</span>
+<span id="92"> 92</span>
+<span id="93"> 93</span>
+<span id="94"> 94</span>
+<span id="95"> 95</span>
+<span id="96"> 96</span>
+<span id="97"> 97</span>
+<span id="98"> 98</span>
+<span id="99"> 99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+</pre><pre class="rust"><code><span class="comment">// Copyright 2019-2021 Parity Technologies (UK) Ltd.</span>
+<span class="comment">// This file is part of Parity Bridges Common.</span>
+
+<span class="comment">// Parity Bridges Common is free software: you can redistribute it and/or modify</span>
+<span class="comment">// it under the terms of the GNU General Public License as published by</span>
+<span class="comment">// the Free Software Foundation, either version 3 of the License, or</span>
+<span class="comment">// (at your option) any later version.</span>
+
+<span class="comment">// Parity Bridges Common is distributed in the hope that it will be useful,</span>
+<span class="comment">// but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="comment">// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span>
+<span class="comment">// GNU General Public License for more details.</span>
+
+<span class="comment">// You should have received a copy of the GNU General Public License</span>
+<span class="comment">// along with Parity Bridges Common.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span>
+
+<span class="attribute">#![<span class="ident">cfg_attr</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>), <span class="ident">no_std</span>)]</span>
+<span class="comment">// RuntimeApi generated functions</span>
+<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::too_many_arguments</span>)]</span>
+<span class="comment">// Runtime-generated DecodeLimit::decode_all_With_depth_limit</span>
+<span class="attribute">#![<span class="ident">allow</span>(<span class="ident">clippy::unnecessary_mut_passed</span>)]</span>
+
+<span class="kw">use</span> <span class="ident">bp_messages</span>::{<span class="ident">LaneId</span>, <span class="ident">MessageDetails</span>, <span class="ident">MessageNonce</span>, <span class="ident">UnrewardedRelayersState</span>};
+<span class="kw">use</span> <span class="ident">bp_runtime::Chain</span>;
+<span class="kw">use</span> <span class="ident">frame_support</span>::{
+	<span class="ident">weights</span>::{<span class="ident">constants::WEIGHT_PER_SECOND</span>, <span class="ident">DispatchClass</span>, <span class="ident">Weight</span>},
+	<span class="ident">Parameter</span>, <span class="ident">RuntimeDebug</span>,
+};
+<span class="kw">use</span> <span class="ident">frame_system::limits</span>;
+<span class="kw">use</span> <span class="ident">sp_core::Hasher</span> <span class="kw">as</span> <span class="ident">HasherT</span>;
+<span class="kw">use</span> <span class="ident">sp_runtime</span>::{
+	<span class="ident">traits</span>::{<span class="ident">BlakeTwo256</span>, <span class="ident">Convert</span>, <span class="ident">IdentifyAccount</span>, <span class="ident">Verify</span>},
+	<span class="ident">MultiSignature</span>, <span class="ident">MultiSigner</span>, <span class="ident">Perbill</span>,
+};
+<span class="kw">use</span> <span class="ident">sp_std::prelude</span>::<span class="kw-2">*</span>;
+
+<span class="doccomment">/// Number of extra bytes (excluding size of storage value itself) of storage proof, built at</span>
+<span class="doccomment">/// Rialto chain. This mostly depends on number of entries (and their density) in the storage trie.</span>
+<span class="doccomment">/// Some reserve is reserved to account future chain growth.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">EXTRA_STORAGE_PROOF_SIZE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">1024</span>;
+
+<span class="doccomment">/// Number of bytes, included in the signed Rialto transaction apart from the encoded call itself.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Can be computed by subtracting encoded call size from raw transaction size.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TX_EXTRA_BYTES</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">103</span>;
+
+<span class="doccomment">/// Maximal size (in bytes) of encoded (using `Encode::encode()`) account id.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAXIMAL_ENCODED_ACCOUNT_ID_SIZE</span>: <span class="ident">u32</span> <span class="op">=</span> <span class="number">32</span>;
+
+<span class="doccomment">/// Maximal weight of single Rialto block.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This represents two seconds of compute assuming a target block time of six seconds.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAXIMUM_BLOCK_WEIGHT</span>: <span class="ident">Weight</span> <span class="op">=</span> <span class="number">2</span> <span class="op">*</span> <span class="ident">WEIGHT_PER_SECOND</span>;
+
+<span class="doccomment">/// Represents the average portion of a block&#39;s weight that will be used by an</span>
+<span class="doccomment">/// `on_initialize()` runtime call.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">AVERAGE_ON_INITIALIZE_RATIO</span>: <span class="ident">Perbill</span> <span class="op">=</span> <span class="ident">Perbill::from_percent</span>(<span class="number">10</span>);
+
+<span class="doccomment">/// Represents the portion of a block that will be used by Normal extrinsics.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NORMAL_DISPATCH_RATIO</span>: <span class="ident">Perbill</span> <span class="op">=</span> <span class="ident">Perbill::from_percent</span>(<span class="number">75</span>);
+
+<span class="doccomment">/// Maximal number of unrewarded relayer entries at inbound lane.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_UNREWARDED_RELAYER_ENTRIES_AT_INBOUND_LANE</span>: <span class="ident">MessageNonce</span> <span class="op">=</span> <span class="number">128</span>;
+
+<span class="doccomment">/// Maximal number of unconfirmed messages at inbound lane.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_UNCONFIRMED_MESSAGES_AT_INBOUND_LANE</span>: <span class="ident">MessageNonce</span> <span class="op">=</span> <span class="number">128</span>;
+
+<span class="doccomment">/// Weight of single regular message delivery transaction on Rialto chain.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This value is a result of `pallet_bridge_messages::Pallet::receive_messages_proof_weight()` call</span>
+<span class="doccomment">/// for the case when single message of `pallet_bridge_messages::EXPECTED_DEFAULT_MESSAGE_LENGTH` bytes is delivered.</span>
+<span class="doccomment">/// The message must have dispatch weight set to zero. The result then must be rounded up to account</span>
+<span class="doccomment">/// possible future runtime upgrades.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DEFAULT_MESSAGE_DELIVERY_TX_WEIGHT</span>: <span class="ident">Weight</span> <span class="op">=</span> <span class="number">1_500_000_000</span>;
+
+<span class="doccomment">/// Increase of delivery transaction weight on Rialto chain with every additional message byte.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This value is a result of `pallet_bridge_messages::WeightInfoExt::storage_proof_size_overhead(1)` call. The</span>
+<span class="doccomment">/// result then must be rounded up to account possible future runtime upgrades.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ADDITIONAL_MESSAGE_BYTE_DELIVERY_WEIGHT</span>: <span class="ident">Weight</span> <span class="op">=</span> <span class="number">25_000</span>;
+
+<span class="doccomment">/// Maximal weight of single message delivery confirmation transaction on Rialto chain.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This value is a result of `pallet_bridge_messages::Pallet::receive_messages_delivery_proof` weight formula computation</span>
+<span class="doccomment">/// for the case when single message is confirmed. The result then must be rounded up to account possible future</span>
+<span class="doccomment">/// runtime upgrades.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_SINGLE_MESSAGE_DELIVERY_CONFIRMATION_TX_WEIGHT</span>: <span class="ident">Weight</span> <span class="op">=</span> <span class="number">2_000_000_000</span>;
+
+<span class="doccomment">/// Weight of pay-dispatch-fee operation for inbound messages at Rialto chain.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// This value corresponds to the result of `pallet_bridge_messages::WeightInfoExt::pay_inbound_dispatch_fee_overhead()`</span>
+<span class="doccomment">/// call for your chain. Don&#39;t put too much reserve there, because it is used to **decrease**</span>
+<span class="doccomment">/// `DEFAULT_MESSAGE_DELIVERY_TX_WEIGHT` cost. So putting large reserve would make delivery transactions cheaper.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PAY_INBOUND_DISPATCH_FEE_WEIGHT</span>: <span class="ident">Weight</span> <span class="op">=</span> <span class="number">600_000_000</span>;
+
+<span class="doccomment">/// The target length of a session (how often authorities change) on Rialto measured in of number of</span>
+<span class="doccomment">/// blocks.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// Note that since this is a target sessions may change before/after this time depending on network</span>
+<span class="doccomment">/// conditions.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SESSION_LENGTH</span>: <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="number">4</span>;
+
+<span class="doccomment">/// Re-export `time_units` to make usage easier.</span>
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">time_units</span>::<span class="kw-2">*</span>;
+
+<span class="doccomment">/// Human readable time units defined in terms of number of blocks.</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">time_units</span> {
+	<span class="kw">use</span> <span class="ident"><span class="kw">super</span>::BlockNumber</span>;
+
+	<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MILLISECS_PER_BLOCK</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">6000</span>;
+	<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">SLOT_DURATION</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">MILLISECS_PER_BLOCK</span>;
+
+	<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MINUTES</span>: <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="number">60_000</span> <span class="op">/</span> (<span class="ident">MILLISECS_PER_BLOCK</span> <span class="kw">as</span> <span class="ident">BlockNumber</span>);
+	<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">HOURS</span>: <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="ident">MINUTES</span> <span class="op">*</span> <span class="number">60</span>;
+	<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">DAYS</span>: <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="ident">HOURS</span> <span class="op">*</span> <span class="number">24</span>;
+}
+
+<span class="doccomment">/// Block number type used in Rialto.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="ident">u32</span>;
+
+<span class="doccomment">/// Hash type used in Rialto.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Hash</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">BlakeTwo256</span> <span class="kw">as</span> <span class="ident">HasherT</span><span class="op">&gt;</span><span class="ident">::Out</span>;
+
+<span class="doccomment">/// The type of an object that can produce hashes on Rialto.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Hasher</span> <span class="op">=</span> <span class="ident">BlakeTwo256</span>;
+
+<span class="doccomment">/// The header type used by Rialto.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Header</span> <span class="op">=</span> <span class="ident">sp_runtime::generic::Header</span><span class="op">&lt;</span><span class="ident">BlockNumber</span>, <span class="ident">Hasher</span><span class="op">&gt;</span>;
+
+<span class="doccomment">/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Signature</span> <span class="op">=</span> <span class="ident">MultiSignature</span>;
+
+<span class="doccomment">/// Some way of identifying an account on the chain. We intentionally make it equivalent</span>
+<span class="doccomment">/// to the public key of our transaction signing scheme.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AccountId</span> <span class="op">=</span> <span class="op">&lt;</span><span class="op">&lt;</span><span class="ident">Signature</span> <span class="kw">as</span> <span class="ident">Verify</span><span class="op">&gt;</span><span class="ident">::Signer</span> <span class="kw">as</span> <span class="ident">IdentifyAccount</span><span class="op">&gt;</span><span class="ident">::AccountId</span>;
+
+<span class="doccomment">/// Public key of the chain account that may be used to verify signatures.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">AccountSigner</span> <span class="op">=</span> <span class="ident">MultiSigner</span>;
+
+<span class="doccomment">/// Balance of an account.</span>
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Balance</span> <span class="op">=</span> <span class="ident">u128</span>;
+
+<span class="doccomment">/// Rialto chain.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">RuntimeDebug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Rialto</span>;
+
+<span class="kw">impl</span> <span class="ident">Chain</span> <span class="kw">for</span> <span class="ident">Rialto</span> {
+	<span class="kw">type</span> <span class="ident">BlockNumber</span> <span class="op">=</span> <span class="ident">BlockNumber</span>;
+	<span class="kw">type</span> <span class="ident">Hash</span> <span class="op">=</span> <span class="ident">Hash</span>;
+	<span class="kw">type</span> <span class="ident">Hasher</span> <span class="op">=</span> <span class="ident">Hasher</span>;
+	<span class="kw">type</span> <span class="ident">Header</span> <span class="op">=</span> <span class="ident">Header</span>;
+}
+
+<span class="doccomment">/// Convert a 256-bit hash into an AccountId.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountIdConverter</span>;
+
+<span class="kw">impl</span> <span class="ident">Convert</span><span class="op">&lt;</span><span class="ident">sp_core::H256</span>, <span class="ident">AccountId</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccountIdConverter</span> {
+	<span class="kw">fn</span> <span class="ident">convert</span>(<span class="ident">hash</span>: <span class="ident">sp_core::H256</span>) -&gt; <span class="ident">AccountId</span> {
+		<span class="ident">hash</span>.<span class="ident">to_fixed_bytes</span>().<span class="ident">into</span>()
+	}
+}
+
+<span class="comment">// We use this to get the account on Rialto (target) which is derived from Millau&#39;s (source)</span>
+<span class="comment">// account. We do this so we can fund the derived account on Rialto at Genesis to it can pay</span>
+<span class="comment">// transaction fees.</span>
+<span class="comment">//</span>
+<span class="comment">// The reason we can use the same `AccountId` type for both chains is because they share the same</span>
+<span class="comment">// development seed phrase.</span>
+<span class="comment">//</span>
+<span class="comment">// Note that this should only be used for testing.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">derive_account_from_millau_id</span>(<span class="ident">id</span>: <span class="ident">bp_runtime::SourceAccount</span><span class="op">&lt;</span><span class="ident">AccountId</span><span class="op">&gt;</span>) -&gt; <span class="ident">AccountId</span> {
+	<span class="kw">let</span> <span class="ident">encoded_id</span> <span class="op">=</span> <span class="ident">bp_runtime::derive_account_id</span>(<span class="ident">bp_runtime::MILLAU_CHAIN_ID</span>, <span class="ident">id</span>);
+	<span class="ident">AccountIdConverter::convert</span>(<span class="ident">encoded_id</span>)
+}
+
+<span class="macro">frame_support::parameter_types!</span> {
+	<span class="kw">pub</span> <span class="ident">BlockLength</span>: <span class="ident">limits::BlockLength</span> <span class="op">=</span>
+		<span class="ident">limits::BlockLength::max_with_normal_ratio</span>(<span class="number">5</span> <span class="op">*</span> <span class="number">1024</span> <span class="op">*</span> <span class="number">1024</span>, <span class="ident">NORMAL_DISPATCH_RATIO</span>);
+	<span class="kw">pub</span> <span class="ident">BlockWeights</span>: <span class="ident">limits::BlockWeights</span> <span class="op">=</span> <span class="ident">limits::BlockWeights::builder</span>()
+		<span class="comment">// Allowance for Normal class</span>
+		.<span class="ident">for_class</span>(<span class="ident">DispatchClass::Normal</span>, <span class="op">|</span><span class="ident">weights</span><span class="op">|</span> {
+			<span class="ident">weights</span>.<span class="ident">max_total</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">NORMAL_DISPATCH_RATIO</span> <span class="op">*</span> <span class="ident">MAXIMUM_BLOCK_WEIGHT</span>);
+		})
+		<span class="comment">// Allowance for Operational class</span>
+		.<span class="ident">for_class</span>(<span class="ident">DispatchClass::Operational</span>, <span class="op">|</span><span class="ident">weights</span><span class="op">|</span> {
+			<span class="ident">weights</span>.<span class="ident">max_total</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">MAXIMUM_BLOCK_WEIGHT</span>);
+			<span class="comment">// Extra reserved space for Operational class</span>
+			<span class="ident">weights</span>.<span class="ident">reserved</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">MAXIMUM_BLOCK_WEIGHT</span> <span class="op">-</span> <span class="ident">NORMAL_DISPATCH_RATIO</span> <span class="op">*</span> <span class="ident">MAXIMUM_BLOCK_WEIGHT</span>);
+		})
+		<span class="comment">// By default Mandatory class is not limited at all.</span>
+		<span class="comment">// This parameter is used to derive maximal size of a single extrinsic.</span>
+		.<span class="ident">avg_block_initialization</span>(<span class="ident">AVERAGE_ON_INITIALIZE_RATIO</span>)
+		.<span class="ident">build_or_panic</span>();
+}
+
+<span class="doccomment">/// Get the maximum weight (compute time) that a Normal extrinsic on the Millau chain can use.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_extrinsic_weight</span>() -&gt; <span class="ident">Weight</span> {
+	<span class="ident">BlockWeights::get</span>()
+		.<span class="ident">get</span>(<span class="ident">DispatchClass::Normal</span>)
+		.<span class="ident">max_extrinsic</span>
+		.<span class="ident">unwrap_or</span>(<span class="ident">Weight::MAX</span>)
+}
+
+<span class="doccomment">/// Get the maximum length in bytes that a Normal extrinsic on the Millau chain requires.</span>
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">max_extrinsic_size</span>() -&gt; <span class="ident">u32</span> {
+	<span class="kw-2">*</span><span class="ident">BlockLength::get</span>().<span class="ident">max</span>.<span class="ident">get</span>(<span class="ident">DispatchClass::Normal</span>)
+}
+
+<span class="doccomment">/// Name of the `RialtoFinalityApi::best_finalized` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">BEST_FINALIZED_RIALTO_HEADER_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;RialtoFinalityApi_best_finalized&quot;</span>;
+
+<span class="doccomment">/// Name of the `ToRialtoOutboundLaneApi::estimate_message_delivery_and_dispatch_fee` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TO_RIALTO_ESTIMATE_MESSAGE_FEE_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span>
+	<span class="string">&quot;ToRialtoOutboundLaneApi_estimate_message_delivery_and_dispatch_fee&quot;</span>;
+<span class="doccomment">/// Name of the `ToRialtoOutboundLaneApi::message_details` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TO_RIALTO_MESSAGE_DETAILS_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;ToRialtoOutboundLaneApi_message_details&quot;</span>;
+<span class="doccomment">/// Name of the `ToRialtoOutboundLaneApi::latest_generated_nonce` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TO_RIALTO_LATEST_GENERATED_NONCE_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;ToRialtoOutboundLaneApi_latest_generated_nonce&quot;</span>;
+<span class="doccomment">/// Name of the `ToRialtoOutboundLaneApi::latest_received_nonce` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TO_RIALTO_LATEST_RECEIVED_NONCE_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;ToRialtoOutboundLaneApi_latest_received_nonce&quot;</span>;
+
+<span class="doccomment">/// Name of the `FromRialtoInboundLaneApi::latest_received_nonce` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">FROM_RIALTO_LATEST_RECEIVED_NONCE_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;FromRialtoInboundLaneApi_latest_received_nonce&quot;</span>;
+<span class="doccomment">/// Name of the `FromRialtoInboundLaneApi::latest_onfirmed_nonce` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">FROM_RIALTO_LATEST_CONFIRMED_NONCE_METHOD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;FromRialtoInboundLaneApi_latest_confirmed_nonce&quot;</span>;
+<span class="doccomment">/// Name of the `FromRialtoInboundLaneApi::unrewarded_relayers_state` runtime method.</span>
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">FROM_RIALTO_UNREWARDED_RELAYERS_STATE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;FromRialtoInboundLaneApi_unrewarded_relayers_state&quot;</span>;
+
+<span class="macro">sp_api::decl_runtime_apis!</span> {
+	<span class="doccomment">/// API for querying information about the finalized Rialto headers.</span>
+	<span class="doccomment">///</span>
+	<span class="doccomment">/// This API is implemented by runtimes that are bridging with the Rialto chain, not the</span>
+	<span class="doccomment">/// Millau runtime itself.</span>
+	<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">RialtoFinalityApi</span> {
+		<span class="doccomment">/// Returns number and hash of the best finalized header known to the bridge module.</span>
+		<span class="kw">fn</span> <span class="ident">best_finalized</span>() -&gt; (<span class="ident">BlockNumber</span>, <span class="ident">Hash</span>);
+		<span class="doccomment">/// Returns true if the header is known to the runtime.</span>
+		<span class="kw">fn</span> <span class="ident">is_known_header</span>(<span class="ident">hash</span>: <span class="ident">Hash</span>) -&gt; <span class="ident">bool</span>;
+	}
+
+	<span class="doccomment">/// Outbound message lane API for messages that are sent to Rialto chain.</span>
+	<span class="doccomment">///</span>
+	<span class="doccomment">/// This API is implemented by runtimes that are sending messages to Rialto chain, not the</span>
+	<span class="doccomment">/// Rialto runtime itself.</span>
+	<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ToRialtoOutboundLaneApi</span><span class="op">&lt;</span><span class="ident">OutboundMessageFee</span>: <span class="ident">Parameter</span>, <span class="ident">OutboundPayload</span>: <span class="ident">Parameter</span><span class="op">&gt;</span> {
+		<span class="doccomment">/// Estimate message delivery and dispatch fee that needs to be paid by the sender on</span>
+		<span class="doccomment">/// this chain.</span>
+		<span class="doccomment">///</span>
+		<span class="doccomment">/// Returns `None` if message is too expensive to be sent to Rialto from this chain.</span>
+		<span class="doccomment">///</span>
+		<span class="doccomment">/// Please keep in mind that this method returns lowest message fee required for message</span>
+		<span class="doccomment">/// to be accepted to the lane. It may be good idea to pay a bit over this price to account</span>
+		<span class="doccomment">/// future exchange rate changes and guarantee that relayer would deliver your message</span>
+		<span class="doccomment">/// to the target chain.</span>
+		<span class="kw">fn</span> <span class="ident">estimate_message_delivery_and_dispatch_fee</span>(
+			<span class="ident">lane_id</span>: <span class="ident">LaneId</span>,
+			<span class="ident">payload</span>: <span class="ident">OutboundPayload</span>,
+		) -&gt; <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">OutboundMessageFee</span><span class="op">&gt;</span>;
+		<span class="doccomment">/// Returns dispatch weight, encoded payload size and delivery+dispatch fee of all</span>
+		<span class="doccomment">/// messages in given inclusive range.</span>
+		<span class="doccomment">///</span>
+		<span class="doccomment">/// If some (or all) messages are missing from the storage, they&#39;ll also will</span>
+		<span class="doccomment">/// be missing from the resulting vector. The vector is ordered by the nonce.</span>
+		<span class="kw">fn</span> <span class="ident">message_details</span>(
+			<span class="ident">lane</span>: <span class="ident">LaneId</span>,
+			<span class="ident">begin</span>: <span class="ident">MessageNonce</span>,
+			<span class="ident">end</span>: <span class="ident">MessageNonce</span>,
+		) -&gt; <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">MessageDetails</span><span class="op">&lt;</span><span class="ident">OutboundMessageFee</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+		<span class="doccomment">/// Returns nonce of the latest message, received by bridged chain.</span>
+		<span class="kw">fn</span> <span class="ident">latest_received_nonce</span>(<span class="ident">lane</span>: <span class="ident">LaneId</span>) -&gt; <span class="ident">MessageNonce</span>;
+		<span class="doccomment">/// Returns nonce of the latest message, generated by given lane.</span>
+		<span class="kw">fn</span> <span class="ident">latest_generated_nonce</span>(<span class="ident">lane</span>: <span class="ident">LaneId</span>) -&gt; <span class="ident">MessageNonce</span>;
+	}
+
+	<span class="doccomment">/// Inbound message lane API for messages sent by Rialto chain.</span>
+	<span class="doccomment">///</span>
+	<span class="doccomment">/// This API is implemented by runtimes that are receiving messages from Rialto chain, not the</span>
+	<span class="doccomment">/// Rialto runtime itself.</span>
+	<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">FromRialtoInboundLaneApi</span> {
+		<span class="doccomment">/// Returns nonce of the latest message, received by given lane.</span>
+		<span class="kw">fn</span> <span class="ident">latest_received_nonce</span>(<span class="ident">lane</span>: <span class="ident">LaneId</span>) -&gt; <span class="ident">MessageNonce</span>;
+		<span class="doccomment">/// Nonce of latest message that has been confirmed to the bridged chain.</span>
+		<span class="kw">fn</span> <span class="ident">latest_confirmed_nonce</span>(<span class="ident">lane</span>: <span class="ident">LaneId</span>) -&gt; <span class="ident">MessageNonce</span>;
+		<span class="doccomment">/// State of the unrewarded relayers set at given lane.</span>
+		<span class="kw">fn</span> <span class="ident">unrewarded_relayers_state</span>(<span class="ident">lane</span>: <span class="ident">LaneId</span>) -&gt; <span class="ident">UnrewardedRelayersState</span>;
+	}
+}
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">tests</span> {
+	<span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+	<span class="kw">use</span> <span class="ident">sp_runtime::codec::Encode</span>;
+
+	<span class="attribute">#[<span class="ident">test</span>]</span>
+	<span class="kw">fn</span> <span class="ident">maximal_account_size_does_not_overflow_constant</span>() {
+		<span class="macro">assert!</span>(
+			<span class="ident">MAXIMAL_ENCODED_ACCOUNT_ID_SIZE</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">AccountId::default</span>().<span class="ident">encode</span>().<span class="ident">len</span>(),
+			<span class="string">&quot;Actual maximal size of encoded AccountId ({}) overflows expected ({})&quot;</span>,
+			<span class="ident">AccountId::default</span>().<span class="ident">encode</span>().<span class="ident">len</span>(),
+			<span class="ident">MAXIMAL_ENCODED_ACCOUNT_ID_SIZE</span>,
+		);
+	}
+}
+</code></pre></div>
+</section><section id="search" class="content hidden"></section><div id="rustdoc-vars" data-root-path="../../" data-current-crate="bp_rialto" data-search-index-js="../../search-index.js" data-search-js="../../search.js"></div>
+    <script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script>
+</body></html>

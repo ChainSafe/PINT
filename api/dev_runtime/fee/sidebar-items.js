@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FeeRate","Represents the fee rate where fee_rate = numerator / denominator"],["RedemptionFeeRange","Determines the fee upon index token redemptions from range"]],"trait":[["BaseFee",""]]});

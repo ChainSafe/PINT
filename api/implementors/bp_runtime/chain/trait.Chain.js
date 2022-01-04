@@ -1,0 +1,4 @@
+(function() {var implementors = {};
+implementors["bp_polkadot_core"] = [{"text":"impl <a class=\"trait\" href=\"bp_runtime/chain/trait.Chain.html\" title=\"trait bp_runtime::chain::Chain\">Chain</a> for <a class=\"struct\" href=\"bp_polkadot_core/struct.PolkadotLike.html\" title=\"struct bp_polkadot_core::PolkadotLike\">PolkadotLike</a>","synthetic":false,"types":["bp_polkadot_core::PolkadotLike"]}];
+implementors["bp_rialto"] = [{"text":"impl <a class=\"trait\" href=\"bp_runtime/chain/trait.Chain.html\" title=\"trait bp_runtime::chain::Chain\">Chain</a> for <a class=\"struct\" href=\"bp_rialto/struct.Rialto.html\" title=\"struct bp_rialto::Rialto\">Rialto</a>","synthetic":false,"types":["bp_rialto::Rialto"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

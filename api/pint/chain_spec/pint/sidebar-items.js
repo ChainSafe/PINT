@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["pint_development_config",""],["pint_local_config",""]],"type":[["ChainSpec","Specialized `ChainSpec` for the normal parachain runtime."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["VotingPeriodRange","A type to abstract the range of voting period"]]});

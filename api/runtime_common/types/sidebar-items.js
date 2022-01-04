@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["LockupPeriodRange","Range of lockup period"],["VotingPeriodRange","Range of voting period"]],"type":[["CommitteeOrigin","Origin that approved by committee"],["GovernanceOrigin","Origin either `Root` or `CommitteeOrigin`"]]});

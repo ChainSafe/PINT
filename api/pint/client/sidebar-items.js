@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Client","A client instance of Polkadot."]],"trait":[["AbstractClient","Config that abstracts over all available client implementations."],["ClientHandle","A handle to a Polkadot client instance."],["ExecuteWithClient","Execute something with the client instance."],["RuntimeApiCollection","A set of APIs that polkadot-like runtimes must implement."]]});

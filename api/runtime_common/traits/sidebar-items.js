@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["XcmRuntimeCallWeights","Weights of Xcm calls for different runtimes"]]});

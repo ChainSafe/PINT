@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["BalanceMeter","The trait that provides balances related info about the parachain’s various sovereign accounts."],["StakingCap","A type to abstract several staking related thresholds"]]});

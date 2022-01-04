@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["KUSAMA_PALLET_UTILITY_INDEX","The index of `pallet_utility` in the polkadot runtime"],["POLKADOT_PALLET_UTILITY_INDEX","The index of `pallet_utility` in the polkadot runtime"]],"enum":[["UtilityCall","Represents dispatchable calls of the FRAME `pallet_utility` pallet."]],"trait":[["UtilityCallEncoder",""]]});

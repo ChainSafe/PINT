@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["fee","Fee types used in PINT pallets"],["traits","This contains shared traits that are used in multiple pallets to prevent circular dependencies"],["types","Shareable PINT types"]]});
