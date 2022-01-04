@@ -945,17 +945,17 @@ pub mod pallet {
 		/// - call: The encoded call to be executed
 		/// - fee: fee (in remote currency) used to buy the `weight` and `debt`.
 		/// - require_weight_at_most: the weight limit used for the xcm transacted call.
-		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, fee: u128) -> Xcm<()> {
-			let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
+		fn wrap_call_into_xcm(call: Vec<u8>, require_weight_at_most: Weight, _fee: u128) -> Xcm<()> {
+			// let asset = MultiAsset { id: Concrete(MultiLocation::here()), fun: Fungibility::Fungible(fee) };
 			Xcm(vec![
-				WithdrawAsset(asset.clone().into()),
-				BuyExecution { fees: asset, weight_limit: Unlimited },
+				// WithdrawAsset(asset.clone().into()),
+				// BuyExecution { fees: asset, weight_limit: Unlimited },
 				Transact { origin_type: OriginKind::SovereignAccount, require_weight_at_most, call: call.into() },
-				DepositAsset {
-					assets: All.into(),
-					max_assets: u32::MAX,
-					beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
-				},
+				// DepositAsset {
+				// 	assets: All.into(),
+				// 	max_assets: u32::MAX,
+				// 	beneficiary: MultiLocation { parents: 1, interior: X1(Parachain(T::SelfParaId::get().into())) },
+				// },
 			])
 		}
 	}

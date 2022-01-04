@@ -54,6 +54,9 @@ orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-l
 orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
+# chainlink
+pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'polkadot-v0.9.13' }
+
 # pint
 pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
 pallet-asset-index = { path = "../../pallets/asset-index" }
@@ -66,6 +69,7 @@ xcm-calls = { path = "../../primitives/xcm-calls" }
 
 # others
 xcm-emulator = { git = "https://github.com/shaunxw/xcm-simulator.git", branch = "master" }
+env_logger = "0.9"
 
 [features]
 runtime-benchmarks = []

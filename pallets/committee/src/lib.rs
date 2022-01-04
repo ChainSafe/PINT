@@ -22,7 +22,7 @@ mod mock;
 mod tests;
 
 pub mod traits;
-mod types;
+pub mod types;
 mod utils;
 
 // requires unused_unit exception as the #[pallet::event] proc macro generates code that violates

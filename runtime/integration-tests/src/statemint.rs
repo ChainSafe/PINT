@@ -1,9 +1,10 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 
-use super::types::*;
+use crate::prelude::*;
 use frame_support::{
 	construct_runtime, parameter_types,
+	sp_runtime::traits::AccountIdLookup,
 	traits::{Everything, Nothing},
 	weights::{constants::WEIGHT_PER_SECOND, Weight},
 };
@@ -34,7 +35,7 @@ impl frame_system::Config for Runtime {
 	type Hash = H256;
 	type Hashing = ::sp_runtime::traits::BlakeTwo256;
 	type AccountId = AccountId;
-	type Lookup = Lookup;
+	type Lookup = AccountIdLookup<AccountId, ()>;
 	type Header = Header;
 	type Event = Event;
 	type BlockHashCount = BlockHashCount;
@@ -119,7 +120,14 @@ parameter_types! {
 pub type LocalAssetTransactor =
 	XcmCurrencyAdapter<Balances, IsConcrete<KsmLocation>, LocationToAccountId, AccountId, ()>;
 
-pub type XcmRouter = crate::ParachainXcmRouter<ParachainInfo>;
+/// The means for routing XCM messages which are not for local execution into the right message
+/// queues.
+pub type XcmRouter = (
+	// Two routers - use UMP to communicate with the relay chain:
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm>,
+	// ..and XCMP to communicate with the sibling chains.
+	XcmpQueue,
+);
 pub type Barrier = AllowUnpaidExecutionFrom<Everything>;
 
 pub struct XcmConfig;
