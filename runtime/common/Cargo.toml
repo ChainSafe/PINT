@@ -8,6 +8,7 @@ repository = 'https://github.com/substrate-developer-hub/substrate-parachain-tem
 version = '0.0.1'
 
 [dependencies]
+serde = { version = "^1", features = ["derive"], optional = true }
 codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ['derive'] }
 scale-info = { version = "1.0", default-features = false, features = ["derive"] }
 
@@ -39,6 +40,7 @@ pallet-remote-asset-manager = { path = '../../pallets/remote-asset-manager', def
 [features]
 default = ['std']
 std = [
+    'serde',
     'codec/std',
     "frame-support/std",
     'frame-system/std',

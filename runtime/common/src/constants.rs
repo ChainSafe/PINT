@@ -1,5 +1,6 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
+use crate::types::AssetId;
 use cumulus_pallet_xcm::Origin;
 use frame_support::{
 	parameter_types,
@@ -16,7 +17,7 @@ use frame_system::limits::{BlockLength, BlockWeights};
 use orml_traits::{arithmetic::Zero, parameter_type_with_key};
 use primitives::{
 	fee::{FeeRate, RedemptionFeeRange},
-	AccountId, AssetId, Balance, BlockNumber,
+	AccountId, Balance, BlockNumber,
 };
 use xcm::v1::MultiLocation;
 
@@ -115,14 +116,14 @@ parameter_types! {
 	pub const OracleLimit: u32 = 10;
 	pub const PalletIndexStringLimit: u32 = 50;
 	pub const Period: u32 = 6 * HOURS;
-	pub const PINTAssetId: AssetId = 1;
+	pub const PINTAssetId: AssetId = AssetId::PINT;
 	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
 		range: [(DAYS * 7, FeeRate { numerator: 1, denominator: 10 }), (DAYS * 30, FeeRate{ numerator: 3, denominator: 100 })],
 		default_fee: FeeRate { numerator: 1, denominator: 100 }
 	};
-	pub const RelayChainAssetId: AssetId = 42;
+	pub const RelayChainAssetId: AssetId = AssetId::Liquid(42);
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay;
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT / 4;
