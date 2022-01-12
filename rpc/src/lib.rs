@@ -5,7 +5,8 @@
 
 #![warn(missing_docs)]
 
-use primitives::{AccountId, AssetId, Balance, Block, Nonce};
+use primitives::{AccountId, Balance, Block, Nonce};
+use runtime_common::types::AssetId;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;

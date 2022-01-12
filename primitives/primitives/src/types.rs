@@ -26,8 +26,8 @@ pub type AccountIndex = u32;
 /// Signed version of Balance
 pub type Amount = i128;
 
-/// Identifier for an asset.
-pub type AssetId = u32;
+// /// Identifier for an asset.
+// pub type AssetId = u64;
 
 /// Balance of an account.
 pub type Balance = u128;

@@ -141,8 +141,8 @@ fn pint_testnet_genesis(
 			//
 			// this config is only for tests for now
 			balances: vec![
-				endowed_accounts.iter().cloned().map(|k| (k, 2, 1 << 12)).collect::<Vec<_>>(),
-				endowed_accounts.iter().cloned().map(|k| (k, 3, 1 << 12)).collect::<Vec<_>>(),
+				endowed_accounts.iter().cloned().map(|k| (k, AssetId::Liquid(2), 1 << 12)).collect::<Vec<_>>(),
+				endowed_accounts.iter().cloned().map(|k| (k, AssetId::Liquid(3), 1 << 12)).collect::<Vec<_>>(),
 			]
 			.concat(),
 		},
@@ -153,7 +153,7 @@ fn pint_testnet_genesis(
 		parachain_system: Default::default(),
 		remote_asset_manager: RemoteAssetManagerConfig {
 			staking_configs: vec![(
-				42,
+				AssetId::Liquid(42),
 				StakingConfig {
 					pallet_index: 7,
 					reward_destination: RewardDestination::Staked,
@@ -163,7 +163,10 @@ fn pint_testnet_genesis(
 					is_frozen: true,
 				},
 			)],
-			proxy_configs: vec![(42, ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() })],
+			proxy_configs: vec![(
+				AssetId::Liquid(42),
+				ProxyConfig { pallet_index: 29, weights: ProxyWeights::polkadot() },
+			)],
 			statemint_config: None,
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },

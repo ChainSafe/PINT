@@ -3,8 +3,9 @@
 
 //! Multiasset related fungibles adapter to allow payments in multiple assets
 
+use crate::types::AssetId;
 use frame_support::{sp_runtime::DispatchError, traits::tokens::BalanceConversion};
-use primitives::{traits::NavProvider, AssetId, Balance};
+use primitives::{traits::NavProvider, Balance};
 use sp_std::marker::PhantomData;
 
 /// Converts a balance value into an asset balance based on the current index token NAV.

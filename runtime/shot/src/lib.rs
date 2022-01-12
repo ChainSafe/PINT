@@ -301,7 +301,7 @@ impl TakeRevenue for ToTreasury {
 					if let Junctions::X1(Junction::Parachain(id)) = interior {
 						// ensure PINT Treasury account have ed for all of the cross-chain asset.
 						// Ignore the result.
-						let _ = Currencies::deposit(id, &PintTreasuryAccount::get(), amount);
+						let _ = Currencies::deposit(id.into(), &PintTreasuryAccount::get(), amount);
 					}
 				}
 			}
