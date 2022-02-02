@@ -1005,7 +1005,7 @@ pub mod pallet {
 		}
 	}
 
-	/// Trait for the asset-index pallet extrinsic weights.
+	/// Trait for the pallet extrinsic weights.
 	pub trait WeightInfo {
 		fn transfer() -> Weight;
 		fn freeze() -> Weight;
