@@ -671,10 +671,10 @@ impl pallet_remote_asset_manager::Config for Runtime {
 	type WeightInfo = weights::pallet_remote_asset_manager::WeightInfo<Self>;
 }
 
-impl pallet_asset_tx_payment::Config for Runtime {
-	type Fungibles = Tokens;
-	type OnChargeAssetTransaction = pallet_asset_tx_payment::FungiblesAdapter<BalanceToAssetBalance<AssetIndex>, ()>;
-}
+// impl pallet_transaction_payment::Config for Runtime {
+// 	type Fungibles = Tokens;
+// 	type OnChargeAssetTransaction = pallet_transaction_payment::FungiblesAdapter<BalanceToAssetBalance<AssetIndex>, ()>;
+// }
 
 impl pallet_utility::Config for Runtime {
 	type Event = Event;
@@ -732,7 +732,7 @@ construct_runtime!(
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>} = 4,
 		Utility: pallet_utility::{Pallet, Call, Event} = 5,
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
-		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
+		AssetTxPayment: pallet_transaction_payment::{Pallet} = 10,
 
 		// Treasury
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 15,
@@ -790,7 +790,7 @@ pub type SignedExtra = (
 	frame_system::CheckEra<Runtime>,
 	frame_system::CheckNonce<Runtime>,
 	frame_system::CheckWeight<Runtime>,
-	pallet_asset_tx_payment::ChargeAssetTxPayment<Runtime>,
+	pallet_transaction_payment::ChargeAssetTxPayment<Runtime>,
 );
 /// Unchecked extrinsic type as expected by this runtime.
 pub type UncheckedExtrinsic = generic::UncheckedExtrinsic<Address, Call, Signature, SignedExtra>;
