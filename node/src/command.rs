@@ -252,17 +252,17 @@ pub fn run() -> Result<()> {
 		}
 		Some(Subcommand::Revert(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
 			let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
-			Ok((cmd.run(client, backend), task_manager))
+			Ok((cmd.run(client, backend, None), task_manager))
 		}),
 		Some(Subcommand::ExportGenesisState(params)) => {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
 
-			let block: Block = generate_genesis_block(&load_spec(
-				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.unwrap_or(200).into(),
-			)?)?;
+			let block: Block = generate_genesis_block(
+				&load_spec(&params.chain.clone().unwrap_or_default(), params.parachain_id.unwrap_or(200).into())?,
+				state_version,
+			)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
 				raw_header
@@ -339,7 +339,8 @@ pub fn run() -> Result<()> {
 
 				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 
-				let block: Block = generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
+				let block: Block =
+					generate_genesis_block(&config.chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let polkadot_config =
@@ -415,8 +416,12 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws(default_listen_port)
 	}
 
-	fn prometheus_config(&self, default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
-		self.base.base.prometheus_config(default_listen_port)
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<PrometheusConfig>> {
+		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
 	fn init<C: SubstrateCli>(&self) -> Result<()> {
