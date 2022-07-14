@@ -107,7 +107,7 @@ impl pallet_local_treasury::Config for Test {
 }
 
 pub fn local_treasury_account_id() -> AccountId {
-	LOCAL_TREASURE_PALLET_ID.into_account()
+	LOCAL_TREASURE_PALLET_ID.into_account_truncating()
 }
 
 // Build genesis storage according to the mock runtime.

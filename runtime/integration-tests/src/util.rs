@@ -23,7 +23,7 @@ pub fn sibling_sovereign_account() -> AccountId {
 
 pub fn relay_sovereign_account() -> AccountId {
 	let para: ParaId = PARA_ID.into();
-	para.into_account()
+	para.into_account_truncating()
 }
 
 /// registers the relay chain as liquid asset

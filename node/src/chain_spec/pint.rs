@@ -30,7 +30,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 				// initial collators.
 				vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), get_collator_keys_from_seed("Alice"))],
 				vec![
-					PalletId(*b"Treasury").into_account(),
+					PalletId(*b"Treasury").into_account_truncating(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),

@@ -928,7 +928,7 @@ pub mod pallet {
 		/// Ensures that the controller account of
 		fn ensure_staking_controller(controller: LookupSourceFor<T>) -> DispatchResult {
 			ensure!(
-				<T as frame_system::Config>::Lookup::lookup(controller)? == T::SelfParaId::get().into_account(),
+				<T as frame_system::Config>::Lookup::lookup(controller)? == T::SelfParaId::get().into_account_truncating(),
 				Error::<T>::NoControllerPermission
 			);
 			Ok(())

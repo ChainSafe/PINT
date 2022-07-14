@@ -337,7 +337,7 @@ pub fn run() -> Result<()> {
 					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
-				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account_truncating(&id);
 
 				let block: Block =
 					generate_genesis_block(&config.chain_spec, state_version).map_err(|e| format!("{:?}", e))?;

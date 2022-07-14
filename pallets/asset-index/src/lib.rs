@@ -746,7 +746,7 @@ pub mod pallet {
 		/// The account of the treausry that keeps track of all the assets
 		/// contributed to the index
 		pub fn treasury_account() -> AccountIdFor<T> {
-			T::TreasuryPalletId::get().into_account()
+			T::TreasuryPalletId::get().into_account_truncating()
 		}
 
 		/// The amount of index tokens held by the given user

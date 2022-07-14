@@ -55,7 +55,7 @@ orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-m
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 
 # chainlink
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master' }
+pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'master' }
 
 # pint
 pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }

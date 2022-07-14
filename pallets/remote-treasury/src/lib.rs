@@ -92,7 +92,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Returns the `AccountId` of the treasury account.
 		pub fn treasury_account() -> T::AccountId {
-			T::PalletId::get().into_account()
+			T::PalletId::get().into_account_truncating()
 		}
 	}
 

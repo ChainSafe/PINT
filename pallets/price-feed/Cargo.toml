@@ -19,7 +19,7 @@ frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polk
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false, optional = true }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
+pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'polkadot-v0.9.24', default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
 [dev-dependencies]

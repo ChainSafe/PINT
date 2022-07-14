@@ -116,7 +116,7 @@ parameter_types! {
 	pub const PalletIndexStringLimit: u32 = 50;
 	pub const Period: u32 = 6 * HOURS;
 	pub const PINTAssetId: AssetId = 1;
-	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
 		range: [(DAYS * 7, FeeRate { numerator: 1, denominator: 10 }), (DAYS * 30, FeeRate{ numerator: 3, denominator: 100 })],
@@ -186,7 +186,7 @@ parameter_types! {
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account()]
+	vec![TreasuryPalletId::get().into_account_truncating()]
 }
 
 pub struct DustRemovalWhitelist;

@@ -25,7 +25,7 @@ xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.2
 xcm-executor = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24', default-features = false }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = 'https://github.com/smartcontractkit/chainlink-polkadot', branch = 'master', default-features = false }
+pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 

@@ -50,14 +50,14 @@ benchmarks! {
 					units: million,
 					amount: million
 		};
-		let balance = T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account());
+		let balance = T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account_truncating());
 	}: { call.dispatch_bypass_filter(origin)? } verify {
 		assert_eq!(
 			AssetIndex::<T>::assets(asset_id),
 			Some(AssetAvailability::Liquid(location))
 		);
 	   assert_eq!(
-			T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account()),
+			T::Currency::total_balance(asset_id, &T::TreasuryPalletId::get().into_account_truncating()),
 			million + balance
 		);
 	}
