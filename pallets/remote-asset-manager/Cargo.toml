@@ -6,13 +6,13 @@ license = 'LGPL-3.0-only'
 name = 'pallet-remote-asset-manager'
 readme = 'README.md'
 repository = 'https://github.com/ChainSafe/PINT/'
-version = '0.0.1'
+version = '0.0.2'
 
 [dependencies]
 log = { version = "0.4.14", default-features = false }
-serde = { version = "1.0.130", features = ["derive"], optional = true }
+serde = { version = "1.0.132", features = ["derive"], optional = true }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }
-scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
+scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
 
 # Substrate Dependencies
 frame-support = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
@@ -33,8 +33,8 @@ xcm-calls = {path = "../../primitives/xcm-calls", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
 # orml Dependencies
-orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
-orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
+orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 
 
 [features]

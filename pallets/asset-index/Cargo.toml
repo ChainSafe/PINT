@@ -30,7 +30,8 @@ pallet-price-feed = { path = "../price-feed", default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 
 # ORML Dependencies
-orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master', default-features = false }
+orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
+orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24' }
 
 [dev-dependencies]
 serde = "1.0.132"
@@ -43,7 +44,6 @@ pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'p
 
 pallet-saft-registry = { path = "../saft-registry" }
 
-orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'master' }
 rand = "0.8.4"
 
 [features]

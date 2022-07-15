@@ -70,6 +70,8 @@ pub mod pallet {
 	// expects a `ProxyType` of u8 and blocknumber of u32
 	type PalletProxyCall<T> = ProxyCall<AccountIdFor<T>, ProxyType, <T as frame_system::Config>::BlockNumber>;
 
+	pub const MAX_UNLOCKING_CHUNKS: usize = 32;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config + MaybeAssetIdConvert<u8, Self::AssetId> {
 		/// The balance type for cross chain transfers
@@ -159,6 +161,7 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
@@ -434,7 +437,7 @@ pub mod pallet {
 						// check if we need and able to unbond funds: only with we currently have enough active funds
 						// and room for 1 more unlocking chunk
 						if balances.pending_redemption < ledger.active.saturating_sub(config.minimum_balance) &&
-							ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS
+							ledger.unlocking.len() < MAX_UNLOCKING_CHUNKS
 						{
 							// attempt to send unbond
 							match Self::do_transact_unbond(&config, asset, balances.pending_redemption, dest) {
@@ -839,7 +842,7 @@ pub mod pallet {
 			ensure!(amount < ledger.active.saturating_sub(config.minimum_balance), Error::<T>::InsufficientBond);
 
 			// Can't schedule unbond before withdrawing the unlocked funds first
-			ensure!(ledger.unlocking.len() < pallet_staking::MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
+			ensure!(ledger.unlocking.len() < MAX_UNLOCKING_CHUNKS, Error::<T>::NoMoreUnbondingChunks);
 
 			// ensure that the PINT parachain account is the controller, because unbond
 			// requires controller origin
