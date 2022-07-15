@@ -5,9 +5,7 @@
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_price_feed;
-use frame_support::{
-	dispatch::DispatchResultWithPostInfo, ord_parameter_types, parameter_types, traits::Everything, PalletId,
-};
+use frame_support::{dispatch::DispatchResult, ord_parameter_types, parameter_types, traits::Everything, PalletId};
 use frame_system as system;
 use pallet_chainlink_feed::RoundId;
 use sp_core::H256;
@@ -208,7 +206,7 @@ impl FeedBuilder {
 		self
 	}
 
-	pub fn build_and_store(self) -> DispatchResultWithPostInfo {
+	pub fn build_and_store(self) -> DispatchResult {
 		let owner = Origin::signed(self.owner.unwrap_or(1));
 		let payment = self.payment.unwrap_or(20);
 		let timeout = self.timeout.unwrap_or(1);
