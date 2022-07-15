@@ -14,7 +14,7 @@ use core::cell::RefCell;
 use frame_support::{
 	assert_ok, ord_parameter_types, parameter_types,
 	sp_std::marker::PhantomData,
-	traits::{Everything, LockIdentifier, StorageMapShim},
+	traits::{ConstU32, Everything, LockIdentifier, StorageMapShim},
 	PalletId,
 };
 use frame_system as system;
@@ -62,6 +62,7 @@ pub(crate) type Amount = i128;
 pub(crate) type AccountId = u64;
 pub(crate) type AssetId = u32;
 pub(crate) type BlockNumber = u64;
+pub(crate) type ReserveIdentifier = [u8; 8];
 
 impl system::Config for Test {
 	type BaseCallFilter = Everything;
@@ -87,7 +88,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
-	type MaxConsumers = frame_support::traits::ConstU32<16>;
+	type MaxConsumers = ConstU32<16>;
 }
 
 // param types for balances
@@ -222,6 +223,10 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 	type OnDust = ();
 	type DustRemovalWhitelist = Everything;
+	type MaxReserves = ConstU32<2>;
+	type OnKilledTokenAccount = ();
+	type OnNewTokenAccount = ();
+	type ReserveIdentifier = ReserveIdentifier;
 }
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 1337;
 
