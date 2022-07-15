@@ -7,6 +7,7 @@ use frame_support::{
 	sp_runtime::traits::Hash,
 	sp_std::{self, prelude::Vec},
 	traits::EnsureOrigin,
+	sp_runtime
 };
 use frame_system::RawOrigin;
 
@@ -107,7 +108,7 @@ pub enum VoteRejectionReason {
 	CouncilDeny,
 }
 
-impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
+impl<AccountId: PartialEq + CustomDefault, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
 	pub fn new(
 		ayes: Vec<CommitteeMember<AccountId>>,
 		nays: Vec<CommitteeMember<AccountId>>,
@@ -123,7 +124,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 	}
 
 	pub fn new_with_end(end: BlockNumber) -> Self {
-		Self { end, ..Default::default() }
+		Self { end, votes: Vec::new() }
 	}
 
 	// This does not check if a vote is a duplicate, This must be done before
@@ -205,11 +206,11 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 	fn successful_origin() -> O {
 		use frame_benchmarking::vec;
 		O::from(CommitteeOrigin::ApprovedByCommittee(
-			Default::default(),
+			CustomDefault::c_default(),
 			VoteAggregate {
 				votes: vec![
 					MemberVote {
-						member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+						member: CommitteeMember { account_id: CustomDefault::c_default(), member_type: MemberType::Council },
 						vote: VoteKind::Aye
 					};
 					T::MinCouncilVotes::get() + 1
@@ -247,6 +248,17 @@ impl<
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(RawOrigin::Signed(Default::default()))
+		O::from(RawOrigin::Signed(CustomDefault::c_default()))
+	}
+}
+pub trait CustomDefault {
+	fn c_default() -> Self;
+}
+
+impl <T: Decode> CustomDefault for T {
+	fn c_default() -> Self {
+		let default_value = T::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+			.expect("infinite length input; no invalid inputs for type; qed");
+		return default_value;
 	}
 }
