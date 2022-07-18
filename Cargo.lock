@@ -1919,6 +1919,7 @@ dependencies = [
 name = "derive"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.7",
  "proc-macro2",
  "quote",
  "syn",
@@ -1956,6 +1957,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "getrandom 0.2.7",
  "hex",
  "hex-literal",
  "log",
@@ -5364,6 +5366,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "orml-tokens",
  "orml-traits",
  "pallet-balances",
@@ -5388,6 +5391,7 @@ dependencies = [
 name = "pallet-asset-index-rpc"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.7",
  "jsonrpc-core",
  "jsonrpc-core-client",
  "jsonrpc-derive",
@@ -5405,6 +5409,7 @@ dependencies = [
 name = "pallet-asset-index-rpc-runtime-api"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.7",
  "parity-scale-codec 3.1.5",
  "primitives",
  "scale-info 2.1.2",
@@ -5750,6 +5755,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "log",
  "parity-scale-codec 3.1.5",
  "scale-info 2.1.2",
@@ -6007,6 +6013,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "pallet-balances",
  "parity-scale-codec 3.1.5",
  "scale-info 2.1.2",
@@ -6207,6 +6214,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "pallet-balances",
  "pallet-chainlink-feed",
  "pallet-timestamp",
@@ -6304,6 +6312,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "log",
  "orml-traits",
  "orml-xtokens",
@@ -6324,6 +6333,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "log",
  "orml-traits",
  "orml-xtokens",
@@ -6346,6 +6356,7 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "orml-tokens",
  "orml-traits",
  "pallet-asset-index",
@@ -7092,6 +7103,7 @@ dependencies = [
  "frame-support",
  "frame-system-rpc-runtime-api",
  "futures 0.3.21",
+ "getrandom 0.2.7",
  "hex-literal",
  "jsonrpc-core",
  "log",
@@ -7153,6 +7165,7 @@ dependencies = [
 name = "pint-rpc"
 version = "0.0.1"
 dependencies = [
+ "getrandom 0.2.7",
  "jsonrpc-core",
  "pallet-asset-index-rpc",
  "pallet-transaction-payment-rpc",
@@ -7188,6 +7201,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "getrandom 0.2.7",
  "hex",
  "hex-literal",
  "log",
@@ -8431,6 +8445,7 @@ version = "0.0.1"
 dependencies = [
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "parity-scale-codec 3.1.5",
  "scale-info 2.1.2",
  "serde",
@@ -9146,6 +9161,7 @@ dependencies = [
  "cumulus-pallet-xcm",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "orml-traits",
  "pallet-asset-index",
  "pallet-chainlink-feed",
@@ -9176,6 +9192,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "kusama-runtime",
  "orml-currencies",
  "orml-tokens",
@@ -10786,6 +10803,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "getrandom 0.2.7",
  "hex",
  "hex-literal",
  "log",
@@ -13362,6 +13380,7 @@ dependencies = [
  "frame-election-provider-support",
  "frame-support",
  "frame-system",
+ "getrandom 0.2.7",
  "pallet-assets",
  "pallet-bags-list",
  "pallet-balances",

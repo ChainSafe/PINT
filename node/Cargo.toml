@@ -26,6 +26,7 @@ runtime-benchmarks = [
 ]
 
 [dependencies]
+getrandom = {version = "0.2", default-features = false, features = ["custom"]}
 derive_more = "0.99.16"
 log = "0.4.14"
 codec = { package = "parity-scale-codec", version = "2.3.1" }

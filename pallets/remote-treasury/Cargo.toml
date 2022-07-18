@@ -9,6 +9,7 @@ repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
+getrandom = {version = "0.2", default-features = false, features = ["custom"]}
 log = { version = "0.4.14", default-features = false }
 serde = { version = "1.0.130", features = ["derive"], optional = true }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false }

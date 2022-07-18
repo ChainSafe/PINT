@@ -8,6 +8,7 @@ repository = 'https://github.com/ChainSafe/PINT/'
 version = '0.0.1'
 
 [dependencies]
+getrandom = {version = "0.2", default-features = false, features = ["custom"]}
 jsonrpc-core = "18.0.0"
 codec = { package = "parity-scale-codec", version = "2.3.1" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }

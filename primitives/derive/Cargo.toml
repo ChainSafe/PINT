@@ -11,6 +11,7 @@ version = "0.0.1"
 proc-macro = true
 
 [dependencies]
+getrandom = {version = "0.2", default-features = false, features = ["custom"]}
 proc-macro2 = "1.0.32"
 quote = "1.0.10"
 syn = { version = "1.0.81", features = ["full"] }
