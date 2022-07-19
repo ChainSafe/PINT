@@ -33,7 +33,7 @@ pallet-staking-reward-curve = { git = 'https://github.com/paritytech/substrate',
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
 pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
 pallet-bags-list = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
-sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
+sp-npos-elections = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 
 # Polkadot Dependencies
 xcm = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24' }
@@ -44,7 +44,8 @@ std = [
     'serde',
     'codec/std',
     'frame-support/std',
-    'frame-system/std'
+    'frame-system/std',
+#    "sp-npos-elections/std"
 ]
 # this feature is only for compilation now
 runtime-benchmarks = []

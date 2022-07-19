@@ -74,3 +74,7 @@ env_logger = "0.9"
 
 [features]
 runtime-benchmarks = []
+#default = ["std"]
+#std = [
+#    "sp-npos-elections/std"
+#]

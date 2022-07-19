@@ -9,6 +9,7 @@ version = '0.0.1'
 
 [dependencies]
 getrandom = {version = "0.2", default-features = false, features = ["custom"]}
+jsonrpsee = { version = "0.13.0", features = ["server"] }
 jsonrpc-core = "18.0.0"
 codec = { package = "parity-scale-codec", version = "2.3.1" }
 sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
@@ -21,7 +22,7 @@ sc-client-api = { git = "https://github.com/paritytech/substrate", branch = "pol
 sc-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 substrate-frame-rpc-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
-pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
+pallet-transaction-payment-rpc = { version = "4.0.0-dev", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24" }
 
 # PINT dependencies
 pallet-asset-index-rpc= { path = "../pallets/asset-index/rpc" }

@@ -1,10 +1,10 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use sp_std::marker::PhantomData;
+use frame_support::traits::EnsureOneOf;
 
 /// Origin either `Root` or `CommitteeOrigin`
-pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
-	AccountId,
+pub type GovernanceOrigin<AccountId, Runtime> = EnsureOneOf<
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
 	frame_system::EnsureRoot<AccountId>,
 >;

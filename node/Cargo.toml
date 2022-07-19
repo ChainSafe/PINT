@@ -22,7 +22,7 @@ runtime-benchmarks = [
     'dev-runtime/runtime-benchmarks',
     'shot-runtime/runtime-benchmarks',
     'pint-runtime/runtime-benchmarks',
-    'polkadot-service/runtime-benchmarks'
+#    'polkadot-service/runtime-benchmarks'
 ]
 
 [dependencies]
@@ -111,7 +111,7 @@ cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus
 
 # Polkadot dependencies
 polkadot-primitives = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24'}
-polkadot-service = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24'}
+polkadot-service = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24', default-features = false, optional = true}
 polkadot-cli = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24'}
 polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24'}
 
