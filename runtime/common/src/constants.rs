@@ -180,9 +180,17 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
 	pub const ProposalBond: Permill = Permill::from_percent(3);
 	pub const ProposalBondMinimum: Balance = 5 * DOLLARS;
+	pub const ProposalBondMaximum: Balance = 50 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 7 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);
 	pub const MaxApprovals: u32 = 100;
+
+	// orml_xtokens
+	pub const MaxAssetsForTransfer: usize = 2;
+	pub const MaxReserves: u32 = 8;
+
+	// pallet_scheduler
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
@@ -200,6 +208,12 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
 		Zero::zero()
+	};
+}
+
+parameter_type_with_key! {
+	pub ParachainZeroFee: |_location: MultiLocation| -> Option<u128> {
+		Some(0)
 	};
 }
 

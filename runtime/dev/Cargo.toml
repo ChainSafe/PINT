@@ -14,7 +14,7 @@ targets = ['x86_64-unknown-linux-gnu']
 substrate-wasm-builder = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
 
 [dependencies]
-getrandom = {version = "0.2", default-features = false, features = ["custom"]}
+
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ['derive', 'max-encoded-len'] }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
@@ -56,6 +56,7 @@ pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'po
 pallet-sudo = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
+pallet-asset-tx-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-scheduler = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
@@ -72,7 +73,6 @@ cumulus-primitives-core = { git = 'https://github.com/paritytech/cumulus', branc
 cumulus-primitives-utility = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.24', default-features = false }
 cumulus-primitives-timestamp = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.24", default-features = false }
 parachain-info = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.24', default-features = false }
-
 
 # Polkadot Dependencies
 polkadot-parachain = { git = 'https://github.com/paritytech/polkadot', branch = 'release-v0.9.24', default-features = false }
@@ -142,6 +142,7 @@ runtime-benchmarks = [
 ]
 std = [
 	'codec/std',
+	'scale-info/std',
 	'serde',
 	'log/std',
 	
@@ -171,6 +172,7 @@ std = [
 	'pallet-sudo/std',
 	'pallet-session/std',
 	'pallet-transaction-payment/std',
+	'pallet-asset-tx-payment/std',
 	'pallet-xcm/std',
 	'pallet-utility/std',
 	'pallet-scheduler/std',
@@ -189,7 +191,7 @@ std = [
 	'xcm-builder/std',
 	'xcm-executor/std',
 
-    'runtime-common/std',
+	'runtime-common/std',
 	'pallet-asset-index/std',
 	"pallet-collator-selection/std",
 	'pallet-committee/std',
@@ -209,4 +211,6 @@ std = [
 	'orml-xtokens/std',
 	'orml-xcm-support/std',
 	'orml-traits/std',
+
+	'polkadot-parachain/std',
 ]
