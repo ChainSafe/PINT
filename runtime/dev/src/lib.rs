@@ -16,7 +16,7 @@ pub use frame_support::{
 	traits::{EqualPrivilegeOnly, IsInVec, Randomness, ConstU32},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
-		DispatchClass, IdentityFee, Weight, WeightToFee
+		DispatchClass, IdentityFee, Weight
 	},
 	PalletId, StorageValue,
 };
@@ -38,7 +38,7 @@ use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, Convert},
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult, SaturatedConversion
+	ApplyExtrinsicResult,
 };
 pub use sp_runtime::{Perbill, Permill, Perquintill};
 use sp_std::prelude::*;
@@ -56,14 +56,12 @@ use xcm_builder::{
 };
 use xcm_executor::XcmExecutor;
 
-use frame_support::traits::{Everything, Nothing, EnsureOneOf};
+use frame_support::traits::{Everything, Nothing};
 use frame_system::EnsureRoot;
 use pallet_committee::EnsureMember;
-
 use primitives::traits::MultiAssetRegistry;
 pub use primitives::*;
-use runtime_common::payment::BalanceToAssetBalance;
-pub use runtime_common::{constants::*, types::*, weights};
+pub use runtime_common::{constants::*, types::*, weights, payment::BalanceToAssetBalance};
 use xcm_calls::{
 	proxy::{ProxyCallEncoder, ProxyType},
 	staking::StakingCallEncoder,
@@ -182,7 +180,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The set code logic of the parachain.
 	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
-	
+
 	type MaxConsumers = ConstU32<16>;
 }
 
@@ -211,22 +209,6 @@ impl pallet_balances::Config for Runtime {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
-
-pub struct CustomLengthToFee {}
-
-impl CustomLengthToFee {
-	const LENGTH_FEE: Balance = TransactionByteFee::get();
-}
-
-impl WeightToFee for CustomLengthToFee {
-	type Balance = Balance;
-
-	fn weight_to_fee(weight: &Weight) -> Self::Balance {
-		Self::Balance::saturated_from(*weight)
-			.saturating_mul(CustomLengthToFee::LENGTH_FEE)
-	}
-}
-
 
 impl pallet_transaction_payment::Config for Runtime {
 	type OnChargeTransaction = pallet_transaction_payment::CurrencyAdapter<Balances, ()>;
@@ -606,7 +588,6 @@ impl orml_currencies::Config for Runtime {
 	type GetNativeCurrencyId = PINTAssetId;
 	type WeightInfo = ();
 }
-
 
 impl orml_xtokens::Config for Runtime {
 	type Event = Event;

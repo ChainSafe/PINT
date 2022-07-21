@@ -14,7 +14,7 @@ targets = ['x86_64-unknown-linux-gnu']
 substrate-wasm-builder = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24' }
 
 [dependencies]
-codec = { package = "parity-scale-codec", version = "2.3.1", default-features = false, features = ['derive', 'max-encoded-len'] }
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ['derive', 'max-encoded-len'] }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 
 log = { version = "0.4.14", default-features = false }
@@ -55,6 +55,7 @@ pallet-session = { git = 'https://github.com/paritytech/substrate', branch = 'po
 pallet-sudo = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-timestamp = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-transaction-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
+pallet-asset-tx-payment = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-scheduler = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
@@ -168,6 +169,7 @@ std = [
 	'pallet-sudo/std',
 	'pallet-session/std',
 	'pallet-transaction-payment/std',
+	'pallet-asset-tx-payment/std',
 	'pallet-xcm/std',
 	'pallet-utility/std',
 	'pallet-scheduler/std',
