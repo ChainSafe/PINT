@@ -116,7 +116,7 @@ fn pint_testnet_genesis(
 			pallet_admin: Some(root_key.clone()),
 			feed_creators: council_members,
 		},
-		sudo: SudoConfig { key: root_key },
+		sudo: SudoConfig { key: Some(root_key) },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: initial_authorities.iter().cloned().map(|(acc, _)| acc).collect(),

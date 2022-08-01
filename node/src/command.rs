@@ -4,13 +4,13 @@
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
-	service::{self, IdentifyVariant},
+	service::{self, IdentifyVariant, new_partial},
 };
 use codec::Encode;
 use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
-use polkadot_parachain::primitives::AccountIdConversion;
+// use polkadot_parachain::primitives::AccountIdConversion;
 use primitives::Block;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result,
@@ -20,6 +20,7 @@ use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
+use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 
 fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
@@ -203,7 +204,7 @@ macro_rules! with_runtime {
 		} else {
 			#[allow(unused_imports)]
             use dev_runtime::{Block, RuntimeApi};
-            use service::{DevExecutorDispatch as Executor};
+            // use service::{DevExecutorDispatch as Executor};
             $( $code )*
 		}
     }
@@ -258,18 +259,20 @@ pub fn run() -> Result<()> {
 			let mut builder = sc_cli::LoggerBuilder::new("");
 			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
 			let _ = builder.init();
-
-			let block: Block = generate_genesis_block(
-				&load_spec(&params.chain.clone().unwrap_or_default(), params.parachain_id.unwrap_or(200).into())?,
-				state_version,
-			)?;
-			let raw_header = block.header().encode();
-			let output_buf = if params.raw {
-				raw_header
-			} else {
-				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-			};
-
+			let chain_spec = cli.load_spec(&params.chain.clone().unwrap_or_default())?;
+			let state_version = Cli::native_runtime_version(&chain_spec).state_version();
+			let output_buf = with_runtime!(chain_spec, {
+				{
+					let block: Block =
+						generate_genesis_block(&chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
+					let raw_header = block.header().encode();
+					if params.raw {
+						raw_header
+					} else {
+						format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
+					}
+				}
+			});
 			if let Some(output) = &params.output {
 				std::fs::write(output, output_buf)?;
 			} else {
@@ -307,7 +310,32 @@ pub fn run() -> Result<()> {
 				set_default_ss58_version(chain_spec);
 
 				with_runtime!(chain_spec, {
-					return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+					match cmd {
+						BenchmarkCmd::Pallet(cmd) => {
+							if cfg!(feature = "runtime-benchmarks") {
+								runner.sync_run(|config| cmd.run::<Block, Executor>(config))
+							} else {
+								Err("Benchmarking wasn't enabled when building the node. \
+						You can enable it with `--features runtime-benchmarks`."
+									.into())
+							}
+						}
+						BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+							let partials = new_partial::<RuntimeApi>(&config, true, false)?;
+							cmd.run(partials.client)
+						}),
+						BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+							let partials = new_partial::<RuntimeApi>(&config, true, false)?;
+							let db = partials.backend.expose_db();
+							let storage = partials.backend.expose_storage();
+
+							cmd.run(config, partials.client.clone(), db, storage)
+						}),
+						BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+						BenchmarkCmd::Machine(cmd) => {
+							runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
+						}
+					}
 				})
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
@@ -319,12 +347,14 @@ pub fn run() -> Result<()> {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let chain_spec = &runner.config().chain_spec;
 			let is_pint_dev = cli.run.base.shared_params.dev || cli.instant_sealing;
+			let collator_options = cli.run.collator_options();
 
 			set_default_ss58_version(chain_spec);
 
 			runner.run_node_until_exit(|config| async move {
-				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
-				let id = ParaId::from(para_id.unwrap_or(200));
+				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id)
+					.ok_or("Could not find parachain extension for chain-spec.")?;
+				let id = ParaId::from(para_id);
 
 				if is_pint_dev {
 					return service::pint_dev(config, cli.instant_sealing).map_err(Into::into);
@@ -337,24 +367,24 @@ pub fn run() -> Result<()> {
 					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
-				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account_truncating(&id);
+				// let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account_truncating(&id);
 
-				let block: Block =
-					generate_genesis_block(&config.chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+				// let block: Block =
+				// 	generate_genesis_block(&config.chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
+				// let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let polkadot_config =
 					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, config.tokio_handle.clone())
 						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
-				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+				// info!("Parachain Account: {}", parachain_account);
+				// info!("Parachain genesis state: {}", genesis_state);
+				// info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime!(config.chain_spec, {
 					{
-						service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+						service::start_node::<RuntimeApi>(config, polkadot_config, collator_options, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
@@ -424,7 +454,16 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
-	fn init<C: SubstrateCli>(&self) -> Result<()> {
+	fn init<F>(
+		&self,
+		_support_url: &String,
+		_impl_version: &String,
+		_logger_hook: F,
+		_config: &sc_service::Configuration,
+	) -> Result<()>
+		where
+			F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

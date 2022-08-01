@@ -49,6 +49,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 		None,
 		None,
 		None,
+		None,
 		Extensions { relay_chain: "rococo-local".into(), para_id: id.into() },
 	)
 }
@@ -95,6 +96,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 		None,
 		None,
 		None,
+		None,
 		Extensions { relay_chain: "rococo-local".into(), para_id: id.into() },
 	)
 }
@@ -116,7 +118,7 @@ fn pint_testnet_genesis(
 			pallet_admin: Some(root_key.clone()),
 			feed_creators: council_members,
 		},
-		sudo: SudoConfig { key: root_key },
+		sudo: SudoConfig { key: Some(root_key) },
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: initial_authorities.iter().cloned().map(|(acc, _)| acc).collect(),
