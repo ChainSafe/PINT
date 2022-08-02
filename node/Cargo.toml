@@ -28,7 +28,7 @@ runtime-benchmarks = [
 [dependencies]
 derive_more = "0.99.16"
 log = "0.4.14"
-codec = { package = "parity-scale-codec", version = "2.3.1" }
+codec = { package = "parity-scale-codec", version = "3.0.0" }
 structopt = "0.3.25"
 clap = { version = "3.1.6", features = ["derive"] }
 serde = { version = "1.0.130", features = ['derive'] }

@@ -204,7 +204,7 @@ macro_rules! with_runtime {
 		} else {
 			#[allow(unused_imports)]
             use dev_runtime::{Block, RuntimeApi};
-            // use service::{DevExecutorDispatch as Executor};
+            use service::{DevExecutorDispatch as Executor};
             $( $code )*
 		}
     }
