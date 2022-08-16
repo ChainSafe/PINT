@@ -738,6 +738,41 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ProposalBondMaximum;
 }
 
+type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
+
+impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
+	type Event = Event;
+	type AddOrigin = CommitteeOrigin<Runtime>;
+	type RemoveOrigin = CommitteeOrigin<Runtime>;
+	type SwapOrigin = CommitteeOrigin<Runtime>;
+	type ResetOrigin = CommitteeOrigin<Runtime>;
+	type PrimeOrigin = CommitteeOrigin<Runtime>;
+	type MembershipInitialized = ();
+	type MembershipChanged = ();
+	type MaxMembers = ConstU32<50>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 1 hours
+	pub RootOperatorAccountId: AccountId = AccountId::from([0xffu8; 32]);
+}
+type PintDataProvider = orml_oracle::Instance1;
+
+impl orml_oracle::Config<PintDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
+	type Time = Timestamp;
+	type OracleKey = AssetId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = RootOperatorAccountId;
+	type Members = OracleOperatorMembership;
+	type MaxHasDispatchedSize = ConstU32<40>;
+	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -784,6 +819,8 @@ construct_runtime!(
 		RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>} = 85,
 		PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>} = 86,
 		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>} = 90,
+		OrmlOracle: orml_oracle::<Instance1> = 91,
+		OracleOperatorMembership: pallet_membership::<Instance5> = 92,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 100,

@@ -7,6 +7,7 @@ pub mod pallet_local_treasury;
 pub mod pallet_price_feed;
 pub mod pallet_remote_asset_manager;
 pub mod pallet_saft_registry;
+pub mod orml_oracle;
 
 use crate::traits::XcmRuntimeCallWeights;
 use frame_support::weights::{constants::RocksDbWeight, Weight};
