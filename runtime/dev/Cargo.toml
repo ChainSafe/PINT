@@ -60,6 +60,7 @@ pallet-transaction-payment-rpc-runtime-api = { git = 'https://github.com/parityt
 pallet-utility = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-scheduler = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
 pallet-treasury = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.24", default-features = false }
 
 # Cumulus Dependencies
 pallet-collator-selection = { git = 'https://github.com/paritytech/cumulus', branch = 'polkadot-v0.9.24', default-features = false }
@@ -87,6 +88,7 @@ orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
+orml-oracle = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 
 # PINT dependencies
 runtime-common = {path = '../common', default-features = false }
@@ -209,6 +211,7 @@ std = [
 	'orml-xtokens/std',
 	'orml-xcm-support/std',
 	'orml-traits/std',
+	'orml-oracle/std',
 
 	'polkadot-parachain/std',
 ]

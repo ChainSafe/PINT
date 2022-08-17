@@ -169,5 +169,9 @@ fn pint_testnet_genesis(
 			statemint_config: None,
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		oracle_operator_membership: OracleOperatorMembershipConfig {
+			members: vec![],
+			phantom: Default::default(),
+		},
 	}
 }

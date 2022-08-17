@@ -49,11 +49,12 @@ pub mod pallet {
 	pub use crate::{traits::PriceFeed, types::TimestampedValue};
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand},
+		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand, FixedU128},
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;
 	use pallet_chainlink_feed::{FeedInterface, FeedOracle, RoundData};
+	use orml_oracle::{DataProvider};
 	use primitives::traits::MaybeAssetIdConvert;
 	pub use primitives::{AssetPricePair, Price};
 
@@ -249,12 +250,13 @@ pub mod pallet {
 		FeedValueFor<T>: FixedPointOperand,
 	{
 		fn get_price(base: T::AssetId) -> Result<Price, DispatchError> {
-			let feed = Self::asset_feed_id(&base).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
+			// let feed = Self::asset_feed_id(&base).ok_or(Error::<T>::AssetPriceFeedNotFound)?;
 
-			let (value, precision) = Self::latest_valid_value(feed)?;
-			let multiplier = 10u128.checked_pow(precision.into()).ok_or(Error::<T>::ExceededAccuracy)?;
+			// let (value, precision) = Self::latest_valid_value(feed)?;
+			// let multiplier = 10u128.checked_pow(precision.into()).ok_or(Error::<T>::ExceededAccuracy)?;
 
-			Price::checked_from_rational(value, multiplier).ok_or_else(|| Error::<T>::ExceededAccuracy.into())
+			// Price::checked_from_rational(value, multiplier).ok_or_else(|| Error::<T>::ExceededAccuracy.into())
+			DataProvider::<T::AssetId, Price>::get(&base).ok_or_else(|| Error::<T>::ExceededAccuracy.into())
 		}
 
 		fn get_relative_price_pair(

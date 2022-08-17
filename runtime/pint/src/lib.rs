@@ -738,9 +738,9 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ProposalBondMaximum;
 }
 
-type GeneralCouncilMembershipInstance = pallet_membership::Instance1;
+type OperatorMembershipInstancePINT = pallet_membership::Instance5;
 
-impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
+impl pallet_membership::Config<OperatorMembershipInstancePINT> for Runtime {
 	type Event = Event;
 	type AddOrigin = CommitteeOrigin<Runtime>;
 	type RemoveOrigin = CommitteeOrigin<Runtime>;
@@ -755,7 +755,7 @@ impl pallet_membership::Config<GeneralCouncilMembershipInstance> for Runtime {
 
 parameter_types! {
 	pub const MinimumCount: u32 = 1;
-	pub const ExpiresIn: Moment = 1000 * 60 * 60; // 1 hours
+	pub const ExpiresIn: u64 = 1000 * 60 * 60; // 1 hours
 	pub RootOperatorAccountId: AccountId = AccountId::from([0xffu8; 32]);
 }
 type PintDataProvider = orml_oracle::Instance1;
@@ -763,7 +763,7 @@ type PintDataProvider = orml_oracle::Instance1;
 impl orml_oracle::Config<PintDataProvider> for Runtime {
 	type Event = Event;
 	type OnNewData = ();
-	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn>;
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, PintDataProvider>;
 	type Time = Timestamp;
 	type OracleKey = AssetId;
 	type OracleValue = Price;
