@@ -20,7 +20,6 @@ frame-system = { git = 'https://github.com/paritytech/substrate', branch = 'polk
 frame-benchmarking = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.24', default-features = false, optional = true }
 
 # PINT dependencies
-pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'polkadot-v0.9.24', default-features = false }
 primitives = { path = "../../primitives/primitives", default-features = false }
 orml-oracle = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
@@ -42,7 +41,6 @@ std = [
     'scale-info/std',
     'frame-support/std',
     'frame-system/std',
-    'pallet-chainlink-feed/std',
     'primitives/std',
     'sp-core/std',
     'sp-io/std',
@@ -52,7 +50,6 @@ std = [
 runtime-benchmarks = [
     'frame-benchmarking',
     'frame-support/runtime-benchmarks',
-    'pallet-chainlink-feed/runtime-benchmarks',
     'primitives/runtime-benchmarks',
 ]
 

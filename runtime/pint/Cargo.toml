@@ -103,8 +103,6 @@ primitives = { path = '../../primitives/primitives', default-features = false }
 xcm-calls = { path = '../../primitives/xcm-calls', default-features = false }
 pallet-asset-index-rpc-runtime-api = { path = '../../pallets/asset-index/rpc/runtime-api', default-features = false }
 
-pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'polkadot-v0.9.24', default-features = false }
-
 [dev-dependencies]
 hex-literal = "0.3.3"
 hex = "0.4.3"
@@ -202,7 +200,6 @@ std = [
 	'xcm-calls/std',
 	'primitives/std',
 	'pallet-asset-index-rpc-runtime-api/std',
-	'pallet-chainlink-feed/std',
 
 	'orml-currencies/std',
 	'orml-unknown-tokens/std',

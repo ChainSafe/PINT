@@ -24,9 +24,6 @@ cumulus-pallet-xcm = { git = 'https://github.com/paritytech/cumulus', branch = '
 orml-traits = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 orml-oracle = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.24', default-features = false }
 
-# chainlink
-pallet-chainlink-feed = { git = 'https://github.com/Sotatek-BaoHoang2/chainlink-polkadot', branch = 'polkadot-v0.9.24', default-features = false }
-
 # pint
 primitives = { path = '../../primitives/primitives', default-features = false }
 pallet-committee = {path = '../../pallets/committee', default-features = false }
@@ -59,6 +56,5 @@ std = [
 	'pallet-price-feed/std',
 	'pallet-remote-asset-manager/std',
 	'pallet-saft-registry/std',
-    'pallet-chainlink-feed/std',
     "primitives/std",
 ]

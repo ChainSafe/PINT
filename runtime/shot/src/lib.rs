@@ -488,21 +488,8 @@ impl pallet_price_feed::Config for Runtime {
 	type AssetId = AssetId;
 	type Time = Timestamp;
 	type Event = Event;
+	type DataProvider = OrmlOracle;
 	type WeightInfo = weights::pallet_price_feed::WeightInfo<Runtime>;
-}
-
-impl pallet_chainlink_feed::Config for Runtime {
-	type Event = Event;
-	type FeedId = FeedId;
-	type Value = Value;
-	type Currency = Balances;
-	type PalletId = FeedPalletId;
-	type MinimumReserve = MinimumReserve;
-	type StringLimit = StringLimit;
-	type OracleCountLimit = OracleLimit;
-	type FeedLimit = FeedLimit;
-	type OnAnswerHandler = PriceFeed;
-	type WeightInfo = ();
 }
 
 impl pallet_asset_index::Config for Runtime {
@@ -736,6 +723,60 @@ impl pallet_treasury::Config for Runtime {
 	type ProposalBondMaximum = ProposalBondMaximum;
 }
 
+parameter_types! {
+	pub const GeneralCouncilMotionDuration: BlockNumber = 7 * DAYS;
+	pub const CouncilDefaultMaxProposals: u32 = 100;
+	pub const CouncilDefaultMaxMembers: u32 = 100;
+}
+
+type GeneralCouncilInstance = pallet_collective::Instance1;
+
+impl pallet_collective::Config<GeneralCouncilInstance> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = GeneralCouncilMotionDuration;
+	type MaxProposals = CouncilDefaultMaxProposals;
+	type MaxMembers = CouncilDefaultMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = ();
+}
+
+type OperatorMembershipInstancePINT = pallet_membership::Instance5;
+
+impl pallet_membership::Config<OperatorMembershipInstancePINT> for Runtime {
+	type Event = Event;
+	type AddOrigin = CommitteeOrigin<Runtime>;
+	type RemoveOrigin = CommitteeOrigin<Runtime>;
+	type SwapOrigin = CommitteeOrigin<Runtime>;
+	type ResetOrigin = CommitteeOrigin<Runtime>;
+	type PrimeOrigin = CommitteeOrigin<Runtime>;
+	type MembershipInitialized = GeneralCouncil;
+	type MembershipChanged = GeneralCouncil;
+	type MaxMembers = ConstU32<100>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: u64 = 1000 * 60 * 60; // 1 hours
+	pub RootOperatorAccountId: AccountId = AccountId::from([0xffu8; 32]);
+}
+type PintDataProvider = orml_oracle::Instance1;
+
+impl orml_oracle::Config<PintDataProvider> for Runtime {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Runtime, MinimumCount, ExpiresIn, PintDataProvider>;
+	type Time = Timestamp;
+	type OracleKey = AssetId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = RootOperatorAccountId;
+	type Members = OracleOperatorMembership;
+	type MaxHasDispatchedSize = ConstU32<40>;
+	type WeightInfo = weights::orml_oracle::WeightInfo<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously
 // configured.
 construct_runtime!(
@@ -752,6 +793,7 @@ construct_runtime!(
 		Utility: pallet_utility::{Pallet, Call, Event} = 5,
 		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>} = 6,
 		AssetTxPayment: pallet_asset_tx_payment::{Pallet} = 10,
+		GeneralCouncil: pallet_collective::<Instance1> = 50,
 
 		// Treasury
 		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>} = 15,
@@ -781,7 +823,8 @@ construct_runtime!(
 		SaftRegistry: pallet_saft_registry::{Pallet, Call, Storage, Event<T>} = 84,
 		RemoteAssetManager: pallet_remote_asset_manager::{Pallet, Call, Storage, Event<T>, Config<T>} = 85,
 		PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>} = 86,
-		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>, Config<T>} = 90,
+		OrmlOracle: orml_oracle::<Instance1> = 91,
+		OracleOperatorMembership: pallet_membership::<Instance5> = 92,
 
 		// XCM
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>} = 100,
