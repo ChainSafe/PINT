@@ -159,7 +159,7 @@ mod tests {
 	use std::{cell::RefCell, collections::HashSet};
 
 	use codec::{Decode, Encode, MaxEncodedLen};
-	use frame_election_provider_support::onchain;
+	use frame_election_provider_support::{onchain, SequentialPhragmen};
 	use frame_support::{
 		parameter_types,
 		sp_runtime::traits::BlakeTwo256,
@@ -334,6 +334,7 @@ mod tests {
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
 		type OnSetCode = ();
+		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 	impl pallet_balances::Config for Test {
 		type MaxLocks = MaxLocks;
@@ -395,6 +396,7 @@ mod tests {
 		pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
 		pub const MaxNominatorRewardedPerValidator: u32 = 64;
 		pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(75);
+		pub const MaxNominations: u32 = <NposCompactSolution16 as frame_election_provider_support::NposSolution>::LIMIT as u32;
 	}
 
 	thread_local! {
@@ -415,6 +417,9 @@ mod tests {
 	impl onchain::Config for Test {
 		type Accuracy = Perbill;
 		type DataProvider = Staking;
+		type System = Runtime;
+		type WeightInfo = weights::frame_election_provider_support::WeightInfo<Runtime>;
+		type Solver = SequentialPhragmen<AccountId, runtime_common::elections::OnChainAccuracy>;
 	}
 	impl staking::Config for Test {
 		const MAX_NOMINATIONS: u32 = 16;
@@ -437,7 +442,13 @@ mod tests {
 		type GenesisElectionProvider = Self::ElectionProvider;
 		type WeightInfo = ();
 		type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
-		type SortedListProvider = BagsList;
+		// type SortedListProvider = BagsList;
+		type MaxUnlockingChunks = frame_support::traits::ConstU32<32>;
+		type CurrencyBalance = Balance;
+		type MaxNominations = MaxNominations;
+		type VoterList = staking::UseNominatorsAndValidatorsMap<Runtime>;
+		type BenchmarkingConfig = runtime_common::StakingBenchmarkingConfig;
+		type OnStakerSlash = ();
 	}
 
 	parameter_types! {
@@ -487,6 +498,7 @@ mod tests {
 		type CallHasher = BlakeTwo256;
 		type AnnouncementDepositBase = AnnouncementDepositBase;
 		type AnnouncementDepositFactor = AnnouncementDepositFactor;
+
 	}
 
 	impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
@@ -521,6 +533,7 @@ mod tests {
 		type Freezer = ();
 		type WeightInfo = ();
 		type Extra = ();
+		type AssetAccountDeposit = ();
 	}
 
 	struct PalletUtilityEncoder;
