@@ -12943,16 +12943,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "pallet-offences-benchmarking"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech//substrate?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
-
-[[patch.unused]]
-name = "pallet-session-benchmarking"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech//substrate?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
-
-[[patch.unused]]
 name = "polkadot-test-runtime"
 version = "0.9.24"
 source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.24#22836e55d41eef24ed5917fd654ee82a683a7cfe"
@@ -12971,3 +12961,13 @@ source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.24#228
 name = "westend-runtime"
 version = "0.9.24"
 source = "git+https://github.com/paritytech//polkadot?branch=release-v0.9.24#22836e55d41eef24ed5917fd654ee82a683a7cfe"
+
+[[patch.unused]]
+name = "pallet-offences-benchmarking"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech//substrate?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
+
+[[patch.unused]]
+name = "pallet-session-benchmarking"
+version = "4.0.0-dev"
+source = "git+https://github.com/paritytech//substrate?branch=polkadot-v0.9.24#814752f60ab8cce7e2ece3ce0c1b10799b4eab28"
