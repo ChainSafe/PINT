@@ -8,11 +8,8 @@ use frame_support::{
 	traits::tokens::fungibles::Inspect,
 };
 use orml_traits::MultiCurrency;
-use pallet_committee::{
-	types::{CommitteeMember, MemberType, MemberVote, VoteAggregate, VoteKind},
-	CommitteeOrigin,
-};
-use xcm_emulator::TestExt;
+use pallet_committee::{types::{CommitteeMember, MemberType, MemberVote, VoteAggregate, VoteKind}, CommitteeOrigin, CustomDefault};
+use xcm_simulator::TestExt;
 use xcm_executor::traits::Convert;
 
 pub fn sibling_sovereign_account() -> AccountId {
@@ -73,7 +70,7 @@ pub fn committee_origin(origin: AccountId) -> CommitteeOrigin<AccountId, BlockNu
 		VoteAggregate {
 			votes: vec![
 				MemberVote {
-					member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+					member: CommitteeMember { account_id: CustomDefault::c_default(), member_type: MemberType::Council },
 					vote: VoteKind::Aye
 				};
 				<ShotRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1

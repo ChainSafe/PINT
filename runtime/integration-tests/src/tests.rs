@@ -11,7 +11,7 @@ use kusama_runtime::ProxyType as RelayProxyType;
 use orml_traits::MultiCurrency;
 use pallet_remote_asset_manager::types::StatemintConfig;
 use xcm_calls::proxy::ProxyType as ParaProxyType;
-use xcm_emulator::TestExt;
+use xcm_simulator::TestExt;
 
 #[test]
 fn para_account_funded_on_relay() {
@@ -37,7 +37,7 @@ fn can_deposit_from_relay() {
 		let index_token_balance = pallet_asset_index::Pallet::<ShotRuntime>::index_token_balance(&ALICE);
 
 		// create feed
-		create_and_submit_feed(ADMIN_ACCOUNT, RELAY_CHAIN_ASSET, 1);
+		// create_and_submit_feed(ADMIN_ACCOUNT, RELAY_CHAIN_ASSET, 1);
 
 		let nav = pallet_asset_index::Pallet::<ShotRuntime>::nav().unwrap();
 

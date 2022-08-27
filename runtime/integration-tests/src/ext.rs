@@ -8,11 +8,11 @@ use xcm_calls::{
 };
 
 fn default_parachains_host_configuration(
-) -> polkadot_runtime_parachains::configuration::HostConfiguration<polkadot_primitives::v1::BlockNumber> {
-	use polkadot_primitives::v1::{MAX_CODE_SIZE, MAX_POV_SIZE};
+) -> polkadot_runtime_parachains::configuration::HostConfiguration<polkadot_primitives::v2::BlockNumber> {
+	use polkadot_primitives::v2::{MAX_CODE_SIZE, MAX_POV_SIZE};
 
 	polkadot_runtime_parachains::configuration::HostConfiguration {
-		validation_upgrade_frequency: 1u32,
+		validation_upgrade_cooldown: 1u32,
 		validation_upgrade_delay: 1,
 		code_retention_period: 1200,
 		max_code_size: MAX_CODE_SIZE,
