@@ -4,14 +4,13 @@
 use crate::{prelude::*, statemint, util::*};
 use frame_support::{
 	assert_noop, assert_ok,
-	sp_runtime::{traits::Zero, FixedPointNumber},
 	traits::tokens::fungibles::Inspect,
 };
 use kusama_runtime::ProxyType as RelayProxyType;
 use orml_traits::MultiCurrency;
 use pallet_remote_asset_manager::types::StatemintConfig;
 use xcm_calls::proxy::ProxyType as ParaProxyType;
-use xcm_simulator::TestExt;
+use xcm_emulator::TestExt;
 
 #[test]
 fn para_account_funded_on_relay() {

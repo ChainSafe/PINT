@@ -13,7 +13,7 @@ use crate::{
 	prelude::*,
 	util::sibling_sovereign_account,
 };
-use xcm_simulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
+use xcm_emulator::{decl_test_network, decl_test_parachain, decl_test_relay_chain};
 
 decl_test_relay_chain! {
 	pub struct Kusama {
@@ -26,8 +26,9 @@ decl_test_relay_chain! {
 decl_test_parachain! {
 	pub struct Shot {
 		Runtime = shot_runtime::Runtime,
-		XcmpMessageHandler = statemint::XcmpQueue,
-		DmpMessageHandler = statemint::DmpQueue,
+		Origin = shot_runtime::Origin,
+		XcmpMessageHandler = shot_runtime::XcmpQueue,
+		DmpMessageHandler = shot_runtime::DmpQueue,
 		new_ext = shot_ext(PARA_ID, vec![(ALICE, INITIAL_BALANCE)]),
 	}
 }
@@ -35,8 +36,9 @@ decl_test_parachain! {
 decl_test_parachain! {
 	pub struct Statemint {
 		Runtime = crate::statemint::Runtime,
-		XcmpMessageHandler = statemint::XcmpQueue,
-		DmpMessageHandler = statemint::DmpQueue,
+		Origin = crate::statemint::Origin,
+		XcmpMessageHandler = crate::statemint::XcmpQueue,
+		DmpMessageHandler = crate::statemint::DmpQueue,
 		new_ext = statemint_ext(STATEMINT_PARA_ID, vec![(ALICE, INITIAL_BALANCE), (sibling_sovereign_account(), INITIAL_BALANCE)]),
 	}
 }
