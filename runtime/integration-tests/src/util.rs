@@ -9,7 +9,7 @@ use frame_support::{
 };
 use orml_traits::MultiCurrency;
 use pallet_committee::{types::{CommitteeMember, MemberType, MemberVote, VoteAggregate, VoteKind}, CommitteeOrigin, CustomDefault};
-use xcm_simulator::TestExt;
+use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert;
 
 pub fn sibling_sovereign_account() -> AccountId {
