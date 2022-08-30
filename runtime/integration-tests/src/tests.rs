@@ -11,6 +11,8 @@ use orml_traits::MultiCurrency;
 use pallet_remote_asset_manager::types::StatemintConfig;
 use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_emulator::TestExt;
+use sp_runtime::FixedPointNumber;
+use sp_runtime::traits::Zero;
 
 #[test]
 fn para_account_funded_on_relay() {
