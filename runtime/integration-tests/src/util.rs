@@ -11,7 +11,8 @@ use orml_traits::MultiCurrency;
 use pallet_committee::{types::{CommitteeMember, MemberType, MemberVote, VoteAggregate, VoteKind}, CommitteeOrigin, CustomDefault};
 use xcm_emulator::TestExt;
 use xcm_executor::traits::Convert;
-pub use shot_runtime::{OrmlOracle};
+pub use shot_runtime::{OrmlOracle, OracleOperatorMembership};
+pub use frame_system::RawOrigin;
 
 pub fn sibling_sovereign_account() -> AccountId {
 	use crate::statemint::LocationToAccountId;
@@ -65,9 +66,11 @@ pub fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 }
 
 pub fn create_and_submit_feed(caller: AccountId, asset_id: AssetId, price: u128) {
+	// assert_ok!(OracleOperatorMembership::add_member(RawOrigin::Root.into(), caller.clone()));
+	// assert_ok!(OrmlOracle::feed_values(shot_runtime::Origin::signed(caller.clone()), vec![(asset_id, price.into())]));
+	assert_ok!(OrmlOracle::feed_values(RawOrigin::Root.into(), vec![(asset_id, price.into())]));
 	// Set caller
-	assert_ok!(OrmlOracle::feed_values(shot_runtime::Origin::signed(caller.clone()), vec![(asset_id, price.into())]));
-	// assert_ok!(orml_oracle::Pallet::<ShotRuntime>::set_feed_creator(
+	// assert_ok!(pallet_chainlink_feed::set_feed_creator(
 	// 	<frame_system::Origin<ShotRuntime>>::Signed(pallet_chainlink_feed::Pallet::<ShotRuntime>::pallet_admin())
 	// 		.into(),
 	// 	caller.clone(),
