@@ -17,10 +17,9 @@ use sc_consensus_aura::StartAuraParams;
 // Substrate Imports
 use cumulus_primitives_parachain_inherent::{MockValidationDataInherentDataProvider, MockXcmConfig};
 use sc_chain_spec::ChainSpec;
-use sc_client_api::ExecutorProvider;
 use sc_consensus::LongestChain;
 use sc_consensus_aura::ImportQueueParams;
-use sc_executor::{NativeElseWasmExecutor, WasmExecutor};
+use sc_executor::{WasmExecutor};
 use sc_network::NetworkService;
 use sc_service::{error::Error as ServiceError, Configuration, PartialComponents, Role, TFullBackend, TaskManager};
 use sc_telemetry::{Telemetry, TelemetryHandle, TelemetryWorker, TelemetryWorkerHandle};
