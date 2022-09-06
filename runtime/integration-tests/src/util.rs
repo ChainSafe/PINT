@@ -66,38 +66,7 @@ pub fn transfer_to_para(relay_deposit_amount: Balance, who: AccountId) {
 }
 
 pub fn create_and_submit_feed(caller: AccountId, asset_id: AssetId, price: u128) {
-	// assert_ok!(OracleOperatorMembership::add_member(RawOrigin::Root.into(), caller.clone()));
-	// assert_ok!(OrmlOracle::feed_values(shot_runtime::Origin::signed(caller.clone()), vec![(asset_id, price.into())]));
 	assert_ok!(OrmlOracle::feed_values(RawOrigin::Root.into(), vec![(asset_id, price.into())]));
-	// Set caller
-	// assert_ok!(pallet_chainlink_feed::set_feed_creator(
-	// 	<frame_system::Origin<ShotRuntime>>::Signed(pallet_chainlink_feed::Pallet::<ShotRuntime>::pallet_admin())
-	// 		.into(),
-	// 	caller.clone(),
-	// ));
-
-	// assert_ok!(pallet_chainlink_feed::Pallet::<ShotRuntime>::create_feed(
-	// 	<frame_system::Origin<ShotRuntime>>::Signed(caller.clone()).into(),
-	// 	100u32.into(),
-	// 	Zero::zero(),
-	// 	(1u8.into(), 100u8.into()),
-	// 	1u8.into(),
-	// 	0u8,
-	// 	vec![1; <ShotRuntime as pallet_chainlink_feed::Config>::StringLimit::get() as usize],
-	// 	Zero::zero(),
-	// 	vec![(caller.clone(), caller.clone())],
-	// 	None,
-	// 	None,
-	// ));
-
-	// let feed_id = <pallet_chainlink_feed::FeedCounter<ShotRuntime>>::get() as u64 - 1;
-	// pallet_price_feed::AssetFeeds::<ShotRuntime>::insert(&asset_id, feed_id);
-	// assert_ok!(pallet_chainlink_feed::Pallet::<ShotRuntime>::submit(
-	// 	<frame_system::Origin<ShotRuntime>>::Signed(caller.clone()).into(),
-	// 	feed_id,
-	// 	1_u32.into(),
-	// 	price.into(),
-	// ));
 }
 
 /// create an approved committe origin from account id
