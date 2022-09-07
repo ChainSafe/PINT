@@ -1,13 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use sp_std::marker::PhantomData;
-use frame_support::{sp_runtime, traits::EnsureOneOf, weights::{WeightToFee, Weight}};
+use frame_support::{sp_runtime, traits::EitherOfDiverse, weights::{WeightToFee, Weight}};
 use primitives::Balance;
 use crate::constants::TransactionByteFee;
 use sp_runtime::SaturatedConversion;
 
 /// Origin either `Root` or `CommitteeOrigin`
-pub type GovernanceOrigin<AccountId, Runtime> = EnsureOneOf<
+pub type GovernanceOrigin<AccountId, Runtime> = EitherOfDiverse<
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
 	frame_system::EnsureRoot<AccountId>,
 >;

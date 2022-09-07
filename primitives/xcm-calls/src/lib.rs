@@ -75,9 +75,9 @@
 
 use codec::{Encode, Output};
 use frame_support::sp_std::marker::PhantomData;
+use crate::staking::EraIndex;
 
 pub use encode_with::*;
-use crate::staking::EraIndex;
 
 pub mod assets;
 mod encode_with;

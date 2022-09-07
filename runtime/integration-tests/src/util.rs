@@ -80,7 +80,7 @@ pub fn committee_origin(origin: AccountId) -> CommitteeOrigin<AccountId, BlockNu
 					vote: VoteKind::Aye
 				};
 				<ShotRuntime as pallet_committee::Config>::MinCouncilVotes::get() + 1
-			],
+			].try_into().unwrap(),
 			end: <frame_system::Pallet<ShotRuntime>>::block_number() + 1,
 		},
 	)

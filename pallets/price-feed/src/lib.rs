@@ -43,13 +43,12 @@ pub mod pallet {
 	pub use crate::traits::PriceFeedBenchmarks;
 	#[cfg(feature = "runtime-benchmarks")]
 	use frame_benchmarking::Zero;
-	#[cfg(feature = "std")]
-	use frame_support::traits::GenesisBuild;
+
 
 	pub use crate::{traits::PriceFeed, types::TimestampedValue};
 	use frame_support::{
 		pallet_prelude::*,
-		sp_runtime::{traits::CheckedDiv, FixedPointNumber, FixedPointOperand, FixedU128},
+		sp_runtime::{traits::CheckedDiv},
 		traits::{Get, Time},
 	};
 	use frame_system::pallet_prelude::*;

@@ -166,7 +166,7 @@ fn pint_testnet_genesis(
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
 		oracle_operator_membership: OracleOperatorMembershipConfig {
-			members: vec![],
+			members: vec![].try_into().unwrap(),
 			phantom: Default::default(),
 		},
 	}
