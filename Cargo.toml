@@ -47,7 +47,6 @@ pallet-mmr = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161
 #pallet-mmr-primitives = { git = "https://github.com/paritytech//substrate", rev = 'fcc54a72973d03afe7bf9e3ef2736050b3f33465'}
 pallet-mmr-rpc = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
 pallet-multisig = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
-pallet-nicks = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
 pallet-offences = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
 pallet-proxy = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
 pallet-offences-benchmarking = { git = "https://github.com/paritytech//substrate", rev = 'e8a7d161f39db70cb27fdad6c6e215cf493ebc3b'}
