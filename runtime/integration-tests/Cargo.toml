@@ -53,6 +53,7 @@ orml-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-li
 orml-xtokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library',branch = 'polkadot-v0.9.26' }
 orml-unknown-tokens = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.26' }
 orml-xcm-support = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.26' }
+orml-oracle = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.26' }
 
 # pint
 pallet-remote-asset-manager = { path = "../../pallets/remote-asset-manager" }
