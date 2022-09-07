@@ -20,8 +20,8 @@
 
 pub use pallet::*;
 
-// #[cfg(test)]
-// mod mock;
+#[cfg(test)]
+mod mock;
 // #[cfg(test)]
 // pub use mock::FeedBuilder;
 

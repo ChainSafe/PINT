@@ -32,6 +32,8 @@ sp-runtime = { git = 'https://github.com/paritytech/substrate', branch = 'polkad
 
 pallet-balances = { git = 'https://github.com/paritytech/substrate', branch = 'polkadot-v0.9.26' }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = 'polkadot-v0.9.26' }
+orml-oracle = { git = 'https://github.com/open-web3-stack/open-runtime-module-library', branch = 'polkadot-v0.9.26' }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = 'polkadot-v0.9.26' }
 
 [features]
 default = ['std']

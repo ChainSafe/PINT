@@ -2,7 +2,7 @@
 // // SPDX-License-Identifier: LGPL-3.0-only
 //
 // use crate as pallet;
-// use crate::{mock::*, Error};
+use crate::{mock::*, Error};
 // use frame_support::{assert_noop, assert_ok};
 // use pallet::PriceFeed as _;
 // use primitives::Price;
@@ -53,48 +53,49 @@
 // 	})
 // }
 //
-// #[test]
-// fn price_pair_should_be_available() {
-// 	new_test_ext().execute_with(|| {
-// 		// insert two feeds
-// 		let decimals = 6;
-// 		assert_ok!(FeedBuilder::new()
-// 			.description(b"X".to_vec())
-// 			.min_submissions(1)
-// 			.decimals(decimals as u8)
-// 			.value_bounds(0, 1_000_000_000_000)
-// 			.build_and_store());
-// 		assert_ok!(FeedBuilder::new().description(b"Y".to_vec()).min_submissions(1).decimals(0).build_and_store());
-//
-// 		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_X_ID, 0));
-// 		assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_Y_ID, 1));
-//
-// 		// insert round feed 1
-// 		let feed_id = 0;
-// 		let round_id = 1;
-// 		let oracle = 2;
-// 		let base_submission = 1_000_000_000;
-// 		let precision = 10u128.pow(decimals);
-// 		assert_ok!(ChainlinkFeed::submit(Origin::signed(oracle), feed_id, round_id, base_submission));
-//
-// 		// insert round feed 2
-// 		let feed_id = 1;
-// 		let round_id = 1;
-// 		let oracle = 2;
-// 		let quote_submission = 200;
-// 		assert_ok!(ChainlinkFeed::submit(Origin::signed(oracle), feed_id, round_id, quote_submission));
-//
-// 		let base_price = PriceFeed::get_price(ASSET_X_ID).expect("price pair should be available");
-// 		assert_eq!(base_price, Price::saturating_from_integer((base_submission as u128) / precision));
-//
-// 		let quote_price = PriceFeed::get_price(ASSET_Y_ID).expect("price pair should be available");
-// 		assert_eq!(quote_price, Price::saturating_from_integer(quote_submission as u128));
-//
-// 		let pair = PriceFeed::get_relative_price_pair(ASSET_X_ID, ASSET_Y_ID).expect("relative price available");
-//
-// 		assert_eq!(
-// 			pair.price,
-// 			Price::saturating_from_rational((base_submission as u128) / precision, quote_submission)
-// 		);
-// 	})
-// }
+#[test]
+fn price_pair_should_be_available() {
+	new_test_ext().execute_with(|| {
+		// insert two feeds
+		let decimals = 6;
+		assert_eq!(1, 1);
+		// assert_ok!(FeedBuilder::new()
+		// 	.description(b"X".to_vec())
+		// 	.min_submissions(1)
+		// 	.decimals(decimals as u8)
+		// 	.value_bounds(0, 1_000_000_000_000)
+		// 	.build_and_store());
+		// assert_ok!(FeedBuilder::new().description(b"Y".to_vec()).min_submissions(1).decimals(0).build_and_store());
+        //
+		// assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_X_ID, 0));
+		// assert_ok!(PriceFeed::map_asset_price_feed(Origin::signed(ADMIN_ACCOUNT_ID), ASSET_Y_ID, 1));
+        //
+		// // insert round feed 1
+		// let feed_id = 0;
+		// let round_id = 1;
+		// let oracle = 2;
+		// let base_submission = 1_000_000_000;
+		// let precision = 10u128.pow(decimals);
+		// assert_ok!(ChainlinkFeed::submit(Origin::signed(oracle), feed_id, round_id, base_submission));
+        //
+		// // insert round feed 2
+		// let feed_id = 1;
+		// let round_id = 1;
+		// let oracle = 2;
+		// let quote_submission = 200;
+		// assert_ok!(ChainlinkFeed::submit(Origin::signed(oracle), feed_id, round_id, quote_submission));
+        //
+		// let base_price = PriceFeed::get_price(ASSET_X_ID).expect("price pair should be available");
+		// assert_eq!(base_price, Price::saturating_from_integer((base_submission as u128) / precision));
+        //
+		// let quote_price = PriceFeed::get_price(ASSET_Y_ID).expect("price pair should be available");
+		// assert_eq!(quote_price, Price::saturating_from_integer(quote_submission as u128));
+        //
+		// let pair = PriceFeed::get_relative_price_pair(ASSET_X_ID, ASSET_Y_ID).expect("relative price available");
+        //
+		// assert_eq!(
+		// 	pair.price,
+		// 	Price::saturating_from_rational((base_submission as u128) / precision, quote_submission)
+		// );
+	})
+}
