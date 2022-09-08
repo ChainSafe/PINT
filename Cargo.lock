@@ -13050,33 +13050,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "polkadot-test-runtime"
-version = "0.9.26"
-source = "git+https://github.com/paritytech//polkadot?rev=d8785970175dce344f2a6ad1cd88297529a6dd59#d8785970175dce344f2a6ad1cd88297529a6dd59"
-
-[[patch.unused]]
-name = "polkadot-test-service"
-version = "0.9.26"
-source = "git+https://github.com/paritytech//polkadot?rev=d8785970175dce344f2a6ad1cd88297529a6dd59#d8785970175dce344f2a6ad1cd88297529a6dd59"
-
-[[patch.unused]]
-name = "rococo-runtime"
-version = "0.9.26"
-source = "git+https://github.com/paritytech//polkadot?rev=d8785970175dce344f2a6ad1cd88297529a6dd59#d8785970175dce344f2a6ad1cd88297529a6dd59"
-
-[[patch.unused]]
-name = "westend-runtime"
-version = "0.9.26"
-source = "git+https://github.com/paritytech//polkadot?rev=d8785970175dce344f2a6ad1cd88297529a6dd59#d8785970175dce344f2a6ad1cd88297529a6dd59"
-
-[[patch.unused]]
-name = "pallet-offences-benchmarking"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech//substrate?rev=e8a7d161f39db70cb27fdad6c6e215cf493ebc3b#e8a7d161f39db70cb27fdad6c6e215cf493ebc3b"
-
-[[patch.unused]]
-name = "pallet-session-benchmarking"
-version = "4.0.0-dev"
-source = "git+https://github.com/paritytech//substrate?rev=e8a7d161f39db70cb27fdad6c6e215cf493ebc3b#e8a7d161f39db70cb27fdad6c6e215cf493ebc3b"
