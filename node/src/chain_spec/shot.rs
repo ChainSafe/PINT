@@ -49,6 +49,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 		None,
 		None,
 		None,
+		None,
 		Extensions { relay_chain: "rococo-local".into(), para_id: id.into() },
 	)
 }
@@ -92,6 +93,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 			)
 		},
 		vec![],
+		None,
 		None,
 		None,
 		None,
@@ -163,5 +165,9 @@ fn pint_testnet_genesis(
 			statemint_config: None,
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		oracle_operator_membership: OracleOperatorMembershipConfig {
+			members: vec![].try_into().unwrap(),
+			phantom: Default::default(),
+		},
 	}
 }

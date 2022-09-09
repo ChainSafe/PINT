@@ -623,7 +623,7 @@ pub fn new_chain_ops(
 		#[cfg(feature = "shot")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<shot_runtime::RuntimeApi, ShotExecutorDispatch>(config, false, false)?;
+				new_partial::<shot_runtime::RuntimeApi>(config, false, false)?;
 			Ok((Arc::new(Client::Shot(client)), backend, import_queue, task_manager))
 		}
 
@@ -633,7 +633,7 @@ pub fn new_chain_ops(
 		#[cfg(feature = "pint")]
 		{
 			let PartialComponents { client, backend, import_queue, task_manager, .. } =
-				new_partial::<pint_runtime::RuntimeApi, PintExecutorDispatch>(config, false, false)?;
+				new_partial::<pint_runtime::RuntimeApi>(config, false, false)?;
 			Ok((Arc::new(Client::Pint(client)), backend, import_queue, task_manager))
 		}
 
