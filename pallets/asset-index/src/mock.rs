@@ -18,7 +18,7 @@ use frame_support::{
 		DispatchError,
 	},
 	sp_std::{cell::RefCell, marker::PhantomData, ops::Range},
-	traits::{Everything, GenesisBuild, LockIdentifier},
+	traits::{ConstU32, Everything, GenesisBuild, LockIdentifier},
 	PalletId,
 };
 use frame_system as system;
@@ -61,6 +61,7 @@ pub(crate) type Amount = i128;
 pub(crate) type AccountId = u64;
 pub(crate) type AssetId = u32;
 pub(crate) type BlockNumber = u64;
+pub(crate) type ReserveIdentifier = [u8; 8];
 
 impl system::Config for Test {
 	type BaseCallFilter = Everything;
@@ -86,6 +87,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
+	type MaxConsumers = ConstU32<16>;
 }
 
 pub(crate) const ACCOUNT_ID: AccountId = 0;
@@ -133,6 +135,10 @@ impl orml_tokens::Config for Test {
 	type OnDust = ();
 	type MaxLocks = MaxLocks;
 	type DustRemovalWhitelist = Everything;
+	type MaxReserves = ConstU32<2>;
+	type OnKilledTokenAccount = ();
+	type OnNewTokenAccount = ();
+	type ReserveIdentifier = ReserveIdentifier;
 }
 
 impl pallet_saft_registry::Config for Test {

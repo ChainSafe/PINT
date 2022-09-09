@@ -1,10 +1,13 @@
 // Copyright 2021 ChainSafe Systems
 // SPDX-License-Identifier: LGPL-3.0-only
 use sp_std::marker::PhantomData;
+use frame_support::{sp_runtime, traits::EitherOfDiverse, weights::{WeightToFee, Weight}};
+use primitives::Balance;
+use crate::constants::TransactionByteFee;
+use sp_runtime::SaturatedConversion;
 
 /// Origin either `Root` or `CommitteeOrigin`
-pub type GovernanceOrigin<AccountId, Runtime> = frame_system::EnsureOneOf<
-	AccountId,
+pub type GovernanceOrigin<AccountId, Runtime> = EitherOfDiverse<
 	pallet_committee::EnsureApprovedByCommittee<Runtime>,
 	frame_system::EnsureRoot<AccountId>,
 >;
@@ -35,5 +38,20 @@ impl<T: frame_system::Config> pallet_asset_index::traits::LockupPeriodRange<T::B
 
 	fn max() -> T::BlockNumber {
 		(crate::constants::DAYS * 28).into()
+	}
+}
+
+pub struct CustomLengthToFee {}
+
+impl CustomLengthToFee {
+	const LENGTH_FEE: Balance = TransactionByteFee::get();
+}
+
+impl WeightToFee for CustomLengthToFee {
+	type Balance = Balance;
+
+	fn weight_to_fee(weight: &Weight) -> Self::Balance {
+		Self::Balance::saturated_from(*weight)
+			.saturating_mul(CustomLengthToFee::LENGTH_FEE)
 	}
 }

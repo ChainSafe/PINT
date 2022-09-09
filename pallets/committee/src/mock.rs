@@ -23,6 +23,7 @@ use sp_core::H256;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
+use frame_support::traits::EitherOfDiverse;
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
@@ -67,6 +68,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
+	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
 pub(crate) const PROPOSAL_SUBMISSION_PERIOD: <Test as system::Config>::BlockNumber = 10;
@@ -91,7 +93,7 @@ ord_parameter_types! {
 }
 
 type EnsureApprovedByCommittee =
-	frame_system::EnsureOneOf<AccountId, frame_system::EnsureRoot<AccountId>, crate::EnsureApprovedByCommittee<Test>>;
+	EitherOfDiverse<frame_system::EnsureRoot<AccountId>, crate::EnsureApprovedByCommittee<Test>>;
 
 pub struct VotingPeriodRange<T>(PhantomData<T>);
 

@@ -152,6 +152,7 @@ pub mod pallet {
 	}
 
 	#[pallet::pallet]
+	#[pallet::without_storage_info]
 	#[pallet::generate_store(pub (super) trait Store)]
 	pub struct Pallet<T>(_);
 
@@ -710,8 +711,8 @@ pub mod pallet {
 					.into_iter()
 					.filter_map(|mut redemption| {
 						// only try to close if the lockup period is over
-						if redemption.end_block >= current_block &&
-							Self::do_complete_redemption(&caller, &mut redemption.assets)
+						if redemption.end_block >= current_block
+							&& Self::do_complete_redemption(&caller, &mut redemption.assets)
 						{
 							// all individual redemptions withdrawn, can remove them from storage
 							Self::deposit_event(Event::WithdrawalCompleted(caller.clone(), redemption.assets));
@@ -746,7 +747,7 @@ pub mod pallet {
 		/// The account of the treausry that keeps track of all the assets
 		/// contributed to the index
 		pub fn treasury_account() -> AccountIdFor<T> {
-			T::TreasuryPalletId::get().into_account()
+			T::TreasuryPalletId::get().into_account_truncating()
 		}
 
 		/// The amount of index tokens held by the given user
@@ -1110,7 +1111,7 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			nav: T::Balance,
-		) -> DispatchResult {
+		) -> Result<(), DispatchError> {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -1128,7 +1129,7 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			saft_nav: T::Balance,
-		) -> DispatchResult {
+		) -> Result<(), DispatchError> {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -1167,7 +1168,7 @@ pub mod pallet {
 			units: T::Balance,
 			nav: T::Balance,
 			recipient: Option<T::AccountId>,
-		) -> DispatchResult {
+		) -> Result<(), DispatchError> {
 			if units.is_zero() {
 				return Ok(());
 			}
@@ -1190,7 +1191,7 @@ pub mod pallet {
 			asset_id: T::AssetId,
 			units: T::Balance,
 			saft_nav: T::Balance,
-		) -> DispatchResult {
+		) -> Result<(), DispatchError> {
 			if units.is_zero() {
 				return Ok(());
 			}

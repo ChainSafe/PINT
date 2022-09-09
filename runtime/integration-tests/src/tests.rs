@@ -4,7 +4,6 @@
 use crate::{prelude::*, statemint, util::*};
 use frame_support::{
 	assert_noop, assert_ok,
-	sp_runtime::{traits::Zero, FixedPointNumber},
 	traits::tokens::fungibles::Inspect,
 };
 use kusama_runtime::ProxyType as RelayProxyType;
@@ -12,6 +11,8 @@ use orml_traits::MultiCurrency;
 use pallet_remote_asset_manager::types::StatemintConfig;
 use xcm_calls::proxy::ProxyType as ParaProxyType;
 use xcm_emulator::TestExt;
+use sp_runtime::FixedPointNumber;
+use sp_runtime::traits::Zero;
 
 #[test]
 fn para_account_funded_on_relay() {
@@ -38,9 +39,9 @@ fn can_deposit_from_relay() {
 
 		// create feed
 		create_and_submit_feed(ADMIN_ACCOUNT, RELAY_CHAIN_ASSET, 1);
-
+		
 		let nav = pallet_asset_index::Pallet::<ShotRuntime>::nav().unwrap();
-
+		
 		// alice has 1000 units of relay chain currency in her account on the parachain
 		assert_ok!(pallet_asset_index::Pallet::<ShotRuntime>::deposit(
 			committee_origin(ALICE).into(),
@@ -49,7 +50,7 @@ fn can_deposit_from_relay() {
 		));
 		// no more relay chain assets
 		assert!(orml_tokens::Pallet::<ShotRuntime>::balance(RELAY_CHAIN_ASSET, &ALICE).is_zero());
-
+		
 		let deposit_value = pallet_price_feed::Pallet::<ShotRuntime>::get_price(RELAY_CHAIN_ASSET)
 			.unwrap()
 			.checked_mul_int(deposit)
@@ -223,8 +224,8 @@ fn can_transfer_to_statemint() {
 		// 	shot_runtime::Origin::signed(ALICE),
 		// 	transfer_amount
 		// );
-
-		// transfer from pint -> statemint to mint SPINT
+		//
+		// // transfer from pint -> statemint to mint SPINT
 		// assert_ok!(pallet_remote_asset_manager::Pallet::<ShotRuntime>::transfer_to_statemint(
 		// 	shot_runtime::Origin::signed(ALICE),
 		// 	transfer_amount

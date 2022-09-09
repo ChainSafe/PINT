@@ -4,9 +4,10 @@
 use crate::{Config, Members, Origin};
 use frame_support::{
 	pallet_prelude::*,
-	sp_runtime::traits::Hash,
+	sp_runtime::{traits::{Hash, ConstU32}, BoundedVec},
 	sp_std::{self, prelude::Vec},
 	traits::EnsureOrigin,
+	sp_runtime
 };
 use frame_system::RawOrigin;
 
@@ -45,14 +46,15 @@ impl<T: Config> Proposal<T> {
 /// Council members are fixed in number and can vote on proposals
 /// Constituent members are unbounded in number but can only veto council
 /// proposals
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, MaxEncodedLen, Encode, Decode, scale_info::TypeInfo)]
 pub enum MemberType {
 	Council,
 	Constituent,
 }
 
 /// Assignment of a member type to an accountId
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, MaxEncodedLen, Encode, Decode, scale_info::TypeInfo)]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct CommitteeMember<AccountId> {
 	pub account_id: AccountId,
 	pub member_type: MemberType,
@@ -69,7 +71,8 @@ impl<AccountId> CommitteeMember<AccountId> {
 }
 
 /// A committee member together with their cast vote.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, MaxEncodedLen, Encode, Decode, scale_info::TypeInfo)]
+#[codec(mel_bound(AccountId: MaxEncodedLen))]
 pub struct MemberVote<AccountId> {
 	pub member: CommitteeMember<AccountId>,
 	pub vote: VoteKind,
@@ -82,7 +85,8 @@ impl<AccountId> MemberVote<AccountId> {
 }
 
 /// Origin for the committee pallet.
-#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, RuntimeDebug, Encode, Decode, MaxEncodedLen, scale_info::TypeInfo)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
 pub enum CommitteeOrigin<AccountId, BlockNumber> {
 	/// Action is executed by the committee. Contains the closer account and the
 	/// members that voted Aye
@@ -93,10 +97,11 @@ pub enum CommitteeOrigin<AccountId, BlockNumber> {
 
 /// Info for keeping track of a motion being voted on.
 /// Default is empty vectors for all votes
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, Default, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, Decode, MaxEncodedLen, RuntimeDebug, Default, scale_info::TypeInfo)]
+#[codec(mel_bound(AccountId: MaxEncodedLen, BlockNumber: MaxEncodedLen))]
 pub struct VoteAggregate<AccountId, BlockNumber> {
 	/// The current set of votes.
-	pub votes: Vec<MemberVote<AccountId>>,
+	pub votes: BoundedVec<MemberVote<AccountId>, ConstU32<320>>,
 	/// The hard end time of this vote.
 	pub end: BlockNumber,
 }
@@ -107,29 +112,30 @@ pub enum VoteRejectionReason {
 	CouncilDeny,
 }
 
-impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
+impl<AccountId: PartialEq + CustomDefault, BlockNumber: Default> VoteAggregate<AccountId, BlockNumber> {
 	pub fn new(
 		ayes: Vec<CommitteeMember<AccountId>>,
 		nays: Vec<CommitteeMember<AccountId>>,
 		abstentions: Vec<CommitteeMember<AccountId>>,
 		end: BlockNumber,
 	) -> Self {
-		let votes = sp_std::iter::empty()
+		let v_votes: Vec<MemberVote<AccountId>> = sp_std::iter::empty()
 			.chain(ayes.into_iter().map(|x| x.into_vote(VoteKind::Aye)))
 			.chain(nays.into_iter().map(|x| x.into_vote(VoteKind::Nay)))
 			.chain(abstentions.into_iter().map(|x| x.into_vote(VoteKind::Abstain)))
 			.collect();
+		let votes= v_votes.try_into().unwrap();
 		Self { votes, end }
 	}
 
 	pub fn new_with_end(end: BlockNumber) -> Self {
-		Self { end, ..Default::default() }
+		Self { end, votes: Vec::new().try_into().unwrap() }
 	}
 
 	// This does not check if a vote is a duplicate, This must be done before
 	// calling this function
 	pub fn cast_vote(&mut self, vote: MemberVote<AccountId>) {
-		self.votes.push(vote)
+		self.votes.try_push(vote).unwrap()
 	}
 
 	pub fn remove_voters(&mut self, voters: &[AccountId]) {
@@ -174,7 +180,7 @@ impl<AccountId: Default + PartialEq, BlockNumber: Default> VoteAggregate<Account
 }
 
 /// Possible votes a member can cast
-#[derive(PartialEq, Eq, Clone, Encode, Decode, RuntimeDebug, scale_info::TypeInfo)]
+#[derive(PartialEq, Eq, Clone, Encode, MaxEncodedLen, Decode, RuntimeDebug, scale_info::TypeInfo)]
 pub enum VoteKind {
 	Aye,
 	Nay,
@@ -205,11 +211,11 @@ impl<O: Into<Result<Origin<T>, O>> + From<Origin<T>> + Clone, T: Config> EnsureO
 	fn successful_origin() -> O {
 		use frame_benchmarking::vec;
 		O::from(CommitteeOrigin::ApprovedByCommittee(
-			Default::default(),
+			CustomDefault::c_default(),
 			VoteAggregate {
 				votes: vec![
 					MemberVote {
-						member: CommitteeMember { account_id: Default::default(), member_type: MemberType::Council },
+						member: CommitteeMember { account_id: CustomDefault::c_default(), member_type: MemberType::Council },
 						vote: VoteKind::Aye
 					};
 					T::MinCouncilVotes::get() + 1
@@ -247,6 +253,17 @@ impl<
 
 	#[cfg(feature = "runtime-benchmarks")]
 	fn successful_origin() -> O {
-		O::from(RawOrigin::Signed(Default::default()))
+		O::from(RawOrigin::Signed(CustomDefault::c_default()))
+	}
+}
+pub trait CustomDefault {
+	fn c_default() -> Self;
+}
+
+impl <T: Decode> CustomDefault for T {
+	fn c_default() -> Self {
+		let default_value = T::decode(&mut sp_runtime::traits::TrailingZeroInput::zeroes())
+			.expect("infinite length input; no invalid inputs for type; qed");
+		return default_value;
 	}
 }

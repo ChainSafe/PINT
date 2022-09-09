@@ -1,24 +1,27 @@
-// Copyright 2021 ChainSafe Systems
-// SPDX-License-Identifier: LGPL-3.0-only
-
+// // Copyright 2021 ChainSafe Systems
+// // SPDX-License-Identifier: LGPL-3.0-only
+//
 // Required as construct_runtime! produces code that violates this lint
 #![allow(clippy::from_over_into)]
 
 use crate as pallet_price_feed;
 use frame_support::{
-	dispatch::DispatchResultWithPostInfo, ord_parameter_types, parameter_types, traits::Everything, PalletId,
+	ord_parameter_types, parameter_types,
+	traits::{Everything, ConstU32, SortedMembers}
 };
+use frame_system::EnsureSignedBy;
 use frame_system as system;
-use pallet_chainlink_feed::RoundId;
+// use pallet_chainlink_feed::RoundId;
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-
+use primitives::Price;
+//
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-
+//
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
 	pub enum Test where
@@ -30,7 +33,7 @@ frame_support::construct_runtime!(
 		PriceFeed: pallet_price_feed::{Pallet, Call, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
 		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
-		ChainlinkFeed: pallet_chainlink_feed::{Pallet, Call, Storage, Event<T>},
+		OrmlOracle: orml_oracle::{Pallet, Call, Event<T>, Storage},
 	}
 );
 
@@ -67,6 +70,7 @@ impl system::Config for Test {
 	type SystemWeightInfo = ();
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
+	type MaxConsumers = ConstU32<16>;
 }
 
 parameter_types! {
@@ -74,15 +78,15 @@ parameter_types! {
 }
 
 impl pallet_balances::Config for Test {
-	type MaxLocks = ();
 	type Balance = Balance;
-	type Event = Event;
 	type DustRemoval = ();
+	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
+	type WeightInfo = ();
+	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type WeightInfo = ();
 }
 
 parameter_types! {
@@ -98,31 +102,6 @@ impl pallet_timestamp::Config for Test {
 
 pub(crate) const MIN_RESERVE: u64 = 100;
 
-parameter_types! {
-	pub const FeedPalletId: PalletId = PalletId(*b"linkfeed");
-	pub const MinimumReserve: u64 = MIN_RESERVE;
-	pub const StringLimit: u32 = 15;
-	pub const OracleLimit: u32 = 10;
-	pub const FeedLimit: u16 = 10;
-	pub const PruningWindow: u32 = 3;
-}
-
-pub(crate) type FeedId = u16;
-pub(crate) type Value = u128;
-impl pallet_chainlink_feed::Config for Test {
-	type Event = Event;
-	type FeedId = FeedId;
-	type Value = Value;
-	type Currency = Balances;
-	type PalletId = FeedPalletId;
-	type MinimumReserve = MinimumReserve;
-	type StringLimit = StringLimit;
-	type OracleCountLimit = OracleLimit;
-	type FeedLimit = FeedLimit;
-	type OnAnswerHandler = PriceFeed;
-	type WeightInfo = ();
-}
-
 pub(crate) type AssetId = u32;
 pub(crate) const ADMIN_ACCOUNT_ID: AccountId = 88;
 
@@ -135,102 +114,40 @@ ord_parameter_types! {
 }
 
 impl pallet_price_feed::Config for Test {
-	type AdminOrigin = frame_system::EnsureSignedBy<AdminAccountId, AccountId>;
+	type AdminOrigin = EnsureSignedBy<AdminAccountId, AccountId>;
 	type SelfAssetId = PINTAssetId;
 	type AssetId = AssetId;
 	type Time = Timestamp;
 	type Event = Event;
 	type WeightInfo = ();
+	type DataProvider = OrmlOracle;
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct FeedBuilder {
-	owner: Option<AccountId>,
-	payment: Option<Balance>,
-	timeout: Option<BlockNumber>,
-	value_bounds: Option<(Value, Value)>,
-	min_submissions: Option<u32>,
-	description: Option<Vec<u8>>,
-	decimals: Option<u8>,
-	restart_delay: Option<RoundId>,
-	oracles: Option<Vec<(AccountId, AccountId)>>,
+parameter_types! {
+	pub const MinimumCount: u32 = 1;
+	pub const ExpiresIn: u64 = 1000 * 60 * 60; // 1 hours
+	pub static OracleMembers: Vec<AccountId> = vec![1, 2, 3];
 }
 
-/// Helper implementation
-impl FeedBuilder {
-	pub fn new() -> Self {
-		Self::default()
-	}
+pub struct Members;
 
-	pub fn owner(mut self, o: AccountId) -> Self {
-		self.owner = Some(o);
-		self
+impl SortedMembers<AccountId> for Members {
+	fn sorted_members() -> Vec<AccountId> {
+		OracleMembers::get()
 	}
+}
 
-	pub fn payment(mut self, p: Balance) -> Self {
-		self.payment = Some(p);
-		self
-	}
-
-	pub fn timeout(mut self, t: BlockNumber) -> Self {
-		self.timeout = Some(t);
-		self
-	}
-
-	pub fn value_bounds(mut self, min: Value, max: Value) -> Self {
-		self.value_bounds = Some((min, max));
-		self
-	}
-
-	pub fn min_submissions(mut self, m: u32) -> Self {
-		self.min_submissions = Some(m);
-		self
-	}
-
-	pub fn description(mut self, d: Vec<u8>) -> Self {
-		self.description = Some(d);
-		self
-	}
-
-	pub fn decimals(mut self, d: u8) -> Self {
-		self.decimals = Some(d);
-		self
-	}
-
-	pub fn restart_delay(mut self, d: RoundId) -> Self {
-		self.restart_delay = Some(d);
-		self
-	}
-
-	pub fn oracles(mut self, o: Vec<(AccountId, AccountId)>) -> Self {
-		self.oracles = Some(o);
-		self
-	}
-
-	pub fn build_and_store(self) -> DispatchResultWithPostInfo {
-		let owner = Origin::signed(self.owner.unwrap_or(1));
-		let payment = self.payment.unwrap_or(20);
-		let timeout = self.timeout.unwrap_or(1);
-		let value_bounds = self.value_bounds.unwrap_or((1, 1_000));
-		let min_submissions = self.min_submissions.unwrap_or(2);
-		let decimals = self.decimals.unwrap_or(5);
-		let description = self.description.unwrap_or_else(|| b"desc".to_vec());
-		let oracles = self.oracles.unwrap_or_else(|| vec![(2, 4), (3, 4), (4, 4)]);
-		let restart_delay = self.restart_delay.unwrap_or(oracles.len().saturating_sub(1) as u32);
-		ChainlinkFeed::create_feed(
-			owner,
-			payment,
-			timeout,
-			value_bounds,
-			min_submissions,
-			decimals,
-			description,
-			restart_delay,
-			oracles,
-			None,
-			None,
-		)
-	}
+impl orml_oracle::Config for Test {
+	type Event = Event;
+	type OnNewData = ();
+	type CombineData = orml_oracle::DefaultCombineData<Test, MinimumCount, ExpiresIn>;
+	type Time = Timestamp;
+	type OracleKey = AssetId;
+	type OracleValue = Price;
+	type RootOperatorAccountId = AdminAccountId;
+	type Members = Members;
+	type WeightInfo = ();
+	type MaxHasDispatchedSize = ConstU32<40>;
 }
 
 // Build genesis storage according to the mock runtime.
@@ -240,14 +157,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	pallet_balances::GenesisConfig::<Test> { balances: vec![(ADMIN_ACCOUNT_ID, 100 * MIN_RESERVE)] }
 		.assimilate_storage(&mut t)
 		.unwrap();
-
-	pallet_chainlink_feed::GenesisConfig::<Test> {
-		feeds: Default::default(),
-		pallet_admin: Some(ADMIN_ACCOUNT_ID),
-		feed_creators: vec![1],
-	}
-	.assimilate_storage(&mut t)
-	.unwrap();
 
 	t.into()
 }

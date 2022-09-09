@@ -30,7 +30,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 				// initial collators.
 				vec![(get_account_id_from_seed::<sr25519::Public>("Alice"), get_collator_keys_from_seed("Alice"))],
 				vec![
-					PalletId(*b"Treasury").into_account(),
+					PalletId(*b"Treasury").into_account_truncating(),
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
 					get_account_id_from_seed::<sr25519::Public>("Alice//stash"),
@@ -46,6 +46,7 @@ pub fn pint_development_config(id: ParaId) -> ChainSpec {
 			)
 		},
 		vec![],
+		None,
 		None,
 		None,
 		None,
@@ -95,6 +96,7 @@ pub fn pint_local_config(id: ParaId) -> ChainSpec {
 		None,
 		None,
 		None,
+		None,
 		Extensions { relay_chain: "rococo-local".into(), para_id: id.into() },
 	)
 }
@@ -111,12 +113,8 @@ fn pint_testnet_genesis(
 		balances: BalancesConfig { balances: vec![(root_key.clone(), 1 << 60)] },
 		treasury: Default::default(),
 		committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default() },
-		chainlink_feed: ChainlinkFeedConfig {
-			feeds: Default::default(),
-			pallet_admin: Some(root_key.clone()),
-			feed_creators: council_members,
-		},
-		sudo: SudoConfig { key: root_key },
+		sudo: SudoConfig { key: Some(root_key) },
+		general_council: Default::default(),
 		parachain_info: ParachainInfoConfig { parachain_id: id },
 		collator_selection: CollatorSelectionConfig {
 			invulnerables: initial_authorities.iter().cloned().map(|(acc, _)| acc).collect(),
@@ -167,5 +165,9 @@ fn pint_testnet_genesis(
 			statemint_config: None,
 		},
 		polkadot_xcm: PolkadotXcmConfig { safe_xcm_version: Some(2) },
+		oracle_operator_membership: OracleOperatorMembershipConfig {
+			members: vec![].try_into().unwrap(),
+			phantom: Default::default(),
+		},
 	}
 }

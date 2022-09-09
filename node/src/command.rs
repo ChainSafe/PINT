@@ -4,22 +4,18 @@
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
-	service::{self, IdentifyVariant},
+	service::{self, IdentifyVariant, new_partial},
 };
-use codec::Encode;
-use cumulus_client_service::genesis::generate_genesis_block;
 use cumulus_primitives_core::ParaId;
 use log::info;
-use polkadot_parachain::primitives::AccountIdConversion;
-use primitives::Block;
+// use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
 	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams, NetworkParams, Result,
 	RuntimeVersion, SharedParams, SubstrateCli,
 };
 use sc_service::config::{BasePath, PrometheusConfig};
-use sp_core::hexdisplay::HexDisplay;
-use sp_runtime::traits::Block as BlockT;
-use std::{io::Write, net::SocketAddr};
+use std::{net::SocketAddr};
+use frame_benchmarking_cli::{BenchmarkCmd, SUBSTRATE_REFERENCE_HARDWARE};
 
 fn load_spec(id: &str, para_id: ParaId) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
 	Ok(match id {
@@ -167,15 +163,6 @@ fn set_default_ss58_version(spec: &Box<dyn sc_chain_spec::ChainSpec>) {
 	sp_core::crypto::set_default_ss58_version(ss58_version.into());
 }
 
-fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<Vec<u8>> {
-	let mut storage = chain_spec.build_storage()?;
-
-	storage
-		.top
-		.remove(sp_core::storage::well_known_keys::CODE)
-		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
-}
-
 macro_rules! with_runtime {
 	($chain_spec:expr, { $( $code:tt )* }) => {
 		if $chain_spec.is_shot() {
@@ -252,52 +239,27 @@ pub fn run() -> Result<()> {
 		}
 		Some(Subcommand::Revert(cmd)) => cli.create_runner(cmd)?.async_run(|mut config| {
 			let (client, backend, _, task_manager) = service::new_chain_ops(&mut config)?;
-			Ok((cmd.run(client, backend), task_manager))
+			Ok((cmd.run(client, backend, None), task_manager))
 		}),
-		Some(Subcommand::ExportGenesisState(params)) => {
-			let mut builder = sc_cli::LoggerBuilder::new("");
-			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-			let _ = builder.init();
+		Some(Subcommand::ExportGenesisState(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			let chain_spec = &runner.config().chain_spec;
 
-			let block: Block = generate_genesis_block(&load_spec(
-				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.unwrap_or(200).into(),
-			)?)?;
-			let raw_header = block.header().encode();
-			let output_buf = if params.raw {
-				raw_header
-			} else {
-				format!("0x{:?}", HexDisplay::from(&block.header().encode())).into_bytes()
-			};
-
-			if let Some(output) = &params.output {
-				std::fs::write(output, output_buf)?;
-			} else {
-				std::io::stdout().write_all(&output_buf)?;
-			}
-
-			Ok(())
+			with_runtime!(chain_spec, {
+				return runner.sync_run(|_config| {
+					let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+					let state_version = Cli::native_runtime_version(&spec).state_version();
+					cmd.run::<Block>(&*spec, state_version)
+				});
+			})
 		}
 
-		Some(Subcommand::ExportGenesisWasm(params)) => {
-			let mut builder = sc_cli::LoggerBuilder::new("");
-			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
-			let _ = builder.init();
-
-			let raw_wasm_blob = extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
-			let output_buf = if params.raw {
-				raw_wasm_blob
-			} else {
-				format!("0x{:?}", HexDisplay::from(&raw_wasm_blob)).into_bytes()
-			};
-
-			if let Some(output) = &params.output {
-				std::fs::write(output, output_buf)?;
-			} else {
-				std::io::stdout().write_all(&output_buf)?;
-			}
-
-			Ok(())
+		Some(Subcommand::ExportGenesisWasm(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
+			runner.sync_run(|_config| {
+				let spec = cli.load_spec(&cmd.shared_params.chain.clone().unwrap_or_default())?;
+				cmd.run(&*spec)
+			})
 		}
 		Some(Subcommand::Benchmark(cmd)) => {
 			if cfg!(feature = "runtime-benchmarks") {
@@ -307,7 +269,32 @@ pub fn run() -> Result<()> {
 				set_default_ss58_version(chain_spec);
 
 				with_runtime!(chain_spec, {
-					return runner.sync_run(|config| cmd.run::<Block, Executor>(config));
+					match cmd {
+						BenchmarkCmd::Pallet(cmd) => {
+							if cfg!(feature = "runtime-benchmarks") {
+								runner.sync_run(|config| cmd.run::<Block, Executor>(config))
+							} else {
+								Err("Benchmarking wasn't enabled when building the node. \
+						You can enable it with `--features runtime-benchmarks`."
+									.into())
+							}
+						}
+						BenchmarkCmd::Block(cmd) => runner.sync_run(|config| {
+							let partials = new_partial::<RuntimeApi>(&config, true, false)?;
+							cmd.run(partials.client)
+						}),
+						BenchmarkCmd::Storage(cmd) => runner.sync_run(|config| {
+							let partials = new_partial::<RuntimeApi>(&config, true, false)?;
+							let db = partials.backend.expose_db();
+							let storage = partials.backend.expose_storage();
+
+							cmd.run(config, partials.client.clone(), db, storage)
+						}),
+						BenchmarkCmd::Overhead(_) => Err("Unsupported benchmarking command".into()),
+						BenchmarkCmd::Machine(cmd) => {
+							runner.sync_run(|config| cmd.run(&config, SUBSTRATE_REFERENCE_HARDWARE.clone()))
+						}
+					}
 				})
 			} else {
 				Err("Benchmarking wasn't enabled when building the node. \
@@ -315,16 +302,22 @@ pub fn run() -> Result<()> {
 					.into())
 			}
 		}
+		Some(Subcommand::Key(cmd)) => cmd.run(&cli),
+		Some(Subcommand::Sign(cmd)) => cmd.run(),
+		Some(Subcommand::Verify(cmd)) => cmd.run(),
+		Some(Subcommand::Vanity(cmd)) => cmd.run(),
 		None => {
 			let runner = cli.create_runner(&cli.run.normalize())?;
 			let chain_spec = &runner.config().chain_spec;
 			let is_pint_dev = cli.run.base.shared_params.dev || cli.instant_sealing;
+			let collator_options = cli.run.collator_options();
 
 			set_default_ss58_version(chain_spec);
 
 			runner.run_node_until_exit(|config| async move {
-				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
-				let id = ParaId::from(para_id.unwrap_or(200));
+				let para_id = chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id)
+					.ok_or("Could not find parachain extension for chain-spec.")?;
+				let id = ParaId::from(para_id);
 
 				if is_pint_dev {
 					return service::pint_dev(config, cli.instant_sealing).map_err(Into::into);
@@ -337,23 +330,24 @@ pub fn run() -> Result<()> {
 					[RelayChainCli::executable_name()].iter().chain(cli.relaychain_args.iter()),
 				);
 
-				let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
+				// let parachain_account = AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account_truncating(&id);
 
-				let block: Block = generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
-				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
+				// let block: Block =
+				// 	generate_genesis_block(&config.chain_spec, state_version).map_err(|e| format!("{:?}", e))?;
+				// let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
 				let polkadot_config =
 					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, config.tokio_handle.clone())
 						.map_err(|err| format!("Relay chain argument error: {}", err))?;
 
 				info!("Parachain id: {:?}", id);
-				info!("Parachain Account: {}", parachain_account);
-				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
+				// info!("Parachain Account: {}", parachain_account);
+				// info!("Parachain genesis state: {}", genesis_state);
+				// info!("Is collating: {}", if config.role.is_authority() { "yes" } else { "no" });
 
 				with_runtime!(config.chain_spec, {
 					{
-						service::start_node::<RuntimeApi, Executor>(config, polkadot_config, id)
+						service::start_node::<RuntimeApi>(config, polkadot_config, collator_options, id)
 							.await
 							.map(|r| r.0)
 							.map_err(Into::into)
@@ -415,11 +409,24 @@ impl CliConfiguration<Self> for RelayChainCli {
 		self.base.base.rpc_ws(default_listen_port)
 	}
 
-	fn prometheus_config(&self, default_listen_port: u16) -> Result<Option<PrometheusConfig>> {
-		self.base.base.prometheus_config(default_listen_port)
+	fn prometheus_config(
+		&self,
+		default_listen_port: u16,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<PrometheusConfig>> {
+		self.base.base.prometheus_config(default_listen_port, chain_spec)
 	}
 
-	fn init<C: SubstrateCli>(&self) -> Result<()> {
+	fn init<F>(
+		&self,
+		_support_url: &String,
+		_impl_version: &String,
+		_logger_hook: F,
+		_config: &sc_service::Configuration,
+	) -> Result<()>
+		where
+			F: FnOnce(&mut sc_cli::LoggerBuilder, &sc_service::Configuration),
+	{
 		unreachable!("PolkadotCli is never initialized; qed");
 	}
 

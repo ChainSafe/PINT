@@ -32,7 +32,7 @@ GenesisConfig {
     committee: CommitteeConfig { council_members: council_members.clone(), ..Default::default () },
     // all council members can create feeds and no feeds in genesis
     chainlink_feed: ChainlinkFeedConfig { feeds: Default::default(), pallet_admin: Some(root_key.clone()), feed_creators: council_members },
-    sudo: SudoConfig { key: root_key },
+    sudo: SudoConfig { key: Some(root_key) },
     parachain_info: ParachainInfoConfig { parachain_id: id },
 }
 ```

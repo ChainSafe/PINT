@@ -75,6 +75,7 @@
 
 use codec::{Encode, Output};
 use frame_support::sp_std::marker::PhantomData;
+use crate::staking::EraIndex;
 
 pub use encode_with::*;
 
@@ -159,7 +160,7 @@ mod tests {
 	use std::{cell::RefCell, collections::HashSet};
 
 	use codec::{Decode, Encode, MaxEncodedLen};
-	use frame_election_provider_support::onchain;
+	use frame_election_provider_support::{onchain, SequentialPhragmen};
 	use frame_support::{
 		parameter_types,
 		sp_runtime::traits::BlakeTwo256,
@@ -281,8 +282,9 @@ mod tests {
 	impl pallet_bags_list::Config for Test {
 		type Event = Event;
 		type WeightInfo = ();
-		type VoteWeightProvider = Staking;
 		type BagThresholds = BagThresholds;
+		type Score = sp_npos_elections::VoteWeight;
+		type ScoreProvider = Staking;
 	}
 
 	/// Author of block is always 11
@@ -334,6 +336,7 @@ mod tests {
 		type SystemWeightInfo = ();
 		type SS58Prefix = ();
 		type OnSetCode = ();
+		type MaxConsumers = frame_support::traits::ConstU32<16>;
 	}
 	impl pallet_balances::Config for Test {
 		type MaxLocks = MaxLocks;
@@ -390,11 +393,13 @@ mod tests {
 			test_precision: 0_005_000,
 		);
 	}
+
 	parameter_types! {
 		pub const BondingDuration: EraIndex = 3;
 		pub const RewardCurve: &'static PiecewiseLinear<'static> = &I_NPOS;
 		pub const MaxNominatorRewardedPerValidator: u32 = 64;
 		pub const OffendingValidatorsThreshold: Perbill = Perbill::from_percent(75);
+		pub const MaxNominations: u32 = 32;
 	}
 
 	thread_local! {
@@ -411,13 +416,15 @@ mod tests {
 			drop(amount);
 		}
 	}
-
-	impl onchain::Config for Test {
-		type Accuracy = Perbill;
+	pub struct OnChainSequentialPhragmen;
+	impl onchain::Config for OnChainSequentialPhragmen {
 		type DataProvider = Staking;
+		type System = Test;
+		type WeightInfo = ();
+		type Solver = SequentialPhragmen<AccountId, Perbill>;
 	}
 	impl staking::Config for Test {
-		const MAX_NOMINATIONS: u32 = 16;
+		// const MAX_NOMINATIONS: u32 = 16;
 		type Currency = Balances;
 		type UnixTime = Timestamp;
 		type CurrencyToVote = frame_support::traits::SaturatingCurrencyToVote;
@@ -433,11 +440,17 @@ mod tests {
 		type EraPayout = ConvertCurve<RewardCurve>;
 		type NextNewSession = Session;
 		type MaxNominatorRewardedPerValidator = MaxNominatorRewardedPerValidator;
-		type ElectionProvider = onchain::OnChainSequentialPhragmen<Self>;
+		type ElectionProvider = onchain::UnboundedExecution<OnChainSequentialPhragmen>;
 		type GenesisElectionProvider = Self::ElectionProvider;
 		type WeightInfo = ();
 		type OffendingValidatorsThreshold = OffendingValidatorsThreshold;
-		type SortedListProvider = BagsList;
+		// type SortedListProvider = BagsList;
+		type MaxUnlockingChunks = frame_support::traits::ConstU32<32>;
+		type CurrencyBalance = Balance;
+		type MaxNominations = MaxNominations;
+		type VoterList = UseNominatorsAndValidatorsMap<Test>;
+		type BenchmarkingConfig = TestBenchmarkingConfig;
+		type OnStakerSlash = ();
 	}
 
 	parameter_types! {
@@ -487,6 +500,7 @@ mod tests {
 		type CallHasher = BlakeTwo256;
 		type AnnouncementDepositBase = AnnouncementDepositBase;
 		type AnnouncementDepositFactor = AnnouncementDepositFactor;
+
 	}
 
 	impl<LocalCall> frame_system::offchain::SendTransactionTypes<LocalCall> for Test
@@ -521,6 +535,7 @@ mod tests {
 		type Freezer = ();
 		type WeightInfo = ();
 		type Extra = ();
+		type AssetAccountDeposit = ();
 	}
 
 	struct PalletUtilityEncoder;

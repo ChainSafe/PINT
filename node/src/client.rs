@@ -123,11 +123,11 @@ pub trait ClientHandle {
 /// A client instance of Polkadot.
 #[derive(Clone)]
 pub enum Client {
-	Dev(Arc<crate::service::FullClient<dev_runtime::RuntimeApi, crate::service::DevExecutorDispatch>>),
+	Dev(Arc<crate::service::FullClient<dev_runtime::RuntimeApi>>),
 	#[cfg(feature = "shot")]
-	Shot(Arc<crate::service::FullClient<shot_runtime::RuntimeApi, crate::service::ShotExecutorDispatch>>),
+	Shot(Arc<crate::service::FullClient<shot_runtime::RuntimeApi>>),
 	#[cfg(feature = "pint")]
-	Pint(Arc<crate::service::FullClient<pint_runtime::RuntimeApi, crate::service::PintExecutorDispatch>>),
+	Pint(Arc<crate::service::FullClient<pint_runtime::RuntimeApi>>),
 }
 
 impl ClientHandle for Client {
@@ -232,6 +232,16 @@ impl sc_client_api::BlockBackend<Block> for Client {
 			Self::Shot(client) => client.block_indexed_body(id),
 			#[cfg(feature = "pint")]
 			Self::Pint(client) => client.block_indexed_body(id),
+		}
+	}
+
+	fn requires_full_sync(&self) -> bool {
+		match self {
+			Self::Dev(client) => client.requires_full_sync(),
+			#[cfg(feature = "shot")]
+			Self::Shot(client) => client.requires_full_sync(),
+			#[cfg(feature = "pint")]
+			Self::Pint(client) => client.requires_full_sync(),
 		}
 	}
 }

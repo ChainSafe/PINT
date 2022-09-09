@@ -116,7 +116,7 @@ parameter_types! {
 	pub const PalletIndexStringLimit: u32 = 50;
 	pub const Period: u32 = 6 * HOURS;
 	pub const PINTAssetId: AssetId = 1;
-	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account();
+	pub PintTreasuryAccount: AccountId = TreasuryPalletId::get().into_account_truncating();
 	pub const PotId: PalletId = PalletId(*b"PotStake");
 	pub const RedemptionFee: RedemptionFeeRange<BlockNumber> =  RedemptionFeeRange {
 		range: [(DAYS * 7, FeeRate { numerator: 1, denominator: 10 }), (DAYS * 30, FeeRate{ numerator: 3, denominator: 100 })],
@@ -180,13 +180,21 @@ parameter_types! {
 	pub const TreasuryPalletId: PalletId = PalletId(*b"Treasury");
 	pub const ProposalBond: Permill = Permill::from_percent(3);
 	pub const ProposalBondMinimum: Balance = 5 * DOLLARS;
+	pub const ProposalBondMaximum: Balance = 50 * DOLLARS;
 	pub const SpendPeriod: BlockNumber = 7 * DAYS;
 	pub const Burn: Permill = Permill::from_percent(0);
 	pub const MaxApprovals: u32 = 100;
+
+	// orml_xtokens
+	pub const MaxAssetsForTransfer: usize = 2;
+	pub const MaxReserves: u32 = 8;
+
+	// pallet_scheduler
+	pub const NoPreimagePostponement: Option<u32> = Some(5 * MINUTES);
 }
 
 pub fn get_all_pallet_accounts() -> Vec<AccountId> {
-	vec![TreasuryPalletId::get().into_account()]
+	vec![TreasuryPalletId::get().into_account_truncating()]
 }
 
 pub struct DustRemovalWhitelist;
@@ -200,6 +208,12 @@ impl Contains<AccountId> for DustRemovalWhitelist {
 parameter_type_with_key! {
 	pub ExistentialDeposits: |_asset_id: AssetId| -> Balance {
 		Zero::zero()
+	};
+}
+
+parameter_type_with_key! {
+	pub ParachainZeroFee: |_location: MultiLocation| -> Option<u128> {
+		Some(0)
 	};
 }
 

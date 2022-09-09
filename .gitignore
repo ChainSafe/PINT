@@ -30,3 +30,7 @@ js/**/*/lib
 
 # Unknown
 local-test
+
+# Ignore config ide 
+.vscode
+.idea
